@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -920,59 +921,27 @@ html,body{font-family:'thermal-variable',sans-serif;background:var(--paper);colo
   </div>
 </div>
 
+<input type="file" id="avatarFileInput" accept="image/*" style="display:none">
+
 <script>
 // ════════════════════════════════════════════════════════
 // Parlor Mag — Member Data Receiver
-// Paste inside a <script> tag in the portal HTML.
-// Plan strings sent by Velo:
-//   "The Reader's Circle" | "The Printing Press" | "Archive Pass" | "none"
 // ════════════════════════════════════════════════════════
 
-// ── Global state ─────────────────────────────────────────
-// Holds member data once received from Wix.
-// All other scripts (Airtable loaders, paywall films)
-// read from window.parlorMember throughout the session.
 window.parlorMember = null;
 window.parlorInitialised = false;
 
-
-// ── Message listener ─────────────────────────────────────
-// Fires when Wix sends member data via postMessage.
+// ── Member data receiver ─────────────────────────────────
 window.addEventListener('message', function(event) {
-
-  // Only respond to messages from our Wix bridge
   if (!event.data || event.data.type !== 'PARLOR_MEMBER_DATA') return;
-
-  // Only run once per page load
   if (window.parlorInitialised) return;
   window.parlorInitialised = true;
 
-  // Store member data globally for all other scripts
   window.parlorMember = event.data;
   const m = event.data;
 
   console.log('Portal: member received —', m.name, '| Plan:', m.plan);
-  // ── DEBUG: log the full payload so you can see exactly what Wix is sending
   console.log('Portal: full payload →', JSON.stringify(m, null, 2));
-
-
-  // ── Determine access level ────────────────────────────
-  //
-  // hasDigitalAccess — true for Reader's Circle and Printing Press.
-  //   Full portal access. No paywall on threads or events.
-  //
-  // isPrintingPress — true for Printing Press only.
-  //   Used to show the shipping pill on the dashboard.
-  //   Does not gate any digital content.
-  //
-  // hasArchivePass — true for Archive Pass holders.
-  //   Full library access only. Paywall films on threads
-  //   and ticketed events still apply.
-  //
-  // Matched by plan ID first (robust against Wix renames),
-  // falling back to plan name string as a safety net.
-  // These flags are also read by paywall logic via
-  // window.parlorMember.plan in Step 15.
 
   const PLAN_IDS = {
     READERS_CIRCLE: 'fccb348a-7433-4080-8699-9ef8c0e7a519',
@@ -980,32 +949,21 @@ window.addEventListener('message', function(event) {
     ARCHIVE_PASS:   'd557e8cd-bed2-4f09-a50e-6274d829bfef'
   };
 
-  const isReadersCircle = m.planId === PLAN_IDS.READERS_CIRCLE
-                       || m.plan   === "The Reader's Circle";
-  const isPrintingPress = m.planId === PLAN_IDS.PRINTING_PRESS
-                       || m.plan   === 'The Printing Press';
-  const hasArchivePass  = m.planId === PLAN_IDS.ARCHIVE_PASS
-                       || m.plan   === 'Archive Pass';
-
+  const isReadersCircle = m.planId === PLAN_IDS.READERS_CIRCLE || m.plan === "The Reader's Circle";
+  const isPrintingPress = m.planId === PLAN_IDS.PRINTING_PRESS || m.plan === 'The Printing Press';
+  const hasArchivePass  = m.planId === PLAN_IDS.ARCHIVE_PASS   || m.plan === 'Archive Pass';
   const hasDigitalAccess = isReadersCircle || isPrintingPress;
 
+  // Name
+  document.querySelectorAll('.sb-name').forEach(el => { el.textContent = m.name; });
 
-  // ── Personalise the sidebar ───────────────────────────
-  // Runs for every logged-in user regardless of plan.
-
-  // Member name
-  document.querySelectorAll('.sb-name').forEach(el => {
-    el.textContent = m.name;
-  });
-
-  // Avatar circle — image if available, initial as fallback.
-  // Tries multiple field names since Velo bridge naming varies.
+  // Avatar
   const avatarUrl = m.avatar || m.profileImage || m.picture || m.photo || m.imageUrl || '';
   const fallbackInitial = (m.name || m.nickname || '?').charAt(0).toUpperCase();
   document.querySelectorAll('.av-circle').forEach(el => {
     if (avatarUrl) {
       el.textContent = '';
-      el.style.backgroundImage = `url(${avatarUrl})`;
+      el.style.backgroundImage = 'url(' + avatarUrl + ')';
       el.style.backgroundSize = 'cover';
       el.style.backgroundPosition = 'center';
     } else {
@@ -1013,104 +971,107 @@ window.addEventListener('message', function(event) {
     }
   });
 
-  // Plan + join year under the name — "No active plan" if none
+  // Bio pre-fill
+  const bioInput = document.getElementById('bioInput');
+  if (bioInput && m.bio) bioInput.value = m.bio;
+
+  // Sidebar handle
   document.querySelectorAll('.sb-handle').forEach(el => {
     const hasplan = m.plan && m.plan !== 'none';
     const year = hasplan && m.joinDate ? new Date(m.joinDate).getFullYear() : '';
-    el.textContent = hasplan
-      ? (m.plan + (year ? '  ·  since ' + year : ''))
-      : 'No active plan';
+    el.textContent = hasplan ? (m.plan + (year ? '  ·  since ' + year : '')) : 'No active plan';
   });
 
-  // Plan badge pill — hide entirely if no active plan
+  // Plan badge pill
   document.querySelectorAll('.bp-press').forEach(el => {
-    if (!m.plan || m.plan === 'none') {
-      el.style.display = 'none';
-    } else {
-      el.textContent = m.plan;
-    }
+    if (!m.plan || m.plan === 'none') { el.style.display = 'none'; }
+    else { el.textContent = m.plan; }
   });
 
-  // Attributed badges — map Wix badge IDs to display labels
+  // Attributed badges
   const BADGE_MAP = {
     '8ef54c1c-72c8-4a23-a71d-ab3b76fa30e3': { label: 'Founding member', cls: 'bp-founding' },
     'a454a13e-99cc-48a2-b4d1-96df10c3d54f': { label: 'Writer',          cls: 'bp-writer'  },
     '2324c632-278b-4bf2-a1c0-3c9a45a8ef2b': { label: 'Admin',           cls: 'bp-admin'   },
   };
-
-  // badges may be an array of ID strings, or array of objects with ._id
   const memberBadgeIds = Array.isArray(m.badges)
     ? m.badges.map(b => (typeof b === 'string' ? b : b._id || b.id || '')).filter(Boolean)
     : [];
-
-  // Build the set of badge pills to show
   const badgesStrip = document.querySelector('.badges-strip');
   if (badgesStrip) {
-    // Remove all attributed badge pills first
     badgesStrip.querySelectorAll('.bp-founding, .bp-writer, .bp-admin').forEach(el => el.remove());
-
-    // Re-add only the ones this member actually has
     memberBadgeIds.forEach(id => {
       const badge = BADGE_MAP[id];
       if (!badge) return;
       const pill = document.createElement('span');
       pill.className = 'badge-pill ' + badge.cls;
       pill.textContent = badge.label;
-      // Insert before the plan pill so badges appear first
       const planPill = badgesStrip.querySelector('.bp-press');
       badgesStrip.insertBefore(pill, planPill || null);
     });
   }
 
-  // Dashboard greeting — 'Hello, Firstname.'
+  // Greeting
   const greetingEm = document.querySelector('.greeting em');
-  if (greetingEm) {
-    greetingEm.textContent = (m.name || m.nickname || 'there') + '.';
-  }
+  if (greetingEm) greetingEm.textContent = (m.name || m.nickname || 'there') + '.';
 
-  // Sub-line under greeting — plan + since, or hidden if no plan
+  // Sub-line
   const dashSubline = document.getElementById('dash-subline');
   if (dashSubline) {
     const hasplan = m.plan && m.plan !== 'none';
     if (hasplan) {
-      const joinYear = m.joinDate ? new Date(m.joinDate).getFullYear() : '';
+      const joinYear  = m.joinDate ? new Date(m.joinDate).getFullYear() : '';
       const joinMonth = m.joinDate ? new Date(m.joinDate).toLocaleString(undefined, { month: 'long' }) : '';
       const since = joinYear ? joinMonth + ' ' + joinYear : '';
-      const shippingPillHTML = isPrintingPress
-        ? `<span class="ship-pill">Issue 1 ships Apr 28</span>`
-        : '';
-      dashSubline.innerHTML = m.plan + ' member' + (since ? ' since ' + since : '') + ' ' + shippingPillHTML;
+      const shipHTML = isPrintingPress ? '<span class="ship-pill">Issue 1 ships Apr 28</span>' : '';
+      dashSubline.innerHTML = m.plan + ' member' + (since ? ' since ' + since : '') + ' ' + shipHTML;
     } else {
       dashSubline.style.display = 'none';
     }
   }
 
-
-  // ── Printing Press cosmetic ───────────────────────────
-  // Ship pill is now rendered dynamically in the sub-line above.
-  // This handles any ship-pill elements outside the sub-line.
   document.querySelectorAll('.ship-pill').forEach(el => {
     el.style.display = isPrintingPress ? '' : 'none';
   });
 
-
-  // ── Trigger content loaders ───────────────────────────
-  // Loads for all logged-in users. Free users see library
-  // cards and the feed; paywall films appear when they try
-  // to go deeper. See Step 15 for paywall logic.
   if (typeof loadLibrary       === 'function') loadLibrary();
   if (typeof loadThreads       === 'function') loadThreads();
   if (typeof loadEvents        === 'function') loadEvents();
   if (typeof loadDashboardFeed === 'function') loadDashboardFeed();
-
 });
 
-
 // ── Signal readiness to Wix ───────────────────────────────
-// Tells the Wix parent page the portal iFrame is ready.
-// Prevents postMessage delay in some browsers.
 window.addEventListener('load', function() {
   window.parent.postMessage({ type: 'PORTAL_READY' }, '*');
+});
+
+// ── Bio/photo result listener ─────────────────────────────
+window.addEventListener('message', function(event) {
+  if (!event.data) return;
+  if (event.data.type === 'BIO_UPDATE_RESULT') {
+    const btn = document.getElementById('saveBioBtn');
+    const fb  = document.getElementById('saveFeedback');
+    if (btn) { btn.textContent = 'Save bio'; btn.disabled = false; }
+    if (fb) {
+      fb.textContent = event.data.success ? 'Saved!' : 'Error saving — try again';
+      fb.style.color  = event.data.success ? 'var(--pink)' : '#e07070';
+      setTimeout(() => { fb.textContent = ''; }, 3000);
+    }
+  }
+  if (event.data.type === 'PHOTO_UPDATE_RESULT') {
+    if (!event.data.success) {
+      alert('Could not save photo — please try again.');
+      const m = window.parlorMember;
+      if (m) {
+        const url = m.avatar || '';
+        const fallback = (m.name || '?').charAt(0).toUpperCase();
+        document.querySelectorAll('.av-circle').forEach(el => {
+          if (url) { el.style.backgroundImage = 'url(' + url + ')'; }
+          else { el.style.backgroundImage = ''; el.textContent = fallback; }
+        });
+      }
+    }
+  }
 });
 
 // ── navigation ──
@@ -1131,10 +1092,38 @@ function closeModal(){document.getElementById('newThreadModal').classList.remove
 document.getElementById('newThreadModal').addEventListener('click',function(e){if(e.target===this)closeModal();});
 document.querySelectorAll('.ftab').forEach(t=>{t.addEventListener('click',function(){document.querySelectorAll('.ftab').forEach(x=>x.classList.remove('active'));this.classList.add('active');});});
 document.querySelectorAll('.filter-btn').forEach(b=>{b.addEventListener('click',function(){document.querySelectorAll('.filter-btn').forEach(x=>x.classList.remove('active'));this.classList.add('active');});});
-document.getElementById('saveBioBtn').addEventListener('click',function(){
-  const fb=document.getElementById('saveFeedback');
-  this.textContent='Saving...';
-  setTimeout(()=>{this.textContent='Save bio';fb.textContent='Saved!';setTimeout(()=>fb.textContent='',2500);},600);
+
+// ── Bio save ──
+document.getElementById('saveBioBtn').addEventListener('click', function() {
+  const fb  = document.getElementById('saveFeedback');
+  const bio = document.getElementById('bioInput').value.trim();
+  this.textContent = 'Saving...';
+  this.disabled = true;
+  window.parent.postMessage({ type: 'UPDATE_BIO', bio: bio }, '*');
+});
+
+// ── Avatar upload ──
+document.querySelector('.av-edit').addEventListener('click', function() {
+  document.getElementById('avatarFileInput').click();
+});
+document.getElementById('avatarFileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { alert('Please choose an image file.'); return; }
+  if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5MB.'); return; }
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const dataUrl = ev.target.result;
+    document.querySelectorAll('.av-circle').forEach(el => {
+      el.textContent = '';
+      el.style.backgroundImage = 'url(' + dataUrl + ')';
+      el.style.backgroundSize = 'cover';
+      el.style.backgroundPosition = 'center';
+    });
+    window.parent.postMessage({ type: 'UPDATE_PHOTO', base64: dataUrl.split(',')[1], mimeType: file.type }, '*');
+  };
+  reader.readAsDataURL(file);
+  this.value = '';
 });
 
 // ── MINI WEEKLY CALENDAR ──
@@ -1145,17 +1134,14 @@ document.getElementById('saveBioBtn').addEventListener('click',function(){
     {id:'e2',start:'2026-04-24T18:00:00',end:'2026-04-24T19:30:00',title:'In conversation: independent publishing',time:'6:00 PM',access:'All subscribers'},
     {id:'e3',start:'2026-04-28T09:00:00',end:'2026-04-28T10:00:00',title:'Issue 1 ships to your door',time:'All day',access:'Printing Press only'}
   ];
-
   const detailPanel=document.getElementById('eventDetailPanel');
   const detailInner=document.getElementById('eventDetailInner');
   let activeCell=null;
-
   function startOfWeek(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-x.getDay());return x;}
   function monthLabel(d){return d.toLocaleString(undefined,{month:'long',year:'numeric'});}
   function shiftWeek(n){weekStart.setDate(weekStart.getDate()+n*7);render();}
-
   function showDetail(d,dayEvts,cellEl){
-    if(activeCell){activeCell.style.background='';activeCell.style.fontWeight='';}
+    if(activeCell){activeCell.style.background='';}
     if(!dayEvts.length){detailPanel.classList.remove('visible');activeCell=null;return;}
     activeCell=cellEl;
     cellEl.style.background=PINK;
@@ -1175,46 +1161,35 @@ document.getElementById('saveBioBtn').addEventListener('click',function(){
     detailPanel.classList.add('visible');
     detailPanel.scrollIntoView({behavior:'smooth',block:'nearest'});
   }
-
   let weekStart=startOfWeek(new Date('2026-04-04'));
-
   const host=document.getElementById('miniCalHost');
   host.innerHTML='';
-
   const wrap=document.createElement('div');
   wrap.style.cssText='font-family:"thermal-variable",sans-serif;width:100%;';
-
-  // bar
   const bar=document.createElement('div');
   bar.style.cssText='position:relative;display:flex;align-items:center;justify-content:flex-end;padding:.4rem .7rem;background:'+PINK+';height:44px;border-radius:10px 10px 0 0;';
-
   const titleCluster=document.createElement('div');
   titleCluster.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:.4rem;';
   const prevBtn=document.createElement('div');
-  prevBtn.style.cssText='cursor:pointer;user-select:none;border-radius:8px;font-size:28px;line-height:1;padding:.05rem .3rem;font-weight:700;color:#000;font-family:"thermal-variable",sans-serif;';
+  prevBtn.style.cssText='cursor:pointer;user-select:none;border-radius:8px;font-size:28px;line-height:1;padding:.05rem .3rem;font-weight:700;color:#000;';
   prevBtn.textContent='‹';prevBtn.onclick=()=>shiftWeek(-1);
   const monthLbl=document.createElement('div');
   monthLbl.style.cssText='font-family:"thermal-variable",serif;font-size:17px;line-height:1;font-weight:700;white-space:nowrap;color:#000;';
   const nextBtn=document.createElement('div');
-  nextBtn.style.cssText='cursor:pointer;user-select:none;border-radius:8px;font-size:28px;line-height:1;padding:.05rem .3rem;font-weight:700;color:#000;font-family:"thermal-variable",sans-serif;';
+  nextBtn.style.cssText='cursor:pointer;user-select:none;border-radius:8px;font-size:28px;line-height:1;padding:.05rem .3rem;font-weight:700;color:#000;';
   nextBtn.textContent='›';nextBtn.onclick=()=>shiftWeek(1);
   titleCluster.append(prevBtn,monthLbl,nextBtn);
-
-  // Wix expand button (opens lightbox in parent)
   const expandBtn=document.createElement('button');
   expandBtn.title='Open full calendar';
-  expandBtn.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:32px;height:28px;border-radius:8px;border:0;background:rgba(255,255,255,0.35);box-shadow:0 1px 3px rgba(0,0,0,.18);cursor:pointer;padding:0;flex-shrink:0;transition:box-shadow .18s,transform .18s;';
+  expandBtn.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:32px;height:28px;border-radius:8px;border:0;background:rgba(255,255,255,0.35);box-shadow:0 1px 3px rgba(0,0,0,.18);cursor:pointer;padding:0;flex-shrink:0;';
   expandBtn.innerHTML='<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M9 2h5v5M7 9L14 2M2 7v7h7" stroke="#000" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  expandBtn.onmouseenter=()=>{expandBtn.style.boxShadow='0 4px 12px rgba(0,0,0,.26)';expandBtn.style.transform='translateY(-1px)';};
-  expandBtn.onmouseleave=()=>{expandBtn.style.boxShadow='0 1px 3px rgba(0,0,0,.18)';expandBtn.style.transform='';};
+  expandBtn.onmouseenter=()=>{expandBtn.style.boxShadow='0 4px 12px rgba(0,0,0,.26)';}; 
+  expandBtn.onmouseleave=()=>{expandBtn.style.boxShadow='0 1px 3px rgba(0,0,0,.18)';};
   expandBtn.onclick=()=>parent.postMessage({type:'OPEN_LIGHTBOX',weekStart:weekStart.toISOString()},'*');
-
   bar.append(titleCluster,expandBtn);
   wrap.append(bar);
-
   const grid=document.createElement('div');
   grid.style.cssText='display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid rgba(0,0,0,.1);';
-
   function render(){
     monthLbl.textContent=monthLabel(weekStart);
     grid.innerHTML='';
@@ -1231,21 +1206,16 @@ document.getElementById('saveBioBtn').addEventListener('click',function(){
         const de=new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59,59,999);
         return st<=de&&en>=ds;
       }).sort((a,b)=>new Date(a.start)-new Date(b.start));
-
       const cell=document.createElement('div');
-      cell.style.cssText='display:flex;flex-direction:column;border-right:1px solid rgba(0,0,0,.1);min-width:0;overflow:hidden;cursor:'+(dayEvts.length?'pointer':'default')+';transition:background .15s;';
+      cell.style.cssText='display:flex;flex-direction:column;border-right:1px solid rgba(0,0,0,.1);min-width:0;overflow:hidden;cursor:'+(dayEvts.length?'pointer':'default')+';';
       if(i===6)cell.style.borderRight='none';
-
-      // head: day + number
       const head=document.createElement('div');
-      head.style.cssText='background:'+(isToday?PINK:'#e5e7eb')+';color:#111;padding:.28rem .4rem;display:flex;align-items:center;gap:.35rem;justify-content:flex-start;font-family:"thermal-variable",sans-serif;font-size:13px;border-bottom:1px solid rgba(0,0,0,.1);font-weight:800;';
-      const dow=document.createElement('span');dow.style.cssText='letter-spacing:.02em;font-family:"thermal-variable",sans-serif;';
+      head.style.cssText='background:'+(isToday?PINK:'#e5e7eb')+';color:#111;padding:.28rem .4rem;display:flex;align-items:center;gap:.35rem;font-size:13px;border-bottom:1px solid rgba(0,0,0,.1);font-weight:800;';
+      const dow=document.createElement('span');
       dow.textContent=d.toLocaleDateString(undefined,{weekday:'short'});
-      const num=document.createElement('span');num.style.cssText='color:#333;font-weight:700;font-family:"thermal-variable",sans-serif;';
+      const num=document.createElement('span');num.style.color='#333';
       num.textContent=d.getDate();
       head.append(dow,num);
-
-      // body: dots for events
       const body=document.createElement('div');
       body.style.cssText='padding:.5rem .4rem;min-height:36px;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;';
       if(dayEvts.length){
@@ -1256,25 +1226,21 @@ document.getElementById('saveBioBtn').addEventListener('click',function(){
           body.appendChild(dot);
         });
         cell.onclick=()=>showDetail(d,dayEvts,head);
-        cell.onmouseenter=()=>{if(dayEvts.length&&head!==activeCell)head.style.background='#d4c0c3';};
+        cell.onmouseenter=()=>{if(head!==activeCell)head.style.background='#d4c0c3';};
         cell.onmouseleave=()=>{if(head!==activeCell)head.style.background=isToday?PINK:'#e5e7eb';};
       } else {
         const dash=document.createElement('span');
-        dash.style.cssText='font-size:12px;color:#9ca3af;font-family:"thermal-variable",sans-serif;';
+        dash.style.cssText='font-size:12px;color:#9ca3af;';
         dash.textContent='—';
         body.appendChild(dash);
       }
-
       cell.append(head,body);
       grid.appendChild(cell);
     }
   }
-
   wrap.append(grid);
   host.appendChild(wrap);
   render();
-
-  // touch swipe
   let sx=0,tracking=false;
   wrap.addEventListener('touchstart',e=>{tracking=true;sx=e.changedTouches[0].screenX;},{passive:true});
   wrap.addEventListener('touchend',e=>{
