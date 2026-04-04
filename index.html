@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -920,6 +921,139 @@ html,body{font-family:'thermal-variable',sans-serif;background:var(--paper);colo
 </div>
 
 <script>
+// ════════════════════════════════════════════════════════
+// Parlor Mag — Member Data Receiver
+// Paste inside a <script> tag in the portal HTML.
+// Plan strings sent by Velo:
+//   "The Reader's Circle" | "The Printing Press" | "Archive Pass" | "none"
+// ════════════════════════════════════════════════════════
+
+// ── Global state ─────────────────────────────────────────
+// Holds member data once received from Wix.
+// All other scripts (Airtable loaders, paywall films)
+// read from window.parlorMember throughout the session.
+window.parlorMember = null;
+window.parlorInitialised = false;
+
+
+// ── Message listener ─────────────────────────────────────
+// Fires when Wix sends member data via postMessage.
+window.addEventListener('message', function(event) {
+
+  // Only respond to messages from our Wix bridge
+  if (!event.data || event.data.type !== 'PARLOR_MEMBER_DATA') return;
+
+  // Only run once per page load
+  if (window.parlorInitialised) return;
+  window.parlorInitialised = true;
+
+  // Store member data globally for all other scripts
+  window.parlorMember = event.data;
+  const m = event.data;
+
+  console.log('Portal: member received —', m.name, '| Plan:', m.plan);
+
+
+  // ── Determine access level ────────────────────────────
+  //
+  // hasDigitalAccess — true for Reader's Circle and Printing Press.
+  //   Full portal access. No paywall on threads or events.
+  //
+  // isPrintingPress — true for Printing Press only.
+  //   Used to show the shipping pill on the dashboard.
+  //   Does not gate any digital content.
+  //
+  // hasArchivePass — true for Archive Pass holders.
+  //   Full library access only. Paywall films on threads
+  //   and ticketed events still apply.
+  //
+  // Matched by plan ID first (robust against Wix renames),
+  // falling back to plan name string as a safety net.
+  // These flags are also read by paywall logic via
+  // window.parlorMember.plan in Step 15.
+
+  const PLAN_IDS = {
+    READERS_CIRCLE: 'fccb348a-7433-4080-8699-9ef8c0e7a519',
+    PRINTING_PRESS: 'c666f321-47e5-40c1-bc2a-565a2f52f64d',
+    ARCHIVE_PASS:   'd557e8cd-bed2-4f09-a50e-6274d829bfef'
+  };
+
+  const isReadersCircle = m.planId === PLAN_IDS.READERS_CIRCLE
+                       || m.plan   === "The Reader's Circle";
+  const isPrintingPress = m.planId === PLAN_IDS.PRINTING_PRESS
+                       || m.plan   === 'The Printing Press';
+  const hasArchivePass  = m.planId === PLAN_IDS.ARCHIVE_PASS
+                       || m.plan   === 'Archive Pass';
+
+  const hasDigitalAccess = isReadersCircle || isPrintingPress;
+
+
+  // ── Personalise the sidebar ───────────────────────────
+  // Runs for every logged-in user regardless of plan.
+
+  // Member name
+  document.querySelectorAll('.sb-name').forEach(el => {
+    el.textContent = m.name;
+  });
+
+  // Avatar circle — image if available, initial as fallback
+  document.querySelectorAll('.av-circle').forEach(el => {
+    if (m.avatar) {
+      el.textContent = '';
+      el.style.backgroundImage = `url(${m.avatar})`;
+      el.style.backgroundSize = 'cover';
+      el.style.backgroundPosition = 'center';
+    } else {
+      el.textContent = m.name.charAt(0).toUpperCase();
+    }
+  });
+
+  // Plan + join year under the name
+  document.querySelectorAll('.sb-handle').forEach(el => {
+    const year = m.joinDate ? new Date(m.joinDate).getFullYear() : '';
+    el.textContent = m.plan + (year ? '  ·  since ' + year : '');
+  });
+
+  // Plan badge pill
+  document.querySelectorAll('.bp-press').forEach(el => {
+    el.textContent = m.plan;
+  });
+
+  // Dashboard greeting — 'Hello, Firstname.'
+  const greetingEm = document.querySelector('.greeting em');
+  if (greetingEm) {
+    greetingEm.textContent = m.name.split(' ')[0] + '.';
+  }
+
+
+  // ── Printing Press cosmetic ───────────────────────────
+  // Show the shipping pill only to Printing Press members.
+  // Purely cosmetic — no content is gated by this.
+  const shippingPill = document.querySelector('.ship-pill');
+  if (shippingPill) {
+    shippingPill.style.display = isPrintingPress ? '' : 'none';
+  }
+
+
+  // ── Trigger content loaders ───────────────────────────
+  // Loads for all logged-in users. Free users see library
+  // cards and the feed; paywall films appear when they try
+  // to go deeper. See Step 15 for paywall logic.
+  if (typeof loadLibrary       === 'function') loadLibrary();
+  if (typeof loadThreads       === 'function') loadThreads();
+  if (typeof loadEvents        === 'function') loadEvents();
+  if (typeof loadDashboardFeed === 'function') loadDashboardFeed();
+
+});
+
+
+// ── Signal readiness to Wix ───────────────────────────────
+// Tells the Wix parent page the portal iFrame is ready.
+// Prevents postMessage delay in some browsers.
+window.addEventListener('load', function() {
+  window.parent.postMessage({ type: 'PORTAL_READY' }, '*');
+});
+
 // ── navigation ──
 function navigate(dest){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
