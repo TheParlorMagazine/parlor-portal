@@ -502,7 +502,7 @@ html,body{font-family:'thermal-variable',sans-serif;background:var(--paper);colo
   <!-- main -->
   <div class="dash-main">
     <div class="greeting">Hello, <em>Erin.</em></div>
-    <div class="sub-line">Printing Press member since March 2026 <span class="ship-pill">Issue 1 ships Apr 28</span></div>
+    <div class="sub-line" id="dash-subline">Printing Press member since March 2026 <span class="ship-pill">Issue 1 ships Apr 28</span></div>
 
     <div class="qcards">
       <div class="qcard" onclick="navigate('forum')">
@@ -952,6 +952,8 @@ window.addEventListener('message', function(event) {
   const m = event.data;
 
   console.log('Portal: member received —', m.name, '| Plan:', m.plan);
+  // ── DEBUG: log the full payload so you can see exactly what Wix is sending
+  console.log('Portal: full payload →', JSON.stringify(m, null, 2));
 
 
   // ── Determine access level ────────────────────────────
@@ -996,22 +998,28 @@ window.addEventListener('message', function(event) {
     el.textContent = m.name;
   });
 
-  // Avatar circle — image if available, initial as fallback
+  // Avatar circle — image if available, initial as fallback.
+  // Tries multiple field names since Velo bridge naming varies.
+  const avatarUrl = m.avatar || m.profileImage || m.picture || m.photo || m.imageUrl || '';
+  const fallbackInitial = (m.name || m.nickname || '?').charAt(0).toUpperCase();
   document.querySelectorAll('.av-circle').forEach(el => {
-    if (m.avatar) {
+    if (avatarUrl) {
       el.textContent = '';
-      el.style.backgroundImage = `url(${m.avatar})`;
+      el.style.backgroundImage = `url(${avatarUrl})`;
       el.style.backgroundSize = 'cover';
       el.style.backgroundPosition = 'center';
     } else {
-      el.textContent = m.name.charAt(0).toUpperCase();
+      el.textContent = fallbackInitial;
     }
   });
 
-  // Plan + join year under the name
+  // Plan + join year under the name — "No active plan" if none
   document.querySelectorAll('.sb-handle').forEach(el => {
-    const year = m.joinDate ? new Date(m.joinDate).getFullYear() : '';
-    el.textContent = m.plan + (year ? '  ·  since ' + year : '');
+    const hasplan = m.plan && m.plan !== 'none';
+    const year = hasplan && m.joinDate ? new Date(m.joinDate).getFullYear() : '';
+    el.textContent = hasplan
+      ? (m.plan + (year ? '  ·  since ' + year : ''))
+      : 'No active plan';
   });
 
   // Plan badge pill — hide entirely if no active plan
@@ -1030,7 +1038,10 @@ window.addEventListener('message', function(event) {
     '2324c632-278b-4bf2-a1c0-3c9a45a8ef2b': { label: 'Admin',           cls: 'bp-admin'   },
   };
 
-  const memberBadgeIds = Array.isArray(m.badges) ? m.badges : [];
+  // badges may be an array of ID strings, or array of objects with ._id
+  const memberBadgeIds = Array.isArray(m.badges)
+    ? m.badges.map(b => (typeof b === 'string' ? b : b._id || b.id || '')).filter(Boolean)
+    : [];
 
   // Build the set of badge pills to show
   const badgesStrip = document.querySelector('.badges-strip');
@@ -1054,17 +1065,33 @@ window.addEventListener('message', function(event) {
   // Dashboard greeting — 'Hello, Firstname.'
   const greetingEm = document.querySelector('.greeting em');
   if (greetingEm) {
-    greetingEm.textContent = m.name.split(' ')[0] + '.';
+    greetingEm.textContent = (m.name || m.nickname || 'there') + '.';
+  }
+
+  // Sub-line under greeting — plan + since, or hidden if no plan
+  const dashSubline = document.getElementById('dash-subline');
+  if (dashSubline) {
+    const hasplan = m.plan && m.plan !== 'none';
+    if (hasplan) {
+      const joinYear = m.joinDate ? new Date(m.joinDate).getFullYear() : '';
+      const joinMonth = m.joinDate ? new Date(m.joinDate).toLocaleString(undefined, { month: 'long' }) : '';
+      const since = joinYear ? joinMonth + ' ' + joinYear : '';
+      const shippingPillHTML = isPrintingPress
+        ? `<span class="ship-pill">Issue 1 ships Apr 28</span>`
+        : '';
+      dashSubline.innerHTML = m.plan + ' member' + (since ? ' since ' + since : '') + ' ' + shippingPillHTML;
+    } else {
+      dashSubline.style.display = 'none';
+    }
   }
 
 
   // ── Printing Press cosmetic ───────────────────────────
-  // Show the shipping pill only to Printing Press members.
-  // Purely cosmetic — no content is gated by this.
-  const shippingPill = document.querySelector('.ship-pill');
-  if (shippingPill) {
-    shippingPill.style.display = isPrintingPress ? '' : 'none';
-  }
+  // Ship pill is now rendered dynamically in the sub-line above.
+  // This handles any ship-pill elements outside the sub-line.
+  document.querySelectorAll('.ship-pill').forEach(el => {
+    el.style.display = isPrintingPress ? '' : 'none';
+  });
 
 
   // ── Trigger content loaders ───────────────────────────
