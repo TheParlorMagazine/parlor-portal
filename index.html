@@ -15,9 +15,9 @@
   --sage:#fce8ec;--sagedark:#000000;--lilac:#fce8ec;--lilacdark:#000000;
   --sidebar-bg:#000000;--sidebar-text:#ffffff;--sidebar-muted:rgba(255,255,255,0.5);--sidebar-border:rgba(255,255,255,0.12);
 }
-html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper);color:var(--ink);min-height:100vh;font-size:15px}
+html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper);color:var(--ink);height:100%;overflow:hidden;font-size:15px}
 
-.page{display:none}.page.active{display:block;padding-left:260px}
+.page{display:none;height:100vh;overflow-y:auto}.page.active{display:block;padding-left:260px;height:100vh;overflow-y:auto}
 .subpage{display:none}.subpage.active{display:block}
 
 /* ══ SIDEBAR ══ */
