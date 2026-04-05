@@ -291,7 +291,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 
 /* ══ LIBRARY PAGE ══ */
 #page-library{grid-template-columns:260px 1fr}
-.library-content{min-width:0}
+.library-content{min-width:0;overflow:hidden}
 .lib-topbar{padding:0 38px;border-bottom:1px solid var(--border)}
 .lib-page-eyebrow{font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.13em;color:#000000;padding-top:22px;margin-bottom:5px}
 .lib-page-title{font-family:'thermal-variable','Georgia',serif;font-size:28px;font-weight:500;padding-bottom:18px}
@@ -355,9 +355,9 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .lib-detail-back{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer;margin-bottom:26px;transition:color 0.15s;background:none;border:none;font-family:'thermal-variable','Georgia',serif;padding:0}
 .lib-detail-back:hover{color:#000000}
 .lib-detail-back svg{width:14px;height:14px}
-.lib-detail-hero{background:var(--ink);padding:48px 48px 40px;margin:-32px -48px 36px;position:relative;overflow:hidden}
+.lib-detail-hero{background:var(--ink);padding:48px 48px 40px;margin:0 0 0 0;position:relative;overflow:hidden}
 .lib-detail-hero-bg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0.35}
-.lib-detail-hero-content{position:relative;z-index:1;max-width:720px;margin:0 auto}
+.lib-detail-hero-content{position:relative;z-index:1;max-width:720px;margin:0 auto;padding:0}
 .lib-detail-hero .lib-eyebrow{color:rgba(255,255,255,0.6)}
 .lib-detail-hero .lib-eyebrow-dot{background:var(--pink)}
 .lib-detail-hero .theme-tag{background:rgba(241,183,192,0.2);color:var(--pink)}
@@ -367,7 +367,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .lib-detail-hero .editorial-label{color:rgba(255,255,255,0.5)}
 .lib-detail-hero .editorial-text{color:rgba(255,255,255,0.9)}
 .lib-detail-hero .editorial-sig{color:rgba(255,255,255,0.45)}
-.lib-detail-header{display:block;max-width:720px;margin:0 auto 36px;padding-bottom:36px;border-bottom:1px solid var(--border)}
+.lib-detail-header{display:block;max-width:720px;margin:0 auto 0;padding-bottom:36px;border-bottom:none}
 .lib-eyebrow{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:11px}
 .lib-eyebrow-dot{width:5px;height:5px;border-radius:50%;background:var(--pink)}
 .lib-detail-title{font-family:'thermal-variable','Georgia',serif;font-size:38px;font-weight:500;line-height:1.15;margin-bottom:10px}
@@ -395,7 +395,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .preview-meta-row{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:5px 0;border-bottom:1px solid var(--border)}
 .preview-meta-row:last-child{border-bottom:none}
 .preview-meta-row span:last-child{color:var(--ink);font-weight:500}
-.lib-detail-body{display:block;width:100%}
+.lib-detail-body{display:block;width:100%;padding:28px 48px 0}
 .content-area{background:var(--white);border:1px solid var(--border);border-radius:11px;overflow:hidden}
 .content-header{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .content-header-title{font-size:13px;font-weight:500;color:var(--muted)}
@@ -1018,7 +1018,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
     </div>
     <div class="subpage" id="library-detail">
       <div class="lib-detail-wrap">
-        <button class="lib-detail-back" onclick="showLibraryBrowse()"><svg viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Back to library</button>
+        <div style="padding:28px 48px 0"><button class="lib-detail-back" onclick="showLibraryBrowse()"><svg viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Back to library</button></div>
         <div class="lib-detail-hero" id="libDetailHero">
           <div class="lib-detail-hero-bg" id="libDetailHeroBg"></div>
           <div class="lib-detail-hero-content">
@@ -1049,7 +1049,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
         <div class="lib-detail-body" style="padding:32px 48px 60px;">
           <div id="libSectionRead" style="display:none;width:100%">
           <div class="content-area" style="width:100%">
-            <div class="content-header"><div class="content-header-title">Reading: The Samizdat Underground</div><div class="content-pages">p. 1 of 14</div></div>
+
             <div class="content-reader">
               <p>There is something peculiarly modern about the idea that literature can be illegal. Not the book itself — books have been burned since there were books — but the act of writing, copying, passing hand to hand. Under totalitarianism, the typewriter becomes a weapon. The carbon copy becomes contraband.</p>
               <p>Samizdat — the word comes from sam (self) and izdat (to publish) — was never a movement. It had no manifesto, no headquarters, no funding. It was simply what happened when people refused to stop reading and writing. A manuscript would be typed, six or eight copies at a time, the carbon paper worn thin by repetition. Each reader became a publisher: you read it, you copied it, you passed it on.</p>
