@@ -17,16 +17,18 @@
 }
 html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper);color:var(--ink);min-height:100vh;font-size:15px}
 
-.page{display:none}.page.active{display:grid}
+.page{display:none}.page.active{display:block;padding-left:260px}
 .subpage{display:none}.subpage.active{display:block}
 
 /* ══ SIDEBAR ══ */
 .sidebar{
   background:#000000;border-right:none;
   display:flex;flex-direction:column;
-  position:sticky;top:0;height:100vh;overflow-y:auto;
+  position:fixed;top:0;left:0;height:100vh;overflow-y:auto;
   width:260px;flex-shrink:0;
+  z-index:50;
 }
+.page > .sidebar{display:flex}
 .sb-logo{font-family:'thermal-variable','Georgia',serif;font-size:18px;font-weight:600;letter-spacing:0.02em;padding:22px 20px 16px;border-bottom:1px solid rgba(255,255,255,0.12);color:#ffffff;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .sb-home-btn{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:7px;background:rgba(255,255,255,0.08);border:none;cursor:pointer;flex-shrink:0;transition:background 0.15s;padding:0;margin-top:1px}
 .sb-home-btn:hover{background:rgba(255,255,255,0.18)}
@@ -65,7 +67,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .stp-issue{font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px}
 
 /* ══ DASHBOARD PAGE ══ */
-#page-dashboard{grid-template-columns:260px 1fr}
+
 .dash-main{padding:30px 38px;min-width:0;overflow:hidden}
 .greeting{font-family:'thermal-variable','Georgia',serif;font-size:28px;font-weight:500;margin-bottom:4px}
 .greeting em{color:var(--pink)}
@@ -131,7 +133,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .edp-close:hover{color:var(--ink)}
 
 /* ══ FORUM PAGE ══ */
-#page-forum{grid-template-columns:260px 1fr}
+
 .forum-content{min-width:0;display:flex;flex-direction:column}
 
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,23,16,0.5);z-index:200;align-items:center;justify-content:center}
@@ -279,18 +281,18 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .se-pill{display:inline-block;margin-top:4px;background:var(--pink);color:#000000;font-size:9px;font-weight:500;padding:2px 6px;border-radius:20px}
 
 /* ══ PROFILE PAGE ══ */
-#page-profile{grid-template-columns:260px 1fr}
+
 .profile-frame-wrap{min-width:0;height:100vh;position:relative;}
 .profile-frame{width:100%;height:100%;border:none;display:block;}
 
 /* ══ SETTINGS / SUBSCRIPTIONS PAGES ══ */
-#page-settings{grid-template-columns:260px 1fr}
-#page-subscriptions{grid-template-columns:260px 1fr}
+
+
 .embedded-frame-wrap{min-width:0;height:100vh;position:relative;}
 .embedded-frame{width:100%;height:100%;border:none;display:block;}
 
 /* ══ LIBRARY PAGE ══ */
-#page-library{grid-template-columns:260px 1fr}
+
 .library-content{min-width:0;overflow:hidden}
 .lib-topbar{padding:0 38px;border-bottom:1px solid var(--border)}
 .lib-page-eyebrow{font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.13em;color:#000000;padding-top:22px;margin-bottom:5px}
@@ -504,16 +506,16 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
       Inbox <span class="sb-notif">3</span>
     </div>
     <div class="sb-item" onclick="navigate('dashboard')">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M8 1a5 5 0 015 5c0 3-2 4.5-2 6H5c0-1.5-2-3-2-6a5 5 0 015-5z" stroke="currentColor" stroke-width="1.5"/><path d="M6 14h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.5a4.5 4.5 0 00-4.5 4.5c0 2.5-1 3.5-1.5 4h12c-.5-.5-1.5-1.5-1.5-4A4.5 4.5 0 008 1.5z" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 10.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="1.5" x2="8" y2="0.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       Notifications <span class="sb-notif">5</span>
     </div>
     <div class="sb-section">Explore</div>
     <div class="sb-item" onclick="navigate('forum')">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 20 14" fill="none"><circle cx="3" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M0 13c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="3.5" r="2.2" stroke="currentColor" stroke-width="1.4"/><path d="M5.8 13c0-2.3 1.9-4.2 4.2-4.2s4.2 1.9 4.2 4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="17" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M14 13c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
       Reading Room <span class="sb-badge">12</span>
     </div>
     <div class="sb-item" onclick="navigate('library')">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 13V4M8 4C8 4 6 3 3 3v10c3 0 5 1 5 1M8 4c0 0 2-1 5-1v10c-3 0-5 1-5 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       Library
     </div>
     <div class="sb-item" onclick="navigate('dashboard')">
@@ -535,11 +537,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
     </div>
     <div class="sb-spacer"></div>
 
-    <div class="sb-theme-pill">
-      <div class="stp-label">This month</div>
-      <div class="stp-theme">Resistance &amp; the Printed Word</div>
-      <div class="stp-issue">Issue 1 &nbsp;·&nbsp; April 2026</div>
-    </div>
+
   </div>
 
   <!-- main -->
@@ -549,7 +547,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 
     <div class="qcards">
       <div class="qcard" onclick="navigate('forum')">
-        <div class="qcard-icon ic-room"><svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        <div class="qcard-icon ic-room"><svg viewBox="0 0 20 14" fill="none"><circle cx="3" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M0 13c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="3.5" r="2.2" stroke="currentColor" stroke-width="1.4"/><path d="M5.8 13c0-2.3 1.9-4.2 4.2-4.2s4.2 1.9 4.2 4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="17" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M14 13c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
         <div class="qcard-title">Reading Room</div>
         <div class="qcard-sub">12 new discussions</div>
         <div class="qcard-cta">Enter &rsaquo;</div>
@@ -609,7 +607,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
     </div>
     <div class="sb-section">Discover</div>
     <div class="sb-item active">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 20 14" fill="none"><circle cx="3" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M0 13c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="3.5" r="2.2" stroke="currentColor" stroke-width="1.4"/><path d="M5.8 13c0-2.3 1.9-4.2 4.2-4.2s4.2 1.9 4.2 4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="17" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M14 13c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
       All discussions <span class="sb-badge">12</span>
     </div>
     <div class="sb-item">
@@ -640,11 +638,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
     </div>
     <div class="sb-spacer"></div>
 
-    <div class="sb-theme-pill">
-      <div class="stp-label">This month</div>
-      <div class="stp-theme">Resistance &amp; the Printed Word</div>
-      <div class="stp-issue">Issue 1 &nbsp;·&nbsp; April 2026</div>
-    </div>
+
   </div>
   <div class="forum-content">
     <div class="subpage active" id="forum-threads">
@@ -814,11 +808,11 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
       Dashboard
     </div>
     <div class="sb-item" onclick="navigate('forum')">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 20 14" fill="none"><circle cx="3" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M0 13c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="3.5" r="2.2" stroke="currentColor" stroke-width="1.4"/><path d="M5.8 13c0-2.3 1.9-4.2 4.2-4.2s4.2 1.9 4.2 4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="17" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M14 13c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
       Reading Room
     </div>
     <div class="sb-item" onclick="navigate('library')">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 13V4M8 4C8 4 6 3 3 3v10c3 0 5 1 5 1M8 4c0 0 2-1 5-1v10c-3 0-5 1-5 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       Library
     </div>
     <div class="sb-section">Account</div>
@@ -835,11 +829,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
       Manage subscription
     </div>
     <div class="sb-spacer"></div>
-    <div class="sb-theme-pill">
-      <div class="stp-label">This month</div>
-      <div class="stp-theme">Resistance &amp; the Printed Word</div>
-      <div class="stp-issue">Issue 1 &nbsp;·&nbsp; April 2026</div>
-    </div>
+
   </div>
   <div class="profile-frame-wrap">
     <iframe id="profileFrame" class="profile-frame" src="about:blank" title="Member profile"></iframe>
@@ -856,11 +846,11 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
       Dashboard
     </div>
     <div class="sb-item" onclick="navigate('forum')">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 20 14" fill="none"><circle cx="3" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M0 13c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="3.5" r="2.2" stroke="currentColor" stroke-width="1.4"/><path d="M5.8 13c0-2.3 1.9-4.2 4.2-4.2s4.2 1.9 4.2 4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="17" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M14 13c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
       Reading Room
     </div>
     <div class="sb-item" onclick="navigate('library')">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 13V4M8 4C8 4 6 3 3 3v10c3 0 5 1 5 1M8 4c0 0 2-1 5-1v10c-3 0-5 1-5 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       Library
     </div>
     <div class="sb-section">Account</div>
@@ -877,11 +867,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
       Manage subscription
     </div>
     <div class="sb-spacer"></div>
-    <div class="sb-theme-pill">
-      <div class="stp-label">This month</div>
-      <div class="stp-theme">Resistance &amp; the Printed Word</div>
-      <div class="stp-issue">Issue 1 &nbsp;·&nbsp; April 2026</div>
-    </div>
+
   </div>
   <div class="embedded-frame-wrap">
     <iframe id="settingsFrame" class="embedded-frame" src="about:blank" title="Account settings"></iframe>
@@ -898,11 +884,11 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
       Dashboard
     </div>
     <div class="sb-item" onclick="navigate('forum')">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 20 14" fill="none"><circle cx="3" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M0 13c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="3.5" r="2.2" stroke="currentColor" stroke-width="1.4"/><path d="M5.8 13c0-2.3 1.9-4.2 4.2-4.2s4.2 1.9 4.2 4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="17" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M14 13c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
       Reading Room
     </div>
     <div class="sb-item" onclick="navigate('library')">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 13V4M8 4C8 4 6 3 3 3v10c3 0 5 1 5 1M8 4c0 0 2-1 5-1v10c-3 0-5 1-5 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       Library
     </div>
     <div class="sb-section">Account</div>
@@ -919,11 +905,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
       Manage subscription
     </div>
     <div class="sb-spacer"></div>
-    <div class="sb-theme-pill">
-      <div class="stp-label">This month</div>
-      <div class="stp-theme">Resistance &amp; the Printed Word</div>
-      <div class="stp-issue">Issue 1 &nbsp;·&nbsp; April 2026</div>
-    </div>
+
   </div>
   <div class="embedded-frame-wrap">
     <iframe id="subscriptionsFrame" class="embedded-frame" src="about:blank" title="Manage subscription"></iframe>
@@ -961,11 +943,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Reading history</div>
     <div class="sb-spacer"></div>
 
-    <div class="sb-theme-pill">
-      <div class="stp-label">This month</div>
-      <div class="stp-theme">Resistance &amp; the Printed Word</div>
-      <div class="stp-issue">Issue 1 &nbsp;·&nbsp; April 2026</div>
-    </div>
+
   </div>
   <div class="library-content">
     <div class="subpage active" id="library-browse">
@@ -1042,7 +1020,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
         <div style="padding:20px 48px;border-bottom:1px solid var(--border);background:var(--white);">
           <div class="detail-actions">
               <button class="btn-primary" id="btnReadInFull" onclick="toggleLibSection('read')"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Read in full</button>
-              <button class="btn-secondary" id="btnDiscuss" onclick="toggleLibSection('discuss')"><svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Discuss</button>
+              <button class="btn-secondary" id="btnDiscuss" onclick="toggleLibSection('discuss')"><svg viewBox="0 0 20 14" fill="none"><circle cx="3" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M0 13c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="3.5" r="2.2" stroke="currentColor" stroke-width="1.4"/><path d="M5.8 13c0-2.3 1.9-4.2 4.2-4.2s4.2 1.9 4.2 4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="17" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M14 13c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Discuss</button>
               <button class="btn-secondary" id="btnSaveLib"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Save</button>
           </div>
         </div>
