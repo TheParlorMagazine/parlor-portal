@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://use.typekit.net/azq6zbr.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{background:transparent;display:flex;align-items:center;justify-content:center;height:100%;width:100%;overflow:hidden}
+
+.save-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  background:none;
+  color:#000000;
+  border:1px solid #e8d4d8;
+  padding:8px 16px;
+  border-radius:8px;
+  font-family:'thermal-variable','Georgia',serif;
+  font-size:13.5px;font-weight:500;
+  cursor:pointer;
+  transition:all 0.15s;
+  white-space:nowrap;
+}
+.save-btn:hover{border-color:#e8a0b0;background:#fce8ec}
+.save-btn.saved{background:#000000;color:#ffffff;border-color:#000000}
+.save-btn.saving{opacity:0.6;cursor:default}
+.save-btn svg{width:14px;height:14px;flex-shrink:0;transition:fill 0.15s}
+.save-btn.saved svg{stroke:#ffffff}
+
+.toast{
+  display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+  background:#000000;color:#ffffff;
+  font-family:'thermal-variable','Georgia',serif;font-size:12.5px;
+  padding:8px 16px;border-radius:8px;
+  white-space:nowrap;z-index:100;
+  animation:fadeup 0.2s ease;
+}
+.toast.visible{display:block}
+@keyframes fadeup{from{opacity:0;transform:translateX(-50%) translateY(6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+</style>
+</head>
+<body>
+
+<button class="save-btn" id="saveBtn" onclick="toggleSave()">
+  <svg viewBox="0 0 16 16" fill="none" id="saveIcon">
+    <path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z"
+      stroke="currentColor" stroke-width="1.5"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <span id="saveBtnText">Save</span>
+</button>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ────────────────────────────────────────────────
+let articleData = {
+  title:    '',
+  url:      '',
+  type:     'Article',
+  memberId: '',
+};
+let isSaved  = false;
+let isReady  = false; // true once member data received
+
+// ── Receive article + member data from Wix ───────────────
+window.addEventListener('message', function(e) {
+  if (!e.data) return;
+
+  // Article metadata from the Wix page
+  if (e.data.type === 'SAVE_BTN_INIT') {
+    articleData.title  = e.data.title  || document.referrer || 'Untitled';
+    articleData.url    = e.data.url    || '';
+    articleData.type   = e.data.itemType || 'Article';
+    articleData.memberId = e.data.memberId || '';
+    isReady = true;
+
+    // Check if already saved (Airtable lookup — wired up later)
+    checkIfSaved();
+  }
+
+  // Result from Wix after save attempt
+  if (e.data.type === 'SAVE_RESULT') {
+    const btn = document.getElementById('saveBtn');
+    btn.classList.remove('saving');
+    if (e.data.success) {
+      isSaved = true;
+      updateButtonState();
+      showToast(isSaved ? 'Saved to your library' : 'Removed from saved items');
+    } else {
+      showToast('Could not save — please try again');
+    }
+  }
+});
+
+// ── Signal readiness to Wix ──────────────────────────────
+window.addEventListener('load', function() {
+  window.parent.postMessage({ type: 'SAVE_BTN_READY' }, '*');
+});
+
+// ── Toggle save ──────────────────────────────────────────
+function toggleSave() {
+  if (!isReady) return;
+  const btn = document.getElementById('saveBtn');
+  btn.classList.add('saving');
+
+  const action = isSaved ? 'Unsaved' : 'Saved';
+
+  // Will POST to Airtable when wired up
+  // For now, simulate locally and send to Wix for future handling
+  window.parent.postMessage({
+    type:      'SAVE_ARTICLE',
+    action:    action,
+    title:     articleData.title,
+    url:       articleData.url,
+    itemType:  articleData.type,
+    memberId:  articleData.memberId,
+  }, '*');
+
+  // Optimistic UI update while we wait for confirmation
+  isSaved = !isSaved;
+  btn.classList.remove('saving');
+  updateButtonState();
+  showToast(isSaved ? 'Saved to your library' : 'Removed from saved items');
+}
+
+function checkIfSaved() {
+  // Will query Airtable when wired up
+  // For now always starts unsaved
+  isSaved = false;
+  updateButtonState();
+}
+
+function updateButtonState() {
+  const btn  = document.getElementById('saveBtn');
+  const text = document.getElementById('saveBtnText');
+  const icon = document.getElementById('saveIcon');
+  if (isSaved) {
+    btn.classList.add('saved');
+    text.textContent = 'Saved';
+    icon.innerHTML = '<path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
+  } else {
+    btn.classList.remove('saved');
+    text.textContent = 'Save';
+    icon.innerHTML = '<path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>';
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  setTimeout(() => t.classList.remove('visible'), 2500);
+}
+</script>
+</body>
+</html>
