@@ -303,6 +303,21 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .theme-cta{flex-shrink:0;background:var(--pink);color:#000000;border:none;padding:9px 18px;border-radius:7px;font-family:'thermal-variable','Georgia',serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:opacity 0.15s}
 .theme-cta:hover{opacity:0.85}
 .filters-bar{display:flex;align-items:center;gap:8px;padding:14px 38px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.lib-search-wrap{position:relative;display:flex;align-items:center;gap:9px;background:var(--white);border:1px solid var(--border);border-radius:10px;padding:9px 16px;transition:border-color 0.15s;width:100%}
+.lib-search-wrap:focus-within{border-color:var(--pinkborder)}
+.lib-search-wrap svg{width:13px;height:13px;color:var(--muted);flex-shrink:0}
+.lib-search-input{border:none;outline:none;font-family:'thermal-variable','Georgia',serif;font-size:13.5px;color:var(--ink);background:transparent;width:100%}
+.lib-search-input::placeholder{color:var(--muted)}
+.lib-search-suggestions{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--white);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.08);z-index:100;overflow:hidden}
+.lib-search-suggestions.visible{display:block}
+.lib-suggestion-group{padding:8px 0}
+.lib-suggestion-label{font-size:9.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);padding:4px 16px 6px}
+.lib-suggestion-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;transition:background 0.12s}
+.lib-suggestion-item:hover{background:var(--cream)}
+.lib-suggestion-item svg{width:12px;height:12px;color:var(--muted);flex-shrink:0}
+.lib-suggestion-title{font-size:13px;color:var(--ink);line-height:1.3}
+.lib-suggestion-type{font-size:11px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.lib-no-results{padding:16px;font-size:13px;color:var(--muted);font-style:italic;text-align:center}
 .filter-btn{font-size:12.5px;font-weight:500;padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-family:'thermal-variable','Georgia',serif;transition:all 0.15s}
 .filter-btn:hover{border-color:var(--pinkborder);color:var(--ink)}
 .filter-btn.active{background:var(--ink);color:white;border-color:var(--ink)}
@@ -337,7 +352,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .lib-detail-back{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer;margin-bottom:26px;transition:color 0.15s;background:none;border:none;font-family:'thermal-variable','Georgia',serif;padding:0}
 .lib-detail-back:hover{color:#000000}
 .lib-detail-back svg{width:14px;height:14px}
-.lib-detail-header{display:grid;grid-template-columns:1fr 270px;gap:40px;margin-bottom:36px;padding-bottom:36px;border-bottom:1px solid var(--border);align-items:start}
+.lib-detail-header{display:block;margin-bottom:36px;padding-bottom:36px;border-bottom:1px solid var(--border)}
 .lib-eyebrow{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:11px}
 .lib-eyebrow-dot{width:5px;height:5px;border-radius:50%;background:var(--pink)}
 .lib-detail-title{font-family:'thermal-variable','Georgia',serif;font-size:32px;font-weight:500;line-height:1.2;margin-bottom:8px}
@@ -349,6 +364,9 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .editorial-sig{font-size:12px;color:var(--muted);margin-top:10px;font-family:'thermal-variable','Georgia',serif}
 .detail-actions{display:flex;gap:8px;flex-wrap:wrap}
 .btn-primary{background:var(--ink);color:white;border:none;padding:10px 20px;border-radius:8px;font-family:'thermal-variable','Georgia',serif;font-size:13.5px;font-weight:500;cursor:pointer;transition:opacity 0.15s;display:flex;align-items:center;gap:7px}
+.btn-primary.btn-active{background:var(--ink);color:white;opacity:1}
+.btn-secondary.btn-active{background:var(--ink);color:white;border-color:var(--ink)}
+.btn-primary:not(.btn-active){background:transparent;color:var(--ink);border:1px solid var(--border)}
 .btn-primary:hover{opacity:0.85}
 .btn-primary svg,.btn-secondary svg{width:14px;height:14px}
 .btn-secondary{background:none;color:var(--ink);border:1px solid var(--border);padding:10px 20px;border-radius:8px;font-family:'thermal-variable','Georgia',serif;font-size:13.5px;font-weight:500;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:7px}
@@ -362,7 +380,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .preview-meta-row{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:5px 0;border-bottom:1px solid var(--border)}
 .preview-meta-row:last-child{border-bottom:none}
 .preview-meta-row span:last-child{color:var(--ink);font-weight:500}
-.lib-detail-body{display:grid;grid-template-columns:1fr 270px;gap:40px;align-items:start}
+.lib-detail-body{display:block}
 .content-area{background:var(--white);border:1px solid var(--border);border-radius:11px;overflow:hidden}
 .content-header{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .content-header-title{font-size:13px;font-weight:500;color:var(--muted)}
@@ -377,7 +395,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .disc-prompt{background:var(--white);border:1px solid var(--border);border-radius:11px;padding:17px;margin-bottom:13px}
 .disc-prompt-label{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.11em;color:#000000;margin-bottom:8px}
 .disc-prompt-q{font-family:'thermal-variable','Georgia',serif;font-size:15px;font-style:italic;line-height:1.55;color:var(--ink);margin-bottom:13px}
-.disc-join-btn{width:100%;background:var(--pink);color:#000000;border:none;padding:8px;border-radius:7px;font-family:'thermal-variable','Georgia',serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity 0.15s}
+.disc-join-btn{background:var(--pink);color:#000000;border:none;padding:8px 20px;border-radius:7px;font-family:'thermal-variable','Georgia',serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity 0.15s}
 .disc-join-btn:hover{opacity:0.85}
 .disc-replies{background:var(--white);border:1px solid var(--border);border-radius:11px;overflow:hidden}
 .disc-replies-head{padding:12px 15px;border-bottom:1px solid var(--border);font-size:13px;font-weight:500;color:var(--muted);display:flex;align-items:center;justify-content:space-between}
@@ -914,15 +932,17 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
       <svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       All items
     </div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v4M11 1v4M2 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Issues</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Articles</div>
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Essays &amp; literature</div>
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Protest posters</div>
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><path d="M4 2h6l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/></svg>Books</div>
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M6 6l4 2-4 2V6z" fill="currentColor"/></svg>Audio &amp; film</div>
-    <div class="sb-section">By issue</div>
-    <div class="sb-item active"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/></svg>Issue 1 — Spring '26</div>
-    <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/></svg>Archive</div>
+    <div class="sb-section">By month</div>
+    <div class="sb-item active"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/></svg>April 2026</div>
+
     <div class="sb-section">My library</div>
-    <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h8l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/></svg>Saved items</div>
+    <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Saved items</div>
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Reading history</div>
     <div class="sb-spacer"></div>
 
@@ -948,12 +968,11 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
         <button class="theme-cta" onclick="navigate('forum')">Join this month's roundtable &rsaquo;</button>
       </div>
       <div class="filters-bar">
-        <button class="filter-btn active">All</button>
-        <button class="filter-btn">Essays</button>
-        <button class="filter-btn">Posters</button>
-        <button class="filter-btn">Books</button>
-        <button class="filter-btn">Audio</button>
-        <button class="filter-btn">Film</button>
+        <div class="lib-search-wrap" id="libSearchWrap">
+          <svg viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M10 10l3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <input class="lib-search-input" id="libSearchInput" type="text" placeholder="Search library...">
+          <div class="lib-search-suggestions" id="libSearchSuggestions"></div>
+        </div>
       </div>
       <div class="library-grid">
         <div class="lib-card" onclick="navigate('library-detail')">
@@ -987,7 +1006,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
         <button class="lib-detail-back" onclick="showLibraryBrowse()"><svg viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Back to library</button>
         <div class="lib-detail-header">
           <div>
-            <div class="lib-eyebrow"><div class="lib-eyebrow-dot"></div>Essay &nbsp;·&nbsp; Issue 1</div>
+            <div class="lib-eyebrow"><div class="lib-eyebrow-dot"></div>Essay &nbsp;·&nbsp; April 2026</div>
             <div class="theme-tag"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/></svg>Resistance &amp; the Printed Word</div>
             <div class="lib-detail-title">The Samizdat Underground: Literature as Survival</div>
             <div class="lib-detail-author">Václav Havel &nbsp;·&nbsp; 1978 &nbsp;·&nbsp; 14 pages</div>
@@ -997,23 +1016,16 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
               <div class="editorial-sig">— Parlor Editors, April 2026</div>
             </div>
             <div class="detail-actions">
-              <button class="btn-primary"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Read in full</button>
-              <button class="btn-secondary"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Save</button>
-              <button class="btn-secondary" onclick="navigate('forum')"><svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Discuss</button>
+              <button class="btn-primary" id="btnReadInFull" onclick="toggleLibSection('read')"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Read in full</button>
+              <button class="btn-secondary" id="btnDiscuss" onclick="toggleLibSection('discuss')"><svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Discuss</button>
+              <button class="btn-secondary" id="btnSaveLib"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Save</button>
             </div>
           </div>
-          <div class="preview-panel">
-            <div class="preview-thumb"><div class="preview-play"><div class="preview-play-inner"></div></div><div class="preview-label">PROTECTED &nbsp;·&nbsp; SUBSCRIBERS ONLY</div></div>
-            <div class="preview-meta">
-              <div class="preview-meta-row"><span>Type</span><span>Essay</span></div>
-              <div class="preview-meta-row"><span>Length</span><span>14 pages</span></div>
-              <div class="preview-meta-row"><span>Added</span><span>Apr 1, 2026</span></div>
-              <div class="preview-meta-row"><span>Access</span><span>All subscribers</span></div>
-            </div>
-          </div>
+
         </div>
         <div class="lib-detail-body">
-          <div class="content-area">
+          <div id="libSectionRead" style="display:none;width:100%">
+          <div class="content-area" style="width:100%">
             <div class="content-header"><div class="content-header-title">Reading: The Samizdat Underground</div><div class="content-pages">p. 1 of 14</div></div>
             <div class="content-reader">
               <p>There is something peculiarly modern about the idea that literature can be illegal. Not the book itself — books have been burned since there were books — but the act of writing, copying, passing hand to hand. Under totalitarianism, the typewriter becomes a weapon. The carbon copy becomes contraband.</p>
@@ -1022,7 +1034,9 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
             </div>
             <div class="content-footer"><div><button class="content-nav-btn">&lsaquo; Prev</button> <button class="content-nav-btn">Next &rsaquo;</button></div><div class="reading-progress">1 / 14 &nbsp;·&nbsp; ~7%</div></div>
           </div>
-          <div>
+          </div><!-- /libSectionRead -->
+          <div id="libSectionDiscuss" style="display:none;width:100%">
+          <div style="width:100%">
             <div class="disc-prompt">
               <div class="disc-prompt-label">Discussion prompt</div>
               <div class="disc-prompt-q">"Havel writes that samizdat was 'simply what happens when people refuse to stop reading.' What does that suggest about reading and resistance today?"</div>
@@ -1035,6 +1049,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
               <div class="disc-reply"><div class="disc-av disc-av-sage">ML</div><div><div class="disc-reply-name">Margot L.</div><div class="disc-reply-text">The carbon copy detail keeps staying with me. The text literally wearing out from being shared — there's a metaphor there for what happens to ideas as they travel.</div><div class="disc-reply-time">6 hours ago</div></div></div>
               <div class="disc-input-wrap"><textarea class="disc-input" placeholder="Add to the discussion..."></textarea><button class="disc-send">Post</button><div style="clear:both"></div></div>
             </div>
+          </div><!-- /libSectionDiscuss -->
             <div class="related-section" style="margin-top:26px;padding-top:22px">
               <div class="related-title">Also in this theme</div>
               <div class="related-grid">
@@ -1362,6 +1377,141 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
     if(Math.abs(dx)>40){dx<0?shiftWeek(1):shiftWeek(-1);}
   },{passive:true});
 })();
+// ── LIBRARY SEARCH ──────────────────────────────────────
+(function() {
+  // Static library items — will be replaced by Airtable data
+  const LIBRARY_ITEMS = [
+    { title: 'The Samizdat Underground: Literature as Survival', type: 'Essay', author: 'Václav Havel', tags: ['resistance', 'samizdat', 'literature', 'czechoslovakia', 'printing'] },
+    { title: 'WPA Labor Series: The Right to Organise', type: 'Poster', author: 'Federal Art Project', tags: ['labor', 'workers', 'protest', 'wpa', 'organise', 'chicago'] },
+    { title: 'The Wretched of the Earth', type: 'Book', author: 'Frantz Fanon', tags: ['colonialism', 'liberation', 'violence', 'fanon', 'revolution'] },
+    { title: 'Conversation with adrienne maree brown on emergent strategy', type: 'Audio', author: 'adrienne maree brown', tags: ['emergent strategy', 'organizing', 'interview', 'brown'] },
+    { title: 'I Am Not Your Negro', type: 'Film', author: 'Raoul Peck', tags: ['baldwin', 'race', 'america', 'film', 'documentary'] },
+    { title: 'Notes Toward a Politics of Location', type: 'Essay', author: 'Adrienne Rich', tags: ['feminism', 'location', 'politics', 'rich', 'identity'] },
+  ];
+
+  const input       = document.getElementById('libSearchInput');
+  const suggestions = document.getElementById('libSearchSuggestions');
+  if (!input || !suggestions) return;
+
+  function highlight(text, query) {
+    if (!query) return text;
+    const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    return text.replace(re, '<mark style="background:var(--accentlight);color:var(--ink);border-radius:2px;">$1</mark>');
+  }
+
+  function search(query) {
+    if (!query || query.length < 2) {
+      suggestions.classList.remove('visible');
+      suggestions.innerHTML = '';
+      return;
+    }
+    const q = query.toLowerCase();
+    const matches = LIBRARY_ITEMS.filter(item =>
+      item.title.toLowerCase().includes(q) ||
+      item.author.toLowerCase().includes(q) ||
+      item.type.toLowerCase().includes(q) ||
+      item.tags.some(t => t.includes(q))
+    );
+
+    if (!matches.length) {
+      suggestions.innerHTML = '<div class="lib-no-results">No results for "' + query + '"</div>';
+      suggestions.classList.add('visible');
+      return;
+    }
+
+    // Group by type
+    const byType = {};
+    matches.forEach(item => {
+      if (!byType[item.type]) byType[item.type] = [];
+      byType[item.type].push(item);
+    });
+
+    let html = '';
+    Object.entries(byType).forEach(([type, items]) => {
+      html += '<div class="lib-suggestion-group">';
+      html += '<div class="lib-suggestion-label">' + type + '</div>';
+      items.slice(0, 4).forEach(item => {
+        html += '<div class="lib-suggestion-item" onclick="selectSuggestion(' + JSON.stringify(item.title) + ')">';
+        html += '<svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/></svg>';
+        html += '<span class="lib-suggestion-title">' + highlight(item.title, query) + '</span>';
+        html += '<span class="lib-suggestion-type">' + item.author + '</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+    });
+
+    suggestions.innerHTML = html;
+    suggestions.classList.add('visible');
+  }
+
+  window.selectSuggestion = function(title) {
+    input.value = title;
+    suggestions.classList.remove('visible');
+    // Filter the library grid
+    filterLibraryGrid(title);
+  };
+
+  window.filterLibraryGrid = function(query) {
+    const q = (query || '').toLowerCase();
+    document.querySelectorAll('.lib-card').forEach(card => {
+      const text = card.textContent.toLowerCase();
+      card.style.display = (!q || text.includes(q)) ? '' : 'none';
+    });
+  };
+
+  input.addEventListener('input', () => {
+    search(input.value.trim());
+    filterLibraryGrid(input.value.trim());
+  });
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      suggestions.classList.remove('visible');
+      input.value = '';
+      filterLibraryGrid('');
+    }
+  });
+
+  // Close suggestions when clicking outside
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#libSearchWrap')) {
+      suggestions.classList.remove('visible');
+    }
+  });
+})();
+
+// ── LIBRARY DETAIL TOGGLE ────────────────────────────────
+// Read in full is open by default
+document.addEventListener('DOMContentLoaded', function() {
+  const readDiv = document.getElementById('libSectionRead');
+  const btnRead = document.getElementById('btnReadInFull');
+  if (readDiv) readDiv.style.display = 'block';
+  if (btnRead) btnRead.className = 'btn-primary btn-active';
+});
+
+function toggleLibSection(section) {
+  const readDiv    = document.getElementById('libSectionRead');
+  const discussDiv = document.getElementById('libSectionDiscuss');
+  const btnRead    = document.getElementById('btnReadInFull');
+  const btnDiscuss = document.getElementById('btnDiscuss');
+  if (!readDiv || !discussDiv) return;
+
+  if (section === 'read') {
+    // If already open, close it; otherwise open and close discuss
+    const isOpen = readDiv.style.display !== 'none';
+    readDiv.style.display    = isOpen ? 'none' : 'block';
+    discussDiv.style.display = 'none';
+    btnRead.className    = isOpen ? 'btn-primary' : 'btn-primary btn-active';
+    btnDiscuss.className = 'btn-secondary';
+  } else {
+    const isOpen = discussDiv.style.display !== 'none';
+    discussDiv.style.display = isOpen ? 'none' : 'block';
+    readDiv.style.display    = 'none';
+    btnDiscuss.className = isOpen ? 'btn-secondary' : 'btn-secondary btn-active';
+    btnRead.className    = 'btn-primary';
+  }
+}
+
 </script>
 </body>
 </html>
