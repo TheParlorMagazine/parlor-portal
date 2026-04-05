@@ -811,11 +811,8 @@ html,body{font-family:'thermal-variable',sans-serif;background:var(--paper);colo
       <div class="stp-issue">Issue 1 &nbsp;·&nbsp; April 2026</div>
     </div>
   </div>
-  <div class="profile-frame-wrap" style="display:flex;align-items:center;justify-content:center;">
-    <div style="text-align:center;color:var(--muted);font-size:14px;font-family:'thermal-variable',sans-serif;">
-      <div style="font-size:32px;margin-bottom:12px;">↗</div>
-      Loading your profile...
-    </div>
+  <div class="profile-frame-wrap">
+    <iframe id="profileFrame" class="profile-frame" src="about:blank" title="Member profile"></iframe>
   </div>
 </div>
 
@@ -860,11 +857,8 @@ html,body{font-family:'thermal-variable',sans-serif;background:var(--paper);colo
       <div class="stp-issue">Issue 1 &nbsp;·&nbsp; April 2026</div>
     </div>
   </div>
-  <div class="embedded-frame-wrap" style="display:flex;align-items:center;justify-content:center;">
-    <div style="text-align:center;color:var(--muted);font-size:14px;font-family:'thermal-variable',sans-serif;">
-      <div style="font-size:32px;margin-bottom:12px;">↗</div>
-      Loading your settings...
-    </div>
+  <div class="embedded-frame-wrap">
+    <iframe id="settingsFrame" class="embedded-frame" src="about:blank" title="Account settings"></iframe>
   </div>
 </div>
 
@@ -909,11 +903,8 @@ html,body{font-family:'thermal-variable',sans-serif;background:var(--paper);colo
       <div class="stp-issue">Issue 1 &nbsp;·&nbsp; April 2026</div>
     </div>
   </div>
-  <div class="embedded-frame-wrap" style="display:flex;align-items:center;justify-content:center;">
-    <div style="text-align:center;color:var(--muted);font-size:14px;font-family:'thermal-variable',sans-serif;">
-      <div style="font-size:32px;margin-bottom:12px;">↗</div>
-      Loading your subscriptions...
-    </div>
+  <div class="embedded-frame-wrap">
+    <iframe id="subscriptionsFrame" class="embedded-frame" src="about:blank" title="Manage subscription"></iframe>
   </div>
 </div>
 
@@ -1217,15 +1208,24 @@ function navigate(dest){
   else if(dest==='library-detail'){document.getElementById('page-library').classList.add('active');showLibraryDetail();}
   else if(dest==='profile'){
     document.getElementById('page-profile').classList.add('active');
-    window.parent.postMessage({ type: 'NAVIGATE_WIX', url: '/profile' }, '*');
+    const pf = document.getElementById('profileFrame');
+    if(pf && (pf.src === 'about:blank' || pf.src === '')){
+      pf.src = 'https://www.theparlormagazine.com/profile';
+    }
   }
   else if(dest==='settings'){
     document.getElementById('page-settings').classList.add('active');
-    window.parent.postMessage({ type: 'NAVIGATE_WIX', url: '/account-settings' }, '*');
+    const sf = document.getElementById('settingsFrame');
+    if(sf && (sf.src === 'about:blank' || sf.src === '')){
+      sf.src = 'https://www.theparlormagazine.com/account-settings';
+    }
   }
   else if(dest==='subscriptions'){
     document.getElementById('page-subscriptions').classList.add('active');
-    window.parent.postMessage({ type: 'NAVIGATE_WIX', url: '/my-subscriptions' }, '*');
+    const subf = document.getElementById('subscriptionsFrame');
+    if(subf && (subf.src === 'about:blank' || subf.src === '')){
+      subf.src = 'https://www.theparlormagazine.com/my-subscriptions';
+    }
   }
   window.scrollTo(0,0);
 }
