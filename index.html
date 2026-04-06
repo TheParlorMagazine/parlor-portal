@@ -132,8 +132,6 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .edp-close{background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;line-height:1;padding:0;margin-left:auto;align-self:flex-start;transition:color 0.15s}
 .edp-close:hover{color:var(--ink)}
 .edp-desc{font-size:13px;color:var(--muted);line-height:1.6;margin-top:7px;}
-.edp-rsvp-btn{margin-top:10px;background:var(--ink);color:#fff;border:none;padding:7px 16px;border-radius:7px;font-family:'thermal-variable','Georgia',serif;font-size:12.5px;font-weight:500;cursor:pointer;transition:opacity 0.15s;display:inline-block;}
-.edp-rsvp-btn:hover{opacity:0.82;}
 
 /* ══ FORUM PAGE ══ */
 
@@ -540,6 +538,18 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .cal-modal-submit{background:var(--ink);color:#fff;border:none;padding:8px 20px;border-radius:8px;font-family:'thermal-variable','Georgia',serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity 0.15s;}
 .cal-modal-submit:hover{opacity:0.85;}
 .cal-modal-feedback{font-size:12px;color:var(--muted);min-height:16px;margin-bottom:6px;font-style:italic;}
+.cal-up-item{display:flex;align-items:flex-start;gap:12px;padding:10px 16px;cursor:pointer;transition:background 0.12s;border-bottom:1px solid var(--border);}
+.cal-up-item:last-child{border-bottom:none;}
+.cal-up-item.expanded{background:var(--cream);}
+.cal-up-expand{display:none;padding:8px 0 4px;}
+.cal-up-item.expanded .cal-up-expand{display:block;}
+.cal-up-desc{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px;}
+.cal-up-rsvp{font-size:12.5px;color:var(--ink);text-decoration:underline;text-underline-offset:3px;background:none;border:none;cursor:pointer;font-family:'thermal-variable','Georgia',serif;display:inline-flex;align-items:center;gap:4px;padding:0;}
+.cal-up-rsvp:hover{color:var(--muted);}
+.cal-up-chevron{font-size:11px;color:var(--muted);margin-left:auto;transition:transform 0.15s;flex-shrink:0;padding-top:2px;}
+.cal-up-item.expanded .cal-up-chevron{transform:rotate(180deg);}
+.edp-rsvp-btn{margin-top:10px;background:none;color:var(--ink);border:none;padding:0;font-family:'thermal-variable','Georgia',serif;font-size:12.5px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;display:inline-flex;align-items:center;gap:4px;}
+.edp-rsvp-btn:hover{color:var(--muted);}
 </style>
 </head>
 <body>
@@ -1815,28 +1825,33 @@ head.appendChild(plusBtn);
           'ships':'#f5f0e8;color:#5a4a1a' };
         const tc = typeColor[ev.type] || '#f0f0f0;color:#333';
 
-        html += '<div class="cal-up-item">';
-        html += '<div class="cal-up-date"><div class="cal-up-month">' + month + '</div><div class="cal-up-day">' + day + '</div></div>';
-        html += '<div class="cal-up-body">';
-        html += '<div class="cal-up-title">' + ev.title + '</div>';
-        html += '<div class="cal-up-meta">';
-        html += '<span class="cal-up-time">' + ev.time + '</span>';
-        if (ev.type && ev.type !== 'ships') {
-          html += '<span class="cal-up-type" style="background:' + tc + '">' + ev.type + '</span>';
-        }
-        if (isProposed) {
-          html += '<span style="font-size:9.5px;color:#888;font-style:italic;">Proposed</span>';
-        } else if (isPress) {
-          html += '<span class="cal-up-access" style="background:var(--pink);color:#000;">Printing Press</span>';
-        } else {
-          html += '<span class="cal-up-access" style="background:#000;color:#fff;">All subscribers</span>';
-        }
-        if (ev.desc) {
-  html += '<div class="edp-desc" style="margin-top:6px;">' + ev.desc + '</div>';
+      const itemId = 'cal-up-' + ev.id;
+html += '<div class="cal-up-item" id="' + itemId + '">';
+html += '<div class="cal-up-date"><div class="cal-up-month">' + month + '</div><div class="cal-up-day">' + day + '</div></div>';
+html += '<div class="cal-up-body">';
+html += '<div class="cal-up-title">' + ev.title + '</div>';
+html += '<div class="cal-up-meta">';
+html += '<span class="cal-up-time">' + ev.time + '</span>';
+if (ev.type && ev.type !== 'ships') {
+  html += '<span class="cal-up-type" style="background:' + tc + '">' + ev.type + '</span>';
 }
-if (ev.rsvp) {
-  html += '<button class="edp-rsvp-btn" style="margin-top:8px;">RSVP for this event</button>';
+if (isProposed) {
+  html += '<span style="font-size:9.5px;color:#888;font-style:italic;">Proposed</span>';
+} else if (isPress) {
+  html += '<span class="cal-up-access" style="background:var(--pink);color:#000;">Printing Press</span>';
+} else {
+  html += '<span class="cal-up-access" style="background:#000;color:#fff;">All subscribers</span>';
 }
+html += '</div>';
+if (ev.desc || ev.rsvp) {
+  html += '<div class="cal-up-expand">';
+  if (ev.desc) html += '<div class="cal-up-desc">' + ev.desc + '</div>';
+  if (ev.rsvp) html += '<button class="cal-up-rsvp">RSVP for this event ›</button>';
+  html += '</div>';
+}
+html += '</div>';
+html += '<span class="cal-up-chevron">&#8964;</span>';
+html += '</div>';
         html += '</div></div></div>';
       });
       html += '</div>';
@@ -1847,6 +1862,12 @@ container.querySelectorAll('.cal-ftab').forEach(btn => {
   btn.addEventListener('click', function() {
     calUpcomingFilter = this.dataset.filter;
     renderUpcoming();
+  });
+});
+    container.querySelectorAll('.cal-up-item').forEach(item => {
+  item.addEventListener('click', function(e) {
+    if (e.target.classList.contains('cal-up-rsvp')) return;
+    this.classList.toggle('expanded');
   });
 });
 }
