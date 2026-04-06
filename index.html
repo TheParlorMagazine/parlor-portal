@@ -456,10 +456,130 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .wave-bar{width:5px;background:var(--pink);border-radius:2px;opacity:0.7}
 .thumb-film-frame{width:88px;height:58px;background:var(--ink);border-radius:3px;display:flex;align-items:center;justify-content:center}
 .film-play{width:0;height:0;border-top:10px solid transparent;border-bottom:10px solid transparent;border-left:16px solid var(--pink);margin-left:4px}
+
+  /* ── CAL: enhanced calendar styles ── */
+.cal-bar{position:relative;display:flex;align-items:center;justify-content:flex-end;padding:.4rem .75rem;background:var(--pink);height:48px;border-radius:10px 10px 0 0;}
+.cal-title-cluster{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:.4rem;}
+.cal-prev,.cal-next{cursor:pointer;user-select:none;border-radius:8px;font-size:26px;line-height:1;padding:.05rem .28rem;font-weight:700;color:#000;background:none;border:none;}
+.cal-prev:hover,.cal-next:hover{background:rgba(0,0,0,0.08);}
+.cal-month-lbl{font-family:'thermal-variable','Georgia',serif;font-size:16px;font-weight:700;white-space:nowrap;color:#000;}
+.cal-expand-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:28px;border-radius:8px;border:0;background:rgba(255,255,255,0.38);box-shadow:0 1px 3px rgba(0,0,0,.15);cursor:pointer;padding:0;flex-shrink:0;transition:box-shadow 0.15s;}
+.cal-expand-btn:hover{box-shadow:0 4px 12px rgba(0,0,0,.22);}
+.cal-propose-btn{display:inline-flex;align-items:center;gap:5px;margin-right:8px;background:rgba(0,0,0,0.85);color:#fff;border:none;border-radius:7px;padding:5px 11px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:'thermal-variable','Georgia',serif;transition:background 0.15s;}
+.cal-propose-btn:hover{background:#000;}
+.cal-propose-btn svg{width:11px;height:11px;}
+.cal-dow-row{display:grid;grid-template-columns:repeat(7,1fr);background:#fafafa;border-bottom:1px solid rgba(0,0,0,.07);}
+.cal-dow-cell{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);text-align:center;padding:5px 2px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid rgba(0,0,0,.08);}
+.cal-cell{display:flex;flex-direction:column;border-right:1px solid rgba(0,0,0,.08);min-width:0;overflow:hidden;min-height:86px;}
+.cal-cell:last-child{border-right:none;}
+.cal-cell-head{padding:.28rem .4rem .22rem;display:flex;align-items:center;gap:.3rem;border-bottom:1px solid rgba(0,0,0,.06);font-size:12px;font-weight:700;background:#f3f4f6;transition:background 0.15s;}
+.cal-cell-head.cal-today{background:var(--pink);}
+.cal-cell-dow{color:#555;font-weight:600;}
+.cal-cell-num{color:#333;}
+.cal-cell-body{padding:.35rem .3rem;flex:1;display:flex;flex-direction:column;gap:3px;position:relative;}
+.cal-cell-plus{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:5px;background:rgba(0,0,0,0.07);border:none;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:14px;line-height:1;color:#555;font-family:'thermal-variable','Georgia',serif;}
+.cal-cell:hover .cal-cell-plus{display:flex;}
+.cal-cell-plus:hover{background:rgba(0,0,0,0.14);}
+.cal-pill{font-size:10.5px;font-style:italic;font-weight:500;padding:2px 6px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:opacity 0.12s;line-height:1.4;}
+.cal-pill:hover{opacity:0.78;}
+.cal-pill-press{background:#000;color:#fff;}
+.cal-pill-all{background:var(--pink);color:#000;}
+.cal-pill-proposed{background:transparent;color:#888;border:1.5px dashed #bbb;}
+.edp-type-badge{font-size:9.5px;font-weight:500;padding:2px 7px;border-radius:20px;}
+.edp-badge-reading{background:#e8f0e8;color:#2a5c2a;}
+.edp-badge-club{background:#e8eaf5;color:#2a2a6e;}
+.edp-badge-organizing{background:#fff0e0;color:#7a4500;}
+.edp-badge-workshop{background:#fce8ec;color:#7a1c2e;}
+.edp-badge-other{background:#f0f0f0;color:#333;}
+.edp-badge-ships{background:#f5f0e8;color:#5a4a1a;}
+.edp-lock{font-size:9.5px;background:var(--pink);color:#000000;padding:2px 7px;border-radius:20px;font-weight:500;}
+.edp-all{font-size:9.5px;background:#000;color:#fff;padding:2px 7px;border-radius:20px;font-weight:500;}
+.cal-upcoming{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.cal-upcoming-head{padding:12px 16px 0;}
+.cal-upcoming-title{font-family:'thermal-variable','Georgia',serif;font-size:14px;font-style:italic;color:var(--muted);font-weight:400;margin-bottom:10px;}
+.cal-filter-strip{display:flex;gap:6px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.cal-ftab{font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-family:'thermal-variable','Georgia',serif;transition:all 0.12s;}
+.cal-ftab:hover{border-color:var(--pinkborder);color:var(--ink);}
+.cal-ftab.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+.cal-upcoming-list{padding:6px 0 8px;}
+.cal-up-item{display:flex;align-items:flex-start;gap:12px;padding:10px 16px;cursor:pointer;transition:background 0.12s;}
+.cal-up-item:hover{background:var(--cream);}
+.cal-up-date{background:var(--cream);border:1px solid var(--border);border-radius:7px;padding:5px 8px;text-align:center;min-width:40px;flex-shrink:0;}
+.cal-up-month{font-size:8.5px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:500;}
+.cal-up-day{font-size:18px;font-weight:600;color:#000;font-family:'thermal-variable','Georgia',serif;line-height:1.1;}
+.cal-up-body{flex:1;min-width:0;}
+.cal-up-title{font-family:'thermal-variable','Georgia',serif;font-size:13.5px;font-weight:500;color:var(--ink);margin-bottom:3px;line-height:1.3;}
+.cal-up-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.cal-up-time{font-size:11.5px;color:var(--muted);}
+.cal-up-type{font-size:9.5px;font-weight:500;padding:2px 7px;border-radius:20px;}
+.cal-up-access{font-size:9.5px;font-weight:500;padding:2px 7px;border-radius:20px;}
+.cal-empty-msg{padding:18px 16px;font-size:13px;color:var(--muted);font-style:italic;}
+.cal-modal-bg{display:none;position:fixed;inset:0;background:rgba(26,23,16,0.5);z-index:300;align-items:center;justify-content:center;}
+.cal-modal-bg.open{display:flex;}
+.cal-modal{background:var(--paper);border:1px solid var(--border);border-radius:13px;width:520px;max-width:93vw;padding:26px 26px 22px;}
+.cal-modal-title{font-family:'thermal-variable','Georgia',serif;font-size:20px;font-weight:500;margin-bottom:4px;}
+.cal-modal-sub{font-size:12.5px;color:var(--muted);margin-bottom:18px;}
+.cal-type-chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px;}
+.cal-chip{font-size:11.5px;font-weight:500;padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-family:'thermal-variable','Georgia',serif;transition:all 0.12s;}
+.cal-chip:hover{border-color:var(--pinkborder);color:var(--ink);}
+.cal-chip.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+.cal-form-label{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:5px;display:block;}
+.cal-form-input{width:100%;font-family:'thermal-variable','Georgia',serif;font-size:13.5px;color:var(--ink);background:var(--white);border:1px solid var(--border);border-radius:8px;padding:9px 12px;outline:none;transition:border-color 0.15s;margin-bottom:12px;}
+.cal-form-input:focus{border-color:var(--pinkborder);}
+.cal-form-textarea{width:100%;font-family:'thermal-variable','Georgia',serif;font-size:13.5px;color:var(--ink);background:var(--white);border:1px solid var(--border);border-radius:8px;padding:9px 12px;resize:none;line-height:1.55;min-height:80px;outline:none;transition:border-color 0.15s;margin-bottom:12px;}
+.cal-form-textarea:focus{border-color:var(--pinkborder);}
+.cal-form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.cal-form-select{width:100%;font-family:'thermal-variable','Georgia',serif;font-size:13px;color:var(--muted);background:var(--white);border:1px solid var(--border);border-radius:8px;padding:9px 12px;outline:none;cursor:pointer;}
+.cal-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:6px;}
+.cal-modal-cancel{background:none;border:1px solid var(--border);color:var(--muted);padding:8px 17px;border-radius:8px;font-family:'thermal-variable','Georgia',serif;font-size:13px;cursor:pointer;transition:all 0.15s;}
+.cal-modal-cancel:hover{border-color:var(--pinkborder);color:var(--ink);}
+.cal-modal-submit{background:var(--ink);color:#fff;border:none;padding:8px 20px;border-radius:8px;font-family:'thermal-variable','Georgia',serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity 0.15s;}
+.cal-modal-submit:hover{opacity:0.85;}
+.cal-modal-feedback{font-size:12px;color:var(--muted);min-height:16px;margin-bottom:6px;font-style:italic;}
 </style>
 </head>
 <body>
-
+  
+<!-- ══ MODAL — PROPOSE AN EVENT ══ -->
+<div class="cal-modal-bg" id="calModalBg">
+  <div class="cal-modal">
+    <div class="cal-modal-title">Propose an event</div>
+    <div class="cal-modal-sub">Submissions go to the editors for review — we'll be in touch.</div>
+    <div class="cal-type-chips" id="calTypeChips">
+      <button class="cal-chip active" data-type="Reading group">Reading group</button>
+      <button class="cal-chip" data-type="Club night">Club night</button>
+      <button class="cal-chip" data-type="Political organizing">Political organizing</button>
+      <button class="cal-chip" data-type="Workshop">Workshop</button>
+      <button class="cal-chip" data-type="Other">Other</button>
+    </div>
+    <label class="cal-form-label">Event title</label>
+    <input class="cal-form-input" id="calPropTitle" type="text" placeholder="What's the session?">
+    <div class="cal-form-row">
+      <div>
+        <label class="cal-form-label">Date</label>
+        <input class="cal-form-input" id="calPropDate" type="date">
+      </div>
+      <div>
+        <label class="cal-form-label">Format</label>
+        <select class="cal-form-select" id="calPropFormat">
+          <option>Online (Zoom)</option>
+          <option>In person</option>
+          <option>Hybrid</option>
+          <option>Async / self-paced</option>
+        </select>
+      </div>
+    </div>
+    <label class="cal-form-label">Description (optional)</label>
+    <textarea class="cal-form-textarea" id="calPropDesc" placeholder="A line or two about what you have in mind..."></textarea>
+    <div class="cal-modal-feedback" id="calModalFeedback"></div>
+    <div class="cal-modal-actions">
+      <button class="cal-modal-cancel" onclick="closeCalModal()">Cancel</button>
+      <button class="cal-modal-submit" onclick="submitCalProposal()">Send proposal</button>
+    </div>
+  </div>
+</div>
+  
 <!-- ══ MODAL — NEW THREAD ══ -->
 <div class="modal-overlay" id="newThreadModal">
   <div class="modal">
@@ -619,16 +739,18 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 
     <div class="divider"></div>
 
-    <div class="sec-head"><div class="sec-title">Events calendar</div></div>
-
-    <!-- ── CALENDAR STACKED ── -->
-    <div class="cal-stack">
-      <div class="mini-cal-wrap" id="miniCalHost"></div>
-      <div class="event-detail-panel" id="eventDetailPanel">
-        <div class="event-detail-inner" id="eventDetailInner"></div>
-      </div>
-    </div>
+    <div class="sec-head">
+  <div>
+    <div class="sec-title">Events calendar</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:2px;">Reading groups, clubs, workshops, political organizing &amp; more — propose your own session below.</div>
   </div>
+</div>
+<div class="cal-stack">
+  <div class="mini-cal-wrap" id="miniCalHost"></div>
+  <div class="event-detail-panel" id="eventDetailPanel">
+    <div class="event-detail-inner" id="eventDetailInner"></div>
+  </div>
+  <div class="cal-upcoming" id="calUpcoming"></div>
 </div>
 
 <!-- ══ PAGE: FORUM ══ -->
@@ -1381,127 +1503,337 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
 
 // ── MINI WEEKLY CALENDAR ──
 (function(){
-  const PINK='#F1B7C0';
-  const events=[
-    {id:'e1',start:'2026-04-10T19:00:00',end:'2026-04-10T20:30:00',title:'Live reading — Issue 1 contributors',time:'7:00 PM',access:'Printing Press only'},
-    {id:'e2',start:'2026-04-24T18:00:00',end:'2026-04-24T19:30:00',title:'In conversation: independent publishing',time:'6:00 PM',access:'All subscribers'},
-    {id:'e3',start:'2026-04-28T09:00:00',end:'2026-04-28T10:00:00',title:'Issue 1 ships to your door',time:'All day',access:'Printing Press only'}
+  const PINK = '#F1B7C0';
+
+  // ── Events data ──
+  const calEvents = [
+    { id:'e1', date:'2026-04-06', title:'Sunday reading session', time:'11:00 AM', type:'Reading group', access:'all' },
+    { id:'e2', date:'2026-04-10', title:'Live reading — Issue 1 contributors', time:'7:00 PM', type:'Reading group', access:'press' },
+    { id:'e3', date:'2026-04-14', title:'Zine-making workshop', time:'6:00 PM', type:'Workshop', access:'all' },
+    { id:'e4', date:'2026-04-17', title:'Organizing circle: print & protest', time:'7:00 PM', type:'Political organizing', access:'all' },
+    { id:'e5', date:'2026-04-22', title:'Book club — The Wretched of the Earth', time:'6:30 PM', type:'Club night', access:'all' },
+    { id:'e6', date:'2026-04-24', title:'In conversation: adrienne maree brown', time:'6:00 PM', type:'Reading group', access:'all' },
+    { id:'e7', date:'2026-04-28', title:'Issue 1 ships to your door', time:'All day', type:'ships', access:'press' },
   ];
-  const detailPanel=document.getElementById('eventDetailPanel');
-  const detailInner=document.getElementById('eventDetailInner');
-  let activeCell=null;
-  function startOfWeek(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-x.getDay());return x;}
-  function monthLabel(d){return d.toLocaleString(undefined,{month:'long',year:'numeric'});}
-  function shiftWeek(n){weekStart.setDate(weekStart.getDate()+n*7);render();}
-  function showDetail(d,dayEvts,cellEl){
-    if(activeCell){activeCell.style.background='';}
-    if(!dayEvts.length){detailPanel.classList.remove('visible');activeCell=null;return;}
-    activeCell=cellEl;
-    cellEl.style.background=PINK;
-    const dayStr=d.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
-    let html='<div class="edp-day-label">'+dayStr+'</div>';
-    dayEvts.forEach(ev=>{
-      const isPressOnly=ev.access&&ev.access.toLowerCase().includes('printing');
-      html+='<div class="edp-event">';
-      html+='<div class="edp-dot" style="background:'+(isPressOnly?'#000':'#888')+'"></div>';
-      html+='<div class="edp-body">';
-      html+='<div class="edp-title">'+ev.title+'</div>';
-      html+='<div class="edp-meta"><span>'+ev.time+'</span>';
-      if(isPressOnly)html+='<span class="edp-lock">Printing Press only</span>';
-      html+='</div></div></div>';
+
+  let proposed = [];
+  let calWeekStart = startOfWeek(new Date('2026-04-06'));
+  let calActiveHead = null;
+  let calSelType = 'Reading group';
+  let calUpcomingFilter = 'All';
+
+  window.openCalModal = function(prefillDate) {
+    document.getElementById('calPropTitle').value = '';
+    document.getElementById('calPropDesc').value = '';
+    document.getElementById('calPropDate').value = prefillDate || '';
+    document.getElementById('calModalFeedback').textContent = '';
+    // reset chips
+    calSelType = 'Reading group';
+    document.querySelectorAll('.cal-chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.type === calSelType);
     });
-    detailInner.innerHTML=html;
-    detailPanel.classList.add('visible');
-    detailPanel.scrollIntoView({behavior:'smooth',block:'nearest'});
+    document.getElementById('calModalBg').classList.add('open');
+  };
+
+  window.closeCalModal = function() {
+    document.getElementById('calModalBg').classList.remove('open');
+  };
+
+  window.submitCalProposal = function() {
+    const title = document.getElementById('calPropTitle').value.trim();
+    const date  = document.getElementById('calPropDate').value;
+    const fb    = document.getElementById('calModalFeedback');
+    if (!title) { fb.textContent = 'Please add a title.'; fb.style.color = '#e07070'; return; }
+    if (!date)  { fb.textContent = 'Please pick a date.'; fb.style.color = '#e07070'; return; }
+    proposed.push({ id: 'p' + Date.now(), date, title,
+      time: document.getElementById('calPropFormat').value,
+      type: calSelType, access: 'proposed' });
+    closeCalModal();
+    renderCal();
+    renderUpcoming();
+  };
+
+  // chip clicks
+  document.getElementById('calTypeChips').addEventListener('click', function(e) {
+    const chip = e.target.closest('.cal-chip');
+    if (!chip) return;
+    calSelType = chip.dataset.type;
+    document.querySelectorAll('.cal-chip').forEach(c => c.classList.toggle('active', c === chip));
+  });
+
+  document.getElementById('calModalBg').addEventListener('click', function(e) {
+    if (e.target === this) closeCalModal();
+  });
+
+  function startOfWeek(d) {
+    const x = new Date(d); x.setHours(0,0,0,0);
+    x.setDate(x.getDate() - x.getDay()); return x;
   }
-  let weekStart=startOfWeek(new Date('2026-04-04'));
-  const host=document.getElementById('miniCalHost');
-  host.innerHTML='';
-  const wrap=document.createElement('div');
-  wrap.style.cssText='font-family:"thermal-variable",sans-serif;width:100%;';
-  const bar=document.createElement('div');
-  bar.style.cssText='position:relative;display:flex;align-items:center;justify-content:flex-end;padding:.4rem .7rem;background:'+PINK+';height:44px;border-radius:10px 10px 0 0;';
-  const titleCluster=document.createElement('div');
-  titleCluster.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:.4rem;';
-  const prevBtn=document.createElement('div');
-  prevBtn.style.cssText='cursor:pointer;user-select:none;border-radius:8px;font-size:28px;line-height:1;padding:.05rem .3rem;font-weight:700;color:#000;';
-  prevBtn.textContent='‹';prevBtn.onclick=()=>shiftWeek(-1);
-  const monthLbl=document.createElement('div');
-  monthLbl.style.cssText='font-family:"thermal-variable",serif;font-size:17px;line-height:1;font-weight:700;white-space:nowrap;color:#000;';
-  const nextBtn=document.createElement('div');
-  nextBtn.style.cssText='cursor:pointer;user-select:none;border-radius:8px;font-size:28px;line-height:1;padding:.05rem .3rem;font-weight:700;color:#000;';
-  nextBtn.textContent='›';nextBtn.onclick=()=>shiftWeek(1);
-  titleCluster.append(prevBtn,monthLbl,nextBtn);
-  const expandBtn=document.createElement('button');
-  expandBtn.title='Open full calendar';
-  expandBtn.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:32px;height:28px;border-radius:8px;border:0;background:rgba(255,255,255,0.35);box-shadow:0 1px 3px rgba(0,0,0,.18);cursor:pointer;padding:0;flex-shrink:0;';
-  expandBtn.innerHTML='<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M9 2h5v5M7 9L14 2M2 7v7h7" stroke="#000" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  expandBtn.onmouseenter=()=>{expandBtn.style.boxShadow='0 4px 12px rgba(0,0,0,.26)';}; 
-  expandBtn.onmouseleave=()=>{expandBtn.style.boxShadow='0 1px 3px rgba(0,0,0,.18)';};
-  expandBtn.onclick=()=>parent.postMessage({type:'OPEN_LIGHTBOX',weekStart:weekStart.toISOString()},'*');
-  bar.append(titleCluster,expandBtn);
-  wrap.append(bar);
-  const grid=document.createElement('div');
-  grid.style.cssText='display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid rgba(0,0,0,.1);';
-  function render(){
-    monthLbl.textContent=monthLabel(weekStart);
-    grid.innerHTML='';
-    if(activeCell){activeCell=null;}
-    detailPanel.classList.remove('visible');
-    const s=new Date(weekStart);
-    const today=new Date();today.setHours(0,0,0,0);
-    for(let i=0;i<7;i++){
-      const d=new Date(s);d.setDate(s.getDate()+i);
-      const isToday=d.getTime()===today.getTime();
-      const dayEvts=events.filter(ev=>{
-        const st=new Date(ev.start),en=new Date(ev.end||ev.start);
-        const ds=new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,0,0,0);
-        const de=new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59,59,999);
-        return st<=de&&en>=ds;
-      }).sort((a,b)=>new Date(a.start)-new Date(b.start));
-      const cell=document.createElement('div');
-      cell.style.cssText='display:flex;flex-direction:column;border-right:1px solid rgba(0,0,0,.1);min-width:0;overflow:hidden;cursor:'+(dayEvts.length?'pointer':'default')+';';
-      if(i===6)cell.style.borderRight='none';
-      const head=document.createElement('div');
-      head.style.cssText='background:'+(isToday?PINK:'#e5e7eb')+';color:#111;padding:.28rem .4rem;display:flex;align-items:center;gap:.35rem;font-size:13px;border-bottom:1px solid rgba(0,0,0,.1);font-weight:800;';
-      const dow=document.createElement('span');
-      dow.textContent=d.toLocaleDateString(undefined,{weekday:'short'});
-      const num=document.createElement('span');num.style.color='#333';
-      num.textContent=d.getDate();
-      head.append(dow,num);
-      const body=document.createElement('div');
-      body.style.cssText='padding:.5rem .4rem;min-height:36px;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;';
-      if(dayEvts.length){
-        dayEvts.forEach(ev=>{
-          const isPressOnly=ev.access&&ev.access.toLowerCase().includes('printing');
-          const dot=document.createElement('div');
-          dot.style.cssText='width:8px;height:8px;border-radius:50%;flex-shrink:0;background:'+(isPressOnly?'#000000':'#888888')+';';
-          body.appendChild(dot);
+
+  function monthLabel(d) {
+    return d.toLocaleString(undefined, { month:'long', year:'numeric' });
+  }
+
+  function eventsForDate(dateStr) {
+    return [...calEvents, ...proposed].filter(e => e.date === dateStr);
+  }
+
+  function typeBadgeClass(type) {
+    const map = { 'Reading group':'reading', 'Club night':'club',
+      'Political organizing':'organizing', 'Workshop':'workshop', 'ships':'ships' };
+    return 'edp-badge-' + (map[type] || 'other');
+  }
+
+  function typeUpClass(type) {
+    return typeBadgeClass(type);
+  }
+
+  // ── Build calendar shell (runs once) ──
+  const host = document.getElementById('miniCalHost');
+  host.innerHTML = '';
+  const wrap = document.createElement('div');
+
+  // Bar
+  const bar = document.createElement('div');
+  bar.className = 'cal-bar';
+
+  const titleCluster = document.createElement('div');
+  titleCluster.className = 'cal-title-cluster';
+
+  const prevBtn = document.createElement('button');
+  prevBtn.className = 'cal-prev'; prevBtn.textContent = '‹';
+  prevBtn.onclick = () => { calWeekStart.setDate(calWeekStart.getDate() - 7); renderCal(); };
+
+  const monthLbl = document.createElement('div');
+  monthLbl.className = 'cal-month-lbl';
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'cal-next'; nextBtn.textContent = '›';
+  nextBtn.onclick = () => { calWeekStart.setDate(calWeekStart.getDate() + 7); renderCal(); };
+
+  titleCluster.append(prevBtn, monthLbl, nextBtn);
+
+  const proposeBtn = document.createElement('button');
+  proposeBtn.className = 'cal-propose-btn';
+  proposeBtn.innerHTML = '<svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg> Propose an event';
+  proposeBtn.onclick = () => openCalModal();
+
+  const expandBtn = document.createElement('button');
+  expandBtn.className = 'cal-expand-btn';
+  expandBtn.title = 'Open full calendar';
+  expandBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M9 2h5v5M7 9L14 2M2 7v7h7" stroke="#000" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  expandBtn.onclick = () => parent.postMessage({ type:'OPEN_LIGHTBOX', weekStart: calWeekStart.toISOString() }, '*');
+
+  bar.append(titleCluster, proposeBtn, expandBtn);
+
+  // DOW header
+  const dowRow = document.createElement('div');
+  dowRow.className = 'cal-dow-row';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
+    const c = document.createElement('div');
+    c.className = 'cal-dow-cell'; c.textContent = d;
+    dowRow.appendChild(c);
+  });
+
+  // Grid
+  const grid = document.createElement('div');
+  grid.className = 'cal-grid';
+  grid.id = 'calGrid';
+
+  wrap.append(bar, dowRow, grid);
+  host.appendChild(wrap);
+
+  // ── Render week ──
+  function renderCal() {
+    monthLbl.textContent = monthLabel(calWeekStart);
+    grid.innerHTML = '';
+    if (calActiveHead) { calActiveHead = null; }
+    document.getElementById('eventDetailPanel').classList.remove('visible');
+
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(calWeekStart);
+      d.setDate(calWeekStart.getDate() + i);
+      const dateStr = d.toISOString().slice(0,10);
+      const isToday = d.getTime() === today.getTime();
+      const dayEvts = eventsForDate(dateStr);
+
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell';
+
+      const head = document.createElement('div');
+      head.className = 'cal-cell-head' + (isToday ? ' cal-today' : '');
+
+      const dow = document.createElement('span');
+      dow.className = 'cal-cell-dow';
+      dow.textContent = d.toLocaleDateString(undefined, { weekday:'short' });
+
+      const num = document.createElement('span');
+      num.className = 'cal-cell-num';
+      num.textContent = d.getDate();
+
+      head.append(dow, num);
+
+      const body = document.createElement('div');
+      body.className = 'cal-cell-body';
+
+      // + button
+      const plusBtn = document.createElement('button');
+      plusBtn.className = 'cal-cell-plus';
+      plusBtn.textContent = '+';
+      plusBtn.title = 'Propose event on this day';
+      plusBtn.onclick = (e) => { e.stopPropagation(); openCalModal(dateStr); };
+      body.appendChild(plusBtn);
+
+      if (dayEvts.length) {
+        dayEvts.forEach(ev => {
+          const pill = document.createElement('div');
+          pill.className = 'cal-pill ' +
+            (ev.access === 'proposed' ? 'cal-pill-proposed' :
+             ev.access === 'press'    ? 'cal-pill-press' : 'cal-pill-all');
+          pill.textContent = ev.title;
+          pill.title = ev.title;
+          pill.onclick = (e) => { e.stopPropagation(); showDetail(d, dateStr, dayEvts, head); };
+          body.appendChild(pill);
         });
-        cell.onclick=()=>showDetail(d,dayEvts,head);
-        cell.onmouseenter=()=>{if(head!==activeCell)head.style.background='#d4c0c3';};
-        cell.onmouseleave=()=>{if(head!==activeCell)head.style.background=isToday?PINK:'#e5e7eb';};
+
+        cell.style.cursor = 'pointer';
+        cell.onclick = () => showDetail(d, dateStr, dayEvts, head);
+        cell.onmouseenter = () => { if (head !== calActiveHead) head.style.background = isToday ? '#dda0ab' : '#dde0e4'; };
+        cell.onmouseleave = () => { if (head !== calActiveHead) head.style.background = ''; };
       } else {
-        const dash=document.createElement('span');
-        dash.style.cssText='font-size:12px;color:#9ca3af;';
-        dash.textContent='—';
+        const dash = document.createElement('span');
+        dash.style.cssText = 'font-size:12px;color:#9ca3af;margin:auto;';
+        dash.textContent = '—';
         body.appendChild(dash);
       }
-      cell.append(head,body);
+
+      cell.append(head, body);
       grid.appendChild(cell);
     }
   }
-  wrap.append(grid);
-  host.appendChild(wrap);
-  render();
-  let sx=0,tracking=false;
-  wrap.addEventListener('touchstart',e=>{tracking=true;sx=e.changedTouches[0].screenX;},{passive:true});
-  wrap.addEventListener('touchend',e=>{
-    if(!tracking)return;tracking=false;
-    const dx=e.changedTouches[0].screenX-sx;
-    if(Math.abs(dx)>40){dx<0?shiftWeek(1):shiftWeek(-1);}
-  },{passive:true});
+
+  // ── Detail panel ──
+  function showDetail(d, dateStr, dayEvts, headEl) {
+    if (calActiveHead) calActiveHead.style.background = '';
+    calActiveHead = headEl;
+    headEl.style.background = PINK;
+
+    const dayStr = d.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
+    let html = '<div class="edp-day-label">' + dayStr + '</div>';
+
+    dayEvts.forEach(ev => {
+      const isProposed = ev.access === 'proposed';
+      const isPress    = ev.access === 'press';
+      html += '<div class="edp-event">';
+      html += '<div class="edp-dot" style="background:' + (isProposed ? '#bbb' : isPress ? '#000' : PINK) + '"></div>';
+      html += '<div class="edp-body">';
+      html += '<div class="edp-title">' + ev.title + '</div>';
+      html += '<div class="edp-meta">';
+      html += '<span class="cal-up-time">' + ev.time + '</span>';
+      if (ev.type && ev.type !== 'ships') {
+        html += '<span class="edp-type-badge ' + typeBadgeClass(ev.type) + '">' + ev.type + '</span>';
+      }
+      if (isProposed) html += '<span style="font-size:9.5px;color:#888;font-style:italic;">Proposed — pending review</span>';
+      else if (isPress) html += '<span class="edp-lock">Printing Press only</span>';
+      else html += '<span class="edp-all">All subscribers</span>';
+      html += '</div></div></div>';
+    });
+
+    document.getElementById('eventDetailInner').innerHTML = html;
+    const panel = document.getElementById('eventDetailPanel');
+    panel.classList.add('visible');
+    panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  // ── Upcoming list ──
+  function renderUpcoming() {
+    const container = document.getElementById('calUpcoming');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todayStr = today.toISOString().slice(0,10);
+
+    const all = [...calEvents, ...proposed]
+      .filter(e => e.date >= todayStr)
+      .sort((a,b) => a.date.localeCompare(b.date));
+
+    const filtered = calUpcomingFilter === 'All' ? all
+      : all.filter(e => e.type === calUpcomingFilter);
+
+    const tabs = ['All','Reading group','Club night','Political organizing','Workshop'];
+
+    let html = '<div class="cal-upcoming-head">';
+    html += '<div class="cal-upcoming-title">Upcoming this month</div>';
+    html += '<div class="cal-filter-strip">';
+    tabs.forEach(t => {
+      html += '<button class="cal-ftab' + (calUpcomingFilter === t ? ' active' : '') +
+        '" onclick="calSetFilter(' + JSON.stringify(t) + ')">' + t + '</button>';
+    });
+    html += '</div></div>';
+
+    if (!filtered.length) {
+      html += '<div class="cal-empty-msg">No upcoming events' +
+        (calUpcomingFilter !== 'All' ? ' in this category' : '') + '.</div>';
+    } else {
+      html += '<div class="cal-upcoming-list">';
+      filtered.slice(0, 6).forEach(ev => {
+        const dt = new Date(ev.date + 'T12:00:00');
+        const month = dt.toLocaleString(undefined, { month:'short' }).toUpperCase();
+        const day   = dt.getDate();
+        const isPress    = ev.access === 'press';
+        const isProposed = ev.access === 'proposed';
+
+        const typeColor = { 'Reading group':'#e8f0e8;color:#2a5c2a',
+          'Club night':'#e8eaf5;color:#2a2a6e',
+          'Political organizing':'#fff0e0;color:#7a4500',
+          'Workshop':'#fce8ec;color:#7a1c2e',
+          'ships':'#f5f0e8;color:#5a4a1a' };
+        const tc = typeColor[ev.type] || '#f0f0f0;color:#333';
+
+        html += '<div class="cal-up-item">';
+        html += '<div class="cal-up-date"><div class="cal-up-month">' + month + '</div><div class="cal-up-day">' + day + '</div></div>';
+        html += '<div class="cal-up-body">';
+        html += '<div class="cal-up-title">' + ev.title + '</div>';
+        html += '<div class="cal-up-meta">';
+        html += '<span class="cal-up-time">' + ev.time + '</span>';
+        if (ev.type && ev.type !== 'ships') {
+          html += '<span class="cal-up-type" style="background:' + tc + '">' + ev.type + '</span>';
+        }
+        if (isProposed) {
+          html += '<span style="font-size:9.5px;color:#888;font-style:italic;">Proposed</span>';
+        } else if (isPress) {
+          html += '<span class="cal-up-access" style="background:var(--pink);color:#000;">Printing Press</span>';
+        } else {
+          html += '<span class="cal-up-access" style="background:#000;color:#fff;">All subscribers</span>';
+        }
+        html += '</div></div></div>';
+      });
+      html += '</div>';
+    }
+
+    container.innerHTML = html;
+  }
+
+  window.calSetFilter = function(type) {
+    calUpcomingFilter = type;
+    renderUpcoming();
+  };
+
+  // Touch swipe
+  let swipeX = 0;
+  wrap.addEventListener('touchstart', e => { swipeX = e.changedTouches[0].screenX; }, { passive:true });
+  wrap.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].screenX - swipeX;
+    if (Math.abs(dx) > 40) {
+      calWeekStart.setDate(calWeekStart.getDate() + (dx < 0 ? 7 : -7));
+      renderCal();
+    }
+  }, { passive:true });
+
+  renderCal();
+  renderUpcoming();
 })();
+  
 // ── LIBRARY SEARCH ──────────────────────────────────────
 (function() {
   // Static library items — will be replaced by Airtable data
