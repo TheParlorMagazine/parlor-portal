@@ -478,9 +478,9 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .cal-cell-dow{color:#555;font-weight:600;}
 .cal-cell-num{color:#333;}
 .cal-cell-body{padding:.35rem .3rem;flex:1;display:flex;flex-direction:column;gap:3px;position:relative;}
-.cal-cell-plus{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:5px;background:rgba(0,0,0,0.07);border:none;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:14px;line-height:1;color:#555;font-family:'thermal-variable','Georgia',serif;}
+.cal-cell-plus{margin-left:auto;width:20px;height:20px;border-radius:5px;background:rgba(0,0,0,0.10);border:none;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:15px;line-height:1;color:#333;font-family:'thermal-variable','Georgia',serif;}
 .cal-cell:hover .cal-cell-plus{display:flex;}
-.cal-cell-plus:hover{background:rgba(0,0,0,0.14);}
+.cal-cell-plus:hover{background:rgba(0,0,0,0.28);color:#000;}
 .cal-pill{font-size:10.5px;font-style:italic;font-weight:500;padding:2px 6px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:opacity 0.12s;line-height:1.4;}
 .cal-pill:hover{opacity:0.78;}
 .cal-pill-press{background:#000;color:#fff;}
@@ -1684,11 +1684,11 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
 
       // + button
       const plusBtn = document.createElement('button');
-      plusBtn.className = 'cal-cell-plus';
-      plusBtn.textContent = '+';
-      plusBtn.title = 'Propose event on this day';
-      plusBtn.onclick = (e) => { e.stopPropagation(); openCalModal(dateStr); };
-      body.appendChild(plusBtn);
+plusBtn.className = 'cal-cell-plus';
+plusBtn.textContent = '+';
+plusBtn.title = 'Propose event on this day';
+plusBtn.onclick = (e) => { e.stopPropagation(); openCalModal(dateStr); };
+head.appendChild(plusBtn);
 
       if (dayEvts.length) {
         dayEvts.forEach(ev => {
