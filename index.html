@@ -1703,14 +1703,18 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
         });
 
         cell.style.cursor = 'pointer';
-        cell.onclick = () => showDetail(d, dateStr, dayEvts, head);
-        cell.onmouseenter = () => { if (head !== calActiveHead) head.style.background = isToday ? '#dda0ab' : '#dde0e4'; };
-        cell.onmouseleave = () => { if (head !== calActiveHead) head.style.background = ''; };
-      } else {
-        const dash = document.createElement('span');
-        dash.style.cssText = 'font-size:12px;color:#9ca3af;margin:auto;';
-        dash.textContent = '—';
-        body.appendChild(dash);
+        cell.onclick = () => showDetail(d, dateStr, dayEvts, head, isToday);
+        cell.onmouseenter = () => { if (head !== calActiveHead) head.style.background = isToday ? '#dda0ab' : '#c8cdd4'; };
+        cell.onmouseleave = () => { if (head !== calActiveHead) head.style.background = isToday ? '' : ''; };
+     } else {
+  const dash = document.createElement('span');
+  dash.style.cssText = 'font-size:12px;color:#9ca3af;margin:auto;';
+  dash.textContent = '—';
+  body.appendChild(dash);
+  cell.style.cursor = 'pointer';
+  cell.onclick = () => showDetail(d, dateStr, [], head, isToday);
+  cell.onmouseenter = () => { if (head !== calActiveHead) head.style.background = isToday ? '#dda0ab' : '#c8cdd4'; };
+  cell.onmouseleave = () => { if (head !== calActiveHead) head.style.background = ''; };
       }
 
       cell.append(head, body);
@@ -1719,13 +1723,20 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
   }
 
   // ── Detail panel ──
-  function showDetail(d, dateStr, dayEvts, headEl) {
+  function showDetail(d, dateStr, dayEvts, headEl, isToday) {
     if (calActiveHead) calActiveHead.style.background = '';
     calActiveHead = headEl;
-    headEl.style.background = PINK;
+    headEl.style.background = isToday ? '#d4909e' : '#c8cdd4';
 
     const dayStr = d.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
     let html = '<div class="edp-day-label">' + dayStr + '</div>';
+    if (!dayEvts.length) {
+  html += '<div class="edp-empty">No events on this day.</div>';
+} else {
+  dayEvts.forEach(ev => {
+    // ... existing event rendering
+  });
+}
 
     dayEvts.forEach(ev => {
       const isProposed = ev.access === 'proposed';
