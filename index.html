@@ -149,6 +149,13 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .form-select{width:100%;font-family:'thermal-variable','Georgia',serif;font-size:13.5px;color:var(--muted);background:var(--white);border:1px solid var(--border);border-radius:8px;padding:10px 12px;outline:none;cursor:pointer}
 .modal-actions{display:flex;justify-content:flex-end;gap:10px}
 .modal-cancel{background:none;border:1px solid var(--border);color:var(--muted);padding:9px 18px;border-radius:8px;font-family:'thermal-variable','Georgia',serif;font-size:13.5px;cursor:pointer;transition:all 0.15s}
+.modal-lib-link{background:var(--cream);border:1px solid var(--border);border-left:3px solid var(--pink);border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:16px}
+.modal-lib-link-inner{display:flex;align-items:center;gap:10px;color:var(--ink)}
+.modal-lib-label{font-size:9.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:2px}
+.modal-lib-title{font-family:'thermal-variable','Georgia',serif;font-size:14px;font-weight:500;color:var(--ink)}
+.modal-lib-remove{margin-left:auto;background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;padding:0;transition:color 0.15s;flex-shrink:0}
+.modal-lib-remove:hover{color:var(--ink)}
+.modal-post-feedback{font-size:12px;color:var(--muted);min-height:16px;margin-bottom:8px;font-style:italic}
 .modal-cancel:hover{border-color:var(--pinkborder);color:var(--ink)}
 .modal-post{background:var(--ink);color:white;border:none;padding:9px 22px;border-radius:8px;font-family:'thermal-variable','Georgia',serif;font-size:13.5px;font-weight:500;cursor:pointer;transition:opacity 0.15s}
 .modal-post:hover{opacity:0.85}
@@ -457,21 +464,48 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 <div class="modal-overlay" id="newThreadModal">
   <div class="modal">
     <div class="modal-title">Start a new thread</div>
-    <label class="form-label">Title</label>
-    <input class="form-input" type="text" placeholder="What's on your mind?">
-    <label class="form-label">Your thoughts</label>
-    <textarea class="form-textarea" placeholder="Share what you're thinking, a question, a passage that struck you..."></textarea>
-    <div class="form-row">
-      <div><label class="form-label">Category</label>
-        <select class="form-select"><option>Discussion</option><option>Question</option><option>Essay response</option><option>Library link</option></select>
-      </div>
-      <div><label class="form-label">Link to library item</label>
-        <select class="form-select"><option>None</option><option>The Samizdat Underground</option><option>WPA Labor Series</option><option>Wretched of the Earth</option></select>
+
+    <!-- Linked library item banner (shown when pre-filled from library) -->
+    <div class="modal-lib-link" id="modalLibLink" style="display:none">
+      <div class="modal-lib-link-inner">
+        <svg viewBox="0 0 16 16" fill="none" style="width:13px;height:13px;flex-shrink:0"><path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div>
+          <div class="modal-lib-label">Linked library item</div>
+          <div class="modal-lib-title" id="modalLibTitle"></div>
+        </div>
+        <button class="modal-lib-remove" onclick="clearLibraryLink()" title="Remove link">×</button>
       </div>
     </div>
+
+    <label class="form-label">Title</label>
+    <input class="form-input" id="threadTitleInput" type="text" placeholder="What's on your mind?">
+    <label class="form-label">Your thoughts</label>
+    <textarea class="form-textarea" id="threadBodyInput" placeholder="Share what you're thinking, a question, a passage that struck you..."></textarea>
+    <div class="form-row">
+      <div><label class="form-label">Category</label>
+        <select class="form-select" id="threadCategorySelect">
+          <option value="Discussion">Discussion</option>
+          <option value="Question">Question</option>
+          <option value="Essay response">Essay response</option>
+          <option value="Library link">Library link</option>
+        </select>
+      </div>
+      <div><label class="form-label">Link to library item</label>
+        <select class="form-select" id="threadLibrarySelect">
+          <option value="">None</option>
+          <option value="The Samizdat Underground: Literature as Survival">The Samizdat Underground</option>
+          <option value="WPA Labor Series: The Right to Organise">WPA Labor Series</option>
+          <option value="The Wretched of the Earth">Wretched of the Earth</option>
+          <option value="Notes Toward a Politics of Location">Notes Toward a Politics of Location</option>
+          <option value="I Am Not Your Negro">I Am Not Your Negro</option>
+          <option value="Conversation with adrienne maree brown">adrienne maree brown conversation</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-post-feedback" id="modalPostFeedback"></div>
     <div class="modal-actions">
       <button class="modal-cancel" onclick="closeModal()">Cancel</button>
-      <button class="modal-post" onclick="closeModal()">Post thread</button>
+      <button class="modal-post" id="modalPostBtn" onclick="postThread()">Post thread</button>
     </div>
   </div>
 </div>
@@ -1038,10 +1072,20 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
           </div><!-- /libSectionRead -->
           <div id="libSectionDiscuss" style="display:none;width:100%">
           <div style="width:100%">
-            <div class="disc-prompt">
+            <!-- Discussion prompt — shown when a prompt exists (from Airtable) -->
+            <div class="disc-prompt" id="discPromptCard">
               <div class="disc-prompt-label">Discussion prompt</div>
               <div class="disc-prompt-q">"Havel writes that samizdat was 'simply what happens when people refuse to stop reading.' What does that suggest about reading and resistance today?"</div>
               <div style="padding:0 15px 16px"><button class="disc-join-btn" onclick="navigate('forum')">Join the discussion &rsaquo;</button></div>
+            </div>
+
+            <!-- No-prompt fallback — shown when no prompt exists -->
+            <div class="disc-prompt" id="discNoPromptCard" style="display:none">
+              <div class="disc-prompt-label">Start the conversation</div>
+              <div class="disc-prompt-q" style="font-style:normal;font-size:15px;color:var(--muted)">No one has written about this piece yet. Be the first to start a thread.</div>
+              <div style="padding:0 15px 16px">
+                <button class="disc-join-btn" onclick="openModalWithLibraryItem()">Start a thread &rsaquo;</button>
+              </div>
             </div>
             <div class="disc-replies">
               <div class="disc-replies-head">Responses <span class="disc-count">14 replies</span></div>
@@ -1235,9 +1279,92 @@ function showForumDetail(){document.getElementById('forum-threads').classList.re
 function showForumList(){document.getElementById('forum-detail').classList.remove('active');document.getElementById('forum-threads').classList.add('active');window.scrollTo(0,0);}
 function showLibraryDetail(){document.getElementById('library-browse').classList.remove('active');document.getElementById('library-detail').classList.add('active');window.scrollTo(0,0);}
 function showLibraryBrowse(){document.getElementById('library-detail').classList.remove('active');document.getElementById('library-browse').classList.add('active');window.scrollTo(0,0);}
-function openModal(){document.getElementById('newThreadModal').classList.add('open');}
-function closeModal(){document.getElementById('newThreadModal').classList.remove('open');}
-document.getElementById('newThreadModal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+// Current library item context (set when opening from a library detail page)
+let _modalLibraryItem = null;
+
+function openModal() {
+  _modalLibraryItem = null;
+  document.getElementById('modalLibLink').style.display = 'none';
+  document.getElementById('threadTitleInput').value = '';
+  document.getElementById('threadBodyInput').value = '';
+  document.getElementById('threadCategorySelect').value = 'Discussion';
+  document.getElementById('threadLibrarySelect').value = '';
+  document.getElementById('modalPostFeedback').textContent = '';
+  document.getElementById('newThreadModal').classList.add('open');
+}
+
+function openModalWithLibraryItem(title, type) {
+  // Pre-fill from library item context
+  const itemTitle = title || document.querySelector('.lib-detail-title')?.textContent?.trim() || '';
+  const itemType  = type  || 'Essay';
+  _modalLibraryItem = { title: itemTitle, type: itemType };
+
+  document.getElementById('threadTitleInput').value = '';
+  document.getElementById('threadBodyInput').value = '';
+  document.getElementById('threadCategorySelect').value = 'Library link';
+  document.getElementById('threadLibrarySelect').value = itemTitle;
+  document.getElementById('modalPostFeedback').textContent = '';
+
+  // Show linked item banner
+  document.getElementById('modalLibTitle').textContent = itemTitle;
+  document.getElementById('modalLibLink').style.display = 'block';
+
+  document.getElementById('newThreadModal').classList.add('open');
+}
+
+function clearLibraryLink() {
+  _modalLibraryItem = null;
+  document.getElementById('modalLibLink').style.display = 'none';
+  document.getElementById('threadLibrarySelect').value = '';
+  if (document.getElementById('threadCategorySelect').value === 'Library link') {
+    document.getElementById('threadCategorySelect').value = 'Discussion';
+  }
+}
+
+function closeModal() {
+  document.getElementById('newThreadModal').classList.remove('open');
+  _modalLibraryItem = null;
+}
+
+function postThread() {
+  const title    = document.getElementById('threadTitleInput').value.trim();
+  const body     = document.getElementById('threadBodyInput').value.trim();
+  const category = document.getElementById('threadCategorySelect').value;
+  const libItem  = document.getElementById('threadLibrarySelect').value;
+  const feedback = document.getElementById('modalPostFeedback');
+  const btn      = document.getElementById('modalPostBtn');
+
+  if (!title) { feedback.textContent = 'Please add a title.'; feedback.style.color = '#e07070'; return; }
+  if (!body)  { feedback.textContent = 'Please add your thoughts.'; feedback.style.color = '#e07070'; return; }
+
+  btn.textContent = 'Posting...';
+  btn.disabled = true;
+  feedback.textContent = '';
+
+  const threadData = {
+    title,
+    body,
+    category,
+    linkedItem: libItem || null,
+    memberId:   window.parlorMember?.memberId || '',
+    authorName: window.parlorMember?.name || 'Member',
+    timestamp:  new Date().toISOString(),
+  };
+
+  console.log('Post thread:', threadData);
+
+  // TODO: POST to Airtable Threads table when wired up
+  // For now simulate success
+  setTimeout(() => {
+    btn.textContent = 'Post thread';
+    btn.disabled = false;
+    feedback.textContent = '✓ Thread posted!';
+    feedback.style.color = 'var(--pink)';
+    setTimeout(() => { closeModal(); navigate('forum'); }, 1200);
+  }, 700);
+}
+
+document.getElementById('newThreadModal').addEventListener('click', function(e) { if(e.target===this) closeModal(); });
 document.querySelectorAll('.ftab').forEach(t=>{t.addEventListener('click',function(){document.querySelectorAll('.ftab').forEach(x=>x.classList.remove('active'));this.classList.add('active');});});
 document.querySelectorAll('.filter-btn').forEach(b=>{b.addEventListener('click',function(){document.querySelectorAll('.filter-btn').forEach(x=>x.classList.remove('active'));this.classList.add('active');});});
 
