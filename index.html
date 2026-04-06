@@ -1770,9 +1770,9 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
     html += '<div class="cal-upcoming-title">Upcoming this month</div>';
     html += '<div class="cal-filter-strip">';
     tabs.forEach(t => {
-      html += '<button class="cal-ftab' + (calUpcomingFilter === t ? ' active' : '') +
-        '" onclick="calSetFilter(' + JSON.stringify(t) + ')">' + t + '</button>';
-    });
+  html += '<button class="cal-ftab' + (calUpcomingFilter === t ? ' active' : '') +
+    '" data-filter="' + t + '">' + t + '</button>';
+});
     html += '</div></div>';
 
     if (!filtered.length) {
@@ -1815,13 +1815,13 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
       html += '</div>';
     }
 
-    container.innerHTML = html;
-  }
-
-  window.calSetFilter = function(type) {
-    calUpcomingFilter = type;
+   container.innerHTML = html;
+container.querySelectorAll('.cal-ftab').forEach(btn => {
+  btn.addEventListener('click', function() {
+    calUpcomingFilter = this.dataset.filter;
     renderUpcoming();
-  };
+  });
+});
 
   // Touch swipe
   let swipeX = 0;
