@@ -131,6 +131,9 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .edp-lock{font-size:9.5px;background:var(--pink);color:#000000;padding:2px 7px;border-radius:20px;font-weight:500}
 .edp-close{background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;line-height:1;padding:0;margin-left:auto;align-self:flex-start;transition:color 0.15s}
 .edp-close:hover{color:var(--ink)}
+.edp-desc{font-size:13px;color:var(--muted);line-height:1.6;margin-top:7px;}
+.edp-rsvp-btn{margin-top:10px;background:var(--ink);color:#fff;border:none;padding:7px 16px;border-radius:7px;font-family:'thermal-variable','Georgia',serif;font-size:12.5px;font-weight:500;cursor:pointer;transition:opacity 0.15s;display:inline-block;}
+.edp-rsvp-btn:hover{opacity:0.82;}
 
 /* ══ FORUM PAGE ══ */
 
@@ -1511,14 +1514,15 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
 
   // ── Events data ──
   const calEvents = [
-    { id:'e1', date:'2026-04-06', title:'Sunday reading session', time:'11:00 AM', type:'Reading group', access:'all' },
-    { id:'e2', date:'2026-04-10', title:'Live reading — Issue 1 contributors', time:'7:00 PM', type:'Reading group', access:'press' },
-    { id:'e3', date:'2026-04-14', title:'Zine-making workshop', time:'6:00 PM', type:'Workshop', access:'all' },
-    { id:'e4', date:'2026-04-17', title:'Organizing circle: print & protest', time:'7:00 PM', type:'Political organizing', access:'all' },
-    { id:'e5', date:'2026-04-22', title:'Book club — The Wretched of the Earth', time:'6:30 PM', type:'Club night', access:'all' },
-    { id:'e6', date:'2026-04-24', title:'In conversation: adrienne maree brown', time:'6:00 PM', type:'Reading group', access:'all' },
-    { id:'e7', date:'2026-04-28', title:'Issue 1 ships to your door', time:'All day', type:'ships', access:'press' },
-  ];
+   const calEvents = [
+  { id:'e1', date:'2026-04-06', title:'Sunday reading session', time:'11:00 AM', type:'Reading group', access:'all', desc:'An open, informal reading session for all subscribers. Bring a passage, a question, or just yourself.', rsvp:true },
+  { id:'e2', date:'2026-04-10', title:'Live reading — Issue 1 contributors', time:'7:00 PM', type:'Reading group', access:'press', desc:'Issue 1 contributors read from their work and take questions. Printing Press members only.', rsvp:true },
+  { id:'e3', date:'2026-04-14', title:'Zine-making workshop', time:'6:00 PM', type:'Workshop', access:'all', desc:'A hands-on workshop on making your own zine — layout, printing, folding, and stapling. No experience needed.', rsvp:true },
+  { id:'e4', date:'2026-04-17', title:'Organizing circle: print & protest', time:'7:00 PM', type:'Political organizing', access:'all', desc:'A member-led discussion on the history of print as a tool for political organising, and what that looks like today.', rsvp:true },
+  { id:'e5', date:'2026-04-22', title:'Book club — The Wretched of the Earth', time:'6:30 PM', type:'Club night', access:'all', desc:'We\'re discussing Chapters 1 and 2 of Fanon. Read before you come — the conversation will go deep.', rsvp:true },
+  { id:'e6', date:'2026-04-24', title:'In conversation: adrienne maree brown', time:'6:00 PM', type:'Reading group', access:'all', desc:'A live conversation with adrienne maree brown on emergent strategy, organising, and the politics of imagination.', rsvp:true },
+  { id:'e7', date:'2026-04-28', title:'Issue 1 ships to your door', time:'All day', type:'ships', access:'press', desc:'Your first issue of The Parlor is on its way. Printing Press members will receive a shipping confirmation by email.', rsvp:false },
+];
 
   let proposed = [];
   let calWeekStart = startOfWeek(new Date('2026-04-06'));
@@ -1739,22 +1743,29 @@ head.appendChild(plusBtn);
 }
 
     dayEvts.forEach(ev => {
-      const isProposed = ev.access === 'proposed';
-      const isPress    = ev.access === 'press';
-      html += '<div class="edp-event">';
-      html += '<div class="edp-dot" style="background:' + (isProposed ? '#bbb' : isPress ? '#000' : PINK) + '"></div>';
-      html += '<div class="edp-body">';
-      html += '<div class="edp-title">' + ev.title + '</div>';
-      html += '<div class="edp-meta">';
-      html += '<span class="cal-up-time">' + ev.time + '</span>';
-      if (ev.type && ev.type !== 'ships') {
-        html += '<span class="edp-type-badge ' + typeBadgeClass(ev.type) + '">' + ev.type + '</span>';
-      }
-      if (isProposed) html += '<span style="font-size:9.5px;color:#888;font-style:italic;">Proposed — pending review</span>';
-      else if (isPress) html += '<span class="edp-lock">Printing Press only</span>';
-      else html += '<span class="edp-all">All subscribers</span>';
-      html += '</div></div></div>';
-    });
+  const isProposed = ev.access === 'proposed';
+  const isPress    = ev.access === 'press';
+  html += '<div class="edp-event">';
+  html += '<div class="edp-dot" style="background:' + (isProposed ? '#bbb' : isPress ? '#000' : PINK) + '"></div>';
+  html += '<div class="edp-body">';
+  html += '<div class="edp-title">' + ev.title + '</div>';
+  html += '<div class="edp-meta">';
+  html += '<span class="cal-up-time">' + ev.time + '</span>';
+  if (ev.type && ev.type !== 'ships') {
+    html += '<span class="edp-type-badge ' + typeBadgeClass(ev.type) + '">' + ev.type + '</span>';
+  }
+  if (isProposed) html += '<span style="font-size:9.5px;color:#888;font-style:italic;">Proposed — pending review</span>';
+  else if (isPress) html += '<span class="edp-lock">Printing Press only</span>';
+  else html += '<span class="edp-all">All subscribers</span>';
+  html += '</div>';
+  if (ev.desc) {
+    html += '<div class="edp-desc">' + ev.desc + '</div>';
+  }
+  if (ev.rsvp) {
+    html += '<button class="edp-rsvp-btn">RSVP for this event</button>';
+  }
+  html += '</div></div>';
+});
 
     document.getElementById('eventDetailInner').innerHTML = html;
     const panel = document.getElementById('eventDetailPanel');
@@ -1821,6 +1832,12 @@ head.appendChild(plusBtn);
         } else {
           html += '<span class="cal-up-access" style="background:#000;color:#fff;">All subscribers</span>';
         }
+        if (ev.desc) {
+  html += '<div class="edp-desc" style="margin-top:6px;">' + ev.desc + '</div>';
+}
+if (ev.rsvp) {
+  html += '<button class="edp-rsvp-btn" style="margin-top:8px;">RSVP for this event</button>';
+}
         html += '</div></div></div>';
       });
       html += '</div>';
