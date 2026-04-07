@@ -562,11 +562,12 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
     <div class="cal-modal-title">Propose an event</div>
     <div class="cal-modal-sub">Submissions go to the editors for review — we'll be in touch.</div>
     <div class="cal-type-chips" id="calTypeChips">
-      <button class="cal-chip active" data-type="Reading group">Reading group</button>
-      <button class="cal-chip" data-type="Club night">Club night</button>
-      <button class="cal-chip" data-type="Political organizing">Political organizing</button>
-      <button class="cal-chip" data-type="Workshop">Workshop</button>
-      <button class="cal-chip" data-type="Other">Other</button>
+      <button class="cal-chip active" data-type="Roundtable discussion">🗣️ Roundtable discussion</button>
+<button class="cal-chip" data-type="Political organizing">✊ Political organizing</button>
+<button class="cal-chip" data-type="Writing workshop">✍️ Writing workshop</button>
+<button class="cal-chip" data-type="Book club">📚 Book club</button>
+<button class="cal-chip" data-type="Community learning">🌱 Community learning</button>
+<button class="cal-chip" data-type="Speaker event">🎙️ Speaker event</button>
     </div>
     <label class="cal-form-label">Event title</label>
     <input class="cal-form-input" id="calPropTitle" type="text" placeholder="What's the session?">
@@ -755,9 +756,17 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
     <div class="divider"></div>
 
     <div class="sec-head">
-  <div>
-    <div class="sec-title">Events calendar</div>
-    <div style="font-size:12px;color:var(--muted);margin-top:2px;">Reading groups, clubs, workshops, political organizing &amp; more — propose your own session below.</div>
+  <div class="sec-title">Events calendar</div>
+</div>
+<div style="background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:14px;">
+  <p style="font-size:14px;line-height:1.7;color:var(--ink);margin-bottom:14px;"><strong>The Parlor brings members together</strong> — through live readings, roundtable calls, and writer conversations. We also welcome <strong>community-proposed events</strong>: reading groups, political organising sessions, writing workshops, book clubs, and more. Click any date to propose something.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <span style="background:var(--white);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:12.5px;cursor:pointer;">🗣️ Roundtable discussion</span>
+    <span style="background:var(--white);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:12.5px;cursor:pointer;">✊ Political organizing</span>
+    <span style="background:var(--white);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:12.5px;cursor:pointer;">✍️ Writing workshop</span>
+    <span style="background:var(--white);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:12.5px;cursor:pointer;">📚 Book club</span>
+    <span style="background:var(--white);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:12.5px;cursor:pointer;">🌱 Community learning</span>
+    <span style="background:var(--white);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:12.5px;cursor:pointer;">🎙️ Speaker event</span>
   </div>
 </div>
 <div class="cal-stack">
@@ -769,8 +778,6 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 </div><!-- /cal-stack -->
 </div><!-- /dash-main -->
 </div><!-- /page-dashboard -->
-
-<!-- ══ PAGE: FORUM ══ -->
 
 <!-- ══ PAGE: FORUM ══ -->
 <div class="page" id="page-forum">
@@ -1538,7 +1545,7 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
   let proposed = [];
   let calWeekStart = startOfWeek(new Date('2026-04-06'));
   let calActiveHead = null;
-  let calSelType = 'Reading group';
+  let calSelType = 'Roundtable discussion';
   let calUpcomingFilter = 'All';
 
   window.openCalModal = function(prefillDate) {
@@ -1547,7 +1554,7 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
     document.getElementById('calPropDate').value = prefillDate || '';
     document.getElementById('calModalFeedback').textContent = '';
     // reset chips
-    calSelType = 'Reading group';
+    calSelType = 'Roundtable discussion';
     document.querySelectorAll('.cal-chip').forEach(c => {
       c.classList.toggle('active', c.dataset.type === calSelType);
     });
@@ -1598,8 +1605,15 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
   }
 
   function typeBadgeClass(type) {
-    const map = { 'Reading group':'reading', 'Club night':'club',
-      'Political organizing':'organizing', 'Workshop':'workshop', 'ships':'ships' };
+    const map = {
+  'Roundtable discussion':'club',
+  'Political organizing':'organizing',
+  'Writing workshop':'workshop',
+  'Book club':'reading',
+  'Community learning':'reading',
+  'Speaker event':'other',
+  'ships':'ships'
+};
     return 'edp-badge-' + (map[type] || 'other');
   }
 
@@ -1792,7 +1806,7 @@ head.appendChild(plusBtn);
     const filtered = calUpcomingFilter === 'All' ? all
       : all.filter(e => e.type === calUpcomingFilter);
 
-    const tabs = ['All','Reading group','Club night','Political organizing','Workshop'];
+    const tabs = ['All','Roundtable discussion','Political organizing','Writing workshop','Book club','Community learning','Speaker event'];
 
     let html = '<div class="cal-upcoming-head">';
     html += '<div class="cal-upcoming-title">Upcoming this month</div>';
@@ -1815,11 +1829,15 @@ const day   = dy;
         const isPress    = ev.access === 'press';
         const isProposed = ev.access === 'proposed';
 
-        const typeColor = { 'Reading group':'#e8f0e8;color:#2a5c2a',
-          'Club night':'#e8eaf5;color:#2a2a6e',
-          'Political organizing':'#fff0e0;color:#7a4500',
-          'Workshop':'#fce8ec;color:#7a1c2e',
-          'ships':'#f5f0e8;color:#5a4a1a' };
+        const typeColor = {
+  'Roundtable discussion':'#e8eaf5;color:#2a2a6e',
+  'Political organizing':'#fff0e0;color:#7a4500',
+  'Writing workshop':'#fce8ec;color:#7a1c2e',
+  'Book club':'#e8f0e8;color:#2a5c2a',
+  'Community learning':'#e8f5ee;color:#1a5c3a',
+  'Speaker event':'#f5f0e8;color:#5a4a1a',
+  'ships':'#f5f0e8;color:#5a4a1a'
+};
         const tc = typeColor[ev.type] || '#f0f0f0;color:#333';
 
       const itemId = 'cal-up-' + ev.id;
