@@ -479,9 +479,11 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .cal-cell-dow{color:#555;font-weight:600;}
 .cal-cell-num{color:#333;}
 .cal-cell-body{padding:.35rem .3rem;flex:1;display:flex;flex-direction:column;gap:3px;position:relative;}
-.cal-cell-plus{margin-left:auto;width:20px;height:20px;border-radius:5px;background:rgba(0,0,0,0.10);border:none;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:15px;line-height:1;color:#333;font-family:'thermal-variable','Georgia',serif;}
+.cal-cell-plus{margin-left:auto;width:20px;height:20px;border-radius:5px;background:#000;border:none;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:15px;line-height:1;color:#fff;font-family:'thermal-variable','Georgia',serif;}
 .cal-cell:hover .cal-cell-plus{display:flex;}
-.cal-cell-plus:hover{background:rgba(0,0,0,0.28);color:#000;}
+.cal-cell-plus:hover{background:#333;color:#fff;}
+.cal-cell{display:flex;flex-direction:column;border-right:1px solid rgba(0,0,0,.08);min-width:0;overflow:hidden;min-height:86px;transition:box-shadow 0.15s,border-color 0.15s;}
+.cal-cell:hover{box-shadow:0 4px 14px rgba(0,0,0,0.13);border:1px solid rgba(0,0,0,0.22);z-index:2;position:relative;}
 .cal-pill{font-size:10.5px;font-style:italic;font-weight:500;padding:2px 6px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:opacity 0.12s;line-height:1.4;}
 .cal-pill:hover{opacity:0.78;}
 .cal-pill-press{background:#000;color:#fff;}
