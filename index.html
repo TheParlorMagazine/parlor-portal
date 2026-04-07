@@ -1644,13 +1644,11 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
   bar.append(titleCluster, proposeBtn, expandBtn);
 
   // DOW header
-  const dowRow = document.createElement('div');
-  dowRow.className = 'cal-dow-row';
-  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
-    const c = document.createElement('div');
-    c.className = 'cal-dow-cell'; c.textContent = d;
-    dowRow.appendChild(c);
-  });
+const num = document.createElement('span');
+num.className = 'cal-cell-num';
+num.textContent = d.getDate();
+
+head.append(num);
 
   // Grid
   const grid = document.createElement('div');
