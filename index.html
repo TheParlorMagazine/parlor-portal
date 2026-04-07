@@ -1649,6 +1649,7 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
   grid.id = 'calGrid';
 
   wrap.append(bar, grid);
+host.appendChild(wrap);
 
   // ── Render week ──
   function renderCal() {
@@ -1842,8 +1843,7 @@ if (ev.desc || ev.rsvp) {
 html += '</div>';
 html += '<span class="cal-up-chevron">&#8964;</span>';
 html += '</div>';
-        html += '</div></div></div>';
-      });
+});
       html += '</div>';
     }
 
