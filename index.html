@@ -552,6 +552,22 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .cal-up-item.expanded .cal-up-chevron{transform:rotate(180deg);}
 .edp-rsvp-btn{margin-top:10px;background:none;color:var(--ink);border:none;padding:0;font-family:'thermal-variable','Georgia',serif;font-size:12.5px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;display:inline-flex;align-items:center;gap:4px;}
 .edp-rsvp-btn:hover{color:var(--muted);}
+.cal-intro-pill{border:1px solid;border-radius:20px;padding:5px 13px;font-size:12.5px;cursor:pointer;transition:opacity 0.15s;white-space:nowrap;}
+.cal-intro-pill:hover{opacity:0.75;}
+.cal-type-modal-bg{display:none;position:fixed;inset:0;background:rgba(26,23,16,0.4);z-index:400;align-items:center;justify-content:center;}
+.cal-type-modal-bg.open{display:flex;}
+.cal-type-modal{background:var(--paper);border:1px solid var(--border);border-radius:13px;width:420px;max-width:92vw;padding:24px 24px 20px;}
+.cal-type-modal-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:4px 12px;border-radius:20px;margin-bottom:12px;}
+.cal-type-modal-title{font-family:'thermal-variable','Georgia',serif;font-size:20px;font-weight:500;margin-bottom:8px;}
+.cal-type-modal-desc{font-size:14px;line-height:1.7;color:var(--muted);margin-bottom:20px;}
+.cal-type-modal-actions{display:flex;justify-content:space-between;align-items:center;}
+.cal-type-modal-close{background:none;border:none;font-size:13px;color:var(--muted);cursor:pointer;font-family:'thermal-variable','Georgia',serif;padding:0;text-decoration:underline;text-underline-offset:3px;}
+.cal-type-modal-close:hover{color:var(--ink);}
+.cal-type-modal-propose{background:var(--ink);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-family:'thermal-variable','Georgia',serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity 0.15s;}
+.cal-type-modal-propose:hover{opacity:0.85;}
+.edp-badge-community{background:#e0f0fa;color:#1a4a6e;}
+.edp-badge-speaker{background:#f5f0e8;color:#5a4a1a;}
+.edp-badge-workshop{background:#fef9e0;color:#7a6500;}
 </style>
 </head>
 <body>
@@ -592,6 +608,19 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
     <div class="cal-modal-actions">
       <button class="cal-modal-cancel" onclick="closeCalModal()">Cancel</button>
       <button class="cal-modal-submit" onclick="submitCalProposal()">Send proposal</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL — EVENT TYPE EXPLAINER ══ -->
+<div class="cal-type-modal-bg" id="calTypeModalBg">
+  <div class="cal-type-modal">
+    <div class="cal-type-modal-pill" id="calTypeModalPill"></div>
+    <div class="cal-type-modal-title" id="calTypeModalTitle"></div>
+    <div class="cal-type-modal-desc" id="calTypeModalDesc"></div>
+    <div class="cal-type-modal-actions">
+      <button class="cal-type-modal-close" onclick="closeTypeModal()">Close</button>
+      <button class="cal-type-modal-propose" onclick="openProposeFromTypeModal()">Propose an event</button>
     </div>
   </div>
 </div>
@@ -761,12 +790,14 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 <div style="background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:14px;">
   <p style="font-size:14px;line-height:1.7;color:var(--ink);margin-bottom:14px;"><strong>The Parlor brings members together</strong> — through live readings, roundtable calls, and writer conversations. We also welcome <strong>community-proposed events</strong>: reading groups, political organising sessions, writing workshops, book clubs, and more. Click any date to propose something.</p>
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <span style="background:var(--white);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:12.5px;cursor:pointer;">🗣️ Roundtable discussion</span>
-    <span style="background:var(--white);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:12.5px;cursor:pointer;">✊ Political organizing</span>
-    <span style="background:var(--white);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:12.5px;cursor:pointer;">✍️ Writing workshop</span>
-    <span style="background:var(--white);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:12.5px;cursor:pointer;">📚 Book club</span>
-    <span style="background:var(--white);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:12.5px;cursor:pointer;">🌱 Community learning</span>
-    <span style="background:var(--white);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:12.5px;cursor:pointer;">🎙️ Speaker event</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+  <span class="cal-intro-pill" data-type="Roundtable discussion" style="background:#e8eaf5;color:#2a2a6e;border-color:#c8cce8;">🗣️ Roundtable discussion</span>
+  <span class="cal-intro-pill" data-type="Political organizing" style="background:#fff0e0;color:#7a4500;border-color:#e8d4b0;">✊ Political organizing</span>
+  <span class="cal-intro-pill" data-type="Writing workshop" style="background:#fef9e0;color:#7a6500;border-color:#e8e0b0;">✍️ Writing workshop</span>
+  <span class="cal-intro-pill" data-type="Book club" style="background:#e8f0e8;color:#2a5c2a;border-color:#b0d4b0;">📚 Book club</span>
+  <span class="cal-intro-pill" data-type="Community learning" style="background:#e0f0fa;color:#1a4a6e;border-color:#b0d4e8;">🌱 Community learning</span>
+  <span class="cal-intro-pill" data-type="Speaker event" style="background:#f5f0e8;color:#5a4a1a;border-color:#d4c8a8;">🎙️ Speaker event</span>
+</div>
   </div>
 </div>
 <div class="cal-stack">
@@ -1610,8 +1641,8 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
   'Political organizing':'organizing',
   'Writing workshop':'workshop',
   'Book club':'reading',
-  'Community learning':'reading',
-  'Speaker event':'other',
+  'Community learning':'community',
+  'Speaker event':'speaker',
   'ships':'ships'
 };
     return 'edp-badge-' + (map[type] || 'other');
@@ -1832,9 +1863,9 @@ const day   = dy;
         const typeColor = {
   'Roundtable discussion':'#e8eaf5;color:#2a2a6e',
   'Political organizing':'#fff0e0;color:#7a4500',
-  'Writing workshop':'#fce8ec;color:#7a1c2e',
+  'Writing workshop':'#fef9e0;color:#7a6500',
   'Book club':'#e8f0e8;color:#2a5c2a',
-  'Community learning':'#e8f5ee;color:#1a5c3a',
+  'Community learning':'#e0f0fa;color:#1a4a6e',
   'Speaker event':'#f5f0e8;color:#5a4a1a',
   'ships':'#f5f0e8;color:#5a4a1a'
 };
@@ -1885,7 +1916,84 @@ container.querySelectorAll('.cal-ftab').forEach(btn => {
   });
 });
 }
+// ── EVENT TYPE EXPLAINER MODAL ──
+const CAL_TYPE_INFO = {
+  'Roundtable discussion': {
+    emoji: '🗣️',
+    bg: '#e8eaf5', color: '#2a2a6e',
+    desc: 'A guided conversation where members dig into a text, idea, or question together. Open to all.'
+  },
+  'Political organizing': {
+    emoji: '✊',
+    bg: '#fff0e0', color: '#7a4500',
+    desc: 'Space for members to connect around shared causes, campaigns, and collective action.'
+  },
+  'Writing workshop': {
+    emoji: '✍️',
+    bg: '#fef9e0', color: '#7a6500',
+    desc: 'Bring your work or just your curiosity — these sessions are for writers at every stage.'
+  },
+  'Book club': {
+    emoji: '📚',
+    bg: '#e8f0e8', color: '#2a5c2a',
+    desc: 'We read together and talk about it. Usually tied to a library pick or theme.'
+  },
+  'Community learning': {
+    emoji: '🌱',
+    bg: '#e0f0fa', color: '#1a4a6e',
+    desc: 'Member-led classes and knowledge-sharing sessions — teach what you know, learn what you don\'t.'
+  },
+  'Speaker event': {
+    emoji: '🎙️',
+    bg: '#f5f0e8', color: '#5a4a1a',
+    desc: 'Live conversations with writers, thinkers, and makers from in and around The Parlor community.'
+  }
+};
 
+let _calTypeModalCurrentType = null;
+
+function openTypeModal(type) {
+  const info = CAL_TYPE_INFO[type];
+  if (!info) return;
+  _calTypeModalCurrentType = type;
+  const pill = document.getElementById('calTypeModalPill');
+  pill.textContent = info.emoji + ' ' + type;
+  pill.style.background = info.bg;
+  pill.style.color = info.color;
+  document.getElementById('calTypeModalTitle').textContent = type;
+  document.getElementById('calTypeModalDesc').textContent = info.desc;
+  document.getElementById('calTypeModalBg').classList.add('open');
+}
+
+function closeTypeModal() {
+  document.getElementById('calTypeModalBg').classList.remove('open');
+  _calTypeModalCurrentType = null;
+}
+
+function openProposeFromTypeModal() {
+  closeTypeModal();
+  // Open the proposal modal with type pre-filled but no date
+  document.getElementById('calPropTitle').value = '';
+  document.getElementById('calPropDesc').value = '';
+  document.getElementById('calPropDate').value = '';
+  document.getElementById('calModalFeedback').textContent = '';
+  calSelType = _calTypeModalCurrentType || 'Roundtable discussion';
+  document.querySelectorAll('.cal-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.type === calSelType);
+  });
+  document.getElementById('calModalBg').classList.add('open');
+}
+
+document.getElementById('calTypeModalBg').addEventListener('click', function(e) {
+  if (e.target === this) closeTypeModal();
+});
+
+// Wire up intro pills
+document.querySelectorAll('.cal-intro-pill').forEach(pill => {
+  pill.addEventListener('click', function() {
+    openTypeModal(this.dataset.type);
+  });
+});
   // Touch swipe
   let swipeX = 0;
   wrap.addEventListener('touchstart', e => { swipeX = e.changedTouches[0].screenX; }, { passive:true });
