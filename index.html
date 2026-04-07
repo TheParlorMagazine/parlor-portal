@@ -1643,20 +1643,12 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
 
   bar.append(titleCluster, proposeBtn, expandBtn);
 
-  // DOW header
-const num = document.createElement('span');
-num.className = 'cal-cell-num';
-num.textContent = d.getDate();
-
-head.append(num);
-
   // Grid
   const grid = document.createElement('div');
   grid.className = 'cal-grid';
   grid.id = 'calGrid';
 
-  wrap.append(bar, dowRow, grid);
-  host.appendChild(wrap);
+  wrap.append(bar, grid);
 
   // ── Render week ──
   function renderCal() {
