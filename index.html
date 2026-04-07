@@ -1663,7 +1663,9 @@ host.appendChild(wrap);
     for (let i = 0; i < 7; i++) {
       const d = new Date(calWeekStart);
       d.setDate(calWeekStart.getDate() + i);
-      const dateStr = d.toISOString().slice(0,10);
+      const dateStr = d.getFullYear() + '-' +
+  String(d.getMonth() + 1).padStart(2, '0') + '-' +
+  String(d.getDate()).padStart(2, '0');
       const isToday = d.getTime() === today.getTime();
       const dayEvts = eventsForDate(dateStr);
 
@@ -1777,7 +1779,9 @@ head.appendChild(plusBtn);
   function renderUpcoming() {
     const container = document.getElementById('calUpcoming');
     const today = new Date(); today.setHours(0,0,0,0);
-    const todayStr = today.toISOString().slice(0,10);
+   const todayStr = today.getFullYear() + '-' +
+  String(today.getMonth() + 1).padStart(2, '0') + '-' +
+  String(today.getDate()).padStart(2, '0');
 
     const all = [...calEvents, ...proposed]
       .filter(e => e.date >= todayStr)
@@ -1803,9 +1807,9 @@ head.appendChild(plusBtn);
     } else {
       html += '<div class="cal-upcoming-list">';
       filtered.slice(0, 6).forEach(ev => {
-        const dt = new Date(ev.date + 'T12:00:00');
-        const month = dt.toLocaleString(undefined, { month:'short' }).toUpperCase();
-        const day   = dt.getDate();
+        const [year, mo, dy] = ev.date.split('-').map(Number);
+const month = new Date(year, mo - 1, dy).toLocaleString(undefined, { month:'short' }).toUpperCase();
+const day   = dy;
         const isPress    = ev.access === 'press';
         const isProposed = ev.access === 'proposed';
 
