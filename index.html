@@ -1760,11 +1760,19 @@ head.appendChild(plusBtn);
       if (dayEvts.length) {
         dayEvts.forEach(ev => {
           const pill = document.createElement('div');
-          pill.className = 'cal-pill ' +
-            (ev.access === 'proposed' ? 'cal-pill-proposed' :
-             ev.access === 'press'    ? 'cal-pill-press' : 'cal-pill-all');
-          pill.textContent = ev.title;
-          pill.title = ev.title;
+const pillColors = {
+  'Roundtable discussion': 'background:#e8eaf5;color:#2a2a6e',
+  'Political organizing':  'background:#fff0e0;color:#7a4500',
+  'Writing workshop':      'background:#fef9e0;color:#7a6500',
+  'Book club':             'background:#e8f0e8;color:#2a5c2a',
+  'Community learning':    'background:#e0f0fa;color:#1a4a6e',
+  'Speaker event':         'background:#f5f0e8;color:#5a4a1a',
+  'ships':                 'background:#f5f0e8;color:#5a4a1a'
+};
+pill.className = 'cal-pill' + (ev.access === 'proposed' ? ' cal-pill-proposed' : '');
+pill.style.cssText = ev.access === 'proposed' ? '' : (pillColors[ev.type] || 'background:#f0f0f0;color:#333');
+pill.textContent = ev.title;
+pill.title = ev.title;
           pill.onclick = (e) => { e.stopPropagation(); showDetail(d, dateStr, dayEvts, head); };
           body.appendChild(pill);
         });
