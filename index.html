@@ -1998,13 +1998,12 @@ function openTypeModal(type) {
   document.getElementById('calTypeModalDesc').textContent = info.desc;
   document.getElementById('calTypeModalBg').classList.add('open');
 }
-
-function closeTypeModal() {
+window.closeTypeModal = function() {
   document.getElementById('calTypeModalBg').classList.remove('open');
   _calTypeModalCurrentType = null;
-}
+};
 
-function openProposeFromTypeModal() {
+window.openProposeFromTypeModal = function() {
   closeTypeModal();
   // Open the proposal modal with type pre-filled but no date
   document.getElementById('calPropTitle').value = '';
