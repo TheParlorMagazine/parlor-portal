@@ -1555,8 +1555,22 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
   this.disabled = true;
   window.parent.postMessage({ type: 'UPDATE_BIO', bio: bio }, '*');
 });
-
-
+function memberHasAccess(access) {
+  if (access === 'all' || access === 'proposed') return true;
+  const m = window.parlorMember;
+  if (!m) return false;
+  const PLAN_IDS = {
+    READERS_CIRCLE: 'fccb348a-7433-4080-8699-9ef8c0e7a519',
+    PRINTING_PRESS: 'c666f321-47e5-40c1-bc2a-565a2f52f64d'
+  };
+  const isPaid = m.planId === PLAN_IDS.READERS_CIRCLE ||
+                 m.planId === PLAN_IDS.PRINTING_PRESS ||
+                 m.plan === "The Reader's Circle" ||
+                 m.plan === 'The Printing Press';
+  if (access === 'members') return isPaid;
+  if (access === 'press') return m.planId === PLAN_IDS.PRINTING_PRESS || m.plan === 'The Printing Press';
+  return false;
+}
 
 // ── MINI WEEKLY CALENDAR ──
 (function(){
@@ -1564,12 +1578,12 @@ document.getElementById('saveBioBtn').addEventListener('click', function() {
 
   // ── Events data ──
    const calEvents = [
-  { id:'e1', date:'2026-04-06', title:'Sunday reading session', time:'11:00 AM', type:'Reading group', access:'all', desc:'An open, informal reading session for all subscribers. Bring a passage, a question, or just yourself.', rsvp:true },
-  { id:'e2', date:'2026-04-10', title:'Live reading — Issue 1 contributors', time:'7:00 PM', type:'Reading group', access:'press', desc:'Issue 1 contributors read from their work and take questions. Printing Press members only.', rsvp:true },
-  { id:'e3', date:'2026-04-14', title:'Zine-making workshop', time:'6:00 PM', type:'Workshop', access:'all', desc:'A hands-on workshop on making your own zine — layout, printing, folding, and stapling. No experience needed.', rsvp:true },
+  { id:'e1', date:'2026-04-06', title:'Sunday reading session', time:'11:00 AM', type:'Roundtable discussion', access:'all', desc:'An open, informal reading session for all subscribers. Bring a passage, a question, or just yourself.', rsvp:true },
+  { id:'e2', date:'2026-04-10', title:'Live reading — Issue 1 contributors', time:'7:00 PM', type:'Roundtable discussion', access:'members', desc:'Issue 1 contributors read from their work and take questions. Printing Press members only.', rsvp:true },
+  { id:'e3', date:'2026-04-14', title:'Zine-making workshop', time:'6:00 PM', type:'Writing Workshop', access:'all', desc:'A hands-on workshop on making your own zine — layout, printing, folding, and stapling. No experience needed.', rsvp:true },
   { id:'e4', date:'2026-04-17', title:'Organizing circle: print & protest', time:'7:00 PM', type:'Political organizing', access:'all', desc:'A member-led discussion on the history of print as a tool for political organising, and what that looks like today.', rsvp:true },
-  { id:'e5', date:'2026-04-22', title:'Book club — The Wretched of the Earth', time:'6:30 PM', type:'Club night', access:'all', desc:'We\'re discussing Chapters 1 and 2 of Fanon. Read before you come — the conversation will go deep.', rsvp:true },
-  { id:'e6', date:'2026-04-24', title:'In conversation: adrienne maree brown', time:'6:00 PM', type:'Reading group', access:'all', desc:'A live conversation with adrienne maree brown on emergent strategy, organising, and the politics of imagination.', rsvp:true },
+  { id:'e5', date:'2026-04-22', title:'Book club — The Wretched of the Earth', time:'6:30 PM', type:'Book club', access:'all', desc:'We\'re discussing Chapters 1 and 2 of Fanon. Read before you come — the conversation will go deep.', rsvp:true },
+  { id:'e6', date:'2026-04-24', title:'In conversation: adrienne maree brown', time:'6:00 PM', type:'Speaker event', access:'all', desc:'A live conversation with adrienne maree brown on emergent strategy, organising, and the politics of imagination.', rsvp:true },
   { id:'e7', date:'2026-04-28', title:'Issue 1 ships to your door', time:'All day', type:'ships', access:'press', desc:'Your first issue of The Parlor is on its way. Printing Press members will receive a shipping confirmation by email.', rsvp:false },
 ];
 
@@ -1804,15 +1818,22 @@ head.appendChild(plusBtn);
     html += '<span class="edp-type-badge ' + typeBadgeClass(ev.type) + '">' + ev.type + '</span>';
   }
   if (isProposed) html += '<span style="font-size:9.5px;color:#888;font-style:italic;">Proposed — pending review</span>';
-  else if (isPress) html += '<span class="edp-lock">Printing Press only</span>';
-  else html += '<span class="edp-all">All subscribers</span>';
+else if (ev.access === 'press') html += '<span class="edp-lock">Printing Press only</span>';
+else if (ev.access === 'members') {
+  html += '<span class="edp-lock">Reader\'s Circle</span>';
+  html += '<span class="edp-lock">Printing Press</span>';
+}
   html += '</div>';
   if (ev.desc) {
     html += '<div class="edp-desc">' + ev.desc + '</div>';
   }
   if (ev.rsvp) {
+  if (memberHasAccess(ev.access)) {
     html += '<button class="edp-rsvp-btn">RSVP for this event</button>';
+  } else {
+    html += '<button class="edp-rsvp-btn" style="background:var(--ink);color:#fff;padding:6px 14px;border-radius:7px;text-decoration:none;font-size:12.5px;">Get tickets</button>';
   }
+}
   html += '</div></div>';
 });
 
@@ -1883,16 +1904,23 @@ if (ev.type && ev.type !== 'ships') {
 }
 if (isProposed) {
   html += '<span style="font-size:9.5px;color:#888;font-style:italic;">Proposed</span>';
-} else if (isPress) {
+} else if (ev.access === 'press') {
   html += '<span class="cal-up-access" style="background:var(--pink);color:#000;">Printing Press</span>';
-} else {
-  html += '<span class="cal-up-access" style="background:#000;color:#fff;">All subscribers</span>';
+} else if (ev.access === 'members') {
+  html += '<span class="cal-up-access" style="background:var(--pink);color:#000;">Reader\'s Circle</span>';
+  html += '<span class="cal-up-access" style="background:var(--pink);color:#000;">Printing Press</span>';
 }
 html += '</div>';
 if (ev.desc || ev.rsvp) {
   html += '<div class="cal-up-expand">';
   if (ev.desc) html += '<div class="cal-up-desc">' + ev.desc + '</div>';
-  if (ev.rsvp) html += '<button class="cal-up-rsvp">RSVP for this event ›</button>';
+  if (ev.rsvp) {
+  if (memberHasAccess(ev.access)) {
+    html += '<button class="cal-up-rsvp">RSVP for this event ›</button>';
+  } else {
+    html += '<button class="cal-up-rsvp" style="background:var(--ink);color:#fff;padding:5px 12px;border-radius:7px;text-decoration:none;">Get tickets</button>';
+  }
+}
   html += '</div>';
 }
 html += '</div>';
