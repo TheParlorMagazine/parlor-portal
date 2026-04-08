@@ -613,13 +613,11 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 </div>
 
 <!-- ══ MODAL — EVENT TYPE EXPLAINER ══ -->
-<div class="cal-type-modal-bg" id="calTypeModalBg">
-  <div class="cal-type-modal">
+<div class="cal-type-modal" style="position:relative;">
+    <button onclick="closeTypeModal()" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;padding:4px;">×</button>
     <div class="cal-type-modal-pill" id="calTypeModalPill"></div>
-    <div class="cal-type-modal-title" id="calTypeModalTitle"></div>
     <div class="cal-type-modal-desc" id="calTypeModalDesc"></div>
     <div class="cal-type-modal-actions">
-      <button class="cal-type-modal-close" onclick="closeTypeModal()">Close</button>
       <button class="cal-type-modal-propose" onclick="openProposeFromTypeModal()">Propose an event</button>
     </div>
   </div>
@@ -1996,7 +1994,6 @@ function openTypeModal(type) {
   pill.textContent = info.emoji + ' ' + type;
   pill.style.background = info.bg;
   pill.style.color = info.color;
-  document.getElementById('calTypeModalTitle').textContent = type;
   document.getElementById('calTypeModalDesc').textContent = info.desc;
   document.getElementById('calTypeModalBg').classList.add('open');
 }
