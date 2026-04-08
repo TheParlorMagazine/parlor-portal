@@ -613,7 +613,8 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 </div>
 
 <!-- ══ MODAL — EVENT TYPE EXPLAINER ══ -->
-<div class="cal-type-modal" style="position:relative;">
+<div class="cal-type-modal-bg" id="calTypeModalBg">
+  <div class="cal-type-modal" style="position:relative;">
     <button onclick="closeTypeModal()" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;padding:4px;">×</button>
     <div class="cal-type-modal-pill" id="calTypeModalPill"></div>
     <div class="cal-type-modal-desc" id="calTypeModalDesc"></div>
