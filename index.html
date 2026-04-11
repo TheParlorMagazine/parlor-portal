@@ -832,7 +832,24 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 </div><!-- /cal-stack -->
 </div><!-- /dash-main -->
 </div><!-- /page-dashboard -->
-
+<!-- ══ MODAL — COMMUNITY GUIDELINES ══ -->
+<div class="modal-overlay" id="guidelinesModal" style="z-index:500;">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">Community guidelines</div>
+    <ul style="padding-left:18px;margin-bottom:16px;">
+      <li style="font-size:14px;line-height:1.8;color:var(--ink);margin-bottom:4px;">Be thoughtful, not reactive</li>
+      <li style="font-size:14px;line-height:1.8;color:var(--ink);margin-bottom:4px;">Engage ideas, not people</li>
+      <li style="font-size:14px;line-height:1.8;color:var(--ink);margin-bottom:4px;">No hate, harassment, or bad-faith arguments</li>
+      <li style="font-size:14px;line-height:1.8;color:var(--ink);margin-bottom:4px;">Respect lived experiences — don't dismiss or demand emotional labor</li>
+      <li style="font-size:14px;line-height:1.8;color:var(--ink);margin-bottom:4px;">Stay on topic and add value</li>
+      <li style="font-size:14px;line-height:1.8;color:var(--ink);margin-bottom:4px;">No spam or self-promotion</li>
+    </ul>
+    <p style="font-size:13px;color:var(--muted);font-style:italic;line-height:1.7;margin-bottom:20px;">If you wouldn't say it in a room full of thoughtful people, don't post it here.</p>
+    <div class="modal-actions">
+      <button class="modal-post" onclick="document.getElementById('guidelinesModal').classList.remove('open')">Got it</button>
+    </div>
+  </div>
+</div>
 <!-- ══ PAGE: FORUM ══ -->
 <div class="page" id="page-forum">
   <div class="sidebar">
@@ -1006,6 +1023,20 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
         </div>
       </div>
       <div class="detail-sidebar">
+        <div class="sidebar-card" style="margin-bottom:14px;">
+  <div class="sc-head">Community guidelines</div>
+  <div class="sc-body" style="padding:12px 14px;">
+    <ul style="padding-left:14px;margin-bottom:10px;">
+      <li style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:1px;">Be thoughtful, not reactive</li>
+      <li style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:1px;">Engage ideas, not people</li>
+      <li style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:1px;">No hate, harassment, or bad-faith arguments</li>
+      <li style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:1px;">Respect lived experiences</li>
+      <li style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:1px;">Stay on topic and add value</li>
+      <li style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:1px;">No spam or self-promotion</li>
+    </ul>
+    <button onclick="document.getElementById('guidelinesModal').classList.add('open')" style="background:none;border:none;font-family:'thermal-variable','Georgia',serif;font-size:12px;color:var(--ink);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px;">Read full guidelines →</button>
+  </div>
+</div>
         <div class="sidebar-card">
           <div class="sc-head">In this discussion</div>
           <div class="sc-body">
