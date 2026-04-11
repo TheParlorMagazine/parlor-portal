@@ -834,17 +834,31 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 </div><!-- /page-dashboard -->
 <!-- ══ MODAL — COMMUNITY GUIDELINES ══ -->
 <div class="modal-overlay" id="guidelinesModal" style="z-index:500;">
-  <div class="modal" style="max-width:480px;">
+  <div class="modal" style="max-width:560px;max-height:80vh;overflow-y:auto;">
     <div class="modal-title">Community guidelines</div>
-    <ul style="padding-left:18px;margin-bottom:16px;">
-      <li style="font-size:14px;line-height:1.8;color:var(--ink);margin-bottom:4px;">Be thoughtful, not reactive</li>
-      <li style="font-size:14px;line-height:1.8;color:var(--ink);margin-bottom:4px;">Engage ideas, not people</li>
-      <li style="font-size:14px;line-height:1.8;color:var(--ink);margin-bottom:4px;">No hate, harassment, or bad-faith arguments</li>
-      <li style="font-size:14px;line-height:1.8;color:var(--ink);margin-bottom:4px;">Respect lived experiences — don't dismiss or demand emotional labor</li>
-      <li style="font-size:14px;line-height:1.8;color:var(--ink);margin-bottom:4px;">Stay on topic and add value</li>
-      <li style="font-size:14px;line-height:1.8;color:var(--ink);margin-bottom:4px;">No spam or self-promotion</li>
-    </ul>
-    <p style="font-size:13px;color:var(--muted);font-style:italic;line-height:1.7;margin-bottom:20px;">If you wouldn't say it in a room full of thoughtful people, don't post it here.</p>
+    <p style="font-size:13.5px;line-height:1.7;color:var(--muted);margin-bottom:20px;">Welcome to The Parlor forum — a space for thoughtful dialogue, critical thinking, and community-building across difference. This is not a free-for-all. It is a curated space grounded in respect, rigor, and care.</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:18px;font-weight:500;">By participating, you agree to the following:</p>
+
+    <div style="margin-bottom:16px;"><div style="font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px;">1. Speak with intention, not impulse</div><p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:4px;">This is not a reaction-driven space. Take a moment before posting. Aim to contribute something meaningful — whether that's a question, perspective, or lived experience.</p><p style="font-size:12px;color:var(--muted);font-style:italic;">Low-effort, inflammatory, or attention-seeking posts may be removed.</p></div>
+
+    <div style="margin-bottom:16px;"><div style="font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px;">2. Disagree thoughtfully</div><p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:6px;">Disagreement is welcome. Dismissiveness is not.</p><ul style="padding-left:16px;"><li style="font-size:13px;color:var(--muted);line-height:1.7;">Engage ideas, not people</li><li style="font-size:13px;color:var(--muted);line-height:1.7;">No personal attacks, sarcasm aimed at individuals, or bad-faith arguments</li><li style="font-size:13px;color:var(--muted);line-height:1.7;">Avoid pile-ons or targeting behavior</li></ul></div>
+
+    <div style="margin-bottom:16px;"><div style="font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px;">3. No hate, harassment, or dehumanization</div><p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:6px;">Zero tolerance for:</p><ul style="padding-left:16px;"><li style="font-size:13px;color:var(--muted);line-height:1.7;">Racism, sexism, homophobia, transphobia, xenophobia, ableism</li><li style="font-size:13px;color:var(--muted);line-height:1.7;">Dehumanizing language or coded hostility</li><li style="font-size:13px;color:var(--muted);line-height:1.7;">Dog whistles or "plausible deniability" bigotry</li></ul><p style="font-size:12px;color:var(--muted);font-style:italic;margin-top:6px;">This includes both explicit and subtle forms.</p></div>
+
+    <div style="margin-bottom:16px;"><div style="font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px;">4. Protect lived experience</div><p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:6px;">Many members share personal, political, or vulnerable experiences.</p><ul style="padding-left:16px;"><li style="font-size:13px;color:var(--muted);line-height:1.7;">Do not invalidate or dismiss someone's lived reality</li><li style="font-size:13px;color:var(--muted);line-height:1.7;">Do not demand emotional labor (e.g., "educate me")</li><li style="font-size:13px;color:var(--muted);line-height:1.7;">Engage with care, especially on topics like trauma, identity, and violence</li></ul></div>
+
+    <div style="margin-bottom:16px;"><div style="font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px;">5. No misinformation or bad-faith framing</div><ul style="padding-left:16px;"><li style="font-size:13px;color:var(--muted);line-height:1.7;">Do not intentionally spread false or misleading information</li><li style="font-size:13px;color:var(--muted);line-height:1.7;">Avoid conspiracy framing without credible sources</li><li style="font-size:13px;color:var(--muted);line-height:1.7;">Be open to correction</li></ul><p style="font-size:12px;color:var(--muted);font-style:italic;margin-top:6px;">We value critical thinking — but it must be grounded in reality.</p></div>
+
+    <div style="margin-bottom:16px;"><div style="font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px;">6. Stay on topic and add value</div><ul style="padding-left:16px;"><li style="font-size:13px;color:var(--muted);line-height:1.7;">Keep posts relevant to the thread</li><li style="font-size:13px;color:var(--muted);line-height:1.7;">Avoid derailing conversations</li><li style="font-size:13px;color:var(--muted);line-height:1.7;">Don't dominate discussions or repost the same arguments across threads</li></ul></div>
+
+    <div style="margin-bottom:16px;"><div style="font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px;">7. No self-promotion or spam</div><ul style="padding-left:16px;"><li style="font-size:13px;color:var(--muted);line-height:1.7;">No unsolicited promotion, links, or advertising</li><li style="font-size:13px;color:var(--muted);line-height:1.7;">Sharing your work is allowed only when directly relevant and not excessive</li></ul></div>
+
+    <div style="margin-bottom:16px;"><div style="font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px;">8. Respect privacy</div><ul style="padding-left:16px;"><li style="font-size:13px;color:var(--muted);line-height:1.7;">Do not share personal information (yours or others')</li><li style="font-size:13px;color:var(--muted);line-height:1.7;">Do not repost content from this forum outside the platform without consent</li></ul></div>
+
+    <div style="margin-bottom:16px;"><div style="font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px;">9. Moderation is active and intentional</div><p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:6px;">Moderators may remove content, lock threads, or issue warnings or remove members. Decisions are made to protect the integrity of the space — not to censor disagreement.</p></div>
+
+    <div style="margin-bottom:24px;"><div style="font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px;">10. This is a community, not an audience</div><p style="font-size:13px;color:var(--muted);line-height:1.7;">You are not here to perform. You are here to participate. Thoughtfulness, curiosity, and accountability are valued more than being "right."</p></div>
+
     <div class="modal-actions">
       <button class="modal-post" onclick="document.getElementById('guidelinesModal').classList.remove('open')">Got it</button>
     </div>
