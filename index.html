@@ -160,7 +160,13 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .modal-cancel:hover{border-color:var(--pinkborder);color:var(--ink)}
 .modal-post{background:var(--ink);color:white;border:none;padding:9px 22px;border-radius:8px;font-family:'thermal-variable','Georgia',serif;font-size:13.5px;font-weight:500;cursor:pointer;transition:opacity 0.15s}
 .modal-post:hover{opacity:0.85}
-
+.thread-guidelines{background:var(--cream);border:1px solid var(--border);border-radius:9px;padding:16px 18px;margin-bottom:18px;}
+.thread-guidelines-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink);margin-bottom:10px;}
+.thread-guidelines ul{padding-left:16px;margin-bottom:12px;}
+.thread-guidelines ul li{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:2px;}
+.thread-guidelines-footer{font-size:12.5px;color:var(--muted);font-style:italic;margin-bottom:12px;}
+.thread-guidelines-check{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;}
+.thread-guidelines-check input{width:15px;height:15px;cursor:pointer;accent-color:#000;}
 .threads-topbar{display:flex;align-items:center;justify-content:space-between;padding:24px 32px 19px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#ffffff;z-index:10}
 .threads-title{font-family:'thermal-variable','Georgia',serif;font-size:24px;font-weight:500}
 .threads-title em{color:#000000}
@@ -629,43 +635,61 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
   <div class="modal">
     <div class="modal-title">Start a new thread</div>
 
-    <!-- Linked library item banner (shown when pre-filled from library) -->
-    <div class="modal-lib-link" id="modalLibLink" style="display:none">
-      <div class="modal-lib-link-inner">
-        <svg viewBox="0 0 16 16" fill="none" style="width:13px;height:13px;flex-shrink:0"><path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <div>
-          <div class="modal-lib-label">Linked library item</div>
-          <div class="modal-lib-title" id="modalLibTitle"></div>
+    <div class="thread-guidelines" id="threadGuidelines">
+      <div class="thread-guidelines-title">Before you post…</div>
+      <ul>
+        <li>Be thoughtful, not reactive</li>
+        <li>Engage ideas, not people</li>
+        <li>No hate, harassment, or bad-faith arguments</li>
+        <li>Respect lived experiences — don't dismiss or demand emotional labor</li>
+        <li>Stay on topic and add value</li>
+        <li>No spam or self-promotion</li>
+      </ul>
+      <div class="thread-guidelines-footer">If you wouldn't say it in a room full of thoughtful people, don't post it here.</div>
+      <label class="thread-guidelines-check">
+        <input type="checkbox" id="guidelinesCheck" onchange="toggleThreadForm()">
+        By posting, you agree to follow these guidelines.
+      </label>
+    </div>
+
+    <div id="threadFormBody" style="opacity:0.4;pointer-events:none;transition:opacity 0.2s;">
+      <div class="modal-lib-link" id="modalLibLink" style="display:none">
+        <div class="modal-lib-link-inner">
+          <svg viewBox="0 0 16 16" fill="none" style="width:13px;height:13px;flex-shrink:0"><path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div>
+            <div class="modal-lib-label">Linked library item</div>
+            <div class="modal-lib-title" id="modalLibTitle"></div>
+          </div>
+          <button class="modal-lib-remove" onclick="clearLibraryLink()" title="Remove link">×</button>
         </div>
-        <button class="modal-lib-remove" onclick="clearLibraryLink()" title="Remove link">×</button>
+      </div>
+      <label class="form-label">Title</label>
+      <input class="form-input" id="threadTitleInput" type="text" placeholder="What's on your mind?">
+      <label class="form-label">Your thoughts</label>
+      <textarea class="form-textarea" id="threadBodyInput" placeholder="Share what you're thinking, a question, a passage that struck you..."></textarea>
+      <div class="form-row">
+        <div><label class="form-label">Category</label>
+          <select class="form-select" id="threadCategorySelect">
+            <option value="Discussion">Discussion</option>
+            <option value="Question">Question</option>
+            <option value="Essay response">Essay response</option>
+            <option value="Library link">Library link</option>
+          </select>
+        </div>
+        <div><label class="form-label">Link to library item</label>
+          <select class="form-select" id="threadLibrarySelect">
+            <option value="">None</option>
+            <option value="The Samizdat Underground: Literature as Survival">The Samizdat Underground</option>
+            <option value="WPA Labor Series: The Right to Organise">WPA Labor Series</option>
+            <option value="The Wretched of the Earth">Wretched of the Earth</option>
+            <option value="Notes Toward a Politics of Location">Notes Toward a Politics of Location</option>
+            <option value="I Am Not Your Negro">I Am Not Your Negro</option>
+            <option value="Conversation with adrienne maree brown">adrienne maree brown conversation</option>
+          </select>
+        </div>
       </div>
     </div>
 
-    <label class="form-label">Title</label>
-    <input class="form-input" id="threadTitleInput" type="text" placeholder="What's on your mind?">
-    <label class="form-label">Your thoughts</label>
-    <textarea class="form-textarea" id="threadBodyInput" placeholder="Share what you're thinking, a question, a passage that struck you..."></textarea>
-    <div class="form-row">
-      <div><label class="form-label">Category</label>
-        <select class="form-select" id="threadCategorySelect">
-          <option value="Discussion">Discussion</option>
-          <option value="Question">Question</option>
-          <option value="Essay response">Essay response</option>
-          <option value="Library link">Library link</option>
-        </select>
-      </div>
-      <div><label class="form-label">Link to library item</label>
-        <select class="form-select" id="threadLibrarySelect">
-          <option value="">None</option>
-          <option value="The Samizdat Underground: Literature as Survival">The Samizdat Underground</option>
-          <option value="WPA Labor Series: The Right to Organise">WPA Labor Series</option>
-          <option value="The Wretched of the Earth">Wretched of the Earth</option>
-          <option value="Notes Toward a Politics of Location">Notes Toward a Politics of Location</option>
-          <option value="I Am Not Your Negro">I Am Not Your Negro</option>
-          <option value="Conversation with adrienne maree brown">adrienne maree brown conversation</option>
-        </select>
-      </div>
-    </div>
     <div class="modal-post-feedback" id="modalPostFeedback"></div>
     <div class="modal-actions">
       <button class="modal-cancel" onclick="closeModal()">Cancel</button>
@@ -1461,6 +1485,8 @@ function showLibraryBrowse(){document.getElementById('library-detail').classList
 let _modalLibraryItem = null;
 
 function openModal() {
+  document.getElementById('guidelinesCheck').checked = false;
+  toggleThreadForm();
   _modalLibraryItem = null;
   document.getElementById('modalLibLink').style.display = 'none';
   document.getElementById('threadTitleInput').value = '';
@@ -1470,8 +1496,15 @@ function openModal() {
   document.getElementById('modalPostFeedback').textContent = '';
   document.getElementById('newThreadModal').classList.add('open');
 }
-
+function toggleThreadForm() {
+  const checked = document.getElementById('guidelinesCheck').checked;
+  const form = document.getElementById('threadFormBody');
+  form.style.opacity = checked ? '1' : '0.4';
+  form.style.pointerEvents = checked ? 'auto' : 'none';
+}
 function openModalWithLibraryItem(title, type) {
+  document.getElementById('guidelinesCheck').checked = false;
+  toggleThreadForm();
   // Pre-fill from library item context
   const itemTitle = title || document.querySelector('.lib-detail-title')?.textContent?.trim() || '';
   const itemType  = type  || 'Essay';
