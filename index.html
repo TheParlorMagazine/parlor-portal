@@ -677,17 +677,20 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
           </select>
         </div>
         <div><label class="form-label">Link to library item</label>
-          <select class="form-select" id="threadLibrarySelect">
-            <option value="">None</option>
-            <option value="The Samizdat Underground: Literature as Survival">The Samizdat Underground</option>
-            <option value="WPA Labor Series: The Right to Organise">WPA Labor Series</option>
-            <option value="The Wretched of the Earth">Wretched of the Earth</option>
-            <option value="Notes Toward a Politics of Location">Notes Toward a Politics of Location</option>
-            <option value="I Am Not Your Negro">I Am Not Your Negro</option>
-            <option value="Conversation with adrienne maree brown">adrienne maree brown conversation</option>
-          </select>
+         <select class="form-select" id="threadLibrarySelect">
+  <option value="" disabled selected>Select an article</option>
+  <option value="The Samizdat Underground: Literature as Survival">The Samizdat Underground</option>
+  <option value="WPA Labor Series: The Right to Organise">WPA Labor Series</option>
+  <option value="The Wretched of the Earth">Wretched of the Earth</option>
+  <option value="Notes Toward a Politics of Location">Notes Toward a Politics of Location</option>
+  <option value="I Am Not Your Negro">I Am Not Your Negro</option>
+  <option value="Conversation with adrienne maree brown">adrienne maree brown conversation</option>
+</select>
         </div>
       </div>
+      <div id="threadUpgradeNudge" style="display:none;margin-top:-6px;margin-bottom:14px;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);">
+  🔒 Start open discussions and explore full forum access with a <a href="https://www.theparlormagazine.com/plans" target="_top" style="color:var(--ink);font-weight:500;text-underline-offset:3px;">Membership</a>
+</div>
     </div>
 
     <div class="modal-post-feedback" id="modalPostFeedback"></div>
@@ -1534,11 +1537,40 @@ function openModal() {
   toggleThreadForm();
   _modalLibraryItem = null;
   document.getElementById('modalLibLink').style.display = 'none';
-  document.getElementById('threadTitleInput').value = '';
-  document.getElementById('threadBodyInput').value = '';
-  document.getElementById('threadCategorySelect').value = 'Discussion';
-  document.getElementById('threadLibrarySelect').value = '';
   document.getElementById('modalPostFeedback').textContent = '';
+
+  const isFree = !window.parlorMember ||
+    (!['The Printing Press', "The Reader's Circle"].includes(window.parlorMember.plan) &&
+     ![
+       'fccb348a-7433-4080-8699-9ef8c0e7a519',
+       'c666f321-47e5-40c1-bc2a-565a2f52f64d'
+     ].includes(window.parlorMember.planId));
+
+  if (isFree) {
+    // Free user mode
+    document.getElementById('threadTitleInput').value = '';
+    document.getElementById('threadTitleInput').placeholder = 'What stood out to you in this piece?';
+    document.getElementById('threadBodyInput').value = '';
+    document.getElementById('threadBodyInput').placeholder = 'Respond to the article, ask a question, or share a passage that struck you…';
+    document.getElementById('threadCategorySelect').value = 'Essay response';
+    document.getElementById('threadCategorySelect').disabled = true;
+    document.getElementById('threadLibrarySelect').value = '';
+    document.getElementById('threadLibrarySelect').required = true;
+    // Show upgrade nudge
+    document.getElementById('threadUpgradeNudge').style.display = 'block';
+  } else {
+    // Paid user mode — full access
+    document.getElementById('threadTitleInput').value = '';
+    document.getElementById('threadTitleInput').placeholder = 'What\'s on your mind?';
+    document.getElementById('threadBodyInput').value = '';
+    document.getElementById('threadBodyInput').placeholder = 'Share what you\'re thinking, a question, a passage that struck you...';
+    document.getElementById('threadCategorySelect').value = 'Discussion';
+    document.getElementById('threadCategorySelect').disabled = false;
+    document.getElementById('threadLibrarySelect').value = '';
+    document.getElementById('threadLibrarySelect').required = false;
+    document.getElementById('threadUpgradeNudge').style.display = 'none';
+  }
+
   document.getElementById('newThreadModal').classList.add('open');
 }
 function toggleThreadForm() {
@@ -1592,6 +1624,15 @@ function postThread() {
 
   if (!title) { feedback.textContent = 'Please add a title.'; feedback.style.color = '#e07070'; return; }
   if (!body)  { feedback.textContent = 'Please add your thoughts.'; feedback.style.color = '#e07070'; return; }
+  const isFree = !window.parlorMember ||
+  (!['The Printing Press', "The Reader's Circle"].includes(window.parlorMember.plan) &&
+   !['fccb348a-7433-4080-8699-9ef8c0e7a519','c666f321-47e5-40c1-bc2a-565a2f52f64d'].includes(window.parlorMember.planId));
+
+if (isFree && !libItem) {
+  feedback.textContent = 'Threads must be linked to a published piece.';
+  feedback.style.color = '#e07070';
+  return;
+}
 
   btn.textContent = 'Posting...';
   btn.disabled = true;
