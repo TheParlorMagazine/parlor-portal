@@ -9,6 +9,7 @@
   :root {
     --ink: #000000;
     --pink: #F1B7C0;
+    --pinkborder: #e8a0b0;
     --muted: #888888;
     --border: #e8d4d8;
     --cream: #fdf5f6;
@@ -21,22 +22,28 @@
     font-size: 14px;
   }
 
-  #parlor-embed-root {
-    width: 100%;
-  }
+  #parlor-embed-root { width: 100%; }
 
-  /* ── Loading / empty states ── */
   .embed-loading {
     padding: 16px;
     font-size: 13px;
     color: var(--muted);
     font-style: italic;
   }
-  .embed-empty { display: none; }
 
-  /* ── Media player (dark) ── */
+  .embed-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  /* ── Media player — white with pink border ── */
   .media-player {
-    background: #111;
+    background: #ffffff;
+    border: 1.5px solid #e8d4d8;
     border-radius: 11px;
     overflow: hidden;
     margin-bottom: 12px;
@@ -46,22 +53,36 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 10px;
   }
   .media-player-label {
     font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    color: rgba(255,255,255,0.45);
+    color: var(--muted);
   }
-  .media-player-duration {
+  .media-player-transcript-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     font-size: 11px;
-    color: rgba(255,255,255,0.35);
+    font-family: Georgia, serif;
+    color: var(--ink);
+    background: none;
+    border: 1px solid #e8d4d8;
+    border-radius: 20px;
+    padding: 3px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+    flex-shrink: 0;
   }
+  .media-player-transcript-btn:hover { background: var(--cream); }
   .media-player-title {
     font-family: Georgia, serif;
     font-size: 15px;
-    color: #ffffff;
+    color: var(--ink);
     padding: 6px 18px 14px;
     line-height: 1.4;
   }
@@ -95,7 +116,7 @@
   .media-progress {
     width: 100%;
     height: 3px;
-    background: rgba(255,255,255,0.15);
+    background: var(--border);
     border-radius: 2px;
     cursor: pointer;
     appearance: none;
@@ -113,12 +134,12 @@
     display: flex;
     justify-content: space-between;
     font-size: 10px;
-    color: rgba(255,255,255,0.4);
+    color: var(--muted);
   }
   .media-speed {
-    background: rgba(255,255,255,0.1);
-    border: none;
-    color: rgba(255,255,255,0.7);
+    background: var(--cream);
+    border: 1px solid var(--border);
+    color: var(--ink);
     font-size: 11px;
     font-family: Georgia, serif;
     padding: 4px 8px;
@@ -141,7 +162,7 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: #111;
+    background: var(--ink);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -213,24 +234,6 @@
     margin-top: 4px;
   }
 
-  /* ── Transcript ── */
-  .media-transcript-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12.5px;
-    color: var(--ink);
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 7px 14px;
-    cursor: pointer;
-    font-family: Georgia, serif;
-    transition: border-color 0.15s;
-    margin-top: 4px;
-  }
-  .media-transcript-btn:hover { border-color: var(--pink); }
-
   /* ── Transcript modal ── */
   .transcript-modal-bg {
     display: none;
@@ -283,16 +286,6 @@
     font-family: Georgia, serif;
     white-space: pre-wrap;
   }
-
-  /* ── Section label ── */
-  .embed-section-label {
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--muted);
-    margin-bottom: 10px;
-  }
 </style>
 </head>
 <body>
@@ -301,7 +294,6 @@
   <div class="embed-loading" id="embedLoading">Loading…</div>
 </div>
 
-<!-- Transcript modal -->
 <div class="transcript-modal-bg" id="transcriptModalBg">
   <div class="transcript-modal">
     <div class="transcript-modal-head">
@@ -313,17 +305,15 @@
 </div>
 
 <script>
-// ── Config ──────────────────────────────────────────────
-const VERCEL_URL = 'https://parlor-portal.vercel.app'; // Update to your actual Vercel URL
+const VERCEL_URL = 'https://parlor-portal.vercel.app'; // ← update to your actual Vercel URL
 const PLAN_IDS = {
   READERS_CIRCLE: 'fccb348a-7433-4080-8699-9ef8c0e7a519',
   PRINTING_PRESS: 'c666f321-47e5-40c1-bc2a-565a2f52f64d'
 };
 
-// ── Transcript modal ─────────────────────────────────────
-function openTranscriptModal(title, transcript) {
+function openTranscriptModal(title, body) {
   document.getElementById('transcriptModalTitle').textContent = title || 'Interview transcript';
-  document.getElementById('transcriptModalBody').textContent = transcript || '';
+  document.getElementById('transcriptModalBody').textContent = body || '';
   document.getElementById('transcriptModalBg').classList.add('open');
 }
 function closeTranscriptModal() {
@@ -333,13 +323,12 @@ document.getElementById('transcriptModalBg').addEventListener('click', function(
   if (e.target === this) closeTranscriptModal();
 });
 
-// ── Audio player helpers ─────────────────────────────────
-function buildAudioPlayer(url, title, duration, id) {
+function buildAudioPlayer(url, title, duration, id, transcriptBtnHtml) {
   return `
     <div class="media-player">
       <div class="media-player-header">
         <div class="media-player-label">Now playing</div>
-        <div class="media-player-duration">${duration || ''}</div>
+        ${transcriptBtnHtml || ''}
       </div>
       <div class="media-player-title">${title || ''}</div>
       <audio id="${id}" src="${url}" preload="metadata" style="display:none"></audio>
@@ -415,18 +404,17 @@ function initAudioPlayer(id) {
   });
 }
 
-// ── Render player ────────────────────────────────────────
 function renderEmbed(fields, isPaid) {
   const root = document.getElementById('parlor-embed-root');
-  const mediaType = fields['Accompanying Media Type'];
-  const mediaUrl = fields['Media URL'] || '';
-  const mediaDuration = fields['Media Duration'] || '';
+  const mediaType  = fields['Accompanying Media Type'];
+  const mediaUrl   = fields['Media URL'] || '';
+  const duration   = fields['Media Duration'] || '';
   const mediaTitle = fields['Media Title'] || fields['Title'] || '';
   const transcript = fields['Transcript'] || '';
 
   let html = '';
 
-  // ── Read Recording — not paywalled ──
+  // Read Recording — never paywalled
   if (mediaType === 'Read Recording') {
     html += `
       <div class="embed-section-label">Listen to this article</div>
@@ -436,34 +424,32 @@ function renderEmbed(fields, isPaid) {
         </div>
         <div>
           <div class="media-listen-label">Read recording</div>
-          <div class="media-listen-title">${mediaTitle}${mediaDuration ? ' · ' + mediaDuration : ''}</div>
+          <div class="media-listen-title">${mediaTitle}${duration ? ' · ' + duration : ''}</div>
         </div>
       </div>
-      ${buildAudioPlayer(mediaUrl, mediaTitle, mediaDuration, 'embedListenAudio')}
+      ${buildAudioPlayer(mediaUrl, mediaTitle, duration, 'embedListenAudio', '')}
     `;
     root.innerHTML = html;
     setTimeout(() => initAudioPlayer('embedListenAudio'), 50);
     return;
   }
 
-  // ── Audio or Video Interview — paywalled ──
+  // Interview — paywalled
   const isVideo = mediaType === 'Video Interview';
   const sectionLabel = isVideo ? '🎬 Watch the full interview' : '🎙️ Listen to the full interview';
-
   html += `<div class="embed-section-label">${sectionLabel}</div>`;
 
   if (!isPaid) {
-    // Blurred paywall
     const blurredPlayer = isVideo
       ? `<div class="media-video-wrap"><iframe src="" title=""></iframe></div>`
-      : buildAudioPlayer(mediaUrl, mediaTitle, mediaDuration, 'embedInterviewAudio');
+      : buildAudioPlayer(mediaUrl, mediaTitle, duration, 'embedInterviewAudio', '');
 
     html += `
       <div class="media-paywall">
         <div class="media-paywall-blur">${blurredPlayer}</div>
         <div class="media-paywall-overlay">
           <div class="media-paywall-icon">🔒</div>
-          <div class="media-paywall-msg">This interview is available to members and single-article readers.</div>
+          <div class="media-paywall-msg">This interview is available to members only.</div>
           <button class="media-paywall-btn" onclick="unlockWithPlan('59144c09-0a72-4df4-810c-438e8ed32268')">
             Purchase one-time access
           </button>
@@ -474,25 +460,24 @@ function renderEmbed(fields, isPaid) {
       </div>
     `;
   } else {
-    // Full player
+    // Transcript button for player header
+    const transcriptBtn = transcript
+      ? `<button class="media-player-transcript-btn" onclick="openTranscriptModal('${mediaTitle.replace(/'/g, "\\'")} — transcript', document.getElementById('_transcriptData').textContent)">📄 Read transcript</button>`
+      : '';
+
     if (isVideo) {
       html += `
         <div class="media-video-wrap">
           <iframe src="${mediaUrl}" allowfullscreen title="${mediaTitle}"></iframe>
         </div>
+        ${transcript ? `<button class="media-player-transcript-btn" style="margin-top:8px;" onclick="openTranscriptModal('${mediaTitle.replace(/'/g, "\\'")} — transcript', document.getElementById('_transcriptData').textContent)">📄 Read transcript</button>` : ''}
       `;
     } else {
-      html += buildAudioPlayer(mediaUrl, mediaTitle, mediaDuration, 'embedInterviewAudio');
+      html += buildAudioPlayer(mediaUrl, mediaTitle, duration, 'embedInterviewAudio', transcriptBtn);
     }
 
-    // Transcript button
     if (transcript) {
-      html += `
-        <button class="media-transcript-btn" onclick="openTranscriptModal('${mediaTitle.replace(/'/g, "\\'")} — transcript', document.getElementById('_transcriptData').textContent)">
-          📄 Read transcript
-        </button>
-        <div id="_transcriptData" style="display:none">${transcript}</div>
-      `;
+      html += `<div id="_transcriptData" style="display:none">${transcript}</div>`;
     }
   }
 
@@ -500,10 +485,8 @@ function renderEmbed(fields, isPaid) {
   if (isPaid && !isVideo) setTimeout(() => initAudioPlayer('embedInterviewAudio'), 50);
 }
 
-// ── Check member plan via Wix ────────────────────────────
 async function getMemberPlan() {
   try {
-    // Use Wix Members API via postMessage to parent
     return new Promise((resolve) => {
       const timeout = setTimeout(() => resolve(false), 3000);
       window.addEventListener('message', function handler(e) {
@@ -519,7 +502,6 @@ async function getMemberPlan() {
           resolve(isPaid);
         }
       });
-      // Request member data from Wix parent
       window.parent.postMessage({ type: 'REQUEST_MEMBER_DATA' }, '*');
     });
   } catch (e) {
@@ -527,13 +509,17 @@ async function getMemberPlan() {
   }
 }
 
-// ── Main init ────────────────────────────────────────────
+function unlockWithPlan(planId) {
+  sessionStorage.setItem('checkout:planId', planId);
+  sessionStorage.setItem('checkout:returnTo', window.location.pathname);
+  window.location.href = '/checkout-relay';
+}
+
 async function init() {
-  // Extract slug from URL
   const pathParts = window.location.pathname.split('/post/');
   const slug = pathParts.length > 1 ? pathParts[1].split('/')[0] : null;
 
-  // ── TEST MODE — no slug found, show mock player ──
+  // Test mode
   if (!slug) {
     document.getElementById('embedLoading').style.display = 'none';
     renderEmbed({
@@ -542,12 +528,11 @@ async function init() {
       'Media Duration': '54 min',
       'Media Title': 'Full conversation with adrienne maree brown',
       'Transcript': 'This is a placeholder transcript for preview purposes.'
-    }, true); // second arg = isPaid, set to false to test paywall
+    }, true); // change true → false to preview paywall
     return;
   }
 
   try {
-    // Fetch library item by slug
     const res = await fetch(`${VERCEL_URL}/api/library?slug=${encodeURIComponent(slug)}`);
     const data = await res.json();
 
@@ -557,11 +542,8 @@ async function init() {
     }
 
     const fields = data.records[0].fields;
-
-    // Check member status
     const isPaid = await getMemberPlan();
 
-    // Always render
     document.getElementById('embedLoading').style.display = 'none';
     renderEmbed(fields, isPaid);
 
@@ -569,14 +551,6 @@ async function init() {
     console.error('Parlor embed error:', err);
     document.getElementById('embedLoading').style.display = 'none';
   }
-}
-
-// ── Checkout relay ───────────────────────────────────────
-function unlockWithPlan(planId) {
-  const returnTo = window.location.pathname;
-  sessionStorage.setItem('checkout:planId', planId);
-  sessionStorage.setItem('checkout:returnTo', returnTo);
-  window.location.href = '/checkout-relay';
 }
 
 init();
