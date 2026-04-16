@@ -451,7 +451,7 @@ function renderEmbed(fields, isPaid) {
           <button class="media-paywall-btn" onclick="unlockWithPlan('59144c09-0a72-4df4-810c-438e8ed32268')">
             Purchase one-time access
           </button>
-          <button class="media-paywall-btn" style="background:#000;color:#fff;margin-top:2px;" onclick="window.location.href='https://www.theparlormagazine.com/pricing-plans/become-a-member'">
+          <button class="media-paywall-btn" style="background:#000;color:#fff;margin-top:2px;" onclick="unlockWithPlan('fccb348a-7433-4080-8699-9ef8c0e7a519')">
             Become a member
           </button>
         </div>
@@ -508,9 +508,9 @@ async function getMemberPlan() {
 }
 
 function unlockWithPlan(planId) {
-  sessionStorage.setItem('checkout:planId', planId);
-  sessionStorage.setItem('checkout:returnTo', window.location.pathname);
-  window.location.href = '/checkout-relay';
+  window.top.sessionStorage.setItem('checkout:planId', planId);
+  window.top.sessionStorage.setItem('checkout:returnTo', window.top.location.href);
+  window.top.location.href = 'https://www.theparlormagazine.com/checkout-relay';
 }
 
 async function init() {
