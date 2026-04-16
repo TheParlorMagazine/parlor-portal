@@ -514,8 +514,9 @@ function unlockWithPlan(planId) {
 }
 
 async function init() {
-  const pathParts = window.location.pathname.split('/post/');
-  const slug = pathParts.length > 1 ? pathParts[1].split('/')[0] : null;
+  const parentUrl = document.referrer || window.parent.location.href;
+const pathParts = parentUrl.split('/post/');
+const slug = pathParts.length > 1 ? pathParts[1].split('/')[0] : null;
 
   // Test mode
   if (!slug) {
