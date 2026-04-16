@@ -82,7 +82,7 @@
   .media-player-title {
     font-family: Georgia, serif;
     font-size: 15px;
-    color: var(--ink);
+    color: var(--muted);
     padding: 6px 18px 14px;
     line-height: 1.4;
   }
@@ -96,7 +96,7 @@
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: var(--pink);
+    background: #000000;
     border: none;
     cursor: pointer;
     display: flex;
@@ -106,7 +106,7 @@
     transition: opacity 0.15s;
   }
   .media-play-btn:hover { opacity: 0.85; }
-  .media-play-btn svg { width: 14px; height: 14px; color: #000; }
+  .media-play-btn svg { width: 14px; height: 14px; color: #ffffff; }
   .media-progress-wrap {
     flex: 1;
     display: flex;
@@ -436,9 +436,7 @@ function renderEmbed(fields, isPaid) {
 
   // Interview — paywalled
   const isVideo = mediaType === 'Video Interview';
-  const sectionLabel = isVideo ? '🎬 Watch the full interview' : '🎙️ Listen to the full interview';
-  html += `<div class="embed-section-label">${sectionLabel}</div>`;
-
+  
   if (!isPaid) {
     const blurredPlayer = isVideo
       ? `<div class="media-video-wrap"><iframe src="" title=""></iframe></div>`
@@ -462,7 +460,7 @@ function renderEmbed(fields, isPaid) {
   } else {
     // Transcript button for player header
     const transcriptBtn = transcript
-      ? `<button class="media-player-transcript-btn" onclick="openTranscriptModal('${mediaTitle.replace(/'/g, "\\'")} — transcript', document.getElementById('_transcriptData').textContent)">📄 Read transcript</button>`
+      ? `<button class="media-player-transcript-btn" onclick="openTranscriptModal('${mediaTitle.replace(/'/g, "\\'")} — transcript', document.getElementById('_transcriptData').textContent)">Read transcript</button>`
       : '';
 
     if (isVideo) {
@@ -470,7 +468,7 @@ function renderEmbed(fields, isPaid) {
         <div class="media-video-wrap">
           <iframe src="${mediaUrl}" allowfullscreen title="${mediaTitle}"></iframe>
         </div>
-        ${transcript ? `<button class="media-player-transcript-btn" style="margin-top:8px;" onclick="openTranscriptModal('${mediaTitle.replace(/'/g, "\\'")} — transcript', document.getElementById('_transcriptData').textContent)">📄 Read transcript</button>` : ''}
+        ${transcript ? `<button class="media-player-transcript-btn" style="margin-top:8px;" onclick="openTranscriptModal('${mediaTitle.replace(/'/g, "\\'")} — transcript', document.getElementById('_transcriptData').textContent)">Read transcript</button>` : ''}
       `;
     } else {
       html += buildAudioPlayer(mediaUrl, mediaTitle, duration, 'embedInterviewAudio', transcriptBtn);
