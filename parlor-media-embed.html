@@ -508,9 +508,8 @@ async function getMemberPlan() {
 }
 
 function unlockWithPlan(planId) {
-  window.top.sessionStorage.setItem('checkout:planId', planId);
-  window.top.sessionStorage.setItem('checkout:returnTo', window.top.location.href);
-  window.top.location.href = 'https://www.theparlormagazine.com/checkout-relay';
+  const returnTo = encodeURIComponent(window.top.location.href);
+  window.top.location.href = `https://www.theparlormagazine.com/checkout-relay?planId=${planId}&returnTo=${returnTo}`;
 }
 
 async function init() {
