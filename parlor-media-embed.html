@@ -404,7 +404,7 @@ function initAudioPlayer(id) {
   });
 }
 
-function renderEmbed(fields, isPaid) {
+function renderEmbed(fields, isPaid, slug) {
   const root = document.getElementById('parlor-embed-root');
   const mediaType  = fields['Accompanying Media Type'];
   const mediaUrl   = fields['Media URL'] || '';
@@ -442,18 +442,27 @@ function renderEmbed(fields, isPaid) {
       ? `<div class="media-video-wrap"><iframe src="" title=""></iframe></div>`
       : buildAudioPlayer(mediaUrl, mediaTitle, duration, 'embedInterviewAudio', '');
 
+  const articleUrl = `https://www.theparlormagazine.com/post/${slug}`;
+    const returnToEncoded = encodeURIComponent(articleUrl);
+
     html += `
       <div class="media-paywall">
         <div class="media-paywall-blur">${blurredPlayer}</div>
         <div class="media-paywall-overlay">
           <div class="media-paywall-icon">🔒</div>
           <div class="media-paywall-msg">This interview is available to members only.</div>
-          <button class="media-paywall-btn" onclick="unlockWithPlan('59144c09-0a72-4df4-810c-438e8ed32268')">
+          <a class="media-paywall-btn"
+            href="https://www.theparlormagazine.com/checkout-relay?planId=59144c09-0a72-4df4-810c-438e8ed32268&returnTo=${returnToEncoded}"
+            target="_top"
+            style="text-decoration:none;display:inline-block;">
             Purchase one-time access
-          </button>
-          <button class="media-paywall-btn" style="background:#000;color:#fff;margin-top:2px;" onclick="unlockWithPlan('fccb348a-7433-4080-8699-9ef8c0e7a519')">
+          </a>
+          <a class="media-paywall-btn"
+            href="https://www.theparlormagazine.com/checkout-relay?planId=fccb348a-7433-4080-8699-9ef8c0e7a519&returnTo=${returnToEncoded}"
+            target="_top"
+            style="background:#000;color:#fff;margin-top:2px;text-decoration:none;display:inline-block;">
             Become a member
-          </button>
+          </a>
         </div>
       </div>
     `;
@@ -541,7 +550,7 @@ async function init() {
       'Media Duration': '54 min',
       'Media Title': 'Full conversation with adrienne maree brown',
       'Transcript': 'This is a placeholder transcript for preview purposes.'
-    }, true);
+    }, true, 'test');
     return;
   }
 
@@ -558,7 +567,7 @@ async function init() {
     const isPaid = await getMemberPlan();
 
     document.getElementById('embedLoading').style.display = 'none';
-    renderEmbed(fields, isPaid);
+    renderEmbed(fields, isPaid, slug);
 
   } catch (err) {
     console.error('Parlor embed error:', err);
