@@ -514,11 +514,26 @@ function unlockWithPlan(planId) {
 }
 
 async function init() {
-  const parentUrl = document.referrer || window.parent.location.href;
-const pathParts = parentUrl.split('/post/');
-const slug = pathParts.length > 1 ? pathParts[1].split('/')[0] : null;
+  // Try URL parameter first
+  const params = new URLSearchParams(window.location.search);
+  let slug = params.get('slug');
 
-  // Test mode
+  if (!slug) {
+    // Try parent URL via referrer
+    const parentUrl = document.referrer;
+    if (parentUrl) {
+      const parts = parentUrl.split('/post/');
+      if (parts.length > 1) slug = parts[1].split('/')[0].split('?')[0];
+    }
+  }
+
+  if (!slug) {
+    // Try own pathname as fallback
+    const parts = window.location.pathname.split('/post/');
+    if (parts.length > 1) slug = parts[1].split('/')[0];
+  }
+
+  // Test mode — no slug found
   if (!slug) {
     document.getElementById('embedLoading').style.display = 'none';
     renderEmbed({
@@ -527,7 +542,7 @@ const slug = pathParts.length > 1 ? pathParts[1].split('/')[0] : null;
       'Media Duration': '54 min',
       'Media Title': 'Full conversation with adrienne maree brown',
       'Transcript': 'This is a placeholder transcript for preview purposes.'
-    }, true); // change true → false to preview paywall
+    }, true);
     return;
   }
 
