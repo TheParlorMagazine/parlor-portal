@@ -197,10 +197,10 @@
     margin-bottom: 12px;
   }
   .media-paywall-blur {
-    filter: blur(4px);
-    pointer-events: none;
-    opacity: 0.5;
-  }
+  filter: blur(2px);
+  pointer-events: none;
+  opacity: 0.6;
+}
   .media-paywall-overlay {
     position: absolute;
     inset: 0;
@@ -437,35 +437,35 @@ function renderEmbed(fields, isPaid, slug) {
   // Interview — paywalled
   const isVideo = mediaType === 'Video Interview';
   
-  if (!isPaid) {
-    const blurredPlayer = isVideo
-      ? `<div class="media-video-wrap"><iframe src="" title=""></iframe></div>`
-      : buildAudioPlayer(mediaUrl, mediaTitle, duration, 'embedInterviewAudio', '');
+ if (!isPaid) {
+  const blurredPlayer = isVideo
+    ? `<div class="media-video-wrap"><iframe src="" title=""></iframe></div>`
+    : buildAudioPlayer(mediaUrl, mediaTitle, duration, 'embedInterviewAudio', '');
 
   const articleUrl = `https://www.theparlormagazine.com/post/${slug}`;
-    const returnToEncoded = encodeURIComponent(articleUrl);
+  const returnToEncoded = encodeURIComponent(articleUrl);
 
-    html += `
-      <div class="media-paywall">
-        <div class="media-paywall-blur">${blurredPlayer}</div>
-        <div class="media-paywall-overlay">
-          <div class="media-paywall-icon">🔒</div>
-          <div class="media-paywall-msg">This interview is available to members only.</div>
-          <a class="media-paywall-btn"
-            href="https://www.theparlormagazine.com/checkout-relay?planId=59144c09-0a72-4df4-810c-438e8ed32268&returnTo=${returnToEncoded}"
-            target="_top"
-            style="text-decoration:none;display:inline-block;">
-            Purchase one-time access
-          </a>
-          <a class="media-paywall-btn"
-            href="https://www.theparlormagazine.com/checkout-relay?planId=fccb348a-7433-4080-8699-9ef8c0e7a519&returnTo=${returnToEncoded}"
-            target="_top"
-            style="background:#000;color:#fff;margin-top:2px;text-decoration:none;display:inline-block;">
-            Become a member
-          </a>
-        </div>
+  html += `
+    <div class="media-paywall" id="paywallWrap">
+      <div id="paywallPlayerPreview">${blurredPlayer}</div>
+      <div class="media-paywall-overlay" id="paywallOverlay" style="opacity:0;transition:opacity 1s ease;">
+        <div class="media-paywall-icon">🔒</div>
+        <div class="media-paywall-msg">This interview is available to members only.</div>
+        <a class="media-paywall-btn"
+          href="https://www.theparlormagazine.com/checkout-relay?planId=59144c09-0a72-4df4-810c-438e8ed32268&returnTo=${returnToEncoded}"
+          target="_top"
+          style="text-decoration:none;display:inline-block;">
+          Purchase one-time access
+        </a>
+        <a class="media-paywall-btn"
+          href="https://www.theparlormagazine.com/checkout-relay?planId=fccb348a-7433-4080-8699-9ef8c0e7a519&returnTo=${returnToEncoded}"
+          target="_top"
+          style="background:#000;color:#fff;margin-top:2px;text-decoration:none;display:inline-block;">
+          Become a member
+        </a>
       </div>
-    `;
+    </div>
+  `;
   } else {
     // Transcript button for player header
     const transcriptBtn = transcript
@@ -491,7 +491,16 @@ function renderEmbed(fields, isPaid, slug) {
   root.innerHTML = html;
   if (isPaid && !isVideo) setTimeout(() => initAudioPlayer('embedInterviewAudio'), 50);
 }
-
+// Delayed paywall reveal
+  if (!isPaid) {
+    setTimeout(() => {
+      const overlay = document.getElementById('paywallOverlay');
+      const preview = document.getElementById('paywallPlayerPreview');
+      if (overlay) overlay.style.opacity = '1';
+      if (preview) preview.style.filter = 'blur(4px)';
+      if (preview) preview.style.opacity = '0.5';
+    }, 9000);
+  }
 async function getMemberPlan() {
   try {
     return new Promise((resolve) => {
