@@ -488,19 +488,23 @@ function renderEmbed(fields, isPaid, slug) {
     }
   }
 
-  root.innerHTML = html;
+ root.innerHTML = html;
   if (isPaid && !isVideo) setTimeout(() => initAudioPlayer('embedInterviewAudio'), 50);
-}
-// Delayed paywall reveal
   if (!isPaid) {
     setTimeout(() => {
       const overlay = document.getElementById('paywallOverlay');
       const preview = document.getElementById('paywallPlayerPreview');
       if (overlay) overlay.style.opacity = '1';
-      if (preview) preview.style.filter = 'blur(4px)';
-      if (preview) preview.style.opacity = '0.5';
+      if (preview) {
+        preview.style.filter = 'blur(2px)';
+        preview.style.opacity = '0.6';
+        preview.style.transition = 'filter 1.5s ease, opacity 1.5s ease';
+      }
     }, 9000);
   }
+}
+
+async function getMemberPlan() {
 async function getMemberPlan() {
   try {
     return new Promise((resolve) => {
