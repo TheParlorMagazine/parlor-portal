@@ -191,29 +191,38 @@
 
   /* ── Paywall ── */
   .media-paywall {
-    position: relative;
-    border-radius: 11px;
-    overflow: hidden;
-    margin-bottom: 12px;
-  }
+  position: relative;
+  border-radius: 11px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  min-height: 160px;
+}
   .media-paywall-blur {
   filter: blur(2px);
   pointer-events: none;
   opacity: 0.6;
 }
   .media-paywall-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    background: rgba(0,0,0,0.55);
-    border-radius: 11px;
-    padding: 20px;
-    text-align: center;
-  }
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(0,0,0,0.55);
+  border-radius: 11px;
+  padding: 20px;
+  text-align: center;
+}
+.media-paywall-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 4px;
+}
   .media-paywall-icon { font-size: 22px; }
   .media-paywall-msg {
     font-size: 13px;
@@ -451,18 +460,22 @@ function renderEmbed(fields, isPaid, slug) {
       <div class="media-paywall-overlay" id="paywallOverlay" style="opacity:0;transition:opacity 1s ease;">
         <div class="media-paywall-icon">🔒</div>
         <div class="media-paywall-msg">This interview is available to members only.</div>
-        <a class="media-paywall-btn"
-          href="https://www.theparlormagazine.com/checkout-relay?planId=59144c09-0a72-4df4-810c-438e8ed32268&returnTo=${returnToEncoded}"
-          target="_top"
-          style="text-decoration:none;display:inline-block;">
-          Purchase one-time access
-        </a>
-        <a class="media-paywall-btn"
-          href="https://www.theparlormagazine.com/checkout-relay?planId=fccb348a-7433-4080-8699-9ef8c0e7a519&returnTo=${returnToEncoded}"
-          target="_top"
-          style="background:#000;color:#fff;margin-top:2px;text-decoration:none;display:inline-block;">
-          Become a member
-        </a>
+        <div class="media-paywall-icon">🔒</div>
+<div class="media-paywall-msg">This interview is available to members only.</div>
+<div class="media-paywall-buttons">
+  <a class="media-paywall-btn"
+    href="https://www.theparlormagazine.com/checkout-relay?planId=59144c09-0a72-4df4-810c-438e8ed32268&returnTo=${returnToEncoded}"
+    target="_top"
+    style="text-decoration:none;display:inline-block;">
+    Purchase one-time access
+  </a>
+  <a class="media-paywall-btn"
+    href="https://www.theparlormagazine.com/checkout-relay?planId=fccb348a-7433-4080-8699-9ef8c0e7a519&returnTo=${returnToEncoded}"
+    target="_top"
+    style="background:#000;color:#fff;margin-top:2px;text-decoration:none;display:inline-block;">
+    Become a member
+  </a>
+</div>
       </div>
     </div>
   `;
@@ -489,17 +502,17 @@ function renderEmbed(fields, isPaid, slug) {
   }
 
  root.innerHTML = html;
-  if (isPaid && !isVideo) setTimeout(() => initAudioPlayer('embedInterviewAudio'), 50);
-  if (!isPaid) {
+ if (!isPaid) {
     setTimeout(() => {
       const overlay = document.getElementById('paywallOverlay');
       const preview = document.getElementById('paywallPlayerPreview');
       if (overlay) overlay.style.opacity = '1';
       if (preview) {
-        preview.style.filter = 'blur(2px)';
-        preview.style.opacity = '0.6';
+        preview.style.filter = 'blur(1px)';
+        preview.style.opacity = '0.8';
         preview.style.transition = 'filter 1.5s ease, opacity 1.5s ease';
       }
+      if (typeof resizeParent === 'function') resizeParent();
     }, 9000);
   }
 }
@@ -588,6 +601,14 @@ async function init() {
 }
 
 init();
+</script>
+ <script>
+  function resizeParent() {
+    const height = document.body.scrollHeight;
+    window.parent.postMessage({ type: 'PARLOR_RESIZE', height: height }, '*');
+  }
+  window.addEventListener('load', resizeParent);
+  new MutationObserver(resizeParent).observe(document.body, { childList: true, subtree: true });
 </script>
 </body>
 </html>
