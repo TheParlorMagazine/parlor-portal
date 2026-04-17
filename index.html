@@ -615,75 +615,56 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .edp-badge-speaker{background:#f5f0e8;color:#5a4a1a;}
 .edp-badge-workshop{background:#fef9e0;color:#7a6500;}
 /* ── NOTIFICATION PANEL ── */
-.notif-panel-wrap {
+.notif-modal-bg {
   display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+}
+.notif-modal-bg.open { display: block; }
+.notif-panel {
   position: fixed;
   top: 0;
   left: 260px;
   height: 100vh;
-  z-index: 200;
-  pointer-events: none;
-  align-items: flex-start;
-  padding-top: 172px;
-}
-.notif-panel-wrap.open {
-  display: flex;
-  pointer-events: auto;
-}
-.notif-panel {
   width: 300px;
   background: var(--paper);
-  border: 1px solid var(--border);
+  border-right: 1px solid var(--border);
   border-left: none;
-  border-radius: 0 12px 12px 12px;
-  overflow: hidden;
-  box-shadow: 4px 4px 24px rgba(0,0,0,0.10);
+  box-shadow: 4px 0 24px rgba(0,0,0,0.10);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 .notif-panel-head {
-  padding: 12px 16px;
+  padding: 14px 18px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: var(--paper);
+  z-index: 1;
 }
-.notif-panel-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink);
-}
+.notif-panel-title { font-size: 15px; font-weight: 600; color: var(--ink); }
 .notif-mark-all {
-  font-size: 11px;
-  color: var(--muted);
-  background: none;
-  border: none;
-  font-family: 'thermal-variable', Georgia, serif;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.15s;
+  font-size: 11px; color: var(--muted); background: none; border: none;
+  font-family: 'thermal-variable', Georgia, serif; cursor: pointer; padding: 0;
 }
 .notif-mark-all:hover { color: var(--ink); }
 .notif-item {
-  display: flex;
-  gap: 10px;
-  padding: 11px 16px;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  align-items: flex-start;
-  transition: background 0.12s;
+  display: flex; gap: 10px; padding: 12px 18px;
+  border-bottom: 1px solid var(--border); cursor: pointer;
+  align-items: flex-start; transition: background 0.12s;
 }
 .notif-item:last-of-type { border-bottom: none; }
 .notif-item:hover { background: var(--cream); }
 .notif-item.unread { background: #fef9fa; }
 .notif-item.unread:hover { background: var(--cream); }
 .notif-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 1px;
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; margin-top: 1px;
 }
 .ni-reply   { background: #fce8ec; }
 .ni-inbox   { background: #e8f0f8; }
@@ -691,37 +672,21 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .ni-event   { background: #e8f5ec; }
 .notif-icon svg { width: 13px; height: 13px; }
 .notif-body { flex: 1; min-width: 0; }
-.notif-msg {
-  font-size: 12px;
-  color: var(--ink);
-  line-height: 1.45;
-  margin-bottom: 2px;
-}
+.notif-msg { font-size: 12.5px; color: var(--ink); line-height: 1.45; margin-bottom: 2px; }
 .notif-msg strong { font-weight: 600; }
 .notif-time { font-size: 10.5px; color: var(--muted); }
 .notif-unread-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--pink);
-  flex-shrink: 0;
-  margin-top: 5px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--pink); flex-shrink: 0; margin-top: 5px;
 }
 .notif-panel-footer {
-  padding: 10px 16px;
-  border-top: 1px solid var(--border);
-  text-align: center;
+  padding: 11px 18px; border-top: 1px solid var(--border);
+  text-align: center; margin-top: auto;
 }
 .notif-see-all {
-  font-size: 12px;
-  color: var(--ink);
-  background: none;
-  border: none;
-  font-family: 'thermal-variable', Georgia, serif;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  padding: 0;
+  font-size: 12px; color: var(--ink); background: none; border: none;
+  font-family: 'thermal-variable', Georgia, serif; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px; padding: 0;
 }
 </style>
 </head>
@@ -2683,12 +2648,11 @@ function initAudioPlayer(id) {
 // ── NOTIFICATION PANEL ──
 function toggleNotifPanel(e) {
   if (e) e.stopPropagation();
-  const wrap = document.getElementById('notifPanelWrap');
-  wrap.classList.toggle('open');
+  document.getElementById('notifModalBg').classList.toggle('open');
 }
 
 function closeNotifPanel() {
-  document.getElementById('notifPanelWrap').classList.remove('open');
+  document.getElementById('notifModalBg').classList.remove('open');
 }
 
 function handleNotif(dest) {
@@ -2704,78 +2668,40 @@ function markAllRead() {
   });
   document.querySelectorAll('.sb-notif').forEach(el => el.remove());
 }
-
-document.addEventListener('click', function(e) {
-  const wrap = document.getElementById('notifPanelWrap');
-  if (!wrap || !wrap.classList.contains('open')) return;
-  if (!e.target.closest('#notifPanelWrap') && !e.target.closest('.sb-item')) {
-    closeNotifPanel();
-  }
 });
 </script>
 <!-- ── NOTIFICATION PANEL ── -->
-<div class="notif-panel-wrap" id="notifPanelWrap">
-  <div class="notif-panel" id="notifPanel">
+<div class="notif-modal-bg" id="notifModalBg" onclick="closeNotifPanel()">
+  <div class="notif-panel" id="notifPanel" onclick="event.stopPropagation()">
     <div class="notif-panel-head">
       <div class="notif-panel-title">Notifications</div>
       <button class="notif-mark-all" onclick="markAllRead()">Mark all read</button>
     </div>
-
     <div class="notif-item unread" onclick="handleNotif('forum')">
-      <div class="notif-icon ni-reply">
-        <svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12v8a1 1 0 01-1 1H5l-3 2V3z" stroke="#9b3a6e" stroke-width="1.4"/></svg>
-      </div>
-      <div class="notif-body">
-        <div class="notif-msg"><strong>Margot L.</strong> replied to your thread on Havel</div>
-        <div class="notif-time">2 hours ago</div>
-      </div>
+      <div class="notif-icon ni-reply"><svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12v8a1 1 0 01-1 1H5l-3 2V3z" stroke="#9b3a6e" stroke-width="1.4"/></svg></div>
+      <div class="notif-body"><div class="notif-msg"><strong>Margot L.</strong> replied to your thread on Havel</div><div class="notif-time">2 hours ago</div></div>
       <div class="notif-unread-dot"></div>
     </div>
-
     <div class="notif-item unread" onclick="handleNotif('dashboard')">
-      <div class="notif-icon ni-inbox">
-        <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12v8a1 1 0 01-1 1H3a1 1 0 01-1-1V4z" stroke="#185fa5" stroke-width="1.4"/><path d="M2 4l6 5 6-5" stroke="#185fa5" stroke-width="1.4"/></svg>
-      </div>
-      <div class="notif-body">
-        <div class="notif-msg"><strong>Parlor Editors</strong> sent you a message</div>
-        <div class="notif-time">5 hours ago</div>
-      </div>
+      <div class="notif-icon ni-inbox"><svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12v8a1 1 0 01-1 1H3a1 1 0 01-1-1V4z" stroke="#185fa5" stroke-width="1.4"/><path d="M2 4l6 5 6-5" stroke="#185fa5" stroke-width="1.4"/></svg></div>
+      <div class="notif-body"><div class="notif-msg"><strong>Parlor Editors</strong> sent you a message</div><div class="notif-time">5 hours ago</div></div>
       <div class="notif-unread-dot"></div>
     </div>
-
     <div class="notif-item unread" onclick="handleNotif('library')">
-      <div class="notif-icon ni-library">
-        <svg viewBox="0 0 16 16" fill="none"><path d="M8 13V4M8 4C8 4 6 3 3 3v10c3 0 5 1 5 1M8 4c0 0 2-1 5-1v10c-3 0-5 1-5 1" stroke="#533ab7" stroke-width="1.4" stroke-linecap="round"/></svg>
-      </div>
-      <div class="notif-body">
-        <div class="notif-msg">New library drop — <strong>7 items</strong> for April's theme</div>
-        <div class="notif-time">1 day ago</div>
-      </div>
+      <div class="notif-icon ni-library"><svg viewBox="0 0 16 16" fill="none"><path d="M8 13V4M8 4C8 4 6 3 3 3v10c3 0 5 1 5 1M8 4c0 0 2-1 5-1v10c-3 0-5 1-5 1" stroke="#533ab7" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+      <div class="notif-body"><div class="notif-msg">New library drop — <strong>7 items</strong> for April's theme</div><div class="notif-time">1 day ago</div></div>
       <div class="notif-unread-dot"></div>
     </div>
-
     <div class="notif-item" onclick="handleNotif('dashboard')">
-      <div class="notif-icon ni-event">
-        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="#0f6e56" stroke-width="1.4"/><path d="M5 1v4M11 1v4M2 7h12" stroke="#0f6e56" stroke-width="1.4" stroke-linecap="round"/></svg>
-      </div>
-      <div class="notif-body">
-        <div class="notif-msg">Your event proposal was <strong>accepted</strong></div>
-        <div class="notif-time">2 days ago</div>
-      </div>
+      <div class="notif-icon ni-event"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="#0f6e56" stroke-width="1.4"/><path d="M5 1v4M11 1v4M2 7h12" stroke="#0f6e56" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+      <div class="notif-body"><div class="notif-msg">Your event proposal was <strong>accepted</strong></div><div class="notif-time">2 days ago</div></div>
     </div>
-
     <div class="notif-item" onclick="handleNotif('forum')">
-      <div class="notif-icon ni-reply">
-        <svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12v8a1 1 0 01-1 1H5l-3 2V3z" stroke="#9b3a6e" stroke-width="1.4"/></svg>
-      </div>
-      <div class="notif-body">
-        <div class="notif-msg"><strong>Sofia R.</strong> upvoted your reply in the Fanon discussion</div>
-        <div class="notif-time">3 days ago</div>
-      </div>
+      <div class="notif-icon ni-reply"><svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12v8a1 1 0 01-1 1H5l-3 2V3z" stroke="#9b3a6e" stroke-width="1.4"/></svg></div>
+      <div class="notif-body"><div class="notif-msg"><strong>Sofia R.</strong> upvoted your reply in the Fanon discussion</div><div class="notif-time">3 days ago</div></div>
     </div>
-
     <div class="notif-panel-footer">
-      <button class="notif-see-all" onclick="closeNotifPanel(); navigate('notifications')">See all notifications →</button>
+      <button class="notif-see-all" onclick="closeNotifPanel(); navigate('dashboard')">See all notifications →</button>
     </div>
   </div>
 </div>
