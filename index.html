@@ -621,7 +621,9 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
   inset: 0;
   z-index: 200;
 }
-.notif-modal-bg.open { display: block; }
+.notif-modal-bg.open .notif-panel {
+  display: flex;
+}
 .notif-panel {
   position: fixed;
   top: 0;
