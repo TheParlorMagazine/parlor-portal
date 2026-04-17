@@ -2681,7 +2681,8 @@ function initAudioPlayer(id) {
   heroBg.style.background = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)';
 })();
 // ── NOTIFICATION PANEL ──
-function toggleNotifPanel() {
+function toggleNotifPanel(e) {
+  if (e) e.stopPropagation();
   const wrap = document.getElementById('notifPanelWrap');
   wrap.classList.toggle('open');
 }
@@ -2704,9 +2705,10 @@ function markAllRead() {
   document.querySelectorAll('.sb-notif').forEach(el => el.remove());
 }
 
-// Close panel when clicking outside
 document.addEventListener('click', function(e) {
-  if (!e.target.closest('#notifPanelWrap') && !e.target.closest('[onclick*="toggleNotifPanel"]')) {
+  const wrap = document.getElementById('notifPanelWrap');
+  if (!wrap || !wrap.classList.contains('open')) return;
+  if (!e.target.closest('#notifPanelWrap') && !e.target.closest('.sb-item')) {
     closeNotifPanel();
   }
 });
