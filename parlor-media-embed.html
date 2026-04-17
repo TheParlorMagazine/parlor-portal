@@ -456,7 +456,7 @@ function renderEmbed(fields, isPaid, slug) {
   html += `
     <div class="media-paywall" id="paywallWrap">
       <div id="paywallPlayerPreview" style="pointer-events:auto;">${blurredPlayer}</div>
-      <div class="media-paywall-overlay" id="paywallOverlay" style="opacity:0;transition:opacity 1s ease;">
+      <div class="media-paywall-overlay" id="paywallOverlay" style="opacity:0;pointer-events:none;transition:opacity 1s ease;">
 <div class="media-paywall-msg">This interview is available to members only.</div>
 <div class="media-paywall-buttons">
   <a class="media-paywall-btn"
@@ -505,7 +505,10 @@ if (!isPaid) {
       const preview = document.getElementById('paywallPlayerPreview');
       const audio = document.getElementById('embedInterviewAudio');
 if (audio) audio.pause();
-      if (overlay) overlay.style.opacity = '1';
+      if (overlay) {
+  overlay.style.opacity = '1';
+  overlay.style.pointerEvents = 'auto';
+}
       if (preview) {
         preview.style.filter = 'blur(1px)';
         preview.style.opacity = '0.8';
