@@ -621,8 +621,8 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
   inset: 0;
   z-index: 200;
 }
-.notif-modal-bg.open .notif-panel {
-  display: flex;
+.notif-modal-bg.open {
+  display: block;
 }
 .notif-panel {
   position: fixed;
@@ -634,7 +634,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
   border-right: 1px solid var(--border);
   box-shadow: 4px 0 24px rgba(0,0,0,0.10);
   overflow-y: auto;
-  display: none;
+  display: flex;
   flex-direction: column;
   z-index: 9999;
 }
