@@ -13,8 +13,9 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { threadId, senderType, senderName, senderId, body } = req.body;
-    const now = new Date().toISOString();
+  console.log('Received threadId:', req.body.threadId, typeof req.body.threadId);
+  const { threadId, senderType, senderName, senderId, body } = req.body;
+  const now = new Date().toISOString();
 
     const msgResponse = await fetch(
       `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Inbox%20Messages`,
