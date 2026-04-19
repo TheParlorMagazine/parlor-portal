@@ -1810,6 +1810,7 @@ window.parlorInitialised = false;
 
 // ── Member data receiver ─────────────────────────────────
 window.addEventListener('message', function(event) {
+   console.log('Portal received message:', event.data?.type, event.data);
   if (!event.data || event.data.type !== 'PARLOR_MEMBER_DATA') return;
   if (window.parlorInitialised) return;
   window.parlorInitialised = true;
