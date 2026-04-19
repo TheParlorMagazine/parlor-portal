@@ -2953,60 +2953,177 @@ function initAudioPlayer(id) {
   heroBg.style.background = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)';
 })();
 // ── INBOX ──
-const INBOX_MESSAGES = [
-  {
-    sender: 'Parlor Editors', time: 'Today',
-    subject: 'Welcome to The Parlor',
-    body: '<p>We\'re so glad you\'re here.</p><p>As a Printing Press member, you have full access to the library, the Reading Room forum, all live events, and your first print issue ships April 28th.</p><p>If you have any questions, just reply to this message. Welcome to the community.</p><p>— The Parlor Editors</p>'
-  },
-  {
-    sender: 'Parlor Editors', time: 'Apr 14',
-    subject: 'Issue 1 ships April 28',
-    body: '<p>Your first issue of The Parlor is nearly ready.</p><p>Issue 1 is themed around <em>Resistance & the Printed Word</em> — from samizdat to zines, and what it means to publish independently today. It includes essays, a protest poster series, and a full interview with adrienne maree brown.</p><p>It ships April 28th to the address on file. Watch for a shipping confirmation by email.</p><p>— The Parlor Editors</p>'
-  },
-  {
-    sender: 'Parlor Editors', time: 'Apr 10',
-    subject: 'Roundtable this Thursday',
-    body: '<p>A reminder that this Thursday\'s live roundtable — <em>Resistance & the Printed Word</em> — is open to all Printing Press members.</p><p>Thursday, April 10 · 7:00 PM EST · Zoom (link in events calendar)</p><p>We\'ll be discussing Havel, Fanon, and the question of what resistance looks like for readers today. Come ready to talk.</p><p>— The Parlor Editors</p>'
-  }
-];
+const VERCEL_URL = 'https://parlor-portal.vercel.app';
+let _threads = [];
+let _activeThreadId = null;
+let _activeThreadMessages = [];
 
-function openInbox() {
+async function openInbox() {
   document.getElementById('inboxModalBg').classList.add('open');
   const isAdmin = window.parlorMember?.badges?.some(b =>
     (typeof b === 'string' ? b : b._id || b.id) === '2324c632-278b-4bf2-a1c0-3c9a45a8ef2b'
   );
+  window._inboxIsAdmin = isAdmin;
   const composeBtn = document.getElementById('inboxComposeBtn');
   if (composeBtn) composeBtn.style.display = 'inline-flex';
-  // Store admin state for compose modal
-  window._inboxIsAdmin = isAdmin;
+  await loadThreads();
 }
 
 function closeInbox() {
   document.getElementById('inboxModalBg').classList.remove('open');
 }
 
-function openMessage(index) {
-  const msg = INBOX_MESSAGES[index];
-  // Mark as read in list
-  const items = document.querySelectorAll('.inbox-msg-item');
-  items.forEach(el => el.classList.remove('active'));
-  items[index].classList.add('active');
-  items[index].classList.remove('unread');
-  const dot = items[index].querySelector('.inbox-msg-unread-dot');
-  if (dot) dot.remove();
+async function loadThreads() {
+  const listEl = document.getElementById('inboxMessages');
+  listEl.innerHTML = '<div style="padding:16px;font-size:12px;color:var(--muted);font-style:italic;">Loading...</div>';
 
-  // Show message
+  try {
+    const memberId = window.parlorMember?.memberId || '';
+    const isAdmin = window._inboxIsAdmin;
+    const url = isAdmin
+      ? `${VERCEL_URL}/api/inbox-threads?admin=true`
+      : `${VERCEL_URL}/api/inbox-threads?memberId=${encodeURIComponent(memberId)}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+    _threads = data.records || [];
+    renderThreadList();
+  } catch (e) {
+    console.error('loadThreads error:', e);
+    document.getElementById('inboxMessages').innerHTML = '<div style="padding:16px;font-size:12px;color:var(--muted);font-style:italic;">Could not load messages.</div>';
+  }
+}
+
+function renderThreadList() {
+  const listEl = document.getElementById('inboxMessages');
+  if (!_threads.length) {
+    listEl.innerHTML = '<div style="padding:16px;font-size:12px;color:var(--muted);font-style:italic;">No messages yet.</div>';
+    return;
+  }
+
+  listEl.innerHTML = _threads.map(t => {
+    const f = t.fields;
+    const isUnread = f['Status'] === 'Unread';
+    const date = f['Last Message Date'] ? new Date(f['Last Message Date']).toLocaleDateString(undefined, { month:'short', day:'numeric' }) : '';
+    const name = window._inboxIsAdmin ? (f['Member Name'] || 'Member') : 'Parlor Editors';
+    const initial = name.charAt(0).toUpperCase();
+    return `
+      <div class="inbox-msg-item ${isUnread ? 'unread' : ''} ${_activeThreadId === t.id ? 'active' : ''}" onclick="openThread('${t.id}')">
+        <div class="inbox-msg-row">
+          <div class="inbox-msg-av">${initial}</div>
+          <div class="inbox-msg-sender">${name}</div>
+          <div class="inbox-msg-time">${date}</div>
+          ${isUnread ? '<div class="inbox-msg-unread-dot"></div>' : ''}
+        </div>
+        <div class="inbox-msg-subject">${f['Subject'] || '(no subject)'}</div>
+        <div class="inbox-msg-preview">${f['Last Message Preview'] || ''}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function openThread(threadId) {
+  _activeThreadId = threadId;
+  renderThreadList();
+
   document.getElementById('inboxEmpty').style.display = 'none';
   const view = document.getElementById('inboxMessageView');
   view.style.display = 'flex';
   view.style.flexDirection = 'column';
   view.style.overflow = 'hidden';
   view.style.flex = '1';
-  document.getElementById('inboxSubject').textContent = msg.subject;
-  document.getElementById('inboxSender').textContent = msg.sender;
-  document.getElementById('inboxDate').textContent = msg.time;
-  document.getElementById('inboxContent').innerHTML = msg.body;
+
+  const thread = _threads.find(t => t.id === threadId);
+  const f = thread?.fields || {};
+  document.getElementById('inboxSubject').textContent = f['Subject'] || '';
+  document.getElementById('inboxSender').textContent = window._inboxIsAdmin ? (f['Member Name'] || 'Member') : 'Parlor Editors';
+  document.getElementById('inboxDate').textContent = f['Last Message Date'] ? new Date(f['Last Message Date']).toLocaleDateString() : '';
+
+  document.getElementById('inboxContent').innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic;padding:8px 0;">Loading conversation...</div>';
+
+  try {
+    const res = await fetch(`${VERCEL_URL}/api/inbox-messages?threadId=${encodeURIComponent(threadId)}`);
+    const data = await res.json();
+    _activeThreadMessages = data.records || [];
+    renderConversation();
+  } catch (e) {
+    console.error('openThread error:', e);
+  }
+}
+
+function renderConversation() {
+  const contentEl = document.getElementById('inboxContent');
+  if (!_activeThreadMessages.length) {
+    contentEl.innerHTML = '<div style="font-size:13px;color:var(--muted);font-style:italic;">No messages in this thread yet.</div>';
+    return;
+  }
+
+  const isAdmin = window._inboxIsAdmin;
+
+  let html = _activeThreadMessages.map(m => {
+    const f = m.fields;
+    const isMe = isAdmin ? f['Sender Type'] === 'Admin' : f['Sender Type'] === 'Member';
+    const align = isMe ? 'flex-end' : 'flex-start';
+    const bg = isMe ? 'var(--ink)' : 'var(--cream)';
+    const color = isMe ? '#fff' : 'var(--ink)';
+    const name = f['Sender Name'] || (f['Sender Type'] === 'Admin' ? 'Parlor Editors' : 'Member');
+    const time = f['Timestamp'] ? new Date(f['Timestamp']).toLocaleString(undefined, { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : '';
+
+    return `
+      <div style="display:flex;flex-direction:column;align-items:${align};margin-bottom:16px;">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">${name} · ${time}</div>
+        <div style="max-width:80%;background:${bg};color:${color};border-radius:12px;padding:11px 15px;font-size:14px;line-height:1.7;">${f['Body'] || ''}</div>
+      </div>
+    `;
+  }).join('');
+
+  // Reply composer
+  html += `
+    <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:8px;">
+      <textarea id="inboxReplyBody" style="width:100%;font-family:'thermal-variable',Georgia,serif;font-size:13px;color:var(--ink);background:var(--white);border:1px solid var(--border);border-radius:8px;padding:9px 12px;resize:none;line-height:1.55;min-height:72px;outline:none;" placeholder="Write a reply..."></textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px;gap:8px;align-items:center;">
+        <span id="replyFeedback" style="font-size:12px;color:var(--muted);font-style:italic;"></span>
+        <button onclick="sendReply()" style="background:var(--ink);color:#fff;border:none;padding:7px 18px;border-radius:7px;font-family:'thermal-variable',Georgia,serif;font-size:13px;font-weight:500;cursor:pointer;">Send reply</button>
+      </div>
+    </div>
+  `;
+
+  contentEl.innerHTML = html;
+  contentEl.scrollTop = contentEl.scrollHeight;
+}
+
+async function sendReply() {
+  const body = document.getElementById('inboxReplyBody')?.value.trim();
+  const fb = document.getElementById('replyFeedback');
+  if (!body) { if(fb) { fb.textContent = 'Please write a message.'; fb.style.color='#e07070'; } return; }
+  if (!_activeThreadId) return;
+
+  const isAdmin = window._inboxIsAdmin;
+  const senderType = isAdmin ? 'Admin' : 'Member';
+  const senderName = isAdmin ? 'Parlor Editors' : (window.parlorMember?.name || 'Member');
+  const senderId = window.parlorMember?.memberId || '';
+
+  if (fb) { fb.textContent = 'Sending...'; fb.style.color = 'var(--muted)'; }
+
+  try {
+    await fetch(`${VERCEL_URL}/api/inbox-messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        threadId: _activeThreadId,
+        senderType,
+        senderName,
+        senderId,
+        body,
+      })
+    });
+    if (fb) { fb.textContent = '✓ Sent'; fb.style.color = 'var(--pink)'; }
+    await openThread(_activeThreadId);
+    await loadThreads();
+  } catch (e) {
+    console.error('sendReply error:', e);
+    if (fb) { fb.textContent = 'Error — try again'; fb.style.color = '#e07070'; }
+  }
 }
 // ── MEMBER SEARCH ──
 let MOCK_MEMBERS = [];
@@ -3079,7 +3196,7 @@ function openCompose() {
     `;
     orEl.style.display = '';
     searchEl.style.display = '';
-    searchEl.placeholder = 'Search member by name or email...';
+    searchEl.placeholder = 'Search member by name...';
   } else {
     chipsEl.innerHTML = `
       <button class="compose-chip active" data-group="editors">Parlor Editors & Admin</button>
@@ -3089,7 +3206,6 @@ function openCompose() {
     searchEl.style.display = 'none';
   }
 
-  // Re-wire chip clicks after rebuilding
   chipsEl.querySelectorAll('.compose-chip').forEach(c => {
     c.addEventListener('click', function() {
       _composeGroup = this.dataset.group;
@@ -3107,7 +3223,7 @@ function closeCompose() {
   document.getElementById('composeModalBg').classList.remove('open');
 }
 
-function sendMessage() {
+async function sendMessage() {
   const subject = document.getElementById('composeSubject').value.trim();
   const body    = document.getElementById('composeBody').value.trim();
   const member  = document.getElementById('composeMemberSearch').value.trim();
@@ -3118,10 +3234,69 @@ function sendMessage() {
   if (!body)    { fb.textContent = 'Please write a message.'; fb.style.color = '#e07070'; return; }
 
   fb.textContent = 'Sending...'; fb.style.color = 'var(--muted)';
-  setTimeout(() => {
-    fb.textContent = '✓ Message sent!'; fb.style.color = 'var(--pink)';
-    setTimeout(() => closeCompose(), 1200);
-  }, 700);
+
+  const isAdmin = window._inboxIsAdmin;
+
+  let recipients = [];
+
+  if (isAdmin && member) {
+    const found = MOCK_MEMBERS.find(m => m.name === member);
+    if (found) recipients = [{ id: found.id, name: found.name }];
+    else recipients = [{ id: member, name: member }];
+  } else if (isAdmin && _composeGroup) {
+    const groupMap = {
+      'all': () => MOCK_MEMBERS,
+      'readers-circle': () => MOCK_MEMBERS.filter(m => m.plan === "The Reader's Circle"),
+      'printing-press': () => MOCK_MEMBERS.filter(m => m.plan === 'The Printing Press'),
+      'free': () => MOCK_MEMBERS.filter(m => !m.plan || m.plan === 'Free'),
+    };
+    const groupFn = groupMap[_composeGroup];
+    recipients = groupFn ? groupFn().map(m => ({ id: m.id, name: m.name })) : [];
+  } else {
+    recipients = [{ id: 'admin', name: 'Parlor Editors' }];
+  }
+
+  if (!recipients.length) {
+    fb.textContent = 'No matching members found.'; fb.style.color = '#e07070'; return;
+  }
+
+  try {
+    await Promise.all(recipients.map(async r => {
+      const threadRes = await fetch(`${VERCEL_URL}/api/inbox-threads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          memberId: isAdmin ? r.id : (window.parlorMember?.memberId || ''),
+          memberName: isAdmin ? r.name : (window.parlorMember?.name || 'Member'),
+          subject,
+          firstMessage: body,
+          initiatedBy: isAdmin ? 'Admin' : 'Member',
+        })
+      });
+      const threadData = await threadRes.json();
+      const newThreadId = threadData.records?.[0]?.id;
+      if (!newThreadId) return;
+
+      await fetch(`${VERCEL_URL}/api/inbox-messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          threadId: newThreadId,
+          senderType: isAdmin ? 'Admin' : 'Member',
+          senderName: isAdmin ? 'Parlor Editors' : (window.parlorMember?.name || 'Member'),
+          senderId: isAdmin ? 'admin' : (window.parlorMember?.memberId || ''),
+          body,
+        })
+      });
+    }));
+
+    fb.textContent = `✓ Sent to ${recipients.length} ${recipients.length === 1 ? 'member' : 'members'}!`;
+    fb.style.color = 'var(--pink)';
+    setTimeout(() => closeCompose(), 1400);
+  } catch (e) {
+    console.error('sendMessage error:', e);
+    fb.textContent = 'Error sending — try again.'; fb.style.color = '#e07070';
+  }
 }
 // ── NOTIFICATION PANEL ──
 function toggleNotifPanel(e) {
