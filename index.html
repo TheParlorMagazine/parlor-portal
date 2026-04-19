@@ -689,6 +689,132 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
   font-family: 'thermal-variable', Georgia, serif; cursor: pointer;
   text-decoration: underline; text-underline-offset: 3px; padding: 0;
 }
+/* ══ INBOX MODAL ══ */
+.inbox-modal-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(26,23,16,0.5); z-index: 200;
+  align-items: center; justify-content: center;
+}
+.inbox-modal-bg.open { display: flex; }
+.inbox-modal {
+  background: var(--paper); border: 1px solid var(--border);
+  border-radius: 13px; width: 860px; max-width: 96vw;
+  height: 78vh; max-height: 680px;
+  display: flex; overflow: hidden;
+}
+.inbox-list {
+  width: 280px; flex-shrink: 0; border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.inbox-list-head {
+  padding: 16px 18px 12px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.inbox-list-title { font-size: 15px; font-weight: 600; color: var(--ink); }
+.inbox-close {
+  background: none; border: none; font-size: 20px; color: var(--muted);
+  cursor: pointer; line-height: 1; padding: 2px;
+}
+.inbox-close:hover { color: var(--ink); }
+.inbox-messages { overflow-y: auto; flex: 1; }
+.inbox-msg-item {
+  padding: 13px 18px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.12s;
+}
+.inbox-msg-item:hover { background: var(--cream); }
+.inbox-msg-item.active { background: var(--accentlight); }
+.inbox-msg-item.unread { background: #fef9fa; }
+.inbox-msg-item.unread.active { background: var(--accentlight); }
+.inbox-msg-row { display: flex; align-items: center; gap: 9px; margin-bottom: 4px; }
+.inbox-msg-av {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  background: var(--pink); color: #000; font-size: 10px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+}
+.inbox-msg-sender { font-size: 12.5px; font-weight: 600; color: var(--ink); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inbox-msg-time { font-size: 10px; color: var(--muted); flex-shrink: 0; }
+.inbox-msg-unread-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--pink); flex-shrink: 0;
+}
+.inbox-msg-subject {
+  font-size: 12.5px; font-weight: 500; color: var(--ink);
+  margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.inbox-msg-preview {
+  font-size: 11.5px; color: var(--muted); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.inbox-body {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+}
+.inbox-body-empty {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--muted); font-style: italic;
+}
+.inbox-body-head {
+  padding: 18px 24px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.inbox-body-subject { font-family: 'thermal-variable', Georgia, serif; font-size: 18px; font-weight: 500; margin-bottom: 8px; }
+.inbox-body-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+.inbox-body-av {
+  width: 26px; height: 26px; border-radius: 50%; background: var(--pink);
+  color: #000; font-size: 9.5px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.inbox-body-sender { font-weight: 500; color: var(--ink); }
+.inbox-body-content {
+  flex: 1; overflow-y: auto; padding: 24px;
+  font-family: 'thermal-variable', Georgia, serif;
+  font-size: 15px; line-height: 1.85; color: var(--ink);
+}
+.inbox-body-content p { margin-bottom: 1em; }
+
+/* ══ ADMIN COMPOSE MODAL ══ */
+.compose-modal-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(26,23,16,0.5); z-index: 300;
+  align-items: center; justify-content: center;
+}
+.compose-modal-bg.open { display: flex; }
+.compose-modal {
+  background: var(--paper); border: 1px solid var(--border);
+  border-radius: 13px; width: 580px; max-width: 95vw;
+  max-height: 88vh; overflow-y: auto; padding: 28px 28px 24px;
+}
+.compose-modal-title { font-family: 'thermal-variable', Georgia, serif; font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+.compose-modal-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 20px; }
+.compose-to-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.compose-chip {
+  font-size: 11.5px; font-weight: 500; padding: 5px 12px; border-radius: 20px;
+  border: 1.5px solid var(--border); background: none; color: var(--muted);
+  cursor: pointer; font-family: 'thermal-variable', Georgia, serif; transition: all 0.12s;
+}
+.compose-chip:hover { border-color: var(--pinkborder); color: var(--ink); }
+.compose-chip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+.compose-or { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin: 10px 0 10px; }
+.compose-member-search {
+  width: 100%; font-family: 'thermal-variable', Georgia, serif; font-size: 13.5px;
+  color: var(--ink); background: var(--white); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 12px; outline: none; transition: border-color 0.15s;
+  margin-bottom: 14px;
+}
+.compose-member-search:focus { border-color: var(--pinkborder); }
+.compose-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+.compose-cancel {
+  background: none; border: 1px solid var(--border); color: var(--muted);
+  padding: 8px 17px; border-radius: 8px; font-family: 'thermal-variable', Georgia, serif;
+  font-size: 13px; cursor: pointer; transition: all 0.15s;
+}
+.compose-cancel:hover { border-color: var(--pinkborder); color: var(--ink); }
+.compose-send {
+  background: var(--ink); color: #fff; border: none; padding: 8px 20px;
+  border-radius: 8px; font-family: 'thermal-variable', Georgia, serif;
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity 0.15s;
+}
+.compose-send:hover { opacity: 0.85; }
+.compose-feedback { font-size: 12px; color: var(--muted); min-height: 16px; margin-bottom: 6px; font-style: italic; }
 </style>
 </head>
 <body>
@@ -860,6 +986,92 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
     </div>
   </div>
   </div> 
+  <!-- ══ INBOX MODAL ══ -->
+<div class="inbox-modal-bg" id="inboxModalBg" onclick="closeInbox()">
+  <div class="inbox-modal" onclick="event.stopPropagation()">
+    <div class="inbox-list">
+      <div class="inbox-list-head">
+  <div class="inbox-list-title">Inbox</div>
+  <button id="inboxComposeBtn" onclick="closeInbox(); openCompose()" style="display:inline-flex;align-items:center;gap:5px;background:var(--ink);color:#fff;border:none;border-radius:7px;padding:5px 11px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:'thermal-variable',Georgia,serif;">
+    <svg viewBox="0 0 16 16" fill="none" style="width:11px;height:11px"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    Compose
+  </button>
+  <button class="inbox-close" onclick="closeInbox()">×</button>
+</div>
+      <div class="inbox-messages" id="inboxMessages">
+        <div class="inbox-msg-item unread" onclick="openMessage(0)">
+          <div class="inbox-msg-row">
+            <div class="inbox-msg-av">PE</div>
+            <div class="inbox-msg-sender">Parlor Editors</div>
+            <div class="inbox-msg-time">Today</div>
+            <div class="inbox-msg-unread-dot"></div>
+          </div>
+          <div class="inbox-msg-subject">Welcome to The Parlor</div>
+          <div class="inbox-msg-preview">We're so glad you're here. Here's everything you need to know...</div>
+        </div>
+        <div class="inbox-msg-item unread" onclick="openMessage(1)">
+          <div class="inbox-msg-row">
+            <div class="inbox-msg-av">PE</div>
+            <div class="inbox-msg-sender">Parlor Editors</div>
+            <div class="inbox-msg-time">Apr 14</div>
+            <div class="inbox-msg-unread-dot"></div>
+          </div>
+          <div class="inbox-msg-subject">Issue 1 ships April 28</div>
+          <div class="inbox-msg-preview">Your first issue is on its way — here's what's inside...</div>
+        </div>
+        <div class="inbox-msg-item" onclick="openMessage(2)">
+          <div class="inbox-msg-row">
+            <div class="inbox-msg-av">PE</div>
+            <div class="inbox-msg-sender">Parlor Editors</div>
+            <div class="inbox-msg-time">Apr 10</div>
+          </div>
+          <div class="inbox-msg-subject">Roundtable this Thursday</div>
+          <div class="inbox-msg-preview">A reminder about Thursday's live call on Resistance & the Printed Word...</div>
+        </div>
+      </div>
+    </div>
+    <div class="inbox-body" id="inboxBody">
+      <div class="inbox-body-empty" id="inboxEmpty">Select a message to read it</div>
+      <div id="inboxMessageView" style="display:none;flex:1;flex-direction:column;overflow:hidden;display:none;">
+        <div class="inbox-body-head">
+          <div class="inbox-body-subject" id="inboxSubject"></div>
+          <div class="inbox-body-meta">
+            <div class="inbox-body-av">PE</div>
+            <span class="inbox-body-sender" id="inboxSender"></span>
+            <span id="inboxDate"></span>
+          </div>
+        </div>
+        <div class="inbox-body-content" id="inboxContent"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ COMPOSE MODAL ══ -->
+<div class="compose-modal-bg" id="composeModalBg" onclick="closeCompose()">
+  <div class="compose-modal" onclick="event.stopPropagation()">
+    <div class="compose-modal-title">Send a message</div>
+    <div class="compose-modal-sub">Compose a message to a group or individual member.</div>
+    <label class="form-label">Send to group</label>
+    <div class="compose-to-chips" id="composeChips">
+      <button class="compose-chip" data-group="all">All members</button>
+      <button class="compose-chip" data-group="readers-circle">Reader's Circle</button>
+      <button class="compose-chip" data-group="printing-press">Printing Press</button>
+      <button class="compose-chip" data-group="free">Free subscribers</button>
+    </div>
+    <div class="compose-or">— or send to an individual —</div>
+    <input class="compose-member-search" id="composeMemberSearch" type="text" placeholder="Search member by name or email...">
+    <label class="form-label">Subject</label>
+    <input class="form-input" id="composeSubject" type="text" placeholder="What's this about?">
+    <label class="form-label">Message</label>
+    <textarea class="form-textarea" id="composeBody" style="min-height:140px" placeholder="Write your message..."></textarea>
+    <div class="compose-feedback" id="composeFeedback"></div>
+    <div class="compose-actions">
+      <button class="compose-cancel" onclick="closeCompose()">Cancel</button>
+      <button class="compose-send" onclick="sendMessage()">Send message</button>
+    </div>
+  </div>
+</div>
 <!-- ══ PAGE: DASHBOARD ══ -->
 <div class="page active" id="page-dashboard">
   <div class="sidebar">
@@ -885,7 +1097,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
       <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/></svg>
       Dashboard
     </div>
-    <div class="sb-item" onclick="navigate('dashboard')">
+    <div class="sb-item" onclick="openInbox()">
       <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12v8a1 1 0 01-1 1H3a1 1 0 01-1-1V4z" stroke="currentColor" stroke-width="1.5"/><path d="M2 4l6 5 6-5" stroke="currentColor" stroke-width="1.5"/></svg>
       Inbox <span class="sb-notif">3</span>
     </div>
@@ -2735,6 +2947,132 @@ function initAudioPlayer(id) {
   // Placeholder: use a subtle texture. Will be replaced by Airtable cover image URL.
   heroBg.style.background = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)';
 })();
+// ── INBOX ──
+const INBOX_MESSAGES = [
+  {
+    sender: 'Parlor Editors', time: 'Today',
+    subject: 'Welcome to The Parlor',
+    body: '<p>We\'re so glad you\'re here.</p><p>As a Printing Press member, you have full access to the library, the Reading Room forum, all live events, and your first print issue ships April 28th.</p><p>If you have any questions, just reply to this message. Welcome to the community.</p><p>— The Parlor Editors</p>'
+  },
+  {
+    sender: 'Parlor Editors', time: 'Apr 14',
+    subject: 'Issue 1 ships April 28',
+    body: '<p>Your first issue of The Parlor is nearly ready.</p><p>Issue 1 is themed around <em>Resistance & the Printed Word</em> — from samizdat to zines, and what it means to publish independently today. It includes essays, a protest poster series, and a full interview with adrienne maree brown.</p><p>It ships April 28th to the address on file. Watch for a shipping confirmation by email.</p><p>— The Parlor Editors</p>'
+  },
+  {
+    sender: 'Parlor Editors', time: 'Apr 10',
+    subject: 'Roundtable this Thursday',
+    body: '<p>A reminder that this Thursday\'s live roundtable — <em>Resistance & the Printed Word</em> — is open to all Printing Press members.</p><p>Thursday, April 10 · 7:00 PM EST · Zoom (link in events calendar)</p><p>We\'ll be discussing Havel, Fanon, and the question of what resistance looks like for readers today. Come ready to talk.</p><p>— The Parlor Editors</p>'
+  }
+];
+
+function openInbox() {
+  document.getElementById('inboxModalBg').classList.add('open');
+  const isAdmin = window.parlorMember?.badges?.some(b =>
+    (typeof b === 'string' ? b : b._id || b.id) === '2324c632-278b-4bf2-a1c0-3c9a45a8ef2b'
+  );
+  const composeBtn = document.getElementById('inboxComposeBtn');
+  if (composeBtn) composeBtn.style.display = 'inline-flex';
+  // Store admin state for compose modal
+  window._inboxIsAdmin = isAdmin;
+}
+
+function closeInbox() {
+  document.getElementById('inboxModalBg').classList.remove('open');
+}
+
+function openMessage(index) {
+  const msg = INBOX_MESSAGES[index];
+  // Mark as read in list
+  const items = document.querySelectorAll('.inbox-msg-item');
+  items.forEach(el => el.classList.remove('active'));
+  items[index].classList.add('active');
+  items[index].classList.remove('unread');
+  const dot = items[index].querySelector('.inbox-msg-unread-dot');
+  if (dot) dot.remove();
+
+  // Show message
+  document.getElementById('inboxEmpty').style.display = 'none';
+  const view = document.getElementById('inboxMessageView');
+  view.style.display = 'flex';
+  view.style.flexDirection = 'column';
+  view.style.overflow = 'hidden';
+  view.style.flex = '1';
+  document.getElementById('inboxSubject').textContent = msg.subject;
+  document.getElementById('inboxSender').textContent = msg.sender;
+  document.getElementById('inboxDate').textContent = msg.time;
+  document.getElementById('inboxContent').innerHTML = msg.body;
+}
+
+// ── COMPOSE ──
+let _composeGroup = null;
+
+function openCompose() {
+  _composeGroup = null;
+  document.querySelectorAll('.compose-chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('composeMemberSearch').value = '';
+  document.getElementById('composeSubject').value = '';
+  document.getElementById('composeBody').value = '';
+  document.getElementById('composeFeedback').textContent = '';
+
+  const isAdmin = window._inboxIsAdmin;
+  const chipsEl = document.getElementById('composeChips');
+  const orEl    = document.querySelector('.compose-or');
+  const searchEl = document.getElementById('composeMemberSearch');
+
+  if (isAdmin) {
+    chipsEl.innerHTML = `
+      <button class="compose-chip" data-group="all">All members</button>
+      <button class="compose-chip" data-group="readers-circle">Reader's Circle</button>
+      <button class="compose-chip" data-group="printing-press">Printing Press</button>
+      <button class="compose-chip" data-group="free">Free subscribers</button>
+    `;
+    orEl.style.display = '';
+    searchEl.style.display = '';
+    searchEl.placeholder = 'Search member by name or email...';
+  } else {
+    chipsEl.innerHTML = `
+      <button class="compose-chip active" data-group="editors">Parlor Editors & Admin</button>
+    `;
+    _composeGroup = 'editors';
+    orEl.style.display = 'none';
+    searchEl.style.display = 'none';
+  }
+
+  // Re-wire chip clicks after rebuilding
+  chipsEl.querySelectorAll('.compose-chip').forEach(c => {
+    c.addEventListener('click', function() {
+      _composeGroup = this.dataset.group;
+      chipsEl.querySelectorAll('.compose-chip').forEach(x => x.classList.remove('active'));
+      this.classList.add('active');
+      if (!isAdmin) return;
+      document.getElementById('composeMemberSearch').value = '';
+    });
+  });
+
+  document.getElementById('composeModalBg').classList.add('open');
+}
+
+function closeCompose() {
+  document.getElementById('composeModalBg').classList.remove('open');
+}
+
+function sendMessage() {
+  const subject = document.getElementById('composeSubject').value.trim();
+  const body    = document.getElementById('composeBody').value.trim();
+  const member  = document.getElementById('composeMemberSearch').value.trim();
+  const fb      = document.getElementById('composeFeedback');
+
+  if (!_composeGroup && !member) { fb.textContent = 'Please select a group or enter a member name.'; fb.style.color = '#e07070'; return; }
+  if (!subject) { fb.textContent = 'Please add a subject.'; fb.style.color = '#e07070'; return; }
+  if (!body)    { fb.textContent = 'Please write a message.'; fb.style.color = '#e07070'; return; }
+
+  fb.textContent = 'Sending...'; fb.style.color = 'var(--muted)';
+  setTimeout(() => {
+    fb.textContent = '✓ Message sent!'; fb.style.color = 'var(--pink)';
+    setTimeout(() => closeCompose(), 1200);
+  }, 700);
+}
 // ── NOTIFICATION PANEL ──
 function toggleNotifPanel(e) {
   if (e) e.stopPropagation();
