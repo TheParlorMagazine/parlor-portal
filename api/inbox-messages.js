@@ -5,7 +5,7 @@ module.exports = async function handler(req, res) {
     const { threadId } = req.query;
     if (!threadId) return res.status(400).json({ error: 'threadId required' });
     const response = await fetch(
-      `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Inbox%20Messages?filterByFormula=${encodeURIComponent(`{Thread Record ID}="${threadId}"`)}&sort[0][field]=Timestamp&sort[0][direction]=asc`,
+      `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Inbox%20Messages?filterByFormula=${encodeURIComponent(`FIND("${threadId}", {Thread})`)}&sort[0][field]=Timestamp&sort[0][direction]=asc`,
       { headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` } }
     );
     const data = await response.json();
@@ -27,8 +27,7 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({
           records: [{
             fields: {
-              'Thread': [String(threadId)],
-'Thread Record ID': String(threadId),
+              'Thread': [{ id: threadId }],
               'Sender Type': senderType,
               'Sender Name': senderName,
               'Sender ID': senderId || '',
