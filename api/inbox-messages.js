@@ -28,7 +28,7 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({
           records: [{
             fields: {
-              'Thread': [{ id: threadId }],
+              'Thread': [threadId],
               'Sender Type': senderType,
               'Sender Name': senderName,
               'Sender ID': senderId || '',
