@@ -1935,7 +1935,10 @@ window.addEventListener('message', function(event) {
       setTimeout(() => { fb.textContent = ''; }, 3000);
     }
   }
-
+if (event.data.type === 'PARLOR_MEMBERS_LIST') {
+    MOCK_MEMBERS = event.data.members;
+    console.log('Members received:', MOCK_MEMBERS.length);
+  }
 });
 
 // ── navigation ──
@@ -3127,11 +3130,6 @@ async function sendReply() {
 }
 // ── MEMBER SEARCH ──
 let MOCK_MEMBERS = [];
-
-window.addEventListener('message', function(event) {
-  if (!event.data || event.data.type !== 'PARLOR_MEMBERS_LIST') return;
-  MOCK_MEMBERS = event.data.members;
-});
 
 function searchMembers(query) {
   const el = document.getElementById('composeMemberSuggestions');
