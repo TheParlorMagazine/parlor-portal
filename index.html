@@ -3049,6 +3049,7 @@ async function openThread(threadId) {
     const res = await fetch(`${VERCEL_URL}/api/inbox-messages?threadId=${encodeURIComponent(threadId)}`);
     const data = await res.json();
     _activeThreadMessages = data.records || [];
+    console.log('Thread messages:', _activeThreadMessages.length, JSON.stringify(_activeThreadMessages));
     renderConversation();
   } catch (e) {
     console.error('openThread error:', e);
