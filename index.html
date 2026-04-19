@@ -3275,8 +3275,8 @@ async function sendMessage() {
         })
       });
       const threadData = await threadRes.json();
-      const newThreadId = threadData.records?.[0]?.id|| '');
-      console.log('newThreadId:', newThreadId);
+      const newThreadId = String(threadData.records?.[0]?.id || '');
+console.log('newThreadId:', newThreadId);
       if (!newThreadId) return;
 
       await fetch(`${VERCEL_URL}/api/inbox-messages`, {
