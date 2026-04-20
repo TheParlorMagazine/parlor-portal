@@ -1646,8 +1646,11 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Protest posters</div>
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><path d="M4 2h6l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/></svg>Books</div>
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M6 6l4 2-4 2V6z" fill="currentColor"/></svg>Audio &amp; film</div>
-    <div class="sb-section">By month</div>
-    <div class="sb-item active"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/></svg>April 2026</div>
+   <div class="sb-section">By month</div>
+    <div class="sb-item active" id="sbMonthApr" onclick="filterByMonth('April 2026')"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/></svg>April 2026</div>
+
+    <div class="sb-section">By theme</div>
+    <div class="sb-item" id="sbThemeResistance" onclick="filterByTheme('resistance')"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3 3.5.5-2.5 2.5.5 3.5L8 10l-3 1.5.5-3.5L3 5.5 6.5 5z" stroke="currentColor" stroke-width="1.4"/></svg>Resistance &amp; the Printed Word</div>
 
     <div class="sb-section">My library</div>
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Saved items</div>
@@ -1662,14 +1665,14 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
         <div class="lib-page-eyebrow">The Reading Room</div>
         <div class="lib-page-title">The Library</div>
       </div>
-      <div class="theme-banner">
+      <div class="theme-banner" id="libThemeBanner" style="display:none">
         <div>
-          <div class="theme-label">This month's theme</div>
-          <div class="theme-name">Resistance &amp; the Printed Word</div>
-          <div class="theme-desc">From samizdat to zines, the history of publishing as an act of defiance. What does it mean to publish independently — then and now?</div>
-          <div class="theme-issue">Issue 1 &nbsp;·&nbsp; April 2026 &nbsp;·&nbsp; 7 items</div>
+          <div class="theme-label" id="libThemeLabel">This month's theme</div>
+          <div class="theme-name" id="libThemeName"></div>
+          <div class="theme-desc" id="libThemeDesc"></div>
+          <div class="theme-issue" id="libThemeIssue"></div>
         </div>
-        <button class="theme-cta" onclick="navigate('forum')">Join this month's roundtable &rsaquo;</button>
+        <button class="theme-cta" id="libThemeCta" onclick="navigate('forum')">Join this month's roundtable &rsaquo;</button>
       </div>
       <div class="filters-bar">
         <div class="lib-search-wrap" id="libSearchWrap">
@@ -3332,6 +3335,42 @@ function markAllRead() {
     if (dot) dot.remove();
   });
   document.querySelectorAll('.sb-notif').forEach(el => el.remove());
+}
+const LIBRARY_THEMES = {
+  resistance: {
+    label: 'This month\'s theme',
+    name: 'Resistance & the Printed Word',
+    desc: 'From samizdat to zines, the history of publishing as an act of defiance. What does it mean to publish independently — then and now?',
+    issue: 'Issue 1 · April 2026 · 7 items',
+    cta: 'Join this month\'s roundtable'
+  }
+};
+
+function filterByTheme(themeKey) {
+  const theme = LIBRARY_THEMES[themeKey];
+  if (!theme) return;
+
+  document.querySelectorAll('.sidebar .sb-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('sbThemeResistance') && document.getElementById('sbThemeResistance').classList.add('active');
+
+  const banner = document.getElementById('libThemeBanner');
+  document.getElementById('libThemeLabel').textContent = theme.label;
+  document.getElementById('libThemeName').textContent = theme.name;
+  document.getElementById('libThemeDesc').textContent = theme.desc;
+  document.getElementById('libThemeIssue').innerHTML = theme.issue;
+  document.getElementById('libThemeCta').textContent = theme.cta + ' ›';
+  banner.style.display = 'flex';
+
+  filterLibraryGrid('');
+  showLibraryBrowse();
+}
+
+function filterByMonth(month) {
+  document.querySelectorAll('.sidebar .sb-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('sbMonthApr') && document.getElementById('sbMonthApr').classList.add('active');
+  document.getElementById('libThemeBanner').style.display = 'none';
+  filterLibraryGrid('');
+  showLibraryBrowse();
 }
 </script>
 </body>
