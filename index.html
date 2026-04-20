@@ -1104,7 +1104,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
     </div>
     <div class="sb-item" onclick="openInbox()">
       <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12v8a1 1 0 01-1 1H3a1 1 0 01-1-1V4z" stroke="currentColor" stroke-width="1.5"/><path d="M2 4l6 5 6-5" stroke="currentColor" stroke-width="1.5"/></svg>
-      Inbox <span class="sb-notif">3</span>
+      Inbox <span class="sb-notif" id="inboxBadge" style="display:none">0</span>
     </div>
     <div class="sb-item" onclick="toggleNotifPanel(event)">
       <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.5a4.5 4.5 0 00-4.5 4.5c0 2.5-1 3.5-1.5 4h12c-.5-.5-1.5-1.5-1.5-4A4.5 4.5 0 008 1.5z" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 10.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="1.5" x2="8" y2="0.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -2991,6 +2991,16 @@ async function loadThreads() {
     const res = await fetch(url);
     const data = await res.json();
     _threads = data.records || [];
+    const unreadCount = _threads.filter(t => t.fields['Status'] === 'Unread').length;
+const badge = document.getElementById('inboxBadge');
+if (badge) {
+  if (unreadCount > 0) {
+    badge.textContent = unreadCount;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
     renderThreadList();
   } catch (e) {
     console.error('loadThreads error:', e);
