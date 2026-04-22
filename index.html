@@ -1650,8 +1650,8 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
     <div class="sb-item active" id="sbMonthApr" onclick="filterByMonth('April 2026')"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/></svg>April 2026</div>
 
     <div class="sb-section">By theme</div>
-    <div class="sb-item" id="sbThemeResistance" onclick="filterByTheme('resistance')"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3 3.5.5-2.5 2.5.5 3.5L8 10l-3 1.5.5-3.5L3 5.5 6.5 5z" stroke="currentColor" stroke-width="1.4"/></svg>Resistance &amp; the Printed Word</div>
-
+<div id="libThemeSection"></div>
+    
     <div class="sb-section">My library</div>
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Saved items</div>
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Reading history</div>
@@ -3336,41 +3336,330 @@ function markAllRead() {
   });
   document.querySelectorAll('.sb-notif').forEach(el => el.remove());
 }
-const LIBRARY_THEMES = {
-  resistance: {
-    label: 'This month\'s theme',
-    name: 'Resistance & the Printed Word',
-    desc: 'From samizdat to zines, the history of publishing as an act of defiance. What does it mean to publish independently — then and now?',
-    issue: 'Issue 1 · April 2026 · 7 items',
-    cta: 'Join this month\'s roundtable'
+const VERCEL_LIBRARY_URL = 'https://parlor-portal.vercel.app';
+let _libraryThemes = [];
+
+async function loadLibraryThemes() {
+  try {
+    const res = await fetch(`${VERCEL_LIBRARY_URL}/api/library-themes`);
+    const data = await res.json();
+    _libraryThemes = data.records || [];
+    renderThemeSidebar();
+  } catch (e) {
+    console.error('loadLibraryThemes error:', e);
   }
-};
+}
 
-function filterByTheme(themeKey) {
-  const theme = LIBRARY_THEMES[themeKey];
+function renderThemeSidebar() {
+  const section = document.getElementById('libThemeSection');
+  if (!section) return;
+  section.innerHTML = '';
+  _libraryThemes.forEach(theme => {
+    const item = document.createElement('div');
+    item.className = 'sb-item';
+    item.id = 'sbTheme-' + theme.id;
+    item.innerHTML = `
+      <svg viewBox="0 0 16 16" fill="none">
+        <path d="M8 2l1.5 3 3.5.5-2.5 2.5.5 3.5L8 10l-3 1.5.5-3.5L3 5.5 6.5 5z" 
+          stroke="currentColor" stroke-width="1.4"/>
+      </svg>
+      ${theme.fields['Theme name']}
+    `;
+    item.onclick = () => filterByTheme(theme.id);
+    section.appendChild(item);
+  });
+}
+  async function loadLibraryItems({ themeId } = {}) {
+  const grid = document.querySelector('.library-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">Loading...</div>';
+
+  try {
+    const url = themeId
+      ? `${VERCEL_LIBRARY_URL}/api/library?themeId=${encodeURIComponent(themeId)}`
+      : `${VERCEL_LIBRARY_URL}/api/library`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+    const items = data.records || [];
+
+    if (!items.length) {
+      grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">No items found.</div>';
+      return;
+    }
+
+    grid.innerHTML = items.map(item => {
+      const f = item.fields;
+      const type = (f['Thumbnail Style'] || 'essay').toLowerCase();
+      const coverImg = Array.isArray(f['Cover Image']) ? f['Cover Image'][0]?.url : '';
+      const isNew = f['Is New'];
+      const isPaid = f['Plan Access'] === 'Paid Members';
+
+      return `
+        <div class="lib-card" onclick="openLibraryItem('${f['Slug'] || ''}')">
+          <div class="card-thumb thumb-${type}"
+            style="${coverImg ? `background-image:url(${coverImg});background-size:cover;background-position:center;` : ''}">
+            ${!coverImg ? `<div class="thumb-lines">
+              <div class="thumb-line dark" style="width:65%"></div>
+              <div class="thumb-line" style="width:90%"></div>
+              <div class="thumb-line" style="width:80%"></div>
+              <div class="thumb-line" style="width:70%"></div>
+            </div>` : ''}
+            ${isNew ? '<span class="new-badge">New</span>' : ''}
+            ${isPaid ? '<span class="new-badge" style="background:#000;color:#fff;left:10px;right:auto;">Members</span>' : ''}
+          </div>
+          <div class="card-body">
+            <div class="card-type">
+              <div class="type-dot td-${type}"></div>
+              <span class="tc-${type}">${f['Type'] || 'Article'}</span>
+            </div>
+            <div class="card-title">${f['Title'] || ''}</div>
+            <div class="card-author">${f['Author'] || ''}</div>
+            ${f['Editor Note'] ? `
+              <div class="card-note">
+                <strong>Editor's note</strong>${f['Editor Note']}
+              </div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (e) {
+    console.error('loadLibraryItems error:', e);
+    grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);">Could not load library items.</div>';
+  }
+}
+  async function filterByTheme(themeId) {
+  const theme = _libraryThemes.find(t => t.id === themeId);
   if (!theme) return;
-
-  document.querySelectorAll('.sidebar .sb-item').forEach(el => el.classList.remove('active'));
-  document.getElementById('sbThemeResistance') && document.getElementById('sbThemeResistance').classList.add('active');
-
+  const f = theme.fields;
+  document.querySelectorAll('#page-library .sidebar .sb-item').forEach(el => el.classList.remove('active'));
+  const sidebarItem = document.getElementById('sbTheme-' + themeId);
+  if (sidebarItem) sidebarItem.classList.add('active');
   const banner = document.getElementById('libThemeBanner');
-  document.getElementById('libThemeLabel').textContent = theme.label;
-  document.getElementById('libThemeName').textContent = theme.name;
-  document.getElementById('libThemeDesc').textContent = theme.desc;
-  document.getElementById('libThemeIssue').innerHTML = theme.issue;
-  document.getElementById('libThemeCta').textContent = theme.cta + ' ›';
+  document.getElementById('libThemeLabel').textContent = 'Collection';
+  document.getElementById('libThemeName').textContent = f['Theme name'] || '';
+  document.getElementById('libThemeDesc').textContent = f['Description'] || '';
+  document.getElementById('libThemeIssue').textContent = '';
+  document.getElementById('libThemeCta').textContent = (f['Forum CTA Text'] || 'Start a discussion') + ' ›';
   banner.style.display = 'flex';
-
-  filterLibraryGrid('');
   showLibraryBrowse();
+  await loadLibraryItems({ themeId });
 }
 
 function filterByMonth(month) {
-  document.querySelectorAll('.sidebar .sb-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('#page-library .sidebar .sb-item').forEach(el => el.classList.remove('active'));
   document.getElementById('sbMonthApr') && document.getElementById('sbMonthApr').classList.add('active');
   document.getElementById('libThemeBanner').style.display = 'none';
-  filterLibraryGrid('');
+  loadLibraryItems();
   showLibraryBrowse();
+}
+  let _currentLibraryItem = null;
+
+async function openLibraryItem(slug) {
+  if (!slug) return;
+  try {
+    const res = await fetch(`${VERCEL_LIBRARY_URL}/api/library?slug=${encodeURIComponent(slug)}`);
+    const data = await res.json();
+    const item = data.records?.[0];
+    if (!item) return;
+    _currentLibraryItem = item;
+    renderLibraryDetail(item);
+    showLibraryDetail();
+  } catch (e) {
+    console.error('openLibraryItem error:', e);
+  }
+}
+function renderLibraryDetail(item) {
+  const f = item.fields;
+
+  const isPaidItem = f['Plan Access'] === 'Paid Members';
+  const isMember = window.parlorMember && (
+    ['The Printing Press', "The Reader's Circle"].includes(window.parlorMember.plan) ||
+    ['fccb348a-7433-4080-8699-9ef8c0e7a519',
+     'c666f321-47e5-40c1-bc2a-565a2f52f64d'].includes(window.parlorMember.planId)
+  );
+  const hasAccess = !isPaidItem || isMember;
+
+  const readingExp = f['Reading Experience'] || 'Preview + Link';
+  const hasFullText = readingExp === 'Full text' && f['Full Text'];
+  const hasPreview  = f['Preview'];
+  const articleUrl  = f['URL'];
+  const mediaType   = f['Accompanying Media Type'];
+  const coverImg    = Array.isArray(f['Cover Image']) ? f['Cover Image'][0]?.url : '';
+
+  // ── Hero ──
+  const heroBg = document.getElementById('libDetailHeroBg');
+  if (heroBg) {
+    heroBg.style.background = coverImg
+      ? `url(${coverImg}) center/cover no-repeat`
+      : 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)';
+  }
+
+  // ── Eyebrow ──
+  const eyebrow = document.querySelector('.lib-eyebrow');
+  if (eyebrow) {
+    eyebrow.innerHTML = `<div class="lib-eyebrow-dot"></div>
+      ${f['Type'] || 'Article'} &nbsp;·&nbsp; ${f['Month'] || ''}`;
+  }
+
+  // ── Theme tag ──
+  const themeTag = document.querySelector('.theme-tag');
+  if (themeTag) {
+    const themeName = Array.isArray(f['Theme (name)'])
+      ? f['Theme (name)'][0]
+      : (f['Theme'] || '');
+    themeTag.style.display = themeName ? '' : 'none';
+    themeTag.innerHTML = `<svg width="10" height="10" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/></svg>
+      ${themeName}`;
+  }
+
+  // ── Title / author ──
+  const titleEl = document.querySelector('.lib-detail-title');
+  if (titleEl) titleEl.textContent = f['Title'] || '';
+
+  const authorEl = document.querySelector('.lib-detail-author');
+  if (authorEl) {
+    authorEl.textContent = [f['Author'], f['Length']].filter(Boolean).join(' · ');
+  }
+
+  // ── Editor's note ──
+  const editorialText = document.querySelector('.editorial-text');
+  const editorialNote = document.querySelector('.editorial-note');
+  if (editorialText && f['Editor Note']) {
+    editorialText.textContent = f['Editor Note'];
+    if (editorialNote) editorialNote.style.display = '';
+  } else if (editorialNote) {
+    editorialNote.style.display = 'none';
+  }
+
+  // ── Action buttons ──
+  const btnRead     = document.getElementById('btnReadInFull');
+  const btnListen   = document.getElementById('btnListen');
+  const btnInterview = document.getElementById('btnInterview');
+  const btnDiscuss  = document.getElementById('btnDiscuss');
+
+  // Show/hide read button based on reading experience and access
+  if (btnRead) {
+    if (hasFullText && hasAccess) {
+      btnRead.style.display = '';
+      btnRead.textContent = 'Read in full';
+    } else if (hasFullText && !hasAccess) {
+      btnRead.style.display = '';
+      btnRead.textContent = '🔒 Members only';
+    } else if (hasPreview) {
+      btnRead.style.display = '';
+      btnRead.textContent = 'Preview';
+    } else {
+      btnRead.style.display = 'none';
+    }
+  }
+
+  // Media buttons
+  if (btnListen) {
+    btnListen.style.display = mediaType === 'Read Recording' ? '' : 'none';
+  }
+  if (btnInterview) {
+    const isInterview = mediaType === 'Audio Interview' || mediaType === 'Video Interview';
+    btnInterview.style.display = isInterview ? '' : 'none';
+    if (isInterview) {
+      btnInterview.innerHTML = mediaType === 'Video Interview' ? '🎬 Interview' : '🎙️ Interview';
+    }
+  }
+
+  // ── Read section content ──
+  const readDiv = document.getElementById('libSectionRead');
+  if (readDiv) {
+    if (isPaidItem && !isMember) {
+      // Paywall
+      readDiv.innerHTML = `
+        <div style="background:var(--cream);border:1px solid var(--border);border-radius:11px;
+          padding:40px 32px;text-align:center;margin-bottom:20px;">
+          <div style="font-size:22px;margin-bottom:12px;">🔒</div>
+          <div style="font-family:'thermal-variable',Georgia,serif;font-size:18px;
+            font-weight:500;margin-bottom:8px;">Members only</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6;max-width:360px;margin-left:auto;margin-right:auto;">
+            This piece is available to Reader's Circle and Printing Press members.
+          </div>
+          ${hasPreview ? `<div style="font-family:'thermal-variable',Georgia,serif;font-size:15px;
+            line-height:1.85;color:var(--ink);text-align:left;margin-bottom:20px;
+            padding:20px;background:var(--white);border-radius:9px;border:1px solid var(--border);">
+            ${f['Preview']}
+          </div>` : ''}
+          <button onclick="window.open('https://www.theparlormagazine.com/plans','_top')"
+            style="background:var(--ink);color:#fff;border:none;padding:10px 24px;
+            border-radius:8px;font-family:'thermal-variable',Georgia,serif;
+            font-size:13.5px;font-weight:500;cursor:pointer;">
+            Upgrade your membership
+          </button>
+        </div>`;
+    } else if (hasFullText) {
+      // Full text reader
+      const paragraphs = (f['Full Text'] || '')
+        .split('\n\n')
+        .filter(p => p.trim())
+        .map(p => `<p>${p.trim()}</p>`)
+        .join('');
+      readDiv.innerHTML = `
+        <div class="content-area" style="width:100%">
+          <div class="content-reader">${paragraphs}</div>
+          <div class="content-footer">
+            <div style="font-size:12px;color:var(--muted);font-style:italic;">
+              ${f['Length'] || ''}
+            </div>
+          </div>
+        </div>`;
+    } else if (hasPreview) {
+      // Preview + link out
+      readDiv.innerHTML = `
+        <div class="content-area" style="width:100%">
+          <div class="content-reader">
+            <p>${f['Preview'] || ''}</p>
+          </div>
+          <div class="content-footer" style="justify-content:space-between;">
+            <div style="font-size:13px;color:var(--muted);font-style:italic;">
+              Continue reading on The Parlor Magazine
+            </div>
+            ${articleUrl ? `<button onclick="window.open('${articleUrl}','_blank')"
+              style="background:var(--ink);color:#fff;border:none;padding:7px 18px;
+              border-radius:7px;font-family:'thermal-variable',Georgia,serif;
+              font-size:13px;font-weight:500;cursor:pointer;">
+              Read full piece →
+            </button>` : ''}
+          </div>
+        </div>`;
+    } else if (articleUrl) {
+      // No preview, just link out
+      readDiv.innerHTML = `
+        <div style="padding:28px 0;text-align:center;">
+          <button onclick="window.open('${articleUrl}','_blank')"
+            style="background:var(--ink);color:#fff;border:none;padding:10px 24px;
+            border-radius:8px;font-family:'thermal-variable',Georgia,serif;
+            font-size:13.5px;font-weight:500;cursor:pointer;">
+            Read on The Parlor Magazine →
+          </button>
+        </div>`;
+    }
+  }
+
+  // ── Discussion prompt ──
+  const discPromptQ = document.querySelector('.disc-prompt-q');
+  if (discPromptQ && f['Discussion Prompt']) {
+    discPromptQ.textContent = f['Discussion Prompt'];
+    document.getElementById('discPromptCard').style.display = '';
+    document.getElementById('discNoPromptCard').style.display = 'none';
+  } else {
+    document.getElementById('discPromptCard').style.display = 'none';
+    document.getElementById('discNoPromptCard').style.display = '';
+  }
+
+  // ── Store item for media player ──
+  window._currentLibItem = item;
+  loadLibraryItem(item);
+
+  // ── Default to read tab ──
+  toggleLibSection('read');
 }
 </script>
 </body>
