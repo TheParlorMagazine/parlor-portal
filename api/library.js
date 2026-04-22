@@ -4,6 +4,17 @@ module.exports = async function handler(req, res) {
   const base = `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}`;
   const headers = { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` };
 
+  if (req.query.type) {
+  const filter = encodeURIComponent(
+    `AND({Published}=1,{Type}="${req.query.type}")`
+  );
+  const response = await fetch(
+    `${base}/Library?filterByFormula=${filter}&sort[0][field]=Date%20Published&sort[0][direction]=desc`,
+    { headers }
+  );
+  const data = await response.json();
+  return res.status(200).json(data);
+}
   if (req.query.recordId) {
   const response = await fetch(
     `${base}/Library/${req.query.recordId}`,
