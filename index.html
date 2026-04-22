@@ -3413,7 +3413,7 @@ function renderThemeSidebar() {
       const isPaid = f['Plan Access'] === 'Paid Members';
 
       return `
-        <div class="lib-card" onclick="openLibraryItem('${f['Slug'] || ''}')">
+       <div class="lib-card" onclick="openLibraryItem('${item.id}')">
           <div class="card-thumb thumb-${type}"
             style="${coverImg ? `background-image:url(${coverImg});background-size:cover;background-position:center;` : ''}">
             ${!coverImg ? `<div class="thumb-lines">
@@ -3500,10 +3500,10 @@ document.addEventListener('DOMContentLoaded', function() {
 }
   let _currentLibraryItem = null;
 
-async function openLibraryItem(slug) {
-  if (!slug) return;
+async function openLibraryItem(recordId) {
+  if (!recordId) return;
   try {
-    const res = await fetch(`${VERCEL_LIBRARY_URL}/api/library?slug=${encodeURIComponent(slug)}`);
+    const res = await fetch(`${VERCEL_LIBRARY_URL}/api/library?recordId=${encodeURIComponent(recordId)}`);
     const data = await res.json();
     const item = data.records?.[0];
     if (!item) return;
