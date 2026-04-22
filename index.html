@@ -3389,20 +3389,19 @@ async function loadLibraryMonths() {
     console.error('loadLibraryMonths error:', e);
   }
 }
-  async function loadLibraryItems({ themeId, month } = {}) {
+  async function loadLibraryItems({ themeId, month, type } = {}) {
   const grid = document.querySelector('.library-grid');
   if (!grid) return;
   grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">Loading...</div>';
 
   try {
-    const url = themeId
+   const url = themeId
   ? `${VERCEL_LIBRARY_URL}/api/library?themeId=${encodeURIComponent(themeId)}`
   : month
   ? `${VERCEL_LIBRARY_URL}/api/library?month=${encodeURIComponent(month)}`
-  : `${VERCEL_LIBRARY_URL}/api/library`;
   : type
-    ? `${VERCEL_LIBRARY_URL}/api/library?type=${encodeURIComponent(type)}`
-    : `${VERCEL_LIBRARY_URL}/api/library`;
+  ? `${VERCEL_LIBRARY_URL}/api/library?type=${encodeURIComponent(type)}`
+  : `${VERCEL_LIBRARY_URL}/api/library`;
 
     const res = await fetch(url);
     const data = await res.json();
