@@ -2766,7 +2766,11 @@ function toggleLibSection(section, item) {
   const btnListen    = document.getElementById('btnListen');
   const btnInterview = document.getElementById('btnInterview');
   console.log('btnListen:', btnListen, 'btnInterview:', btnInterview);
-  const mediaType = item && item.fields && item.fields['Accompanying Media Type'];
+  const mediaType = item && item.fields && (
+  Array.isArray(item.fields['Accompanying Media Type'])
+    ? item.fields['Accompanying Media Type'][0]
+    : item.fields['Accompanying Media Type']
+);
   
   
 
@@ -3583,7 +3587,9 @@ function renderLibraryDetail(item) {
   const hasFullText = readingExp === 'Full text' && f['Full Text'];
   const hasPreview  = f['Preview'];
   const articleUrl  = f['URL'];
-  const mediaType   = f['Accompanying Media Type'];
+  const mediaType = Array.isArray(f['Accompanying Media Type']) 
+  ? f['Accompanying Media Type'][0] 
+  : f['Accompanying Media Type'];
   const coverImg    = Array.isArray(f['Cover Image']) ? f['Cover Image'][0]?.url : '';
 
   // ── Hero ──
