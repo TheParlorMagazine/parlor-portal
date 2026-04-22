@@ -614,6 +614,12 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .edp-badge-community{background:#e0f0fa;color:#1a4a6e;}
 .edp-badge-speaker{background:#f5f0e8;color:#5a4a1a;}
 .edp-badge-workshop{background:#fef9e0;color:#7a6500;}
+.sb-accordion-content { display: none; }
+.sb-accordion-content.open { display: block; }
+.sb-accordion-header { cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+.sb-accordion-header::after { content: '›'; font-size: 12px; color: rgba(255,255,255,0.3); transform: rotate(90deg); display: inline-block; transition: transform 0.15s; }
+.sb-accordion-header.open::after { transform: rotate(270deg); }
+  
 /* ── NOTIFICATION PANEL ── */
 .notif-modal-bg {
   display: none;
@@ -1211,6 +1217,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 </div><!-- /cal-stack -->
 </div><!-- /dash-main -->
 </div><!-- /page-dashboard -->
+  
 <!-- ══ MODAL — COMMUNITY GUIDELINES ══ -->
 <div class="modal-overlay" id="guidelinesModal" style="z-index:500;">
   <div class="modal" style="max-width:560px;max-height:80vh;overflow-y:auto;">
@@ -1646,11 +1653,17 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Protest posters</div>
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><path d="M4 2h6l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/></svg>Books</div>
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M6 6l4 2-4 2V6z" fill="currentColor"/></svg>Audio &amp; film</div>
-   <div class="sb-section">By month</div>
-    <div class="sb-item active" id="sbMonthApr" onclick="filterByMonth('April 2026')"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/></svg>April 2026</div>
-
-    <div class="sb-section">By theme</div>
-<div id="libThemeSection"></div>
+   <div class="sb-section sb-accordion-header" onclick="toggleSidebarAccordion('month')">By month</div>
+<div class="sb-accordion-content open" id="accordionMonth">
+  <div class="sb-item active" id="sbMonthCurrent" onclick="filterByMonth(currentMonthLabel())">
+    <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/></svg>
+    <span id="sbMonthCurrentLabel"></span>
+  </div>
+</div>
+<div class="sb-section sb-accordion-header" onclick="toggleSidebarAccordion('theme')">By theme</div>
+<div class="sb-accordion-content" id="accordionTheme">
+  <div id="libThemeSection"></div>
+</div>
     
     <div class="sb-section">My library</div>
     <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Saved items</div>
@@ -3371,15 +3384,17 @@ function renderThemeSidebar() {
     section.appendChild(item);
   });
 }
-  async function loadLibraryItems({ themeId } = {}) {
+  async function loadLibraryItems({ themeId, month } = {}) {
   const grid = document.querySelector('.library-grid');
   if (!grid) return;
   grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">Loading...</div>';
 
   try {
     const url = themeId
-      ? `${VERCEL_LIBRARY_URL}/api/library?themeId=${encodeURIComponent(themeId)}`
-      : `${VERCEL_LIBRARY_URL}/api/library`;
+  ? `${VERCEL_LIBRARY_URL}/api/library?themeId=${encodeURIComponent(themeId)}`
+  : month
+  ? `${VERCEL_LIBRARY_URL}/api/library?month=${encodeURIComponent(month)}`
+  : `${VERCEL_LIBRARY_URL}/api/library`;
 
     const res = await fetch(url);
     const data = await res.json();
@@ -3417,10 +3432,8 @@ function renderThemeSidebar() {
             </div>
             <div class="card-title">${f['Title'] || ''}</div>
             <div class="card-author">${f['Author'] || ''}</div>
-            ${f['Editor Note'] ? `
-              <div class="card-note">
-                <strong>Editor's note</strong>${f['Editor Note']}
-              </div>` : ''}
+            ${f['Description'] ? `
+  <div class="card-note">${f['Description']}</div>` : ''}
           </div>
         </div>
       `;
@@ -3449,12 +3462,41 @@ function renderThemeSidebar() {
   await loadLibraryItems({ themeId });
 }
 
-function filterByMonth(month) {
+async function filterByMonth(month) {
   document.querySelectorAll('#page-library .sidebar .sb-item').forEach(el => el.classList.remove('active'));
-  document.getElementById('sbMonthApr') && document.getElementById('sbMonthApr').classList.add('active');
+  document.getElementById('sbMonthCurrent') && document.getElementById('sbMonthCurrent').classList.add('active');
   document.getElementById('libThemeBanner').style.display = 'none';
-  loadLibraryItems();
+  await loadLibraryItems({ month: new Date().toLocaleString('en-US', { month: 'long' }) });
   showLibraryBrowse();
+}
+function currentMonthLabel() {
+  return new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
+}
+
+// Set the label on load
+document.addEventListener('DOMContentLoaded', function() {
+  const el = document.getElementById('sbMonthCurrentLabel');
+  if (el) el.textContent = currentMonthLabel();
+});
+
+  function toggleSidebarAccordion(which) {
+  const month = document.getElementById('accordionMonth');
+  const theme = document.getElementById('accordionTheme');
+  const headers = document.querySelectorAll('.sb-accordion-header');
+  if (which === 'month') {
+    month.classList.toggle('open');
+    theme.classList.remove('open');
+  } else {
+    theme.classList.toggle('open');
+    month.classList.remove('open');
+  }
+  headers.forEach(h => {
+    if (h.getAttribute('onclick') && h.getAttribute('onclick').includes(which)) {
+      h.classList.toggle('open');
+    } else {
+      h.classList.remove('open');
+    }
+  });
 }
   let _currentLibraryItem = null;
 
