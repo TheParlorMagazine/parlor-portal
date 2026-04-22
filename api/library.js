@@ -35,16 +35,16 @@ if (req.query.month) {
 }
   // Filter by theme record ID
   if (req.query.themeId) {
-    const filter = encodeURIComponent(
-      `AND({Published}=1,FIND("${req.query.themeId}",ARRAYJOIN(Theme," ")))`
-    );
-    const response = await fetch(
-      `${base}/Library?filterByFormula=${filter}&sort[0][field]=Date%20Published&sort[0][direction]=desc`,
-      { headers }
-    );
-    const data = await response.json();
-    return res.status(200).json(data);
-  }
+  const filter = encodeURIComponent(
+    `AND({Published}=1,FIND("${req.query.themeId}",ARRAYJOIN({Theme}," ")))`
+  );
+  const response = await fetch(
+    `${base}/Library?filterByFormula=${filter}&sort[0][field]=Date%20Published&sort[0][direction]=desc`,
+    { headers }
+  );
+  const data = await response.json();
+  return res.status(200).json(data);
+}
 
   // All published items
   const filter = encodeURIComponent(`{Published}=1`);
