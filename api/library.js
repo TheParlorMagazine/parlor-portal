@@ -14,7 +14,17 @@ module.exports = async function handler(req, res) {
     const data = await response.json();
     return res.status(200).json(data);
   }
-
+if (req.query.month) {
+  const filter = encodeURIComponent(
+    `AND({Published}=1,{Month}="${req.query.month}")`
+  );
+  const response = await fetch(
+    `${base}/Library?filterByFormula=${filter}&sort[0][field]=Date%20Published&sort[0][direction]=desc`,
+    { headers }
+  );
+  const data = await response.json();
+  return res.status(200).json(data);
+}
   // Filter by theme record ID
   if (req.query.themeId) {
     const filter = encodeURIComponent(
