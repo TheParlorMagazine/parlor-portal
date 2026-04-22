@@ -2627,20 +2627,10 @@ document.querySelectorAll('.cal-intro-pill').forEach(pill => {
   renderCal();
   renderUpcoming();
 })();
-  
+let _libraryItems = [];  
 // ── LIBRARY SEARCH ──────────────────────────────────────
 (function() {
-  // Static library items — will be replaced by Airtable data
-  const LIBRARY_ITEMS = [
-    { title: 'The Samizdat Underground: Literature as Survival', type: 'Essay', author: 'Václav Havel', tags: ['resistance', 'samizdat', 'literature', 'czechoslovakia', 'printing'] },
-    { title: 'WPA Labor Series: The Right to Organise', type: 'Poster', author: 'Federal Art Project', tags: ['labor', 'workers', 'protest', 'wpa', 'organise', 'chicago'] },
-    { title: 'The Wretched of the Earth', type: 'Book', author: 'Frantz Fanon', tags: ['colonialism', 'liberation', 'violence', 'fanon', 'revolution'] },
-    { title: 'Conversation with adrienne maree brown on emergent strategy', type: 'Audio', author: 'adrienne maree brown', tags: ['emergent strategy', 'organizing', 'interview', 'brown'] },
-    { title: 'I Am Not Your Negro', type: 'Film', author: 'Raoul Peck', tags: ['baldwin', 'race', 'america', 'film', 'documentary'] },
-    { title: 'Notes Toward a Politics of Location', type: 'Essay', author: 'Adrienne Rich', tags: ['feminism', 'location', 'politics', 'rich', 'identity'] },
-  ];
-
-  const input       = document.getElementById('libSearchInput');
+  const input = document.getElementById('libSearchInput');
   const suggestions = document.getElementById('libSearchSuggestions');
   if (!input || !suggestions) return;
 
@@ -2657,7 +2647,7 @@ document.querySelectorAll('.cal-intro-pill').forEach(pill => {
       return;
     }
     const q = query.toLowerCase();
-    const matches = LIBRARY_ITEMS.filter(item =>
+    const matches = _libraryItems.filter(item =>
       item.title.toLowerCase().includes(q) ||
       item.author.toLowerCase().includes(q) ||
       item.type.toLowerCase().includes(q) ||
@@ -2670,7 +2660,6 @@ document.querySelectorAll('.cal-intro-pill').forEach(pill => {
       return;
     }
 
-    // Group by type
     const byType = {};
     matches.forEach(item => {
       if (!byType[item.type]) byType[item.type] = [];
@@ -2682,7 +2671,7 @@ document.querySelectorAll('.cal-intro-pill').forEach(pill => {
       html += '<div class="lib-suggestion-group">';
       html += '<div class="lib-suggestion-label">' + type + '</div>';
       items.slice(0, 4).forEach(item => {
-        html += '<div class="lib-suggestion-item" onclick="selectSuggestion(' + JSON.stringify(item.title) + ')">';
+        html += '<div class="lib-suggestion-item" onclick="openLibraryItem(\'' + item.id + '\')">';
         html += '<svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/></svg>';
         html += '<span class="lib-suggestion-title">' + highlight(item.title, query) + '</span>';
         html += '<span class="lib-suggestion-type">' + item.author + '</span>';
@@ -2695,35 +2684,20 @@ document.querySelectorAll('.cal-intro-pill').forEach(pill => {
     suggestions.classList.add('visible');
   }
 
-  window.selectSuggestion = function(title) {
-    input.value = title;
+  window.selectSuggestion = function(id) {
     suggestions.classList.remove('visible');
-    // Filter the library grid
-    filterLibraryGrid(title);
+    openLibraryItem(id);
   };
 
-  window.filterLibraryGrid = function(query) {
-    const q = (query || '').toLowerCase();
-    document.querySelectorAll('.lib-card').forEach(card => {
-      const text = card.textContent.toLowerCase();
-      card.style.display = (!q || text.includes(q)) ? '' : 'none';
-    });
-  };
-
-  input.addEventListener('input', () => {
-    search(input.value.trim());
-    filterLibraryGrid(input.value.trim());
-  });
+  input.addEventListener('input', () => search(input.value.trim()));
 
   input.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       suggestions.classList.remove('visible');
       input.value = '';
-      filterLibraryGrid('');
     }
   });
 
-  // Close suggestions when clicking outside
   document.addEventListener('click', e => {
     if (!e.target.closest('#libSearchWrap')) {
       suggestions.classList.remove('visible');
@@ -3399,6 +3373,13 @@ function renderThemeSidebar() {
     const res = await fetch(url);
     const data = await res.json();
     const items = data.records || [];
+    _libraryItems = items.map(item => ({
+  id: item.id,
+  title: item.fields['Title'] || '',
+  author: item.fields['Author'] || '',
+  type: item.fields['Type'] || 'Article',
+  tags: (item.fields['Tags'] || '').toString().toLowerCase().split(',').map(t => t.trim())
+}));
 
     if (!items.length) {
       grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">No items found.</div>';
