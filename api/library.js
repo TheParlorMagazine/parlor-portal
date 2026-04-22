@@ -7,7 +7,10 @@ module.exports = async function handler(req, res) {
   // Single item by slug
   if (req.query.slug) {
     const filter = encodeURIComponent(`AND({Slug}="${req.query.slug}",{Published}=1)`);
-    const response = await fetch(`${base}/Library?filterByFormula=${filter}`, { headers });
+    const response = await fetch(
+      `${base}/Library?filterByFormula=${filter}`,
+      { headers }
+    );
     const data = await response.json();
     return res.status(200).json(data);
   }
@@ -15,10 +18,10 @@ module.exports = async function handler(req, res) {
   // Filter by theme record ID
   if (req.query.themeId) {
     const filter = encodeURIComponent(
-      `AND({Published}=1,FIND("${req.query.themeId}",ARRAYJOIN({Theme})))`
+      `AND({Published}=1,FIND("${req.query.themeId}",ARRAYJOIN(Theme," ")))`
     );
     const response = await fetch(
-      `${base}/Library?filterByFormula=${filter}&sort[0][field]=Date Published&sort[0][direction]=desc`,
+      `${base}/Library?filterByFormula=${filter}&sort[0][field]=Date%20Published&sort[0][direction]=desc`,
       { headers }
     );
     const data = await response.json();
@@ -28,7 +31,7 @@ module.exports = async function handler(req, res) {
   // All published items
   const filter = encodeURIComponent(`{Published}=1`);
   const response = await fetch(
-    `${base}/Library?filterByFormula=${filter}&sort[0][field]=Date Published&sort[0][direction]=desc`,
+    `${base}/Library?filterByFormula=${filter}&sort[0][field]=Date%20Published&sort[0][direction]=desc`,
     { headers }
   );
   const data = await response.json();
