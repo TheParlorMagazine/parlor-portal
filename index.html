@@ -1643,16 +1643,18 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
       Back to dashboard
     </div>
     <div class="sb-section">Browse</div>
-    <div class="sb-item active" onclick="showLibraryBrowse()">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      All items
-    </div>
-    <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v4M11 1v4M2 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Issues</div>
-    <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Articles</div>
-    <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Essays &amp; literature</div>
-    <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Protest posters</div>
-    <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><path d="M4 2h6l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/></svg>Books</div>
-    <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M6 6l4 2-4 2V6z" fill="currentColor"/></svg>Audio &amp; film</div>
+<div class="sb-item active" onclick="showLibraryBrowse(); loadLibraryItems();">
+  <svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+  All items
+</div>
+<div class="sb-section sb-accordion-header" onclick="toggleSidebarAccordion('type')">By content type</div>
+<div class="sb-accordion-content" id="accordionType">
+  <div class="sb-item" onclick="filterByType('Article')"><svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Articles</div>
+  <div class="sb-item" onclick="filterByType('Essay')"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Essays &amp; literature</div>
+  <div class="sb-item" onclick="filterByType('Protest poster')"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Protest posters</div>
+  <div class="sb-item" onclick="filterByType('Book')"><svg viewBox="0 0 16 16" fill="none"><path d="M4 2h6l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/></svg>Books</div>
+  <div class="sb-item" onclick="filterByType('Audio')"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M6 6l4 2-4 2V6z" fill="currentColor"/></svg>Audio &amp; film</div>
+</div>
    <div class="sb-section sb-accordion-header" onclick="toggleSidebarAccordion('month')">By month</div>
 <div class="sb-accordion-content open" id="accordionMonth">
   <div class="sb-item active" id="sbMonthCurrent" onclick="filterByMonth(currentMonthLabel())">
@@ -1933,6 +1935,7 @@ window.addEventListener('message', function(event) {
   if (typeof loadEvents        === 'function') loadEvents();
   if (typeof loadDashboardFeed === 'function') loadDashboardFeed();
   if (typeof loadLibraryThemes === 'function') loadLibraryThemes();
+  if (typeof loadLibraryMonths === 'function') loadLibraryMonths();
 if (typeof loadLibraryItems  === 'function') loadLibraryItems();
 });
 
@@ -3358,6 +3361,34 @@ function renderThemeSidebar() {
     section.appendChild(item);
   });
 }
+async function loadLibraryMonths() {
+  try {
+    const res = await fetch(`${VERCEL_LIBRARY_URL}/api/library`);
+    const data = await res.json();
+    const items = data.records || [];
+    const monthOrder = ['January','February','March','April','May','June',
+      'July','August','September','October','November','December'];
+    const months = [...new Set(items.map(i => i.fields['Month']).filter(Boolean))];
+    months.sort((a, b) => {
+      const [ma, ya] = a.split(' ');
+      const [mb, yb] = b.split(' ');
+      return (ya - yb) || (monthOrder.indexOf(ma) - monthOrder.indexOf(mb));
+    });
+    const section = document.getElementById('accordionMonth');
+    if (!section) return;
+    const currentMonth = new Date().toLocaleString('en-US', { month: 'long' });
+    section.innerHTML = months.map(month => {
+      const isCurrent = month.startsWith(currentMonth);
+      return `
+        <div class="sb-item ${isCurrent ? 'active' : ''}" onclick="filterByMonth('${month.split(' ')[0]}')">
+          <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/></svg>
+          ${month}
+        </div>`;
+    }).join('');
+  } catch (e) {
+    console.error('loadLibraryMonths error:', e);
+  }
+}
   async function loadLibraryItems({ themeId, month } = {}) {
   const grid = document.querySelector('.library-grid');
   if (!grid) return;
@@ -3369,6 +3400,9 @@ function renderThemeSidebar() {
   : month
   ? `${VERCEL_LIBRARY_URL}/api/library?month=${encodeURIComponent(month)}`
   : `${VERCEL_LIBRARY_URL}/api/library`;
+  : type
+    ? `${VERCEL_LIBRARY_URL}/api/library?type=${encodeURIComponent(type)}`
+    : `${VERCEL_LIBRARY_URL}/api/library`;
 
     const res = await fetch(url);
     const data = await res.json();
@@ -3445,9 +3479,14 @@ function renderThemeSidebar() {
 
 async function filterByMonth(month) {
   document.querySelectorAll('#page-library .sidebar .sb-item').forEach(el => el.classList.remove('active'));
-  document.getElementById('sbMonthCurrent') && document.getElementById('sbMonthCurrent').classList.add('active');
   document.getElementById('libThemeBanner').style.display = 'none';
-  await loadLibraryItems({ month: new Date().toLocaleString('en-US', { month: 'long' }) });
+  await loadLibraryItems({ month });
+  showLibraryBrowse();
+}
+ async function filterByType(type) {
+  document.querySelectorAll('#page-library .sidebar .sb-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('libThemeBanner').style.display = 'none';
+  await loadLibraryItems({ type });
   showLibraryBrowse();
 }
 function currentMonthLabel() {
@@ -3460,18 +3499,22 @@ document.addEventListener('DOMContentLoaded', function() {
   if (el) el.textContent = currentMonthLabel();
 });
 
-  function toggleSidebarAccordion(which) {
+ function toggleSidebarAccordion(which) {
   const month = document.getElementById('accordionMonth');
   const theme = document.getElementById('accordionTheme');
-  const headers = document.querySelectorAll('.sb-accordion-header');
-  if (which === 'month') {
-    month.classList.toggle('open');
-    theme.classList.remove('open');
-  } else {
-    theme.classList.toggle('open');
-    month.classList.remove('open');
-  }
-  headers.forEach(h => {
+  const type  = document.getElementById('accordionType');
+  const all   = [month, theme, type].filter(Boolean);
+  const target = which === 'month' ? month : which === 'theme' ? theme : type;
+  
+  all.forEach(el => {
+    if (el === target) {
+      el.classList.toggle('open');
+    } else {
+      el.classList.remove('open');
+    }
+  });
+
+  document.querySelectorAll('.sb-accordion-header').forEach(h => {
     if (h.getAttribute('onclick') && h.getAttribute('onclick').includes(which)) {
       h.classList.toggle('open');
     } else {
