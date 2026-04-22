@@ -1666,12 +1666,6 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 <div class="sb-accordion-content" id="accordionTheme">
   <div id="libThemeSection"></div>
 </div>
-    
-    <div class="sb-section">My library</div>
-    <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Saved items</div>
-    <div class="sb-item"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Reading history</div>
-    <div class="sb-spacer"></div>
-
 
   </div>
   <div class="library-content">
@@ -1690,6 +1684,17 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
         <button class="theme-cta" id="libThemeCta" onclick="navigate('forum')">Join this month's roundtable &rsaquo;</button>
       </div>
       <div class="filters-bar">
+  <div style="display:flex;gap:8px;margin-bottom:10px;width:100%;">
+    <button class="filter-btn" id="filterSaved" onclick="toggleLibraryFilter('saved')">
+      <svg viewBox="0 0 16 16" fill="none" style="width:11px;height:11px;margin-right:4px"><path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Saved items
+    </button>
+    <button class="filter-btn" id="filterHistory" onclick="toggleLibraryFilter('history')">
+      <svg viewBox="0 0 16 16" fill="none" style="width:11px;height:11px;margin-right:4px"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Reading history
+    </button>
+  </div>
+  <div class="lib-search-wrap" id="libSearchWrap">
         <div class="lib-search-wrap" id="libSearchWrap">
           <svg viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M10 10l3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
           <input class="lib-search-input" id="libSearchInput" type="text" placeholder="Search library...">
@@ -3487,6 +3492,30 @@ async function filterByMonth(month) {
   document.getElementById('libThemeBanner').style.display = 'none';
   await loadLibraryItems({ type });
   showLibraryBrowse();
+}
+let _activeLibraryFilter = null;
+
+function toggleLibraryFilter(filter) {
+  const savedBtn   = document.getElementById('filterSaved');
+  const historyBtn = document.getElementById('filterHistory');
+
+  if (_activeLibraryFilter === filter) {
+    _activeLibraryFilter = null;
+    savedBtn.classList.remove('active');
+    historyBtn.classList.remove('active');
+    loadLibraryItems();
+  } else {
+    _activeLibraryFilter = filter;
+    savedBtn.classList.toggle('active', filter === 'saved');
+    historyBtn.classList.toggle('active', filter === 'history');
+    // For now show empty state — will wire to member data later
+    const grid = document.querySelector('.library-grid');
+    if (grid) {
+      grid.innerHTML = `<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">
+        ${filter === 'saved' ? 'No saved items yet.' : 'No reading history yet.'}
+      </div>`;
+    }
+  }
 }
 function currentMonthLabel() {
   return new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
