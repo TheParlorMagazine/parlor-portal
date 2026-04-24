@@ -53,80 +53,74 @@ html,body{background:transparent;display:flex;align-items:center;justify-content
 <div class="toast" id="toast"></div>
 
 <script>
-// ── State ────────────────────────────────────────────────
 let articleData = {
   title:    '',
   url:      '',
   type:     'Article',
   memberId: '',
+  slug:     '',
+  itemId:   '',
 };
-let isSaved  = false;
-let isReady  = false; // true once member data received
+let isSaved = false;
+let isReady = false;
 
-// ── Receive article + member data from Wix ───────────────
-window.addEventListener('message', function(e) {
+window.addEventListener('message', async function(e) {
   if (!e.data) return;
 
-  // Article metadata from the Wix page
   if (e.data.type === 'SAVE_BTN_INIT') {
-    articleData.title  = e.data.title  || document.referrer || 'Untitled';
-    articleData.url    = e.data.url    || '';
-    articleData.type   = e.data.itemType || 'Article';
+    articleData.title    = e.data.title || 'Untitled';
+    articleData.url      = e.data.url || '';
+    articleData.type     = e.data.itemType || 'Article';
     articleData.memberId = e.data.memberId || '';
-    isReady = true;
+    articleData.slug     = e.data.slug || '';
 
-    // Check if already saved (Airtable lookup — wired up later)
-    checkIfSaved();
-  }
-
-  // Result from Wix after save attempt
-  if (e.data.type === 'SAVE_RESULT') {
-    const btn = document.getElementById('saveBtn');
-    btn.classList.remove('saving');
-    if (e.data.success) {
-      isSaved = true;
-      updateButtonState();
-      showToast(isSaved ? 'Saved to your library' : 'Removed from saved items');
-    } else {
-      showToast('Could not save — please try again');
+    if (articleData.slug) {
+      try {
+        const res = await fetch(`https://parlor-portal.vercel.app/api/library?slug=${encodeURIComponent(articleData.slug)}`);
+        const data = await res.json();
+        const record = data.records?.[0];
+        if (record) articleData.itemId = record.id;
+      } catch(err) {
+        console.log('Could not look up article ID:', err);
+      }
     }
+
+    isReady = true;
+    checkIfSaved();
   }
 });
 
-// ── Signal readiness to Wix ──────────────────────────────
 window.addEventListener('load', function() {
   window.parent.postMessage({ type: 'SAVE_BTN_READY' }, '*');
 });
 
-// ── Toggle save ──────────────────────────────────────────
-function toggleSave() {
-  if (!isReady) return;
+async function toggleSave() {
+  if (!isReady || !articleData.memberId) return;
   const btn = document.getElementById('saveBtn');
   btn.classList.add('saving');
-
-  const action = isSaved ? 'Unsaved' : 'Saved';
-
-  // Will POST to Airtable when wired up
-  // For now, simulate locally and send to Wix for future handling
-  window.parent.postMessage({
-    type:      'SAVE_ARTICLE',
-    action:    action,
-    title:     articleData.title,
-    url:       articleData.url,
-    itemType:  articleData.type,
-    memberId:  articleData.memberId,
-  }, '*');
-
-  // Optimistic UI update while we wait for confirmation
-  isSaved = !isSaved;
-  btn.classList.remove('saving');
-  updateButtonState();
-  showToast(isSaved ? 'Saved to your library' : 'Removed from saved items');
+  try {
+    await fetch('https://parlor-portal.vercel.app/api/member-activity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        memberId: articleData.memberId,
+        action:   isSaved ? 'Unsaved' : 'Saved',
+        itemType: 'Library Item',
+        itemId:   articleData.itemId || '',
+        itemTitle: articleData.title
+      })
+    });
+    isSaved = !isSaved;
+    btn.classList.remove('saving');
+    updateButtonState();
+    showToast(isSaved ? 'Saved to your library' : 'Removed from saved items');
+  } catch(err) {
+    btn.classList.remove('saving');
+    showToast('Could not save — please try again');
+  }
 }
 
 function checkIfSaved() {
-  // Will query Airtable when wired up
-  // For now always starts unsaved
   isSaved = false;
   updateButtonState();
 }
