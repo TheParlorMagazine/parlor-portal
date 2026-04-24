@@ -3667,7 +3667,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 }
-  let _currentLibraryItem = null;
+  window._currentLibraryItem = null;
 
 async function openLibraryItem(recordId) {
   if (!recordId) return;
