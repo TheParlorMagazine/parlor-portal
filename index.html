@@ -2806,10 +2806,12 @@ document.getElementById('transcriptModalBg').addEventListener('click', function(
 function buildMediaPlayer(item, isPaid, isListen) {
   const f = item.fields;
   const mediaType = f['Accompanying Media Type'];
-  const mediaUrl  = f['Media URL'] || '';
-  const mediaDuration = f['Media Duration'] || '';
-  const mediaTitle = f['Media Title'] || f['Title'] || '';
-  const transcript = f['Transcript'] || '';
+  const mediaUrl = f['Media URL'] || '';
+const mediaDuration = f['Media Duration'] || '';
+const mediaTitle = f['Media Title'] || f['Title'] || '';
+  const transcript = Array.isArray(f['Transcript']) 
+  ? f['Transcript'][0] 
+  : (f['Transcript'] || '');
   const isVideo = mediaType === 'Video Interview';
   const isReadRecording = mediaType === 'Read Recording';
 
