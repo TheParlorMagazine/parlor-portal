@@ -367,7 +367,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .lib-detail-banner{width:100%;height:280px;background:var(--ink);position:relative;overflow:hidden;margin-bottom:0}
 .lib-detail-banner-img{width:100%;height:100%;object-fit:cover;opacity:0.7}
 .lib-detail-banner-overlay{position:absolute;inset:0;background:linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%)}
-.lib-detail-wrap{width:100%;}
+.lib-detail-wrap{width:100%;overflow-y:auto;height:100vh;}
 .lib-detail-back{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer;margin-bottom:26px;transition:color 0.15s;background:none;border:none;font-family:'thermal-variable','Georgia',serif;padding:0}
 .lib-detail-back:hover{color:#000000}
 .lib-detail-back svg{width:14px;height:14px}
@@ -393,7 +393,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .editorial-label{font-size:9.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.13em;color:#000000;margin-bottom:8px}
 .editorial-text{font-family:'thermal-variable','Georgia',serif;font-size:16px;font-style:italic;line-height:1.75;color:var(--ink)}
 .editorial-sig{font-size:12px;color:var(--muted);margin-top:10px;font-family:'thermal-variable','Georgia',serif}
-.detail-actions{display:flex;gap:8px;flex-wrap:wrap}
+.detail-actions{display:flex;gap:8px;flex-wrap:wrap;padding:24px 48px 0;}
 .btn-primary{background:var(--ink);color:white;border:none;padding:10px 20px;border-radius:8px;font-family:'thermal-variable','Georgia',serif;font-size:13.5px;font-weight:500;cursor:pointer;transition:opacity 0.15s;display:flex;align-items:center;gap:7px}
 .btn-primary.btn-active{background:var(--ink);color:white;opacity:1}
 .btn-secondary.btn-active{background:var(--ink);color:white;border-color:var(--ink)}
@@ -1750,7 +1750,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
         </div>
           </div><!-- /hero-content -->
         </div><!-- /lib-detail-hero -->
-        <div class="detail-actions" style="padding:24px 48px 0;">
+        <div class="detail-actions">
   <button class="btn-primary btn-active" id="btnReadInFull" onclick="toggleLibSection('read')">
     <svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
     Read in full
