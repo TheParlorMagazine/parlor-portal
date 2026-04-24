@@ -2809,7 +2809,9 @@ function buildMediaPlayer(item, isPaid, isListen) {
   console.log('mediaType:', f['Accompanying Media Type']);
   console.log('mediaUrl:', f['Media URL']);
   console.log('transcript:', f['Transcript']);
-  const mediaType = f['Accompanying Media Type'];
+  const mediaType = Array.isArray(f['Accompanying Media Type']) 
+  ? f['Accompanying Media Type'][0] 
+  : f['Accompanying Media Type'];
   const mediaUrl = f['Media URL'] || '';
 const mediaDuration = f['Media Duration'] || '';
 const mediaTitle = f['Media Title'] || f['Title'] || '';
