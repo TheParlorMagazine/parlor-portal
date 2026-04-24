@@ -44,17 +44,18 @@ if (req.query.month) {
   const data = await response.json();
   return res.status(200).json(data);
 }
-  // Filter by theme record ID
   if (req.query.themeId) {
-  const filter = encodeURIComponent(
-    `AND({Published}=1,FIND("${req.query.themeId}",ARRAYJOIN({Theme},",")))`
-  );
+  const filter = encodeURIComponent(`{Published}=1`);
   const response = await fetch(
     `${base}/Library?filterByFormula=${filter}&sort[0][field]=Date%20Published&sort[0][direction]=desc`,
     { headers }
   );
   const data = await response.json();
-  return res.status(200).json(data);
+  const filtered = (data.records || []).filter(record => {
+    const themes = record.fields['Theme'];
+    return Array.isArray(themes) && themes.includes(req.query.themeId);
+  });
+  return res.status(200).json({ records: filtered });
 }
 
   // All published items
