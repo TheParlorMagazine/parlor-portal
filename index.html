@@ -3572,7 +3572,17 @@ function toggleLibraryFilter(filter) {
   try {
     const res = await fetch(`${VERCEL_LIBRARY_URL}/api/member-activity?memberId=${encodeURIComponent(memberId)}`);
     const data = await res.json();
-    const saved = (data.records || []).filter(r => r.fields['Action'] === 'Saved' && r.fields['Item Type'] === 'Library Item');
+    // Group by Item ID and only keep items where the most recent action is 'Saved'
+const activityItems = (data.records || []).filter(r => r.fields['Item Type'] === 'Library Item');
+const latestByItem = {};
+activityItems.forEach(r => {
+  const id = r.fields['Item ID'];
+  if (!id) return;
+  if (!latestByItem[id] || r.fields['Timestamp'] > latestByItem[id].fields['Timestamp']) {
+    latestByItem[id] = r;
+  }
+});
+const saved = Object.values(latestByItem).filter(r => r.fields['Action'] === 'Saved');
 
     if (!saved.length) {
       grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">No saved items yet.</div>';
