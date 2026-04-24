@@ -3381,21 +3381,37 @@ async function loadLibraryMonths() {
     const items = data.records || [];
     const monthOrder = ['January','February','March','April','May','June',
       'July','August','September','October','November','December'];
-    const months = [...new Set(items.map(i => i.fields['Month']).filter(Boolean))];
-    months.sort((a, b) => {
-      const [ma, ya] = a.split(' ');
-      const [mb, yb] = b.split(' ');
-      return (ya - yb) || (monthOrder.indexOf(ma) - monthOrder.indexOf(mb));
+
+    // Get unique months and pair with date published for sorting
+    const monthMap = {};
+    items.forEach(i => {
+      const month = i.fields['Month'];
+      const date  = i.fields['Date Published'];
+      if (month && date && !monthMap[month]) {
+        monthMap[month] = date; // store earliest date for this month label
+      }
     });
+
+    const months = Object.keys(monthMap).sort((a, b) => {
+      return new Date(monthMap[a]) - new Date(monthMap[b]);
+    });
+
     const section = document.getElementById('accordionMonth');
     if (!section) return;
     const currentMonth = new Date().toLocaleString('en-US', { month: 'long' });
+
     section.innerHTML = months.map(month => {
-      const isCurrent = month.startsWith(currentMonth);
+      // Find a record with this month to get the year
+      const record = items.find(i => i.fields['Month'] === month);
+      const year = record?.fields['Date Published']
+        ? new Date(record.fields['Date Published']).getFullYear()
+        : '';
+      const label = year ? `${month} ${year}` : month;
+      const isCurrent = month === currentMonth;
       return `
-        <div class="sb-item ${isCurrent ? 'active' : ''}" onclick="filterByMonth('${month.split(' ')[0]}')">
+        <div class="sb-item ${isCurrent ? 'active' : ''}" onclick="filterByMonth('${month}')">
           <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/></svg>
-          ${month}
+          ${label}
         </div>`;
     }).join('');
   } catch (e) {
