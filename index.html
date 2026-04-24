@@ -2837,23 +2837,32 @@ const mediaTitle = f['Media Title'] || f['Title'] || '';
 
   // Interview tab — paywalled
   if (!isListen) {
-    if (!isPaid) {
-      // Blurred paywall state
-      const blurredPlayer = isVideo
-        ? `<div class="media-video-wrap media-paywall-blur"><iframe src="" title=""></iframe></div>`
-        : buildAudioPlayer(mediaUrl, mediaTitle, mediaDuration, 'interviewAudio');
+   if (!isPaid) {
+  const previewPlayer = isVideo
+    ? `<div class="media-video-wrap"><iframe src="" title=""></iframe></div>`
+    : buildAudioPlayer('', mediaTitle, mediaDuration, 'interviewAudio');
 
-      return `
-        <div class="media-paywall">
-          <div class="media-paywall-blur">${blurredPlayer}</div>
-          <div class="media-paywall-overlay">
-            <div class="media-paywall-icon">🔒</div>
-            <div class="media-paywall-msg">This interview is available to Reader's Circle and Printing Press members.</div>
-            <button class="media-paywall-btn" onclick="window.open('https://www.theparlormagazine.com/plans','_top')">Upgrade your membership</button>
-          </div>
-        </div>
-      `;
-    }
+  const blurredTranscript = transcript
+    ? `<div class="media-transcript">
+        <div class="media-transcript-label">Interview transcript</div>
+        <div class="media-transcript-body" style="filter:blur(4px);user-select:none;pointer-events:none;max-height:120px;overflow:hidden;">${transcript}</div>
+      </div>`
+    : '';
+
+  return `
+    <div class="media-paywall" style="border-radius:11px;overflow:hidden;">
+      <div class="media-paywall-blur">
+        ${previewPlayer}
+        ${blurredTranscript}
+      </div>
+      <div class="media-paywall-overlay">
+        <div class="media-paywall-icon">🔒</div>
+        <div class="media-paywall-msg">This interview and transcript are available to Reader's Circle and Printing Press members.</div>
+        <button class="media-paywall-btn" onclick="window.open('https://www.theparlormagazine.com/plans','_top')">Upgrade your membership</button>
+      </div>
+    </div>
+  `;
+}
 
     // Paid — full interview player
     let playerHtml = isVideo
