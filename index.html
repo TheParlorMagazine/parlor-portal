@@ -3551,13 +3551,76 @@ function toggleLibraryFilter(filter) {
     _activeLibraryFilter = filter;
     savedBtn.classList.toggle('active', filter === 'saved');
     historyBtn.classList.toggle('active', filter === 'history');
-    // For now show empty state — will wire to member data later
-    const grid = document.querySelector('.library-grid');
-    if (grid) {
-      grid.innerHTML = `<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">
-        ${filter === 'saved' ? 'No saved items yet.' : 'No reading history yet.'}
-      </div>`;
+
+    if (filter === 'saved') {
+      loadSavedItems();
+    } else {
+      const grid = document.querySelector('.library-grid');
+      if (grid) grid.innerHTML = `<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">No reading history yet.</div>`;
     }
+  }
+  async function loadSavedItems() {
+  const grid = document.querySelector('.library-grid');
+  if (!grid) return;
+  const memberId = window.parlorMember?.memberId;
+  if (!memberId) {
+    grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">No saved items yet.</div>';
+    return;
+  }
+  grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">Loading...</div>';
+  try {
+    const res = await fetch(`${VERCEL_LIBRARY_URL}/api/member-activity?memberId=${encodeURIComponent(memberId)}`);
+    const data = await res.json();
+    const saved = (data.records || []).filter(r => r.fields['Action'] === 'Saved' && r.fields['Item Type'] === 'Library Item');
+
+    if (!saved.length) {
+      grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">No saved items yet.</div>';
+      return;
+    }
+
+    // Fetch the actual library records by ID
+    const itemIds = [...new Set(saved.map(r => r.fields['Item ID']).filter(Boolean))];
+    const items = await Promise.all(itemIds.map(async id => {
+      const r = await fetch(`${VERCEL_LIBRARY_URL}/api/library?recordId=${encodeURIComponent(id)}`);
+      const d = await r.json();
+      return d.records?.[0];
+    }));
+
+    const validItems = items.filter(Boolean);
+    if (!validItems.length) {
+      grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">No saved items yet.</div>';
+      return;
+    }
+
+    grid.innerHTML = validItems.map(item => {
+      const f = item.fields;
+      const type = (f['Thumbnail Style'] || 'essay').toLowerCase();
+      const coverImg = Array.isArray(f['Cover Image']) ? f['Cover Image'][0]?.url : '';
+      return `
+        <div class="lib-card" onclick="openLibraryItem('${item.id}')">
+          <div class="card-thumb thumb-${type}"
+            style="${coverImg ? `background-image:url(${coverImg});background-size:cover;background-position:center;` : ''}">
+            ${!coverImg ? `<div class="thumb-lines">
+              <div class="thumb-line dark" style="width:65%"></div>
+              <div class="thumb-line" style="width:90%"></div>
+              <div class="thumb-line" style="width:80%"></div>
+              <div class="thumb-line" style="width:70%"></div>
+            </div>` : ''}
+          </div>
+          <div class="card-body">
+            <div class="card-type">
+              <div class="type-dot td-${type}"></div>
+              <span class="tc-${type}">${f['Type'] || 'Article'}</span>
+            </div>
+            <div class="card-title">${f['Title'] || ''}</div>
+            <div class="card-author">${f['Author'] || ''}</div>
+            ${f['Description'] ? `<div class="card-note">${f['Description']}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    console.error('loadSavedItems error:', e);
+    grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);">Could not load saved items.</div>';
   }
 }
 function currentMonthLabel() {
