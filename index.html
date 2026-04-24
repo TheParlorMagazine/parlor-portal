@@ -3802,6 +3802,37 @@ function renderLibraryDetail(item) {
   // ── Default to read tab ──
   toggleLibSection('read');
 }
+// ── Save button ──
+  const btnSaveLib = document.getElementById('btnSaveLib');
+  if (btnSaveLib) {
+    btnSaveLib.classList.remove('btn-active');
+    btnSaveLib.innerHTML = '<svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Save';
+    btnSaveLib.onclick = async function() {
+      if (!window.parlorMember?.memberId) return;
+      const isCurrentlySaved = this.classList.contains('btn-active');
+      this.textContent = 'Saving...';
+      try {
+        await fetch(`${VERCEL_LIBRARY_URL}/api/member-activity`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            memberId: window.parlorMember.memberId,
+            action: isCurrentlySaved ? 'Unsaved' : 'Saved',
+            itemType: 'Library Item',
+            itemId: item.id,
+            itemTitle: f['Title'] || ''
+          })
+        });
+        this.classList.toggle('btn-active');
+        this.innerHTML = isCurrentlySaved
+          ? '<svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Save'
+          : '<svg viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z" fill="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Saved';
+      } catch(e) {
+        console.error('Save error:', e);
+        this.textContent = 'Save';
+      }
+    };
+  }
 </script>
 </body>
 </html>
