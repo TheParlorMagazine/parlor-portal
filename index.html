@@ -3889,13 +3889,13 @@ function renderLibraryDetail(item) {
         await fetch(`${VERCEL_LIBRARY_URL}/api/member-activity`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            memberId: window.parlorMember.memberId,
-            action: isCurrentlySaved ? 'Unsaved' : 'Saved',
-            itemType: 'Library Item',
-            itemId: item.id,
-            itemTitle: f['Title'] || ''
-          })
+         body: JSON.stringify({
+  memberId: window.parlorMember.memberId,
+  action: isCurrentlySaved ? 'Unsaved' : 'Saved',
+  itemType: 'Library Item',
+  itemId: window._currentLibraryItem?.id || '',
+  itemTitle: window._currentLibraryItem?.fields?.['Title'] || ''
+})
         });
         this.classList.toggle('btn-active');
         this.innerHTML = isCurrentlySaved
