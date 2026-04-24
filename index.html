@@ -2805,6 +2805,10 @@ document.getElementById('transcriptModalBg').addEventListener('click', function(
 
 function buildMediaPlayer(item, isPaid, isListen) {
   const f = item.fields;
+  console.log('buildMediaPlayer called, isPaid:', isPaid, 'isListen:', isListen);
+  console.log('mediaType:', f['Accompanying Media Type']);
+  console.log('mediaUrl:', f['Media URL']);
+  console.log('transcript:', f['Transcript']);
   const mediaType = f['Accompanying Media Type'];
   const mediaUrl = f['Media URL'] || '';
 const mediaDuration = f['Media Duration'] || '';
