@@ -3835,6 +3835,7 @@ function renderLibraryDetail(item) {
   const f = item.fields;
 
   const articlePlanId = f['Article Plan ID'] || '';
+const isPaidItem = f['Plan Access'] === 'Paid Members';
 
 const isMember = window.parlorMember && (
   ['The Printing Press', "The Reader's Circle"].includes(window.parlorMember.plan) ||
@@ -3843,7 +3844,8 @@ const isMember = window.parlorMember && (
   ].includes(window.parlorMember.planId) ||
   (articlePlanId && window.parlorMember.planId === articlePlanId)
 );
-  const hasAccess = !isPaidItem || isMember;
+
+const hasAccess = !isPaidItem || isMember;
 
   const readingExp = f['Reading Experience'] || 'Preview + Link';
   const hasFullText = readingExp === 'Full text' && f['Full Text'];
