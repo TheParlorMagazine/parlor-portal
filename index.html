@@ -2839,27 +2839,33 @@ const mediaTitle = f['Media Title'] || f['Title'] || '';
   // Interview tab — paywalled
   if (!isListen) {
    if (!isPaid) {
-  const previewPlayer = isVideo
+  const blurredPlayer = isVideo
     ? `<div class="media-video-wrap"><iframe src="" title=""></iframe></div>`
     : buildAudioPlayer('', mediaTitle, mediaDuration, 'interviewAudio');
 
-  const blurredTranscript = transcript
-    ? `<div class="media-transcript">
-        <div class="media-transcript-label">Interview transcript</div>
-        <div class="media-transcript-body" style="filter:blur(4px);user-select:none;pointer-events:none;max-height:120px;overflow:hidden;">${transcript}</div>
-      </div>`
-    : '';
+  const itemId = window._currentLibItem?.id || '';
+  const baseUrl = window.location.href.split('?')[0];
+  const currentUrl = encodeURIComponent(baseUrl + '?openItem=' + itemId);
 
   return `
-    <div class="media-paywall" style="border-radius:11px;overflow:hidden;">
-      <div class="media-paywall-blur">
-        ${previewPlayer}
-        ${blurredTranscript}
+    <div class="media-paywall" id="paywallWrap" style="border-radius:11px;overflow:hidden;position:relative;min-height:120px;">
+      <div id="paywallPlayerPreview" style="pointer-events:auto;">
+        ${blurredPlayer}
       </div>
-      <div class="media-paywall-overlay">
-        <div class="media-paywall-icon">🔒</div>
-        <div class="media-paywall-msg">This interview and transcript are available to Reader's Circle and Printing Press members.</div>
-        <button class="media-paywall-btn" onclick="window.open('https://www.theparlormagazine.com/plans','_top')">Upgrade your membership</button>
+      <div class="media-paywall-overlay" id="paywallOverlay" style="opacity:0;pointer-events:none;transition:opacity 1s ease;position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(0,0,0,0.55);border-radius:11px;padding:16px;text-align:center;">
+        <div style="font-size:13px;color:#fff;font-family:'thermal-variable',Georgia,serif;line-height:1.5;">This interview is available to members only.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px;">
+          <a href="https://www.theparlormagazine.com/checkout-relay?planId=59144c09-0a72-4df4-810c-438e8ed32268&returnTo=${currentUrl}"
+            target="_top"
+            style="background:var(--pink);color:#000;padding:8px 18px;border-radius:7px;font-family:'thermal-variable',Georgia,serif;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;display:inline-block;">
+            Purchase one-time access
+          </a>
+          <a href="https://www.theparlormagazine.com/checkout-relay?planId=fccb348a-7433-4080-8699-9ef8c0e7a519&returnTo=${currentUrl}"
+            target="_top"
+            style="background:#000;color:#fff;padding:8px 18px;border-radius:7px;font-family:'thermal-variable',Georgia,serif;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;display:inline-block;">
+            Become a member
+          </a>
+        </div>
       </div>
     </div>
   `;
