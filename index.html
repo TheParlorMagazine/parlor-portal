@@ -2863,14 +2863,13 @@ const mediaTitle = f['Media Title'] || f['Title'] || '';
   const currentUrl = encodeURIComponent(baseUrl + '?openItem=' + itemId);
 
   const transcriptPreview = transcript
-    ? `<div id="paywallTranscript" style="padding:20px 20px 0;background:var(--paper);">
-        <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:10px;">Interview transcript</div>
-        <div style="font-size:14px;line-height:1.85;color:var(--ink);font-family:'thermal-variable',Georgia,serif;max-height:180px;overflow:hidden;position:relative;">
-         ${parseMarkdown(transcript)}
-          <div style="position:absolute;bottom:0;left:0;right:0;height:80px;background:linear-gradient(to bottom, transparent, var(--paper));"></div>
-        </div>
-      </div>`
-    : '';
+  ? `<div id="paywallTranscript" style="padding:20px 20px 0;background:var(--paper);">
+      <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:10px;">Interview transcript</div>
+      <div style="font-size:14px;line-height:1.85;color:var(--ink);font-family:'thermal-variable',Georgia,serif;">
+        ${parseMarkdown(transcript)}
+      </div>
+    </div>`
+  : '';
 
   return `
     <div style="border-radius:11px;overflow:hidden;border:1px solid var(--border);">
