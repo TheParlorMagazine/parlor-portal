@@ -2753,11 +2753,26 @@ function toggleLibSection(section, item) {
     if (btnListen) btnListen.className = 'btn-secondary btn-active';
     setTimeout(() => initAudioPlayer('listenAudio'), 50);
   } else if (section === 'interview' && interviewDiv && item) {
-    interviewDiv.innerHTML = buildMediaPlayer(item, isPaid, false);
-    interviewDiv.style.display = 'block';
-    if (btnInterview) btnInterview.className = 'btn-secondary btn-active';
-    if (isPaid) setTimeout(() => initAudioPlayer('interviewAudio'), 50);
+  interviewDiv.innerHTML = buildMediaPlayer(item, isPaid, false);
+  interviewDiv.style.display = 'block';
+  if (btnInterview) btnInterview.className = 'btn-secondary btn-active';
+  if (isPaid) setTimeout(() => initAudioPlayer('interviewAudio'), 50);
+  if (!isPaid) {
+    setTimeout(() => initAudioPlayer('interviewAudio'), 50);
+    setTimeout(() => {
+      const overlay = document.getElementById('paywallOverlay');
+      const preview = document.getElementById('paywallPlayerPreview');
+      const audio = document.getElementById('interviewAudio');
+      if (audio) audio.pause();
+      if (overlay) { overlay.style.opacity = '1'; overlay.style.pointerEvents = 'auto'; }
+      if (preview) {
+        preview.style.filter = 'blur(1px)';
+        preview.style.opacity = '0.8';
+        preview.style.transition = 'filter 1.5s ease, opacity 1.5s ease';
+      }
+    }, 9000);
   }
+}
 }
   function loadLibraryItem(item) {
   console.log('loadLibraryItem called, mediaType:', item?.fields?.['Accompanying Media Type']);
