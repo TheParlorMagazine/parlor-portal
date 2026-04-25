@@ -2736,10 +2736,15 @@ function toggleLibSection(section, item) {
     if (b) b.className = b.id === 'btnReadInFull' ? 'btn-primary' : 'btn-secondary';
   });
 
-  const isPaid = window.parlorMember && (
-    ['The Printing Press', "The Reader's Circle"].includes(window.parlorMember.plan) ||
-    ['fccb348a-7433-4080-8699-9ef8c0e7a519','c666f321-47e5-40c1-bc2a-565a2f52f64d'].includes(window.parlorMember.planId)
-  );
+  const itemPlanId = window._currentLibItem?.fields?.['Media Plan ID'] || '';
+
+const isPaid = window.parlorMember && (
+  ['The Printing Press', "The Reader's Circle"].includes(window.parlorMember.plan) ||
+  ['fccb348a-7433-4080-8699-9ef8c0e7a519',
+   'c666f321-47e5-40c1-bc2a-565a2f52f64d'
+  ].includes(window.parlorMember.planId) ||
+  (itemPlanId && window.parlorMember.planId === itemPlanId)
+);
 
   if (section === 'read') {
     if (readDiv) { readDiv.style.display = 'block'; }
