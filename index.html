@@ -2856,7 +2856,7 @@ const mediaTitle = f['Media Title'] || f['Title'] || '';
    if (!isPaid) {
   const blurredPlayer = isVideo
     ? `<div class="media-video-wrap"><iframe src="" title=""></iframe></div>`
-    : buildAudioPlayer('', mediaTitle, mediaDuration, 'interviewAudio');
+    : buildAudioPlayer(mediaUrl, mediaTitle, mediaDuration, 'interviewAudio');
 
   const itemId = window._currentLibItem?.id || '';
   const baseUrl = window.location.href.split('?')[0];
