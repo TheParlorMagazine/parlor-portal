@@ -3362,7 +3362,17 @@ function markAllRead() {
 }
 const VERCEL_LIBRARY_URL = 'https://parlor-portal.vercel.app';
 let _libraryThemes = [];
-
+function parseMarkdown(text) {
+  if (!text) return '';
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--ink);text-decoration:underline;">$1</a>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+    .replace(/^/, '<p>')
+    .replace(/$/, '</p>');
+}
 async function loadLibraryThemes() {
   try {
     const res = await fetch(`${VERCEL_LIBRARY_URL}/api/library-themes`);
@@ -3848,7 +3858,7 @@ function renderLibraryDetail(item) {
   const editorialText = document.querySelector('.editorial-text');
   const editorialNote = document.querySelector('.editorial-note');
   if (editorialText && f['Editor Note']) {
-    editorialText.textContent = f['Editor Note'];
+    editorialText.innerHTML = parseMarkdown(Array.isArray(f['Editor Note']) ? f['Editor Note'][0] : f['Editor Note']);
     if (editorialNote) editorialNote.style.display = '';
   } else if (editorialNote) {
     editorialNote.style.display = 'none';
@@ -3935,7 +3945,7 @@ function renderLibraryDetail(item) {
       readDiv.innerHTML = `
         <div class="content-area" style="width:100%">
           <div class="content-reader">
-            <p>${f['Preview'] || ''}</p>
+            ${parseMarkdown(f['Preview'] || '')}
           </div>
           <div class="content-footer" style="justify-content:space-between;">
             <div style="font-size:13px;color:var(--muted);font-style:italic;">
