@@ -2858,9 +2858,9 @@ const mediaTitle = f['Media Title'] || f['Title'] || '';
     ? `<div class="media-video-wrap"><iframe src="" title=""></iframe></div>`
     : buildAudioPlayer(mediaUrl, mediaTitle, mediaDuration, 'interviewAudio');
 
-  const itemId = window._currentLibItem?.id || '';
-  const baseUrl = window.location.href.split('?')[0];
-  const currentUrl = encodeURIComponent(baseUrl + '?openItem=' + itemId);
+const itemId = window._currentLibItem?.id || '';
+const baseUrl = window.location.href.split('?')[0];
+const currentUrl = encodeURIComponent(baseUrl + '?openItem=' + itemId + '&openTab=interview');
 
  const transcriptPreview = transcript
   ? `<div id="paywallTranscript" style="padding:20px 20px 0;background:var(--paper);">
@@ -4051,6 +4051,19 @@ function renderLibraryDetail(item) {
       }
     };
   }
+  window.addEventListener('message', function(e) {
+  if (e.data?.type === 'OPEN_ITEM') {
+    navigate('library');
+    setTimeout(async () => {
+      await openLibraryItem(e.data.itemId);
+      if (e.data.tab === 'interview') {
+        setTimeout(() => {
+          toggleLibSection('interview', window._currentLibItem);
+        }, 800);
+      }
+    }, 1500);
+  }
+});
 </script>
 </body>
 </html>
