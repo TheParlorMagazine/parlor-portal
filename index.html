@@ -2859,8 +2859,7 @@ const mediaTitle = f['Media Title'] || f['Title'] || '';
     : buildAudioPlayer(mediaUrl, mediaTitle, mediaDuration, 'interviewAudio');
 
 const itemId = window._currentLibItem?.id || '';
-const baseUrl = window.location.href.split('?')[0];
-const currentUrl = encodeURIComponent(baseUrl + '?openItem=' + itemId + '&openTab=interview');
+const currentUrl = encodeURIComponent('https://www.theparlormagazine.com/member-dashboard?openItem=' + itemId + '&openTab=interview');
 
  const transcriptPreview = transcript
   ? `<div id="paywallTranscript" style="padding:20px 20px 0;background:var(--paper);">
