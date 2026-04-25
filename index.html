@@ -3556,7 +3556,7 @@ function toggleLibraryFilter(filter) {
       loadSavedItems();
     } else {
       const grid = document.querySelector('.library-grid');
-      if (grid) grid.innerHTML = `<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">No reading history yet.</div>`;
+     loadReadingHistory();
     }
   }
   }
@@ -3634,6 +3634,97 @@ const saved = Object.values(latestByItem).filter(r => r.fields['Action'] === 'Sa
     grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);">Could not load saved items.</div>';
   }
 }
+async function loadReadingHistory() {
+  const grid = document.querySelector('.library-grid');
+  if (!grid) return;
+  const memberId = window.parlorMember?.memberId;
+  if (!memberId) {
+    grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">No reading history yet.</div>';
+    return;
+  }
+  grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">Loading...</div>';
+  try {
+    const res = await fetch(`${VERCEL_LIBRARY_URL}/api/member-activity?memberId=${encodeURIComponent(memberId)}`);
+    const data = await res.json();
+
+    // Get Read actions, deduplicated by Item ID, most recent first
+    const readItems = (data.records || []).filter(r => 
+      r.fields['Action'] === 'Read' && r.fields['Item Type'] === 'Library Item'
+    );
+    const latestByItem = {};
+    readItems.forEach(r => {
+      const id = r.fields['Item ID'];
+      if (!id) return;
+      if (!latestByItem[id] || r.fields['Timestamp'] > latestByItem[id].fields['Timestamp']) {
+        latestByItem[id] = r;
+      }
+    });
+    const sorted = Object.values(latestByItem).sort((a, b) => 
+      b.fields['Timestamp'].localeCompare(a.fields['Timestamp'])
+    );
+
+    if (!sorted.length) {
+      grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">No reading history yet.</div>';
+      return;
+    }
+
+    const itemIds = sorted.map(r => r.fields['Item ID']);
+    const items = await Promise.all(itemIds.map(async id => {
+      const r = await fetch(`${VERCEL_LIBRARY_URL}/api/library?recordId=${encodeURIComponent(id)}`);
+      const d = await r.json();
+      return d.records?.[0];
+    }));
+
+    const validItems = items.filter(Boolean);
+    if (!validItems.length) {
+      grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);font-style:italic;">No reading history yet.</div>';
+      return;
+    }
+
+    grid.innerHTML = validItems.map(item => {
+      const f = item.fields;
+      const type = (f['Thumbnail Style'] || 'essay').toLowerCase();
+      const coverImg = Array.isArray(f['Cover Image']) ? f['Cover Image'][0]?.url : '';
+      const timestamp = sorted.find(r => r.fields['Item ID'] === item.id)?.fields['Timestamp'];
+      const timeAgo = timestamp ? formatTimeAgo(new Date(timestamp)) : '';
+      return `
+        <div class="lib-card" onclick="openLibraryItem('${item.id}')">
+          <div class="card-thumb thumb-${type}"
+            style="${coverImg ? `background-image:url(${coverImg});background-size:cover;background-position:center;` : ''}">
+            ${!coverImg ? `<div class="thumb-lines">
+              <div class="thumb-line dark" style="width:65%"></div>
+              <div class="thumb-line" style="width:90%"></div>
+              <div class="thumb-line" style="width:80%"></div>
+              <div class="thumb-line" style="width:70%"></div>
+            </div>` : ''}
+            ${timeAgo ? `<span class="new-badge" style="background:rgba(0,0,0,0.6);color:#fff;">${timeAgo}</span>` : ''}
+          </div>
+          <div class="card-body">
+            <div class="card-type">
+              <div class="type-dot td-${type}"></div>
+              <span class="tc-${type}">${f['Type'] || 'Article'}</span>
+            </div>
+            <div class="card-title">${f['Title'] || ''}</div>
+            <div class="card-author">${f['Author'] || ''}</div>
+            ${f['Description'] ? `<div class="card-note">${f['Description']}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    console.error('loadReadingHistory error:', e);
+    grid.innerHTML = '<div style="padding:28px 38px;font-size:13px;color:var(--muted);">Could not load reading history.</div>';
+  }
+}
+
+function formatTimeAgo(date) {
+  const mins = Math.floor((Date.now() - date) / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
 function currentMonthLabel() {
   return new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
 }
@@ -3679,6 +3770,20 @@ async function openLibraryItem(recordId) {
     _currentLibraryItem = item;
     renderLibraryDetail(item);
     showLibraryDetail();
+    // ── Log read activity ──
+if (window.parlorMember?.memberId) {
+  fetch(`${VERCEL_LIBRARY_URL}/api/member-activity`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      memberId: window.parlorMember.memberId,
+      action: 'Read',
+      itemType: 'Library Item',
+      itemId: item.id,
+      itemTitle: item.fields['Title'] || ''
+    })
+  }).catch(() => {});
+}
   } catch (e) {
     console.error('openLibraryItem error:', e);
   }
