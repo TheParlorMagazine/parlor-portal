@@ -2862,24 +2862,37 @@ const mediaTitle = f['Media Title'] || f['Title'] || '';
   const baseUrl = window.location.href.split('?')[0];
   const currentUrl = encodeURIComponent(baseUrl + '?openItem=' + itemId);
 
+  const transcriptPreview = transcript
+    ? `<div id="paywallTranscript" style="padding:20px 20px 0;background:var(--paper);">
+        <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:10px;">Interview transcript</div>
+        <div style="font-size:14px;line-height:1.85;color:var(--ink);font-family:'thermal-variable',Georgia,serif;max-height:180px;overflow:hidden;position:relative;">
+          ${transcript}
+          <div style="position:absolute;bottom:0;left:0;right:0;height:80px;background:linear-gradient(to bottom, transparent, var(--paper));"></div>
+        </div>
+      </div>`
+    : '';
+
   return `
-    <div class="media-paywall" id="paywallWrap" style="border-radius:11px;overflow:hidden;position:relative;min-height:120px;">
-      <div id="paywallPlayerPreview" style="pointer-events:auto;">
-        ${blurredPlayer}
-      </div>
-      <div class="media-paywall-overlay" id="paywallOverlay" style="opacity:0;pointer-events:none;transition:opacity 1s ease;position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(0,0,0,0.55);border-radius:11px;padding:16px;text-align:center;">
-        <div style="font-size:13px;color:#fff;font-family:'thermal-variable',Georgia,serif;line-height:1.5;">This interview is available to members only.</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px;">
-          <a href="https://www.theparlormagazine.com/checkout-relay?planId=59144c09-0a72-4df4-810c-438e8ed32268&returnTo=${currentUrl}"
-            target="_top"
-            style="background:var(--pink);color:#000;padding:8px 18px;border-radius:7px;font-family:'thermal-variable',Georgia,serif;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;display:inline-block;">
-            Purchase one-time access
-          </a>
-          <a href="https://www.theparlormagazine.com/checkout-relay?planId=fccb348a-7433-4080-8699-9ef8c0e7a519&returnTo=${currentUrl}"
-            target="_top"
-            style="background:#000;color:#fff;padding:8px 18px;border-radius:7px;font-family:'thermal-variable',Georgia,serif;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;display:inline-block;">
-            Become a member
-          </a>
+    <div style="border-radius:11px;overflow:hidden;border:1px solid var(--border);">
+      <div class="media-paywall" id="paywallWrap" style="border-radius:0;overflow:visible;position:relative;min-height:120px;">
+        <div id="paywallPlayerPreview" style="pointer-events:auto;">
+          ${blurredPlayer}
+          ${transcriptPreview}
+        </div>
+        <div class="media-paywall-overlay" id="paywallOverlay" style="opacity:0;pointer-events:none;transition:opacity 1s ease;position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(0,0,0,0.55);border-radius:0;padding:16px;text-align:center;">
+          <div style="font-size:13px;color:#fff;font-family:'thermal-variable',Georgia,serif;line-height:1.5;">This interview is available to members only.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px;">
+            <a href="https://www.theparlormagazine.com/checkout-relay?planId=59144c09-0a72-4df4-810c-438e8ed32268&returnTo=${currentUrl}"
+              target="_top"
+              style="background:var(--pink);color:#000;padding:8px 18px;border-radius:7px;font-family:'thermal-variable',Georgia,serif;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;display:inline-block;">
+              Purchase one-time access
+            </a>
+            <a href="https://www.theparlormagazine.com/checkout-relay?planId=fccb348a-7433-4080-8699-9ef8c0e7a519&returnTo=${currentUrl}"
+              target="_top"
+              style="background:#000;color:#fff;padding:8px 18px;border-radius:7px;font-family:'thermal-variable',Georgia,serif;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;display:inline-block;">
+              Become a member
+            </a>
+          </div>
         </div>
       </div>
     </div>
