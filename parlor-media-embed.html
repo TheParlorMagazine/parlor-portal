@@ -519,7 +519,7 @@ if (audio) audio.pause();
   }
 }
 
-async function getMemberPlan() {
+async function getMemberPlan(fields) {
   try {
     return new Promise((resolve) => {
       const timeout = setTimeout(() => resolve({ isPaid: false, planId: '' }), 3000);
@@ -528,11 +528,14 @@ async function getMemberPlan() {
           clearTimeout(timeout);
           window.removeEventListener('message', handler);
           const m = e.data;
+          const mediaPlanId = fields['Media Plan ID'] || '';
+          const allPlanIds = m.allPlanIds || [];
           const isPaid =
             m.planId === PLAN_IDS.READERS_CIRCLE ||
             m.planId === PLAN_IDS.PRINTING_PRESS ||
             m.plan === "The Reader's Circle" ||
-            m.plan === 'The Printing Press';
+            m.plan === 'The Printing Press' ||
+            (mediaPlanId && allPlanIds.includes(mediaPlanId));
           resolve({ isPaid, planId: m.planId || '' });
         }
       });
