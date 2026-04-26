@@ -522,7 +522,7 @@ if (audio) audio.pause();
 async function getMemberPlan() {
   try {
     return new Promise((resolve) => {
-      const timeout = setTimeout(() => resolve({ isPaid: false, planId: '', memberId: '' }), 5000);
+      const timeout = setTimeout(() => resolve({ isPaid: false, planId: '', memberId: '' }), 8000);
       window.addEventListener('message', function handler(e) {
         if (e.data && e.data.type === 'PARLOR_MEMBER_DATA') {
           clearTimeout(timeout);
