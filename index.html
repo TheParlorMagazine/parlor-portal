@@ -2737,13 +2737,14 @@ function toggleLibSection(section, item) {
   });
 
   const itemPlanId = window._currentLibItem?.fields?.['Media Plan ID'] || '';
+const allPlanIds = window.parlorMember?.allPlanIds || [];
 
 const isPaid = window.parlorMember && (
   ['The Printing Press', "The Reader's Circle"].includes(window.parlorMember.plan) ||
   ['fccb348a-7433-4080-8699-9ef8c0e7a519',
    'c666f321-47e5-40c1-bc2a-565a2f52f64d'
   ].includes(window.parlorMember.planId) ||
-  (itemPlanId && window.parlorMember.planId === itemPlanId)
+  (itemPlanId && allPlanIds.includes(itemPlanId))
 );
 
   if (section === 'read') {
