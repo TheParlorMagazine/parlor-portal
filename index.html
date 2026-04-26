@@ -2913,7 +2913,7 @@ const currentUrl = encodeURIComponent('https://www.theparlormagazine.com/member-
       transcriptHtml = `
         <div class="media-transcript">
           <div class="media-transcript-label">Interview transcript</div>
-          <div class="media-transcript-body">${transcript}</div>
+         <div class="media-transcript-body">${parseMarkdown(transcript)}</div>
         </div>
       `;
     }
