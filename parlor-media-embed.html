@@ -592,17 +592,21 @@ async function init() {
     }
 
     const fields = data.records[0].fields;
-const { isPaid: basePaid, planId: memberPlanId, memberId } = await getMemberPlan();
+const fields = data.records[0].fields;
 const mediaPlanId = fields['Media Plan ID'] || '';
-let isPaid = basePaid;
+let isPaid = false;
 
-if (!isPaid && mediaPlanId && memberId) {
-  try {
-    const plansRes = await fetch(`${VERCEL_URL}/api/member-plans?memberId=${encodeURIComponent(memberId)}`);
-    const plansData = await plansRes.json();
-    isPaid = (plansData.planIds || []).includes(mediaPlanId);
-  } catch(e) {}
-}
+try {
+  const sessionRes = await fetch('https://www.theparlormagazine.com/_functions/getMemberPlanIds', {
+    credentials: 'include'
+  });
+  const sessionData = await sessionRes.json();
+  const planIds = sessionData.planIds || [];
+  
+  isPaid = planIds.includes(PLAN_IDS.READERS_CIRCLE) ||
+           planIds.includes(PLAN_IDS.PRINTING_PRESS) ||
+           (mediaPlanId && planIds.includes(mediaPlanId));
+} catch(e) {}
 
     document.getElementById('embedLoading').style.display = 'none';
     renderEmbed(fields, isPaid, slug);
