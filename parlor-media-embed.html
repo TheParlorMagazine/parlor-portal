@@ -590,8 +590,6 @@ async function init() {
       document.getElementById('embedLoading').style.display = 'none';
       return;
     }
-
-    const fields = data.records[0].fields;
 const fields = data.records[0].fields;
 const mediaPlanId = fields['Media Plan ID'] || '';
 let isPaid = false;
