@@ -594,7 +594,7 @@ async function init() {
     }
 
     const fields = data.records[0].fields;
-const { isPaid: basePaid, planId: memberPlanId } = await getMemberPlan();
+const { isPaid: basePaid, planId: memberPlanId } = await getMemberPlan(fields);
 const mediaPlanId = fields['Media Plan ID'] || '';
 const isPaid = basePaid || (mediaPlanId && memberPlanId === mediaPlanId);
 
