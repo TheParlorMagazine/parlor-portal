@@ -594,7 +594,7 @@ const fields = data.records[0].fields;
 const mediaPlanId = fields['Media Plan ID'] || '';
 let isPaid = false;
 
-cconst memberId = await new Promise((resolve) => {
+const memberId = await new Promise((resolve) => {
   const timeout = setTimeout(() => resolve(''), 3000);
   const handler = function(e) {
     if (e.data && e.data.type === 'PARLOR_MEMBER_DATA') {
