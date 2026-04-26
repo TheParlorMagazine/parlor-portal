@@ -594,19 +594,21 @@ const fields = data.records[0].fields;
 const mediaPlanId = fields['Media Plan ID'] || '';
 let isPaid = false;
 
-const memberId = await new Promise((resolve) => {
+cconst memberId = await new Promise((resolve) => {
   const timeout = setTimeout(() => resolve(''), 3000);
-  window.addEventListener('message', function handler(e) {
+  const handler = function(e) {
     if (e.data && e.data.type === 'PARLOR_MEMBER_DATA') {
       clearTimeout(timeout);
       window.removeEventListener('message', handler);
+      try { window.top.removeEventListener('message', handler); } catch(e) {}
       resolve(e.data.memberId || '');
     }
-  });
+  };
+  window.addEventListener('message', handler);
+  try { window.top.addEventListener('message', handler); } catch(e) {}
   try { window.parent.postMessage({ type: 'REQUEST_MEMBER_DATA' }, '*'); } catch(e) {}
   try { window.top.postMessage({ type: 'REQUEST_MEMBER_DATA' }, '*'); } catch(e) {}
 });
-
 console.log('memberId received:', memberId);
 
 if (memberId) {
