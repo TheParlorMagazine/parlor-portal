@@ -594,20 +594,34 @@ const fields = data.records[0].fields;
 const mediaPlanId = fields['Media Plan ID'] || '';
 let isPaid = false;
 
-try {
-  const sessionRes = await fetch('https://www.theparlormagazine.com/_functions/getMemberPlanIds', {
-    credentials: 'include'
+const memberId = await new Promise((resolve) => {
+  const timeout = setTimeout(() => resolve(''), 3000);
+  window.addEventListener('message', function handler(e) {
+    if (e.data && e.data.type === 'PARLOR_MEMBER_DATA') {
+      clearTimeout(timeout);
+      window.removeEventListener('message', handler);
+      resolve(e.data.memberId || '');
+    }
   });
-  const sessionData = await sessionRes.json();
-  const planIds = sessionData.planIds || [];
-  
-  isPaid = planIds.includes(PLAN_IDS.READERS_CIRCLE) ||
-           planIds.includes(PLAN_IDS.PRINTING_PRESS) ||
-           (mediaPlanId && planIds.includes(mediaPlanId));
-} catch(e) {}
+  try { window.parent.postMessage({ type: 'REQUEST_MEMBER_DATA' }, '*'); } catch(e) {}
+  try { window.top.postMessage({ type: 'REQUEST_MEMBER_DATA' }, '*'); } catch(e) {}
+});
 
-    document.getElementById('embedLoading').style.display = 'none';
-    renderEmbed(fields, isPaid, slug);
+console.log('memberId received:', memberId);
+
+if (memberId) {
+  try {
+    const sessionRes = await fetch(`https://www.theparlormagazine.com/_functions/getMemberPlanIds?memberId=${encodeURIComponent(memberId)}`);
+    const sessionData = await sessionRes.json();
+    const planIds = sessionData.planIds || [];
+    isPaid = planIds.includes(PLAN_IDS.READERS_CIRCLE) ||
+             planIds.includes(PLAN_IDS.PRINTING_PRESS) ||
+             (mediaPlanId && planIds.includes(mediaPlanId));
+  } catch(e) {}
+}
+
+document.getElementById('embedLoading').style.display = 'none';
+renderEmbed(fields, isPaid, slug);
 
   } catch (err) {
     console.error('Parlor embed error:', err);
