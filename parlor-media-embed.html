@@ -522,7 +522,7 @@ if (audio) audio.pause();
 async function getMemberPlan() {
   try {
     return new Promise((resolve) => {
-      const timeout = setTimeout(() => resolve({ isPaid: false, planId: '' }), 3000);
+      const timeout = setTimeout(() => resolve({ isPaid: false, planId: '', memberId: '' }), 5000);
       window.addEventListener('message', function handler(e) {
         if (e.data && e.data.type === 'PARLOR_MEMBER_DATA') {
           clearTimeout(timeout);
@@ -536,7 +536,8 @@ async function getMemberPlan() {
           resolve({ isPaid, planId: m.planId || '', memberId: m.memberId || '' });
         }
       });
-      window.parent.postMessage({ type: 'REQUEST_MEMBER_DATA' }, '*');
+      try { window.parent.postMessage({ type: 'REQUEST_MEMBER_DATA' }, '*'); } catch(e) {}
+      try { window.top.postMessage({ type: 'REQUEST_MEMBER_DATA' }, '*'); } catch(e) {}
     });
   } catch (e) {
     return { isPaid: false, planId: '', memberId: '' };
