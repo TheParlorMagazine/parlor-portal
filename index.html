@@ -2124,15 +2124,34 @@ if (isFree && !libItem) {
 
   console.log('Post thread:', threadData);
 
-  // TODO: POST to Airtable Threads table when wired up
-  // For now simulate success
-  setTimeout(() => {
+  const VERCEL_FORUM_URL = 'https://parlor-portal.vercel.app';
+  fetch(VERCEL_FORUM_URL + '/api/threads', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title, body, category,
+      linkedLibraryItem: libItem || '',
+      authorMemberId: window.parlorMember?.memberId || '',
+      authorName: window.parlorMember?.name || 'Member',
+      authorType: 'member',
+    })
+  })
+  .then(r => r.json())
+  .then(() => {
     btn.textContent = 'Post thread';
     btn.disabled = false;
     feedback.textContent = '✓ Thread posted!';
     feedback.style.color = 'var(--pink)';
-    setTimeout(() => { closeModal(); navigate('forum'); }, 1200);
-  }, 700);
+    _threads_forum = [];
+    setTimeout(() => { closeModal(); navigate('forum'); if(typeof loadForumThreads==='function') loadForumThreads(); }, 900);
+  })
+  .catch(e => {
+    console.error('postThread error:', e);
+    btn.textContent = 'Post thread';
+    btn.disabled = false;
+    feedback.textContent = 'Error posting — try again.';
+    feedback.style.color = '#e07070';
+  });
 }
 
 document.getElementById('newThreadModal').addEventListener('click', function(e) { if(e.target===this) closeModal(); });
