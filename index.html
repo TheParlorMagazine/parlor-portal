@@ -4338,8 +4338,8 @@ async function loadReplies(threadId) {
       const f = reply.fields;
       const initial = (f['Author Name'] || 'M').charAt(0).toUpperCase();
       const colorClass = AVATAR_COLORS[initial.charCodeAt(0) % AVATAR_COLORS.length];
-      const isEditor = f['Author Type'] === 'editor';
-      const isWriter = f['Author Type'] === 'writer';
+      const isEditor = (f['Author Type'] || '').toLowerCase() === 'editor';
+      const isWriter = (f['Author Type'] || '').toLowerCase() === 'writer';
       const badge = isEditor
         ? `<span class="reply-writer-badge">Editor</span>`
         : isWriter
