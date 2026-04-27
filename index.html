@@ -4278,7 +4278,7 @@ async function openForumThread(threadId) {
   if (llc) {
     if (f['Linked Library Item']) {
       llc.style.display = '';
-      llc.querySelector('.llc-title').textContent = f['Linked Library Item'];
+      llc.querySelector('.llc-title').textContent = f['Linked Library Item Title']?.[0] || '';
       llc.style.marginBottom = '16px';
     } else {
       llc.style.display = 'none';
