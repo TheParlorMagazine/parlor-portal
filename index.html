@@ -4096,6 +4096,49 @@ const hasAccess = !isPaidItem || isMember;
       }
     };
   }
+  async function loadLibraryDiscussions(libraryItemId) {
+  if (!libraryItemId) return;
+  try {
+    const res = await fetch(`${VERCEL_FORUM_URL}/api/threads?libraryItemId=${encodeURIComponent(libraryItemId)}`);
+    const data = await res.json();
+    const threads = data.records || [];
+    const promptCard = document.getElementById('discPromptCard');
+    const noPromptCard = document.getElementById('discNoPromptCard');
+    const repliesHead = document.querySelector('.disc-replies-head');
+    const repliesContainer = document.querySelector('.disc-replies');
+    if (!repliesContainer) return;
+
+    if (!threads.length) {
+      if (promptCard) promptCard.style.display = 'none';
+      if (noPromptCard) noPromptCard.style.display = '';
+      return;
+    }
+
+    if (noPromptCard) noPromptCard.style.display = 'none';
+    if (promptCard) promptCard.style.display = '';
+
+    const AVATAR_COLORS = ['disc-av-gold', 'disc-av-pink', 'disc-av-sage'];
+    let html = `<div class="disc-replies-head">Threads about this piece <span class="disc-count">${threads.length}</span></div>`;
+    threads.forEach(t => {
+      const f = t.fields;
+      const initial = (f['Author Name'] || 'M').charAt(0).toUpperCase();
+      const colorClass = AVATAR_COLORS[initial.charCodeAt(0) % AVATAR_COLORS.length];
+      html += `
+        <div class="disc-reply" style="cursor:pointer" onclick="navigate('forum');setTimeout(()=>openForumThread('${t.id}'),300)">
+          <div class="disc-av ${colorClass}">${initial}</div>
+          <div>
+            <div class="disc-reply-name">${f['Author Name'] || 'Member'}</div>
+            <div class="disc-reply-text" style="font-weight:500;font-style:normal;">${f['Title'] || ''}</div>
+            <div class="disc-reply-time">${f['Reply Count'] || 0} replies · ${timeAgo(f['Created at'])}</div>
+          </div>
+        </div>`;
+    });
+    html += `<div class="disc-input-wrap"><button class="disc-join-btn" onclick="navigate('forum')">Go to Reading Room →</button></div>`;
+    repliesContainer.innerHTML = html;
+  } catch(e) {
+    console.error('loadLibraryDiscussions error:', e);
+  }
+}
   window.addEventListener('message', function(e) {
   if (e.data?.type === 'OPEN_ITEM') {
     navigate('library');
