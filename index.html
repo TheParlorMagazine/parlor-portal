@@ -4262,7 +4262,7 @@ async function openForumThread(threadId) {
       (f['Linked Library Item'] ? `<span class="ttag ttag-library">Library link</span>` : '');
     topbar.querySelector('.detail-title').textContent = f['Title'] || '';
     topbar.querySelector('.detail-meta').innerHTML = `
-  <div class="detail-author-av tav-gold" style="background:var(--goldlight);color:#000;overflow:hidden;">${(f['Author Type']||'').toLowerCase()==='editor' ? '<img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : (f['Author Name']||'M').charAt(0)}</div>
+  <div class="detail-author-av tav-gold" style="overflow:hidden;">${(f['Author Type']||'').toLowerCase()==='editor' ? '<img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : (f['Author Name']||'M').charAt(0)}</div>
       <span style="font-weight:500;color:var(--ink)">${f['Author Name'] || 'Member'}</span>
       <div class="meta-dot"></div>
       <span>${timeAgo(f['Created at'])}</span>
