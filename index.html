@@ -4595,7 +4595,7 @@ async function upvoteReply(e, replyId, el) {
     const newCount = hasUpvoted ? currentCount - 1 : currentCount + 1;
     if (el) {
       el.innerHTML = `<svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ${newCount}`;
-      el.style.color = hasUpvoted ? '' : 'var(--pink)';
+      el.classList.toggle('upvoted', !hasUpvoted);
     }
   } catch(e) { console.error('upvoteReply error:', e); }
 }
