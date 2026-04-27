@@ -4280,6 +4280,8 @@ async function openForumThread(threadId) {
       llc.style.display = '';
       llc.querySelector('.llc-title').textContent = f['Linked Library Item Title']?.[0] || '';
       llc.style.marginBottom = '16px';
+      const linkedRecordId = Array.isArray(f['Linked Library Item']) ? f['Linked Library Item'][0] : null;
+llc.onclick = linkedRecordId ? () => { navigate('library'); setTimeout(() => openLibraryItem(linkedRecordId), 300); } : null;
     } else {
       llc.style.display = 'none';
     }
