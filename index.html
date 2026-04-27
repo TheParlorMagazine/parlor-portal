@@ -4107,9 +4107,9 @@ const hasAccess = !isPaidItem || isMember;
 // FORUM — Live Airtable wiring
 // ════════════════════════════════════════════════════════
 
-const VERCEL_FORUM_URL = 'https://parlor-portal.vercel.app';
-let _threads_forum = [];
-let _activeThread = null;
+var VERCEL_FORUM_URL = 'https://parlor-portal.vercel.app';
+var _threads_forum = [];
+var _activeThread = null;
 
 // ── Load & render thread list ────────────────────────────
 async function loadForumThreads() {
