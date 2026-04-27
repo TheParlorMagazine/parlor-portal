@@ -4510,38 +4510,91 @@ async function postReply() {
 // ── Upvoting ────────────────────────────────────────────
 async function upvoteThread(e, threadId, el) {
   if (e) e.stopPropagation();
+  const memberId = window.parlorMember?.memberId;
+  if (!memberId) return;
   try {
-    const res = await fetch(`${VERCEL_FORUM_URL}/api/threads`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ threadId, incrementUpvote: true })
-    });
-    const data = await res.json();
-    const newCount = data.fields?.['Upvote Count'] || 
-      ((parseInt(el?.textContent?.replace(/\D/g,'')) || 0) + 1);
-    if (el) {
-      if (el.classList.contains('op-vote')) {
-        el.innerHTML = `<svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ${newCount} upvotes`;
-      } else {
-        el.innerHTML = `<svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ${newCount}`;
-      }
+    const checkRes = await fetch(`${VERCEL_FORUM_URL}/api/upvotes?memberId=${encodeURIComponent(memberId)}&itemId=${encodeURIComponent(threadId)}`);
+    const checkData = await checkRes.json();
+    const hasUpvoted = checkData.upvoted;
+    const recordId = checkData.recordId;
+
+    if (hasUpvoted && recordId) {
+      await fetch(`${VERCEL_FORUM_URL}/api/upvotes`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recordId })
+      });
+      await fetch(`${VERCEL_FORUM_URL}/api/threads`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threadId, incrementUpvote: -1 })
+      });
+    } else {
+      await fetch(`${VERCEL_FORUM_URL}/api/upvotes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId, itemId: threadId, itemType: 'Thread' })
+      });
+      await fetch(`${VERCEL_FORUM_URL}/api/threads`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threadId, incrementUpvote: 1 })
+      });
     }
-    // Update local cache
+
     const t = _threads_forum.find(t => t.id === threadId);
+    const currentCount = t?.fields?.['Upvote Count'] || 0;
+    const newCount = hasUpvoted ? currentCount - 1 : currentCount + 1;
     if (t) t.fields['Upvote Count'] = newCount;
+
+    if (el) {
+      const label = el.classList.contains('op-vote') ? ' upvotes' : '';
+      el.innerHTML = `<svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ${newCount}${label}`;
+      el.style.color = hasUpvoted ? '' : 'var(--pink)';
+    }
   } catch(e) { console.error('upvoteThread error:', e); }
 }
 
 async function upvoteReply(e, replyId, el) {
   if (e) e.stopPropagation();
-  const currentCount = parseInt(el?.textContent?.replace(/\D/g,'')) || 0;
+  const memberId = window.parlorMember?.memberId;
+  if (!memberId) return;
   try {
-    await fetch(`${VERCEL_FORUM_URL}/api/replies`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ replyId, incrementUpvote: true })
-    });
-    if (el) el.innerHTML = `<svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ${currentCount + 1}`;
+    const checkRes = await fetch(`${VERCEL_FORUM_URL}/api/upvotes?memberId=${encodeURIComponent(memberId)}&itemId=${encodeURIComponent(replyId)}`);
+    const checkData = await checkRes.json();
+    const hasUpvoted = checkData.upvoted;
+    const recordId = checkData.recordId;
+
+    if (hasUpvoted && recordId) {
+      await fetch(`${VERCEL_FORUM_URL}/api/upvotes`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recordId })
+      });
+      await fetch(`${VERCEL_FORUM_URL}/api/replies`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ replyId, incrementUpvote: -1 })
+      });
+    } else {
+      await fetch(`${VERCEL_FORUM_URL}/api/upvotes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId, itemId: replyId, itemType: 'Reply' })
+      });
+      await fetch(`${VERCEL_FORUM_URL}/api/replies`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ replyId, incrementUpvote: 1 })
+      });
+    }
+
+    const currentCount = parseInt(el?.textContent?.replace(/\D/g,'')) || 0;
+    const newCount = hasUpvoted ? currentCount - 1 : currentCount + 1;
+    if (el) {
+      el.innerHTML = `<svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ${newCount}`;
+      el.style.color = hasUpvoted ? '' : 'var(--pink)';
+    }
   } catch(e) { console.error('upvoteReply error:', e); }
 }
 
