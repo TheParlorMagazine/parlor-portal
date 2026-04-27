@@ -33,7 +33,7 @@ module.exports = async function handler(req, res) {
               'Author Member ID': authorMemberId,
               'Author Type': authorType || 'member',
               Category: category,
-              'Linked Library Item': linkedLibraryItem || '',
+              'Linked Library Item': linkedLibraryItem ? [linkedLibraryItem] : [],
               'Upvote Count': 0,
               'Reply Count': 0,
               Published: true,
