@@ -4437,7 +4437,7 @@ function renderParticipants(replies) {
       : p.type === 'writer' ? `<span class="part-badge">Writer</span>` : '';
     const countEl = p.count > 0 ? `<span class="part-count">${p.count}</span>` : '';
     return `<div class="participant">
-      <div class="part-av ${colorClass}">${initial}</div>
+      <div class="part-av ${colorClass}">${p.type.toLowerCase() === 'editor' ? '<img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : initial}</div>
       <div class="part-name">${p.name}</div>
       ${badge}${countEl}
     </div>`;
