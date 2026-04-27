@@ -1973,7 +1973,7 @@ function navigate(dest){
   else if(dest==='notifications'){
   document.getElementById('page-notifications').classList.add('active');
 }
-  else if(dest==='forum'){document.getElementById('page-forum').classList.add('active');showForumList();}
+  else if(dest==='forum'){document.getElementById('page-forum').classList.add('active');showForumList();if(typeof loadForumThreads==='function')setTimeout(loadForumThreads,0);}
   else if(dest==='library'){document.getElementById('page-library').classList.add('active');showLibraryBrowse();}
   else if(dest==='library-detail'){document.getElementById('page-library').classList.add('active');showLibraryDetail();}
   else if(dest==='profile'){
