@@ -4399,13 +4399,50 @@ async function loadReplies(threadId) {
     // Update reply count
     const opReplyCount = document.querySelector('.op-reply-count');
     if (opReplyCount) opReplyCount.textContent = `${replies.length} replies`;
-
+ renderParticipants(replies);
   } catch (e) {
     console.error('loadReplies error:', e);
     loadingDiv.textContent = 'Could not load replies.';
   }
 }
+function renderParticipants(replies) {
+  const participantsCard = Array.from(document.querySelectorAll('.detail-sidebar .sidebar-card'))
+    .find(el => el.querySelector('.sc-head')?.textContent.trim() === 'In this discussion');
+  if (!participantsCard) return;
+  const scBody = participantsCard.querySelector('.sc-body');
+  if (!scBody) return;
 
+  const authorMap = {};
+  replies.forEach(r => {
+    const f = r.fields;
+    const name = f['Author Name'] || 'Member';
+    const type = f['Author Type'] || 'member';
+    if (!authorMap[name]) authorMap[name] = { name, type, count: 0 };
+    authorMap[name].count++;
+  });
+
+  if (_activeThread) {
+    const f = _activeThread.fields;
+    const opName = f['Author Name'] || 'Member';
+    if (!authorMap[opName]) authorMap[opName] = { name: opName, type: f['Author Type'] || 'member', count: 0 };
+  }
+
+  const AVATAR_COLORS = ['tav-gold', 'tav-pink', 'tav-sage', 'tav-lilac', 'tav-ink'];
+  const participants = Object.values(authorMap).sort((a, b) => b.count - a.count).slice(0, 6);
+
+  scBody.innerHTML = participants.map(p => {
+    const initial = p.name.charAt(0).toUpperCase();
+    const colorClass = AVATAR_COLORS[initial.charCodeAt(0) % AVATAR_COLORS.length];
+    const badge = p.type === 'editor' ? `<span class="part-badge">Editor</span>`
+      : p.type === 'writer' ? `<span class="part-badge">Writer</span>` : '';
+    const countEl = p.count > 0 ? `<span class="part-count">${p.count}</span>` : '';
+    return `<div class="participant">
+      <div class="part-av ${colorClass}">${initial}</div>
+      <div class="part-name">${p.name}</div>
+      ${badge}${countEl}
+    </div>`;
+  }).join('');
+}
 // ── Reply parent state ─────────────────────────────────
 let _replyParentId = null;
 let _replyParentName = null;
