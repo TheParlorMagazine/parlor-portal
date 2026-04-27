@@ -4103,6 +4103,469 @@ const hasAccess = !isPaidItem || isMember;
     }, 1500);
   }
 });
+// ════════════════════════════════════════════════════════
+// FORUM — Live Airtable wiring
+// ════════════════════════════════════════════════════════
+
+const VERCEL_FORUM_URL = 'https://parlor-portal.vercel.app';
+let _threads_forum = [];
+let _activeThread = null;
+
+// ── Load & render thread list ────────────────────────────
+async function loadForumThreads() {
+  const list = document.getElementById('forum-threads');
+  if (!list) return;
+
+  // Show loading in the threads list area
+  const threadsListEl = list.querySelector('.threads-list');
+  if (threadsListEl) {
+    threadsListEl.innerHTML = '<div style="padding:32px;font-size:13px;color:var(--muted);font-style:italic;text-align:center;">Loading discussions...</div>';
+  }
+
+  try {
+    const res = await fetch(`${VERCEL_FORUM_URL}/api/threads`);
+    const data = await res.json();
+    _threads_forum = data.records || [];
+    renderThreadList();
+  } catch (e) {
+    console.error('loadForumThreads error:', e);
+    if (threadsListEl) {
+      threadsListEl.innerHTML = '<div style="padding:32px;font-size:13px;color:var(--muted);font-style:italic;text-align:center;">Could not load discussions.</div>';
+    }
+  }
+}
+
+function renderThreadList() {
+  const threadsListEl = document.querySelector('#forum-threads .threads-list');
+  if (!threadsListEl) return;
+
+  if (!_threads_forum.length) {
+    threadsListEl.innerHTML = '<div style="padding:32px;font-size:13px;color:var(--muted);font-style:italic;text-align:center;">No discussions yet — start the first one!</div>';
+    return;
+  }
+
+  // Separate pinned from regular
+  const pinned = _threads_forum.filter(t => t.fields['Pinned']);
+  const regular = _threads_forum.filter(t => !t.fields['Pinned']);
+
+  // Update pinned banner if there's a pinned thread
+  const pinnedBanner = document.querySelector('.pinned-banner');
+  if (pinnedBanner && pinned.length) {
+    const p = pinned[0];
+    const f = p.fields;
+    pinnedBanner.onclick = () => openForumThread(p.id);
+    pinnedBanner.querySelector('.pinned-title').textContent = f['Title'] || '';
+    pinnedBanner.querySelector('.pinned-meta').textContent =
+      `${f['Reply Count'] || 0} replies · ${timeAgo(f['Created at'])}`;
+    pinnedBanner.style.display = '';
+  } else if (pinnedBanner) {
+    pinnedBanner.style.display = 'none';
+  }
+
+  const CATEGORY_CLASS = {
+    'Discussion': 'ttag-discuss',
+    'Question': 'ttag-discuss',
+    'Essay response': 'ttag-essay',
+    'Library link': 'ttag-library',
+    'Writer Q&A': 'ttag-qa',
+  };
+
+  const AVATAR_COLORS = ['tav-gold', 'tav-pink', 'tav-sage', 'tav-lilac', 'tav-ink'];
+
+  function threadCard(t) {
+    const f = t.fields;
+    const initial = (f['Author Name'] || 'M').charAt(0).toUpperCase();
+    const colorClass = AVATAR_COLORS[initial.charCodeAt(0) % AVATAR_COLORS.length];
+    const catClass = CATEGORY_CLASS[f['Category']] || 'ttag-discuss';
+    const isEditor = f['Author Type'] === 'editor';
+    const isWriter = f['Author Type'] === 'writer';
+    const excerpt = (f['Body'] || '').substring(0, 160);
+    const libLink = f['Linked Library Item']
+      ? `<span class="ttag ttag-library">Library link</span>` : '';
+    const writerBadge = isWriter
+      ? `<span class="writer-tag">${f['Author Name']}</span>` : '';
+    const qaTag = f['Category'] === 'Writer Q&A'
+      ? `<span class="ttag ttag-qa">Writer Q&A</span>` : '';
+
+    return `
+      <div class="thread-card" onclick="openForumThread('${t.id}')">
+        <div class="tav ${colorClass}">${initial}</div>
+        <div class="thread-body">
+          <div class="thread-tags">
+            ${qaTag || `<span class="ttag ${catClass}">${f['Category'] || 'Discussion'}</span>`}
+            ${libLink}
+            ${writerBadge}
+          </div>
+          <div class="thread-title">${f['Title'] || ''}</div>
+          <div class="thread-excerpt">${excerpt}</div>
+          <div class="thread-meta-row">
+            <span class="thread-author">${f['Author Name'] || 'Member'}</span>
+            <div class="meta-dot"></div>
+            <span>${timeAgo(f['Created at'])}</span>
+            <div class="meta-dot"></div>
+            <span>${f['Reply Count'] || 0} replies</span>
+          </div>
+        </div>
+        <div class="thread-stats">
+          <div class="stat-votes" onclick="upvoteThread(event,'${t.id}',this)">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            ${f['Upvote Count'] || 0}
+          </div>
+          <div class="stat-replies">${f['Reply Count'] || 0} replies</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Build section HTML
+  let html = '';
+
+  if (regular.length) {
+    const recent = regular.slice(0, 20);
+    html += `<div class="threads-section-label">Discussions <span class="tsl-count">${regular.length} threads</span></div>`;
+    html += recent.map(threadCard).join('');
+  }
+
+  threadsListEl.innerHTML = html;
+
+  // Update badge count
+  document.querySelectorAll('.sb-badge').forEach(el => {
+    if (el.closest('.sb-item') && el.closest('.sb-item').textContent.includes('Reading Room')) {
+      el.textContent = _threads_forum.length;
+    }
+  });
+}
+
+// ── Open a thread detail ────────────────────────────────
+async function openForumThread(threadId) {
+  const thread = _threads_forum.find(t => t.id === threadId);
+  if (!thread) return;
+  _activeThread = thread;
+
+  showForumDetail();
+
+  const f = thread.fields;
+  const CATEGORY_CLASS = {
+    'Discussion': 'ttag-discuss',
+    'Question': 'ttag-discuss',
+    'Essay response': 'ttag-essay',
+    'Library link': 'ttag-library',
+    'Writer Q&A': 'ttag-qa',
+  };
+  const catClass = CATEGORY_CLASS[f['Category']] || 'ttag-discuss';
+
+  // Populate header
+  const topbar = document.querySelector('.detail-topbar');
+  if (topbar) {
+    topbar.querySelector('.detail-tags').innerHTML =
+      `<span class="ttag ${catClass}">${f['Category'] || 'Discussion'}</span>` +
+      (f['Linked Library Item'] ? `<span class="ttag ttag-library">Library link</span>` : '');
+    topbar.querySelector('.detail-title').textContent = f['Title'] || '';
+    topbar.querySelector('.detail-meta').innerHTML = `
+      <div class="detail-author-av tav-gold" style="background:var(--goldlight);color:#000">${(f['Author Name']||'M').charAt(0)}</div>
+      <span style="font-weight:500;color:var(--ink)">${f['Author Name'] || 'Member'}</span>
+      <div class="meta-dot"></div>
+      <span>${timeAgo(f['Created at'])}</span>
+      <div class="meta-dot"></div>
+      <span>${f['Reply Count'] || 0} replies</span>
+    `;
+  }
+
+  // Library link card
+  const llc = document.querySelector('.lib-link-card');
+  if (llc) {
+    if (f['Linked Library Item']) {
+      llc.style.display = '';
+      llc.querySelector('.llc-title').textContent = f['Linked Library Item'];
+      llc.style.marginBottom = '16px';
+    } else {
+      llc.style.display = 'none';
+    }
+  }
+
+  // OP body
+  const opText = document.querySelector('.op-text');
+  if (opText) {
+    opText.innerHTML = (f['Body'] || '').split('\n\n').filter(Boolean)
+      .map(p => `<p>${p}</p>`).join('') || `<p>${f['Body'] || ''}</p>`;
+  }
+
+  // Upvote button
+  const opVote = document.querySelector('.op-vote');
+  if (opVote) {
+    opVote.innerHTML = `<svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ${f['Upvote Count'] || 0} upvotes`;
+    opVote.onclick = () => upvoteThread(null, threadId, opVote);
+  }
+
+  // Load replies
+  await loadReplies(threadId);
+}
+
+// ── Load replies ────────────────────────────────────────
+async function loadReplies(threadId) {
+  const repliesSection = document.querySelector('.replies-section');
+  if (!repliesSection) return;
+
+  const label = repliesSection.querySelector('.replies-label');
+
+  // Clear existing replies (keep label)
+  Array.from(repliesSection.children).forEach(el => {
+    if (!el.classList.contains('replies-label')) el.remove();
+  });
+
+  // Loading state
+  const loadingDiv = document.createElement('div');
+  loadingDiv.style.cssText = 'padding:16px 0;font-size:13px;color:var(--muted);font-style:italic;';
+  loadingDiv.textContent = 'Loading replies...';
+  repliesSection.appendChild(loadingDiv);
+
+  try {
+    const res = await fetch(`${VERCEL_FORUM_URL}/api/replies?threadId=${encodeURIComponent(threadId)}`);
+    const data = await res.json();
+    const replies = data.records || [];
+
+    loadingDiv.remove();
+
+    if (label) label.textContent = `${replies.length} ${replies.length === 1 ? 'reply' : 'replies'} · sorted by oldest`;
+
+    const AVATAR_COLORS = ['av-sage', 'av-pink', 'av-gold', 'av-lilac'];
+
+    // Group nested replies
+    const topLevel = replies.filter(r => !r.fields['Parent Reply ID']);
+    const nested = replies.filter(r => r.fields['Parent Reply ID']);
+
+    topLevel.forEach(reply => {
+      const f = reply.fields;
+      const initial = (f['Author Name'] || 'M').charAt(0).toUpperCase();
+      const colorClass = AVATAR_COLORS[initial.charCodeAt(0) % AVATAR_COLORS.length];
+      const isEditor = f['Author Type'] === 'editor';
+      const isWriter = f['Author Type'] === 'writer';
+      const badge = isEditor
+        ? `<span class="reply-writer-badge">Editor</span>`
+        : isWriter
+        ? `<span class="reply-writer-badge">Writer</span>` : '';
+
+      // Children of this reply
+      const children = nested.filter(r => r.fields['Parent Reply ID'] === reply.id);
+      const nestedHTML = children.map(nr => {
+        const nf = nr.fields;
+        const ni = (nf['Author Name'] || 'M').charAt(0).toUpperCase();
+        const nc = AVATAR_COLORS[ni.charCodeAt(0) % AVATAR_COLORS.length];
+        return `
+          <div class="nested-reply">
+            <div class="nested-av ${nc}">${ni}</div>
+            <div>
+              <div class="nested-name">${nf['Author Name'] || 'Member'}
+                ${nf['Author Type'] === 'editor' ? `<span style="background:var(--pink);color:#000;font-size:9px;font-weight:500;padding:2px 5px;border-radius:3px">Editor</span>` : ''}
+                <span style="font-size:10.5px;color:var(--muted);margin-left:auto">${timeAgo(nf['Created At'])}</span>
+              </div>
+              <div class="nested-text">${nf['Body'] || ''}</div>
+            </div>
+          </div>`;
+      }).join('');
+
+      const replyEl = document.createElement('div');
+      replyEl.className = 'reply';
+      replyEl.dataset.replyId = reply.id;
+      replyEl.innerHTML = `
+        <div class="reply-av ${colorClass}">${initial}</div>
+        <div>
+          <div class="reply-header">
+            <span class="reply-name">${f['Author Name'] || 'Member'}</span>
+            ${badge}
+            <span class="reply-time">${timeAgo(f['Created At'])}</span>
+          </div>
+          <div class="reply-text">${f['Body'] || ''}</div>
+          <div class="reply-actions">
+            <button class="reply-vote" onclick="upvoteReply(event,'${reply.id}',this)">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              ${f['Upvote Count'] || 0}
+            </button>
+            <button class="reply-btn" onclick="setReplyParent('${reply.id}','${f['Author Name'] || 'Member'}')">Reply</button>
+          </div>
+          ${nestedHTML}
+        </div>
+      `;
+      repliesSection.appendChild(replyEl);
+    });
+
+    if (!replies.length) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding:16px 0;font-size:13px;color:var(--muted);font-style:italic;';
+      empty.textContent = 'No replies yet — be the first to respond.';
+      repliesSection.appendChild(empty);
+    }
+
+    // Update reply count
+    const opReplyCount = document.querySelector('.op-reply-count');
+    if (opReplyCount) opReplyCount.textContent = `${replies.length} replies`;
+
+  } catch (e) {
+    console.error('loadReplies error:', e);
+    loadingDiv.textContent = 'Could not load replies.';
+  }
+}
+
+// ── Reply parent state ─────────────────────────────────
+let _replyParentId = null;
+let _replyParentName = null;
+
+function setReplyParent(replyId, authorName) {
+  _replyParentId = replyId;
+  _replyParentName = authorName;
+  const composer = document.querySelector('.composer-textarea');
+  if (composer) {
+    composer.placeholder = `Replying to ${authorName}...`;
+    composer.focus();
+  }
+  // Clear on next send
+}
+
+// ── Post a reply ────────────────────────────────────────
+async function postReply() {
+  if (!_activeThread) return;
+  const composer = document.querySelector('.composer-textarea');
+  const sendBtn = document.querySelector('.composer-send');
+  const body = composer?.value.trim();
+  if (!body) return;
+
+  sendBtn.textContent = 'Posting...';
+  sendBtn.disabled = true;
+
+  try {
+    await fetch(`${VERCEL_FORUM_URL}/api/replies`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        threadId: _activeThread.id,
+        body,
+        authorName: window.parlorMember?.name || 'Member',
+        authorMemberId: window.parlorMember?.memberId || '',
+        authorType: 'member',
+        parentReplyId: _replyParentId || '',
+      })
+    });
+
+    // Increment reply count locally + in Airtable (fire and forget)
+    fetch(`${VERCEL_FORUM_URL}/api/threads`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        threadId: _activeThread.id,
+        incrementReplyCount: true,
+      })
+    }).catch(() => {});
+
+    composer.value = '';
+    composer.placeholder = 'What are you thinking? Quote a passage, ask a question, push back...';
+    _replyParentId = null;
+    _replyParentName = null;
+
+    await loadReplies(_activeThread.id);
+  } catch(e) {
+    console.error('postReply error:', e);
+  }
+
+  sendBtn.textContent = 'Post reply';
+  sendBtn.disabled = false;
+}
+
+// ── Upvoting ────────────────────────────────────────────
+async function upvoteThread(e, threadId, el) {
+  if (e) e.stopPropagation();
+  try {
+    const res = await fetch(`${VERCEL_FORUM_URL}/api/threads`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId, incrementUpvote: true })
+    });
+    const data = await res.json();
+    const newCount = data.fields?.['Upvote Count'] || 
+      ((parseInt(el?.textContent?.replace(/\D/g,'')) || 0) + 1);
+    if (el) {
+      if (el.classList.contains('op-vote')) {
+        el.innerHTML = `<svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ${newCount} upvotes`;
+      } else {
+        el.innerHTML = `<svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ${newCount}`;
+      }
+    }
+    // Update local cache
+    const t = _threads_forum.find(t => t.id === threadId);
+    if (t) t.fields['Upvote Count'] = newCount;
+  } catch(e) { console.error('upvoteThread error:', e); }
+}
+
+async function upvoteReply(e, replyId, el) {
+  if (e) e.stopPropagation();
+  const currentCount = parseInt(el?.textContent?.replace(/\D/g,'')) || 0;
+  try {
+    await fetch(`${VERCEL_FORUM_URL}/api/replies`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ replyId, incrementUpvote: true })
+    });
+    if (el) el.innerHTML = `<svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ${currentCount + 1}`;
+  } catch(e) { console.error('upvoteReply error:', e); }
+}
+
+// ── Dashboard feed ──────────────────────────────────────
+async function loadDashboardFeed() {
+  const feedContainer = document.querySelector('.dash-main .feed-item')?.parentElement;
+  // Find the sec-head for "Forum feed" and get its sibling feed items
+  const allFeedItems = document.querySelectorAll('.feed-item');
+  if (!allFeedItems.length) return;
+
+  if (!_threads_forum.length) {
+    try {
+      const res = await fetch(`${VERCEL_FORUM_URL}/api/threads`);
+      const data = await res.json();
+      _threads_forum = data.records || [];
+    } catch(e) { return; }
+  }
+
+  const CATEGORY_CLASS = {
+    'Discussion': 'tag-d', 'Question': 'tag-d',
+    'Essay response': 'tag-e', 'Library link': 'tag-e', 'Writer Q&A': 'tag-q',
+  };
+
+  const top = _threads_forum.slice(0, 3);
+
+  allFeedItems.forEach((el, i) => {
+    const t = top[i];
+    if (!t) return;
+    const f = t.fields;
+    const initial = (f['Author Name'] || 'M').charAt(0).toUpperCase();
+    const catClass = CATEGORY_CLASS[f['Category']] || 'tag-d';
+    el.onclick = () => { navigate('forum'); setTimeout(() => openForumThread(t.id), 100); };
+    el.querySelector('.feed-av').textContent = initial;
+    el.querySelector('.feed-tag').className = `feed-tag ${catClass}`;
+    el.querySelector('.feed-tag').textContent = f['Category'] || 'Discussion';
+    el.querySelector('.feed-title').textContent = f['Title'] || '';
+    el.querySelector('.feed-meta').textContent = `${f['Author Name'] || 'Member'} · ${timeAgo(f['Created at'])} · ${f['Reply Count'] || 0} replies`;
+    el.querySelector('.feed-votes').textContent = `↑ ${f['Upvote Count'] || 0}`;
+  });
+}
+
+// ── Utility: time ago ───────────────────────────────────
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const now = Date.now();
+  const diff = now - d.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+// ── Wire up composer send button ───────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  const composerSend = document.querySelector('.composer-send');
+  if (composerSend) composerSend.onclick = postReply;
+});
 </script>
 </body>
 </html>
