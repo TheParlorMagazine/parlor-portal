@@ -4346,7 +4346,7 @@ async function loadReplies(threadId) {
     topLevel.forEach(reply => {
       const f = reply.fields;
       const initial = (f['Author Name'] || 'M').charAt(0).toUpperCase();
-      const colorClass = f['Author Type'] === 'editor' ? 'av-parlor-editors' : AVATAR_COLORS[initial.charCodeAt(0) % AVATAR_COLORS.length];
+      const colorClass = AVATAR_COLORS[initial.charCodeAt(0) % AVATAR_COLORS.length];
       const isEditor = f['Author Type'] === 'editor';
       const isWriter = f['Author Type'] === 'writer';
       const badge = isEditor
