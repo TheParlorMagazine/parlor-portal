@@ -4437,7 +4437,7 @@ function renderParticipants(replies) {
 
   scBody.innerHTML = participants.map(p => {
     const initial = p.name.charAt(0).toUpperCase();
-    const colorClass = AVATAR_COLORS[initial.charCodeAt(0) % AVATAR_COLORS.length];
+    const colorClass = f['Author Type'] === 'editor' ? 'av-parlor-editors' : AVATAR_COLORS[initial.charCodeAt(0) % AVATAR_COLORS.length];
     const badge = p.type === 'editor' ? `<span class="part-badge">Editor</span>`
       : p.type === 'writer' ? `<span class="part-badge">Writer</span>` : '';
     const countEl = p.count > 0 ? `<span class="part-count">${p.count}</span>` : '';
