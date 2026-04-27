@@ -4180,7 +4180,7 @@ function renderThreadList() {
   function threadCard(t) {
     const f = t.fields;
     const initial = (f['Author Name'] || 'M').charAt(0).toUpperCase();
-    const colorClass = AVATAR_COLORS[initial.charCodeAt(0) % AVATAR_COLORS.length];
+    const colorClass = p.type === 'editor' ? 'av-parlor-editors' : AVATAR_COLORS[initial.charCodeAt(0) % AVATAR_COLORS.length];
     const catClass = CATEGORY_CLASS[f['Category']] || 'ttag-discuss';
     const isEditor = f['Author Type'] === 'editor';
     const isWriter = f['Author Type'] === 'writer';
