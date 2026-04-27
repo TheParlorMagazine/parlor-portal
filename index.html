@@ -4579,12 +4579,14 @@ async function loadDashboardFeed() {
     const initial = (f['Author Name'] || 'M').charAt(0).toUpperCase();
     const catClass = CATEGORY_CLASS[f['Category']] || 'tag-d';
     el.onclick = () => { navigate('forum'); setTimeout(() => openForumThread(t.id), 100); };
-    if (f['Author Type'] === 'editor') {
-  el.querySelector('.feed-av').classList.add('av-parlor-editors');
-  el.querySelector('.feed-av').textContent = '';
+    const feedAv = el.querySelector('.feed-av');
+feedAv.classList.remove('av-gold','av-rose','av-sage','av-lilac');
+if (f['Author Type'] === 'editor') {
+  feedAv.classList.add('av-parlor-editors');
+  feedAv.textContent = '';
 } else {
-  el.querySelector('.feed-av').classList.remove('av-parlor-editors');
-  el.querySelector('.feed-av').textContent = initial;
+  feedAv.classList.remove('av-parlor-editors');
+  feedAv.textContent = initial;
 }
     el.querySelector('.feed-tag').className = `feed-tag ${catClass}`;
     el.querySelector('.feed-tag').textContent = f['Category'] || 'Discussion';
