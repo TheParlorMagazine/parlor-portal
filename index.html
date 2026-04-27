@@ -3943,26 +3943,35 @@ const hasAccess = !isPaidItem || isMember;
     if (isPaidItem && !isMember) {
       // Paywall
       readDiv.innerHTML = `
-        <div style="background:var(--cream);border:1px solid var(--border);border-radius:11px;
-          padding:40px 32px;text-align:center;margin-bottom:20px;">
-          <div style="font-size:22px;margin-bottom:12px;">🔒</div>
-          <div style="font-family:'thermal-variable',Georgia,serif;font-size:18px;
-            font-weight:500;margin-bottom:8px;">Members only</div>
-          <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6;max-width:360px;margin-left:auto;margin-right:auto;">
-            This piece is available to Reader's Circle and Printing Press members.
-          </div>
-          ${hasPreview ? `<div style="font-family:'thermal-variable',Georgia,serif;font-size:15px;
-            line-height:1.85;color:var(--ink);text-align:left;margin-bottom:20px;
-            padding:20px;background:var(--white);border-radius:9px;border:1px solid var(--border);">
-            ${f['Preview']}
-          </div>` : ''}
-          <button onclick="window.open('https://www.theparlormagazine.com/plans','_top')"
-            style="background:var(--ink);color:#fff;border:none;padding:10px 24px;
-            border-radius:8px;font-family:'thermal-variable',Georgia,serif;
-            font-size:13.5px;font-weight:500;cursor:pointer;">
-            Upgrade your membership
-          </button>
-        </div>`;
+  <div style="background:var(--cream);border:1px solid var(--border);border-radius:11px;
+    padding:40px 32px;text-align:center;margin-bottom:20px;">
+    <div style="font-size:22px;margin-bottom:12px;">🔒</div>
+    <div style="font-family:'thermal-variable',Georgia,serif;font-size:18px;
+      font-weight:500;margin-bottom:8px;">Members only</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6;max-width:360px;margin-left:auto;margin-right:auto;">
+      This piece is available to Reader's Circle and Printing Press members.
+    </div>
+    ${hasPreview ? `<div style="font-family:'thermal-variable',Georgia,serif;font-size:15px;
+      line-height:1.85;color:var(--ink);text-align:left;margin-bottom:20px;
+      padding:20px;background:var(--white);border-radius:9px;border:1px solid var(--border);">
+      ${f['Preview']}
+    </div>` : ''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+      ${articlePlanId ? `<a href="https://www.theparlormagazine.com/checkout-relay?planId=${articlePlanId}&returnTo=${encodeURIComponent('https://www.theparlormagazine.com/member-dashboard?openItem=' + item.id)}"
+        target="_top"
+        style="background:var(--pink);color:#000;padding:10px 22px;border-radius:8px;
+        font-family:'thermal-variable',Georgia,serif;font-size:13.5px;font-weight:500;
+        cursor:pointer;text-decoration:none;display:inline-block;">
+        Purchase one-time access
+      </a>` : ''}
+      <button onclick="window.open('https://www.theparlormagazine.com/plans','_top')"
+        style="background:var(--ink);color:#fff;border:none;padding:10px 24px;
+        border-radius:8px;font-family:'thermal-variable',Georgia,serif;
+        font-size:13.5px;font-weight:500;cursor:pointer;">
+        Upgrade your membership
+      </button>
+    </div>
+  </div>`;
     } else if (hasFullText) {
       // Full text reader
       const paragraphs = (f['Full Text'] || '')
