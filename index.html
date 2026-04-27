@@ -2772,9 +2772,13 @@ const isPaid = window.parlorMember && (
   if (section === 'read') {
     if (readDiv) { readDiv.style.display = 'block'; }
     if (btnRead) btnRead.className = 'btn-primary btn-active';
-  } else if (section === 'discuss') {
-    if (discussDiv) { discussDiv.style.display = 'block'; }
-    if (btnDiscuss) btnDiscuss.className = 'btn-secondary btn-active';
+ } else if (section === 'discuss') {
+  if (discussDiv) { 
+    discussDiv.style.display = 'block';
+    loadLibraryDiscussions(window._currentLibItem?.id);
+  }
+  if (btnDiscuss) btnDiscuss.className = 'btn-secondary btn-active';
+}
   } else if (section === 'listen' && listenDiv && item) {
     listenDiv.innerHTML = buildMediaPlayer(item, true, true);
     listenDiv.style.display = 'block';
