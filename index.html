@@ -4576,7 +4576,7 @@ async function loadDashboardFeed() {
     el.onclick = () => { navigate('forum'); setTimeout(() => openForumThread(t.id), 100); };
     const feedAv = el.querySelector('.feed-av');
 feedAv.classList.remove('av-gold','av-rose','av-sage','av-lilac','av-parlor-editors');
-if (f['Author Type'] === 'editor') {
+if f['Author Type'] === 'editor' || f['Author Type'] === 'Editor'
   feedAv.innerHTML = '<img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
 } else {
   feedAv.innerHTML = '';
