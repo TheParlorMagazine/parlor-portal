@@ -916,6 +916,12 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
       <label class="form-label">Title</label>
       <input class="form-input" id="threadTitleInput" type="text" placeholder="What's on your mind?">
       <label class="form-label">Your thoughts</label>
+      <div class="composer-toolbar" style="border:1px solid var(--border);border-radius:8px 8px 0 0;margin-bottom:-1px;">
+  <button class="toolbar-btn" onclick="formatText('bold', document.getElementById('threadBodyInput'))"><b>B</b></button>
+  <button class="toolbar-btn" onclick="formatText('italic', document.getElementById('threadBodyInput'))"><i>I</i></button>
+  <button class="toolbar-btn" onclick="formatText('underline', document.getElementById('threadBodyInput'))"><u>U</u></button>
+  <button class="toolbar-btn" onclick="formatText('link', document.getElementById('threadBodyInput'))">🔗 Link</button>
+</div>
       <textarea class="form-textarea" id="threadBodyInput" placeholder="Share what you're thinking, a question, a passage that struck you..."></textarea>
       <div class="form-row">
         <div><label class="form-label">Category</label>
