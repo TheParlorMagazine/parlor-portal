@@ -4547,7 +4547,7 @@ async function postReply() {
   sendBtn.disabled = true;
 
   try {
-    await fetch(`${VERCEL_FORUM_URL}/api/replies`, {
+    await fetch(`https://parlor-portal.vercel.app/api/replies`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
