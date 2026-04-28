@@ -4412,7 +4412,7 @@ async function loadReplies(threadId) {
   repliesSection.appendChild(loadingDiv);
 
   try {
-    const res = await fetch(`${VERCEL_FORUM_URL}/api/replies?threadId=${encodeURIComponent(threadId)}`);
+    const res = await fetch(`https://parlor-portal.vercel.app/api/replies?threadId=${encodeURIComponent(threadId)}`);
     const data = await res.json();
     const replies = data.records || [];
 
