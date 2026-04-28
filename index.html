@@ -4555,7 +4555,7 @@ async function postReply() {
         body,
         authorName: window.parlorMember?.name || 'Member',
         authorMemberId: window.parlorMember?.memberId || '',
-        authorType: 'member',
+        'Author Type': authorType || 'Member',
         parentReplyId: _replyParentId || '',
       })
     });
