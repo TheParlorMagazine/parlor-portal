@@ -1436,7 +1436,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
         </div>
         <div class="reply-composer">
           <div class="composer-header"><div class="composer-av">E</div><div class="composer-label">Add to the discussion</div></div>
-          <textarea class="composer-textarea" placeholder="What are you thinking? Quote a passage, ask a question, push back..."></textarea>
+          <textarea class="composer-textarea" onpaste="handlePaste(event, this)" placeholder="What are you thinking? Quote a passage, ask a question, push back..."></textarea>
           <div class="composer-footer"><div class="composer-tip">Be specific — the best replies quote the text directly</div><button class="composer-send">Post reply</button></div>
         </div>
       </div>
