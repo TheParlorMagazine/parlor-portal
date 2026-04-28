@@ -4795,7 +4795,42 @@ function timeAgo(dateStr) {
   if (days < 7) return `${days}d ago`;
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
+  
+function updateThreadCountsUI(threadId) {
+  const t = _threads_forum.find(t => t.id === threadId);
+  if (!t) return;
+  const replyCount = t.fields['Reply Count'] || 0;
+  const upvoteCount = t.fields['Upvote Count'] || 0;
 
+  // Update thread detail view
+  const opReplyCount = document.querySelector('.op-reply-count');
+  if (opReplyCount) opReplyCount.textContent = `${replyCount} replies`;
+
+  // Update detail meta row
+  document.querySelectorAll('.detail-meta span').forEach(span => {
+    if (span.textContent.includes('replies')) span.textContent = `${replyCount} replies`;
+  });
+
+  // Update thread list cards
+  document.querySelectorAll('.thread-card').forEach(card => {
+    if (card.getAttribute('onclick')?.includes(threadId)) {
+      const statReplies = card.querySelector('.stat-replies');
+      if (statReplies) statReplies.textContent = `${replyCount} replies`;
+      const statVotes = card.querySelector('.stat-votes');
+      if (statVotes) statVotes.innerHTML = `<svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>${upvoteCount}`;
+    }
+  });
+
+  // Update dashboard feed
+  document.querySelectorAll('.feed-item').forEach(item => {
+    if (item.getAttribute('onclick')?.includes(threadId)) {
+      const votes = item.querySelector('.feed-votes');
+      if (votes) votes.textContent = `↑ ${upvoteCount}`;
+      const meta = item.querySelector('.feed-meta');
+      if (meta) meta.textContent = meta.textContent.replace(/\d+ replies/, `${replyCount} replies`);
+    }
+  });
+}
 // ── Wire up composer send button ───────────────────────
 document.addEventListener('DOMContentLoaded', function() {
   const composerSend = document.querySelector('.composer-send');
