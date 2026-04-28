@@ -4583,7 +4583,25 @@ async function postReply() {
   sendBtn.textContent = 'Post reply';
   sendBtn.disabled = false;
 }
-
+async function deleteReply(replyId, threadId) {
+  if (!confirm('Delete this reply?')) return;
+  try {
+    await fetch('https://parlor-portal.vercel.app/api/replies', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ replyId })
+    });
+    // Decrement reply count
+    fetch('https://parlor-portal.vercel.app/api/threads', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId, incrementReplyCount: -1 })
+    }).catch(() => {});
+    await loadReplies(threadId);
+  } catch(e) {
+    console.error('deleteReply error:', e);
+  }
+}
 // ── Upvoting ────────────────────────────────────────────
 async function upvoteThread(e, threadId, el) {
   if (e) e.stopPropagation();
