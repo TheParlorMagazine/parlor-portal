@@ -920,8 +920,7 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
   <button class="toolbar-btn" onclick="formatText('bold', document.getElementById('threadBodyInput'))"><b>B</b></button>
   <button class="toolbar-btn" onclick="formatText('italic', document.getElementById('threadBodyInput'))"><i>I</i></button>
   <button class="toolbar-btn" onclick="formatText('underline', document.getElementById('threadBodyInput'))"><u>U</u></button>
-  <button class="toolbar-btn" onclick="formatText('link', document.getElementById('threadBodyInput'))">🔗 Link</button>
-</div>
+ <button class="toolbar-btn" onclick="showLinkPopover(document.getElementById('threadBodyInput'))">🔗 Link</button>
       <textarea class="form-textarea" id="threadBodyInput" placeholder="Share what you're thinking, a question, a passage that struck you..."></textarea>
       <div class="form-row">
         <div><label class="form-label">Category</label>
