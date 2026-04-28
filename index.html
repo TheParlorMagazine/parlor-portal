@@ -4594,14 +4594,12 @@ async function postReply() {
   sendBtn.disabled = false;
 }
 async function deleteReply(replyId, threadId) {
-  if (!confirm('Delete this reply?')) return;
   try {
     await fetch('https://parlor-portal.vercel.app/api/replies', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ replyId })
     });
-    // Decrement reply count
     fetch('https://parlor-portal.vercel.app/api/threads', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -4611,6 +4609,19 @@ async function deleteReply(replyId, threadId) {
   } catch(e) {
     console.error('deleteReply error:', e);
   }
+}
+
+function confirmDeleteReply(btn, replyId, threadId) {
+  const modal = document.getElementById('deleteConfirmModal');
+  modal.style.display = 'flex';
+  document.getElementById('deleteConfirmBtn').onclick = () => {
+    closeDeleteConfirm();
+    deleteReply(replyId, threadId);
+  };
+}
+
+function closeDeleteConfirm() {
+  document.getElementById('deleteConfirmModal').style.display = 'none';
 }
 // ── Upvoting ────────────────────────────────────────────
 async function upvoteThread(e, threadId, el) {
