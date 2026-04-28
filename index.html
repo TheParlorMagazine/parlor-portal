@@ -4710,8 +4710,11 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeLinkPopover();
 });
 
-document.getElementById('linkPopoverInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') applyLinkPopover();
+document.addEventListener('DOMContentLoaded', function() {
+  const linkInput = document.getElementById('linkPopoverInput');
+  if (linkInput) linkInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') applyLinkPopover();
+  });
 });
 // ── Upvoting ────────────────────────────────────────────
 async function upvoteThread(e, threadId, el) {
