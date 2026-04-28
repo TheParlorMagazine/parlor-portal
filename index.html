@@ -4569,20 +4569,11 @@ async function postReply() {
         parentReplyId: _replyParentId || '',
       })
     });
-// Update local cache and UI
 if (_activeThread) {
   _activeThread.fields['Reply Count'] = (_activeThread.fields['Reply Count'] || 0) + 1;
-  const opReplyCount = document.querySelector('.op-reply-count');
-  if (opReplyCount) opReplyCount.textContent = `${_activeThread.fields['Reply Count']} replies`;
-  const detailMeta = document.querySelector('.detail-meta');
-  if (detailMeta) {
-    const spans = detailMeta.querySelectorAll('span');
-    spans.forEach(span => {
-      if (span.textContent.includes('replies')) {
-        span.textContent = `${_activeThread.fields['Reply Count']} replies`;
-      }
-    });
-  }
+  const t = _threads_forum.find(t => t.id === _activeThread.id);
+  if (t) t.fields['Reply Count'] = _activeThread.fields['Reply Count'];
+  updateThreadCountsUI(_activeThread.id);
 }
     // Increment reply count locally + in Airtable (fire and forget)
     fetch(`https://parlor-portal.vercel.app/api/threads`, {
@@ -4620,10 +4611,11 @@ async function deleteReply(replyId, threadId) {
       body: JSON.stringify({ threadId, incrementReplyCount: -1 })
     }).catch(() => {});
     await loadReplies(threadId);
-    if (_activeThread) {
+   if (_activeThread) {
   _activeThread.fields['Reply Count'] = Math.max(0, (_activeThread.fields['Reply Count'] || 0) - 1);
-  const opReplyCount = document.querySelector('.op-reply-count');
-  if (opReplyCount) opReplyCount.textContent = `${_activeThread.fields['Reply Count']} replies`;
+  const t = _threads_forum.find(t => t.id === _activeThread.id);
+  if (t) t.fields['Reply Count'] = _activeThread.fields['Reply Count'];
+  updateThreadCountsUI(_activeThread.id);
 }
   } catch(e) {
     console.error('deleteReply error:', e);
