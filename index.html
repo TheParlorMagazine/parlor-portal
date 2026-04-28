@@ -4664,6 +4664,56 @@ function closeDeleteConfirm() {
   textarea.selectionStart = start + replacement.length;
   textarea.selectionEnd = start + replacement.length;
 }
+let _linkPopoverTextarea = null;
+let _linkPopoverStart = null;
+let _linkPopoverEnd = null;
+
+function showLinkPopover(textarea) {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  if (start === end) return; // nothing selected
+  _linkPopoverTextarea = textarea;
+  _linkPopoverStart = start;
+  _linkPopoverEnd = end;
+
+  const popover = document.getElementById('linkPopover');
+  const input = document.getElementById('linkPopoverInput');
+  input.value = '';
+
+  // Position near the toolbar button
+  const btn = event.target.closest('.toolbar-btn');
+  const rect = btn.getBoundingClientRect();
+  popover.style.top = (rect.bottom + 6) + 'px';
+  popover.style.left = rect.left + 'px';
+  popover.style.display = 'flex';
+  input.focus();
+}
+
+function applyLinkPopover() {
+  const url = document.getElementById('linkPopoverInput').value.trim();
+  if (!url || !_linkPopoverTextarea) return;
+  const selected = _linkPopoverTextarea.value.substring(_linkPopoverStart, _linkPopoverEnd);
+  const replacement = `[${selected}](${url})`;
+  _linkPopoverTextarea.value = 
+    _linkPopoverTextarea.value.substring(0, _linkPopoverStart) + 
+    replacement + 
+    _linkPopoverTextarea.value.substring(_linkPopoverEnd);
+  closeLinkPopover();
+  _linkPopoverTextarea.focus();
+}
+
+function closeLinkPopover() {
+  document.getElementById('linkPopover').style.display = 'none';
+  _linkPopoverTextarea = null;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLinkPopover();
+});
+
+document.getElementById('linkPopoverInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') applyLinkPopover();
+});
 // ── Upvoting ────────────────────────────────────────────
 async function upvoteThread(e, threadId, el) {
   if (e) e.stopPropagation();
