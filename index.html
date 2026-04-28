@@ -4092,9 +4092,9 @@ const hasAccess = !isPaidItem || isMember;
         this.textContent = 'Save';
       }
     };
-  }
-  const themeName = Array.isArray(f['Theme (name)']) ? f['Theme (name)'][0] : f['Theme (name)'] || '';
+    const themeName = Array.isArray(f['Theme (name)']) ? f['Theme (name)'][0] : f['Theme (name)'] || '';
 if (themeName) loadRelatedItems(item.id, themeName);
+  }
   async function loadLibraryDiscussions(libraryItemId) {
   if (!libraryItemId) return;
   try {
