@@ -5,13 +5,13 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
 if (req.method === 'GET') {
-  const { libraryItemId } = req.query;
+  const { libraryTitle } = req.query;
   let filter;
-  if (libraryItemId) {
-  filter = encodeURIComponent(`AND({Published}=1, SEARCH("${libraryItemId}", ARRAYJOIN({Linked Library Item})))`);
-} else {
-  filter = encodeURIComponent(`{Published}=1`);
-}
+  if (libraryTitle) {
+    filter = encodeURIComponent(`AND({Published}=1, SEARCH("${libraryTitle}", ARRAYJOIN({Linked Library Item Title})))`);
+  } else {
+    filter = encodeURIComponent(`{Published}=1`);
+  }
   const response = await fetch(
     `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Threads?filterByFormula=${filter}&sort[0][field]=Created at&sort[0][direction]=desc`,
     { headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` } }
