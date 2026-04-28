@@ -4640,6 +4640,30 @@ function confirmDeleteReply(btn, replyId, threadId) {
 function closeDeleteConfirm() {
   document.getElementById('deleteConfirmModal').style.display = 'none';
 }
+  function formatText(type, textarea) {
+  if (!textarea) return;
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const selected = textarea.value.substring(start, end);
+  let replacement = '';
+
+  if (type === 'bold') {
+    replacement = `**${selected || 'bold text'}**`;
+  } else if (type === 'italic') {
+    replacement = `*${selected || 'italic text'}*`;
+  } else if (type === 'underline') {
+    replacement = `_${selected || 'underlined text'}_`;
+  } else if (type === 'link') {
+    const url = prompt('Enter URL:');
+    if (!url) return;
+    replacement = `[${selected || 'link text'}](${url})`;
+  }
+
+  textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+  textarea.focus();
+  textarea.selectionStart = start + replacement.length;
+  textarea.selectionEnd = start + replacement.length;
+}
 // ── Upvoting ────────────────────────────────────────────
 async function upvoteThread(e, threadId, el) {
   if (e) e.stopPropagation();
