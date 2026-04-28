@@ -4458,9 +4458,6 @@ async function loadReplies(threadId) {
   <button class="reply-btn" onclick="setReplyParent('${reply.id}','${f['Author Name'] || 'Member'}')">Reply</button>
   ${f['Author Member ID'] === (window.parlorMember?.memberId || '') ? `<button class="reply-btn" style="color:#e07070" onclick="deleteReply('${reply.id}','${_activeThread.id}')">Delete</button>` : ''}
 </div>
-              <svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              ${f['Upvote Count'] || 0}
-            </button>
             <button class="reply-btn" onclick="setReplyParent('${reply.id}','${f['Author Name'] || 'Member'}')">Reply</button>
           </div>
           ${nestedHTML}
