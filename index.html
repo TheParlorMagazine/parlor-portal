@@ -4909,5 +4909,10 @@ document.addEventListener('DOMContentLoaded', function() {
   if (composerSend) composerSend.onclick = postReply;
 });
 </script>
+<div id="linkPopover" style="display:none;position:fixed;background:var(--paper);border:1px solid var(--border);border-radius:9px;padding:10px 12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);z-index:600;display:none;gap:6px;align-items:center;">
+  <input id="linkPopoverInput" type="text" placeholder="Paste URL..." style="font-family:'thermal-variable',Georgia,serif;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:5px 9px;outline:none;width:220px;">
+  <button onclick="applyLinkPopover()" style="background:var(--ink);color:#fff;border:none;padding:5px 12px;border-radius:6px;font-family:'thermal-variable',Georgia,serif;font-size:12px;cursor:pointer;">Apply</button>
+  <button onclick="closeLinkPopover()" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0 2px;line-height:1;">×</button>
+</div>
 </body>
 </html>
