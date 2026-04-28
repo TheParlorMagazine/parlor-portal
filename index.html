@@ -4769,29 +4769,29 @@ async function upvoteReply(e, replyId, el) {
   const memberId = window.parlorMember?.memberId;
   if (!memberId) return;
   try {
-    const checkRes = await fetch(`${VERCEL_FORUM_URL}/api/upvotes?memberId=${encodeURIComponent(memberId)}&itemId=${encodeURIComponent(replyId)}`);
+    const checkRes = await fetch(`https://parlor-portal.vercel.app/api/upvotes?memberId=${encodeURIComponent(memberId)}&itemId=${encodeURIComponent(replyId)}`);
     const checkData = await checkRes.json();
     const hasUpvoted = checkData.upvoted;
     const recordId = checkData.recordId;
 
     if (hasUpvoted && recordId) {
-      await fetch(`${VERCEL_FORUM_URL}/api/upvotes`, {
+      await fetch(`https://parlor-portal.vercel.app/api/upvotes`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recordId })
       });
-      await fetch(`${VERCEL_FORUM_URL}/api/replies`, {
+      await fetch(`https://parlor-portal.vercel.app/api/replies`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ replyId, incrementUpvote: -1 })
       });
     } else {
-      await fetch(`${VERCEL_FORUM_URL}/api/upvotes`, {
+      await fetch(`https://parlor-portal.vercel.app/api/upvotes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ memberId, itemId: replyId, itemType: 'Reply' })
       });
-      await fetch(`${VERCEL_FORUM_URL}/api/replies`, {
+      await fetch(`https://parlor-portal.vercel.app/api/replies`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ replyId, incrementUpvote: 1 })
