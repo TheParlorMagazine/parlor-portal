@@ -1,7 +1,7 @@
 // replies.js — add PATCH support for upvoting
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method === 'GET') {
@@ -73,6 +73,18 @@ module.exports = async function handler(req, res) {
     const data = await patchRes.json();
     return res.status(200).json(data);
   }
-
+if (req.method === 'DELETE') {
+  const { replyId } = req.body;
+  if (!replyId) return res.status(400).json({ error: 'replyId required' });
+  const response = await fetch(
+    `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Replies/${replyId}`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` }
+    }
+  );
+  const data = await response.json();
+  return res.status(200).json(data);
+}
   res.status(405).end();
 };
