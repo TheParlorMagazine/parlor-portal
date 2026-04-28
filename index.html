@@ -4099,7 +4099,8 @@ const hasAccess = !isPaidItem || isMember;
   async function loadLibraryDiscussions(libraryItemId) {
   if (!libraryItemId) return;
   try {
-    const res = await fetch(`${VERCEL_FORUM_URL}/api/threads?libraryItemId=${encodeURIComponent(libraryItemId)}`);
+    const itemTitle = window._currentLibItem?.fields?.['Title'] || '';
+const res = await fetch(`${VERCEL_FORUM_URL}/api/threads?libraryTitle=${encodeURIComponent(itemTitle)}`);
     const data = await res.json();
     const threads = data.records || [];
     const promptCard = document.getElementById('discPromptCard');
