@@ -65,8 +65,8 @@ if (req.method === 'GET') {
     const fields = record.fields || {};
 
     const updates = {};
-    if (incrementUpvote) updates['Upvote Count'] = (fields['Upvote Count'] || 0) + 1;
-    if (incrementReplyCount) updates['Reply Count'] = (fields['Reply Count'] || 0) + 1;
+    if (incrementUpvote !== undefined) updates['Upvote Count'] = (fields['Upvote Count'] || 0) + incrementUpvote;
+    if (incrementReplyCount !== undefined) updates['Reply Count'] = Math.max(0, (fields['Reply Count'] || 0) + incrementReplyCount);
 
     const patchRes = await fetch(
       `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Threads/${threadId}`,
