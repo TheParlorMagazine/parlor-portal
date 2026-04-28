@@ -4050,7 +4050,7 @@ const hasAccess = !isPaidItem || isMember;
   // ── Discussion prompt ──
   const discPromptQ = document.querySelector('.disc-prompt-q');
   if (discPromptQ && f['Discussion Prompt']) {
-    discPromptQ.textContent = f['Discussion Prompt'];
+    discPromptQ.innerHTML = parseMarkdown(f['Discussion Prompt']);
     document.getElementById('discPromptCard').style.display = '';
     document.getElementById('discNoPromptCard').style.display = 'none';
   } else {
