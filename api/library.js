@@ -57,7 +57,17 @@ if (req.query.month) {
   });
   return res.status(200).json({ records: filtered });
 }
-
+if (req.query.theme) {
+  const filter = encodeURIComponent(
+    `AND({Published}=1,{Theme (name)}="${req.query.theme}")`
+  );
+  const response = await fetch(
+    `${base}/Library?filterByFormula=${filter}&sort[0][field]=Date%20Published&sort[0][direction]=desc`,
+    { headers }
+  );
+  const data = await response.json();
+  return res.status(200).json(data);
+}
   // All published items
   const filter = encodeURIComponent(`{Published}=1`);
   const response = await fetch(
