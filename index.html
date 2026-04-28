@@ -4816,7 +4816,7 @@ async function loadDashboardFeed() {
 
   if (!_threads_forum.length) {
     try {
-      const res = await fetch(`${VERCEL_FORUM_URL}/api/threads`);
+      const res = await fetch(`https://parlor-portal.vercel.app/api/threads`);
       const data = await res.json();
       _threads_forum = data.records || [];
     } catch(e) { return; }
