@@ -4561,7 +4561,7 @@ async function postReply() {
     });
 
     // Increment reply count locally + in Airtable (fire and forget)
-    fetch(`${VERCEL_FORUM_URL}/api/threads`, {
+    fetch(`https://parlor-portal.vercel.app/api/threads`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
