@@ -1836,6 +1836,10 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 </div>
 
 <script>
+var VERCEL_FORUM_URL = 'https://parlor-portal.vercel.app';
+var _threads_forum = [];
+var _activeThread = null;
+  
 // ════════════════════════════════════════════════════════
 // Parlor Mag — Member Data Receiver
 // ════════════════════════════════════════════════════════
@@ -4196,10 +4200,6 @@ const res = await fetch(`${VERCEL_FORUM_URL}/api/threads?libraryTitle=${encodeUR
 // ════════════════════════════════════════════════════════
 // FORUM — Live Airtable wiring
 // ════════════════════════════════════════════════════════
-
-var VERCEL_FORUM_URL = 'https://parlor-portal.vercel.app';
-var _threads_forum = [];
-var _activeThread = null;
 
 // ── Load & render thread list ────────────────────────────
 async function loadForumThreads() {
