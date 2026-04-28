@@ -4137,6 +4137,31 @@ const res = await fetch(`${VERCEL_FORUM_URL}/api/threads?libraryTitle=${encodeUR
     console.error('loadLibraryDiscussions error:', e);
   }
 }
+  async function loadRelatedItems(currentItemId, themeName) {
+  if (!themeName) return;
+  const grid = document.getElementById('relatedItemsGrid');
+  if (!grid) return;
+  try {
+    const res = await fetch(`${VERCEL_LIBRARY_URL}/api/library?theme=${encodeURIComponent(themeName)}`);
+    const data = await res.json();
+    const items = (data.records || []).filter(i => i.id !== currentItemId).slice(0, 3);
+    if (!items.length) {
+      document.getElementById('relatedItemsSection').style.display = 'none';
+      return;
+    }
+    grid.innerHTML = items.map(item => {
+      const f = item.fields;
+      const type = (f['Type'] || 'Article').toLowerCase();
+      return `
+        <div class="related-card" onclick="openLibraryItem('${item.id}')">
+          <div class="related-type">${f['Type'] || 'Article'}</div>
+          <div class="related-card-title">${f['Title'] || ''}</div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    console.error('loadRelatedItems error:', e);
+  }
+}
   window.addEventListener('message', function(e) {
   if (e.data?.type === 'OPEN_ITEM') {
     navigate('library');
