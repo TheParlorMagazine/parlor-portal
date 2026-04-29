@@ -4763,12 +4763,41 @@ function closeDeleteConfirm() {
   // ── Post-as toggle (admin only) ──────────────────────────
 let _postAsEditor = false;
 
+function toggleComposerDropdown() {
+  const btn = document.getElementById('composerToggleBtn');
+  if (btn && btn.style.display === 'none') return;
+  const dropdown = document.getElementById('composerDropdown');
+  if (!dropdown) return;
+  dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+}
+
+function selectPostAs(asEditor) {
+  _postAsEditor = asEditor;
+  document.getElementById('composerDropdown').style.display = 'none';
+  renderComposerIdentity();
+}
+
 function initComposerIdentity() {
   const isAdmin = window.parlorMember?.badges?.some(b =>
     (typeof b === 'string' ? b : b._id || b.id) === '2324c632-278b-4bf2-a1c0-3c9a45a8ef2b'
   );
   const btn = document.getElementById('composerToggleBtn');
   if (btn) btn.style.display = isAdmin ? 'inline-flex' : 'none';
+
+  const nameEl = document.getElementById('composerDropdownName');
+  const avEl = document.getElementById('composerDropdownAv');
+  if (nameEl) nameEl.textContent = window.parlorMember?.name || 'You';
+  if (avEl) {
+    const avatarUrl = window.parlorMember?.avatar || '';
+    if (avatarUrl) {
+      avEl.style.backgroundImage = `url(${avatarUrl})`;
+      avEl.textContent = '';
+    } else {
+      avEl.style.backgroundImage = '';
+      avEl.textContent = (window.parlorMember?.name || 'M').charAt(0).toUpperCase();
+    }
+  }
+
   _postAsEditor = false;
   renderComposerIdentity();
 }
@@ -4782,8 +4811,6 @@ function renderComposerIdentity() {
     av.style.backgroundSize = 'cover';
     av.style.backgroundPosition = 'center';
     av.textContent = '';
-    if (label) label.textContent = 'Posting as Parlor Editors';
-    if (label) label.style.color = 'var(--ink)';
   } else {
     const avatarUrl = window.parlorMember?.avatar || '';
     const initial = (window.parlorMember?.name || 'M').charAt(0).toUpperCase();
@@ -4796,14 +4823,9 @@ function renderComposerIdentity() {
       av.style.backgroundImage = '';
       av.textContent = initial;
     }
-    if (label) label.textContent = 'Add to the discussion';
-    if (label) label.style.color = '';
   }
-}
-
-function togglePostAs() {
-  _postAsEditor = !_postAsEditor;
-  renderComposerIdentity();
+  if (label) label.textContent = 'Add to the discussion';
+  if (label) label.style.color = '';
 }
   // ── RICH TEXT EDITOR ──────────────────────────────────────
 function rteCmd(editorId, command) {
