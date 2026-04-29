@@ -5033,6 +5033,32 @@ document.addEventListener('DOMContentLoaded', function() {
   const composerSend = document.querySelector('.composer-send');
   if (composerSend) composerSend.onclick = postReply;
 });
+  // ── Auto-linkify in RTE editors ──
+['threadBodyInput', 'replyEditor'].forEach(id => {
+  const editor = document.getElementById(id);
+  if (!editor) return;
+  editor.addEventListener('paste', function(e) {
+    const text = e.clipboardData?.getData('text/plain') || '';
+    const urlPattern = /^https?:\/\/[^\s]+$/;
+    if (urlPattern.test(text.trim())) {
+      e.preventDefault();
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return;
+      const range = selection.getRangeAt(0);
+      const selectedText = range.toString();
+      const a = document.createElement('a');
+      a.href = text.trim();
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = selectedText || text.trim();
+      range.deleteContents();
+      range.insertNode(a);
+      range.setStartAfter(a);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  });
+});
 </script>
 </body>
 </html>
