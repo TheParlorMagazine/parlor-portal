@@ -4279,9 +4279,10 @@ function renderForumThreadList() {
       ? `<span class="ttag ttag-qa">Writer Q&A</span>` : '';
 
     return `
-      <div class="thread-card" onclick="openForumThread('${t.id}')">
-        <div class="tav ${colorClass}">${(f['Author Type'] || '').toLowerCase() === 'editor' ? '<img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : initial}
-        <div class="thread-body">
+      return `
+  <div class="thread-card" onclick="openForumThread('${t.id}')">
+    <div class="tav ${colorClass}">${(f['Author Type'] || '').toLowerCase() === 'editor' ? '<img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : initial}</div>
+    <div class="thread-body">
           <div class="thread-tags">
             ${qaTag || `<span class="ttag ${catClass}">${f['Category'] || 'Discussion'}</span>`}
             ${libLink}
