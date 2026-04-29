@@ -5127,6 +5127,7 @@ if ((f['Author Type'] || '').toLowerCase() === 'editor') {
     el.querySelector('.feed-title').textContent = f['Title'] || '';
     el.querySelector('.feed-meta').textContent = `${f['Author Name'] || 'Member'} · ${timeAgo(f['Created at'])} · ${f['Reply Count'] || 0} replies`;
     el.querySelector('.feed-votes').textContent = `↑ ${f['Upvote Count'] || 0}`;
+    el.style.display = 'flex';
   });
 }
 
