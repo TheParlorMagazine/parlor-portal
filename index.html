@@ -5184,7 +5184,25 @@ function updateThreadCountsUI(threadId) {
 document.addEventListener('DOMContentLoaded', function() {
   const composerSend = document.querySelector('.composer-send');
   if (composerSend) composerSend.onclick = postReply;
+
+  // Clear hardcoded placeholder forum content
+  const threadsList = document.querySelector('#forum-threads .threads-list');
+  if (threadsList) threadsList.innerHTML = '';
+  
+  const pinnedBanner = document.querySelector('.pinned-banner');
+  if (pinnedBanner) pinnedBanner.style.display = 'none';
+
+  const repliesSection = document.querySelector('.replies-section');
+  if (repliesSection) {
+    Array.from(repliesSection.children).forEach(el => {
+      if (!el.classList.contains('replies-label')) el.remove();
+    });
+  }
+
+  const opText = document.querySelector('.op-text');
+  if (opText) opText.innerHTML = '';
 });
+  
  // ── Auto-linkify pasted URLs ──
 ['threadBodyInput', 'replyEditor'].forEach(id => {
   const editor = document.getElementById(id);
