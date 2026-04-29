@@ -4687,82 +4687,87 @@ function confirmDeleteReply(btn, replyId, threadId) {
 function closeDeleteConfirm() {
   document.getElementById('deleteConfirmModal').style.display = 'none';
 }
-  function formatText(type, textarea) {
-  if (!textarea) return;
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-  const selected = textarea.value.substring(start, end);
-  let replacement = '';
+  // ── RICH TEXT EDITOR ──────────────────────────────────────
+function rteCmd(editorId, command) {
+  const editor = document.getElementById(editorId);
+  if (!editor) return;
+  editor.focus();
+  document.execCommand(command, false, null);
+  updateRteToolbarState(editorId);
+}
 
-  if (type === 'bold') {
-    replacement = `**${selected || 'bold text'}**`;
-  } else if (type === 'italic') {
-    replacement = `*${selected || 'italic text'}*`;
-  } else if (type === 'underline') {
-    replacement = `_${selected || 'underlined text'}_`;
-  } else if (type === 'link') {
-    const url = prompt('Enter URL:');
-    if (!url) return;
-    replacement = `[${selected || 'link text'}](${url})`;
+function rteLink(editorId) {
+  const editor = document.getElementById(editorId);
+  if (!editor) return;
+  editor.focus();
+  const selection = window.getSelection();
+  const selectedText = selection?.toString() || '';
+  const url = prompt('Enter URL:');
+  if (!url) return;
+  if (selectedText) {
+    document.execCommand('createLink', false, url);
+    // Make links open in new tab
+    editor.querySelectorAll('a').forEach(a => {
+      a.target = '_blank';
+      a.rel = 'noopener';
+    });
+  } else {
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = url;
+    const range = selection.getRangeAt(0);
+    range.insertNode(a);
+    range.setStartAfter(a);
+    selection.removeAllRanges();
+    selection.addRange(range);
   }
-
-  textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
-  textarea.focus();
-  textarea.selectionStart = start + replacement.length;
-  textarea.selectionEnd = start + replacement.length;
-}
-let _linkPopoverTextarea = null;
-let _linkPopoverStart = null;
-let _linkPopoverEnd = null;
-
-function showLinkPopover(textarea) {
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-  if (start === end) return; // nothing selected
-  _linkPopoverTextarea = textarea;
-  _linkPopoverStart = start;
-  _linkPopoverEnd = end;
-
-  const popover = document.getElementById('linkPopover');
-  const input = document.getElementById('linkPopoverInput');
-  input.value = '';
-
-  // Position near the toolbar button
-  const btn = event.target.closest('.toolbar-btn');
-  const rect = btn.getBoundingClientRect();
-  popover.style.top = (rect.bottom + 6) + 'px';
-  popover.style.left = rect.left + 'px';
-  popover.style.display = 'flex';
-  input.focus();
 }
 
-function applyLinkPopover() {
-  const url = document.getElementById('linkPopoverInput').value.trim();
-  if (!url || !_linkPopoverTextarea) return;
-  const selected = _linkPopoverTextarea.value.substring(_linkPopoverStart, _linkPopoverEnd);
-  const replacement = `[${selected}](${url})`;
-  _linkPopoverTextarea.value = 
-    _linkPopoverTextarea.value.substring(0, _linkPopoverStart) + 
-    replacement + 
-    _linkPopoverTextarea.value.substring(_linkPopoverEnd);
-  closeLinkPopover();
-  _linkPopoverTextarea.focus();
+function rteBlockquote(editorId) {
+  const editor = document.getElementById(editorId);
+  if (!editor) return;
+  editor.focus();
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return;
+  const range = selection.getRangeAt(0);
+  const selectedText = range.toString();
+  if (!selectedText) return;
+  const bq = document.createElement('blockquote');
+  bq.textContent = selectedText;
+  range.deleteContents();
+  range.insertNode(bq);
+  range.setStartAfter(bq);
+  selection.removeAllRanges();
+  selection.addRange(range);
 }
 
-function closeLinkPopover() {
-  document.getElementById('linkPopover').style.display = 'none';
-  _linkPopoverTextarea = null;
+function rteGetHTML(editorId) {
+  const editor = document.getElementById(editorId);
+  if (!editor) return '';
+  return editor.innerHTML.trim();
 }
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeLinkPopover();
-});
+function rteClear(editorId) {
+  const editor = document.getElementById(editorId);
+  if (editor) editor.innerHTML = '';
+}
 
-document.addEventListener('DOMContentLoaded', function() {
-  const linkInput = document.getElementById('linkPopoverInput');
-  if (linkInput) linkInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') applyLinkPopover();
+function updateRteToolbarState(editorId) {
+  const wrap = document.getElementById(editorId)?.closest('.rte-wrap');
+  if (!wrap) return;
+  wrap.querySelectorAll('.rte-btn[title]').forEach(btn => {
+    const title = btn.getAttribute('title');
+    const cmdMap = { 'Bold': 'bold', 'Italic': 'italic', 'Underline': 'underline' };
+    const cmd = cmdMap[title];
+    if (cmd) btn.classList.toggle('active', document.queryCommandState(cmd));
   });
+}
+
+// Update toolbar active states on selection change
+document.addEventListener('selectionchange', () => {
+  ['threadBodyInput', 'replyEditor'].forEach(updateRteToolbarState);
 });
 // ── Upvoting ────────────────────────────────────────────
 async function upvoteThread(e, threadId, el) {
