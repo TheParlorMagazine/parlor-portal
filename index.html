@@ -4744,12 +4744,43 @@ function rteLink(editorId) {
   }
   _rteLinkEditorId = editorId;
   const selectedText = selection?.toString() || '';
-  document.getElementById('rteLinkUrl').value = '';
-  document.getElementById('rteLinkText').value = selectedText;
-  const bg = document.getElementById('rteLinkModalBg');
-  bg.style.top = (document.documentElement.scrollTop || document.body.scrollTop) + 'px';
-bg.style.display = 'flex';
+
+  // Remove any existing modal
+  const existing = document.getElementById('rteLinkModalBg');
+  if (existing) existing.remove();
+
+  // Build modal fresh and append to body
+  const bg = document.createElement('div');
+  bg.id = 'rteLinkModalBg';
+  bg.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(26,23,16,0.5);z-index:2147483647;display:flex;align-items:center;justify-content:center;';
+  bg.onclick = function(e) { if (e.target === bg) closeRteLinkModal(); };
+
+  bg.innerHTML = `
+    <div onclick="event.stopPropagation()" style="background:#fff;border:1px solid #e8d4d8;border-radius:12px;padding:24px;width:420px;max-width:92vw;box-shadow:0 8px 40px rgba(0,0,0,0.18);">
+      <div style="font-family:'thermal-variable',Georgia,serif;font-size:17px;font-weight:500;margin-bottom:16px;">Insert link</div>
+      <label style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:#888;display:block;margin-bottom:5px;">URL</label>
+      <input id="rteLinkUrl" type="url" placeholder="https://..." 
+        style="width:100%;font-family:'thermal-variable',Georgia,serif;font-size:14px;color:#000;background:#fff;border:1px solid #e8d4d8;border-radius:8px;padding:9px 12px;outline:none;margin-bottom:16px;">
+      <label style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:#888;display:block;margin-bottom:5px;">Display text (optional)</label>
+      <input id="rteLinkText" type="text" placeholder="Leave blank to use URL" value="${selectedText}"
+        style="width:100%;font-family:'thermal-variable',Georgia,serif;font-size:14px;color:#000;background:#fff;border:1px solid #e8d4d8;border-radius:8px;padding:9px 12px;outline:none;margin-bottom:20px;">
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button type="button" onclick="closeRteLinkModal()" 
+          style="background:none;border:1px solid #e8d4d8;color:#888;padding:8px 17px;border-radius:8px;font-family:'thermal-variable',Georgia,serif;font-size:13px;cursor:pointer;">Cancel</button>
+        <button type="button" onclick="applyRteLink()" 
+          style="background:#000;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-family:'thermal-variable',Georgia,serif;font-size:13px;font-weight:500;cursor:pointer;">Insert link</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(bg);
   setTimeout(() => document.getElementById('rteLinkUrl').focus(), 50);
+}
+
+function closeRteLinkModal() {
+  const bg = document.getElementById('rteLinkModalBg');
+  if (bg) bg.remove();
+  _rteLinkEditorId = null;
+  _rteLinkSavedRange = null;
 }
 
 function applyRteLink() {
@@ -4783,12 +4814,6 @@ function applyRteLink() {
     selection.addRange(range);
   }
   closeRteLinkModal();
-}
-
-function closeRteLinkModal() {
-  document.getElementById('rteLinkModalBg').style.display = 'none';
-  _rteLinkEditorId = null;
-  _rteLinkSavedRange = null;
 }
 
 function rteBlockquote(editorId) {
