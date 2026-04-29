@@ -4601,7 +4601,6 @@ async function loadReplies(threadId) {
   (f['Author Member ID'] === 'admin' && window.parlorMember?.badges?.some(b => (typeof b === 'string' ? b : b._id || b.id) === '2324c632-278b-4bf2-a1c0-3c9a45a8ef2b'))) 
   ? `<button class="reply-btn" style="color:#e07070" onclick="confirmDeleteReply(this,'${reply.id}','${_activeThread.id}')">Delete</button>` : ''}
 </div>
-            <button class="reply-btn" onclick="setReplyParent('${reply.id}','${f['Author Name'] || 'Member'}')">Reply</button>
           </div>
           ${nestedHTML}
         </div>
