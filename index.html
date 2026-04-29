@@ -4696,33 +4696,63 @@ function rteCmd(editorId, command) {
   updateRteToolbarState(editorId);
 }
 
+// ── RICH TEXT EDITOR LINK ────────────────────────────────
+let _rteLinkEditorId = null;
+let _rteLinkSavedRange = null;
+
 function rteLink(editorId) {
   const editor = document.getElementById(editorId);
   if (!editor) return;
-  editor.focus();
   const selection = window.getSelection();
+  if (selection.rangeCount) {
+    _rteLinkSavedRange = selection.getRangeAt(0).cloneRange();
+  }
+  _rteLinkEditorId = editorId;
   const selectedText = selection?.toString() || '';
-  const url = prompt('Enter URL:');
-  if (!url) return;
-  if (selectedText) {
-    document.execCommand('createLink', false, url);
-    // Make links open in new tab
-    editor.querySelectorAll('a').forEach(a => {
-      a.target = '_blank';
-      a.rel = 'noopener';
-    });
-  } else {
-    const a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    a.textContent = url;
+  document.getElementById('rteLinkUrl').value = '';
+  document.getElementById('rteLinkText').value = selectedText;
+  const bg = document.getElementById('rteLinkModalBg');
+  bg.style.display = 'flex';
+  setTimeout(() => document.getElementById('rteLinkUrl').focus(), 50);
+}
+
+function applyRteLink() {
+  const url = document.getElementById('rteLinkUrl').value.trim();
+  const text = document.getElementById('rteLinkText').value.trim();
+  if (!url) {
+    document.getElementById('rteLinkUrl').style.borderColor = '#e07070';
+    return;
+  }
+  const editor = document.getElementById(_rteLinkEditorId);
+  if (!editor) { closeRteLinkModal(); return; }
+  editor.focus();
+  if (_rteLinkSavedRange) {
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(_rteLinkSavedRange);
+  }
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.textContent = text || url;
+  const selection = window.getSelection();
+  if (selection.rangeCount) {
     const range = selection.getRangeAt(0);
+    range.deleteContents();
     range.insertNode(a);
     range.setStartAfter(a);
+    range.collapse(true);
     selection.removeAllRanges();
     selection.addRange(range);
   }
+  closeRteLinkModal();
+}
+
+function closeRteLinkModal() {
+  document.getElementById('rteLinkModalBg').style.display = 'none';
+  _rteLinkEditorId = null;
+  _rteLinkSavedRange = null;
 }
 
 function rteBlockquote(editorId) {
@@ -4730,17 +4760,28 @@ function rteBlockquote(editorId) {
   if (!editor) return;
   editor.focus();
   const selection = window.getSelection();
-  if (!selection.rangeCount) return;
-  const range = selection.getRangeAt(0);
-  const selectedText = range.toString();
-  if (!selectedText) return;
+  const selectedText = selection?.rangeCount ? selection.getRangeAt(0).toString() : '';
   const bq = document.createElement('blockquote');
-  bq.textContent = selectedText;
-  range.deleteContents();
-  range.insertNode(bq);
-  range.setStartAfter(bq);
-  selection.removeAllRanges();
-  selection.addRange(range);
+  bq.textContent = selectedText || 'Add your quote here...';
+  if (selection?.rangeCount) {
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(bq);
+    if (!selectedText) {
+      const newRange = document.createRange();
+      newRange.selectNodeContents(bq);
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+    } else {
+      const newRange = document.createRange();
+      newRange.setStartAfter(bq);
+      newRange.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+    }
+  } else {
+    editor.appendChild(bq);
+  }
 }
 
 function rteGetHTML(editorId) {
@@ -4765,10 +4806,18 @@ function updateRteToolbarState(editorId) {
   });
 }
 
-// Update toolbar active states on selection change
 document.addEventListener('selectionchange', () => {
   ['threadBodyInput', 'replyEditor'].forEach(updateRteToolbarState);
 });
+
+document.getElementById('rteLinkModalBg').addEventListener('click', function(e) {
+  if (e.target === this) closeRteLinkModal();
+});
+document.getElementById('rteLinkUrl').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') applyRteLink();
+  if (e.key === 'Escape') closeRteLinkModal();
+});
+  
 // ── Upvoting ────────────────────────────────────────────
 async function upvoteThread(e, threadId, el) {
   if (e) e.stopPropagation();
