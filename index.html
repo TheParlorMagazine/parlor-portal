@@ -1482,14 +1482,26 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
         </div>
        <div class="reply-composer">
           <div class="composer-header">
-            <div style="position:relative;display:inline-flex;align-items:center;gap:0;">
-              <div class="composer-av" id="composerAv"></div>
-              <button id="composerToggleBtn" onclick="togglePostAs()" style="display:none;background:none;border:none;cursor:pointer;padding:2px 4px;margin-left:2px;color:var(--muted);line-height:1;">
-                <svg viewBox="0 0 10 6" fill="none" style="width:10px;height:10px"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-            </div>
-            <div class="composer-label" id="composerLabel">Add to the discussion</div>
-          </div>
+  <div style="position:relative;">
+    <div style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:2px 6px 2px 2px;border-radius:20px;transition:background 0.12s;" id="composerIdentityTrigger" onclick="toggleComposerDropdown()">
+      <div class="composer-av" id="composerAv"></div>
+      <button id="composerToggleBtn" style="display:none;background:none;border:none;cursor:pointer;padding:0;color:var(--muted);line-height:1;">
+        <svg viewBox="0 0 10 6" fill="none" style="width:10px;height:10px"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <div id="composerDropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--paper);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);z-index:200;min-width:180px;overflow:hidden;">
+      <div id="composerOptionPersonal" onclick="selectPostAs(false)" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background=''">
+        <div id="composerDropdownAv" style="width:26px;height:26px;border-radius:50%;background:var(--pink);color:#000;font-size:9.5px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;background-size:cover;background-position:center;"></div>
+        <span id="composerDropdownName" style="font-size:13px;font-weight:500;color:var(--ink);"></span>
+      </div>
+      <div id="composerOptionEditor" onclick="selectPostAs(true)" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-top:1px solid var(--border);transition:background 0.12s;" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background=''">
+        <div style="width:26px;height:26px;border-radius:50%;background-image:url(https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png);background-size:cover;background-position:center;flex-shrink:0;"></div>
+        <span style="font-size:13px;font-weight:500;color:var(--ink);">Parlor Editors</span>
+      </div>
+    </div>
+  </div>
+  <div class="composer-label" id="composerLabel">Add to the discussion</div>
+</div>
           <div class="rte-wrap rte-composer">
             <div class="rte-toolbar rte-toolbar-compact">
               <button type="button" class="rte-btn" onclick="rteCmd('replyEditor','bold')" title="Bold"><b>B</b></button>
