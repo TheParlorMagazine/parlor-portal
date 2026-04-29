@@ -642,7 +642,20 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .sb-accordion-header { cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
 .sb-accordion-header::after { content: '›'; font-size: 12px; color: rgba(255,255,255,0.3); transform: rotate(90deg); display: inline-block; transition: transform 0.15s; }
 .sb-accordion-header.open::after { transform: rotate(270deg); }
-  
+ 
+  #rteLinkModalBg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 99999;
+}
+#rteLinkModalBg > div {
+  position: sticky;
+  top: 50%;
+  transform: translateY(-50%);
+} 
 /* ── NOTIFICATION PANEL ── */
 .notif-modal-bg {
   display: none;
