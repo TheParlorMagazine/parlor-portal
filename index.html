@@ -3259,7 +3259,7 @@ function renderConversation() {
 }
 
 async function sendReply() {
-  const body = document.getElementById('inboxReplyBody')?.value.trim();
+  const body = rteGetHTML('threadBodyInput');
   const fb = document.getElementById('replyFeedback');
   if (!body) { if(fb) { fb.textContent = 'Please write a message.'; fb.style.color='#e07070'; } return; }
   if (!_activeThreadId) return;
