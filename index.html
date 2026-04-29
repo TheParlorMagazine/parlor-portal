@@ -4716,6 +4716,51 @@ function confirmDeleteReply(btn, replyId, threadId) {
 function closeDeleteConfirm() {
   document.getElementById('deleteConfirmModal').style.display = 'none';
 }
+  // ── Post-as toggle (admin only) ──────────────────────────
+let _postAsEditor = false;
+
+function initComposerIdentity() {
+  const isAdmin = window.parlorMember?.badges?.some(b =>
+    (typeof b === 'string' ? b : b._id || b.id) === '2324c632-278b-4bf2-a1c0-3c9a45a8ef2b'
+  );
+  const btn = document.getElementById('composerToggleBtn');
+  if (btn) btn.style.display = isAdmin ? 'inline-flex' : 'none';
+  _postAsEditor = false;
+  renderComposerIdentity();
+}
+
+function renderComposerIdentity() {
+  const av = document.getElementById('composerAv');
+  const label = document.getElementById('composerLabel');
+  if (!av) return;
+  if (_postAsEditor) {
+    av.style.backgroundImage = 'url(https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png)';
+    av.style.backgroundSize = 'cover';
+    av.style.backgroundPosition = 'center';
+    av.textContent = '';
+    if (label) label.textContent = 'Posting as Parlor Editors';
+    if (label) label.style.color = 'var(--ink)';
+  } else {
+    const avatarUrl = window.parlorMember?.avatar || '';
+    const initial = (window.parlorMember?.name || 'M').charAt(0).toUpperCase();
+    if (avatarUrl) {
+      av.style.backgroundImage = `url(${avatarUrl})`;
+      av.style.backgroundSize = 'cover';
+      av.style.backgroundPosition = 'center';
+      av.textContent = '';
+    } else {
+      av.style.backgroundImage = '';
+      av.textContent = initial;
+    }
+    if (label) label.textContent = 'Add to the discussion';
+    if (label) label.style.color = '';
+  }
+}
+
+function togglePostAs() {
+  _postAsEditor = !_postAsEditor;
+  renderComposerIdentity();
+}
   // ── RICH TEXT EDITOR ──────────────────────────────────────
 function rteCmd(editorId, command) {
   const editor = document.getElementById(editorId);
