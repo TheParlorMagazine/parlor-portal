@@ -365,6 +365,26 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
 .card-note{font-size:12.5px;color:var(--muted);line-height:1.55;border-top:1px solid var(--border);padding-top:10px;font-style:italic}
 .card-note strong{color:#000000;font-style:normal;font-weight:500;font-size:10px;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.07em}
 
+  /* ══ RICH TEXT EDITOR ══ */
+.rte-wrap{border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-bottom:14px;transition:border-color 0.15s;}
+.rte-wrap:focus-within{border-color:var(--pinkborder);}
+.rte-toolbar{display:flex;align-items:center;gap:2px;padding:6px 8px;background:var(--cream);border-bottom:1px solid var(--border);}
+.rte-toolbar-compact{padding:5px 8px;}
+.rte-btn{display:flex;align-items:center;justify-content:center;width:28px;height:26px;border:none;background:none;border-radius:5px;cursor:pointer;font-family:'thermal-variable','Georgia',serif;font-size:13px;color:var(--muted);transition:all 0.12s;padding:0;}
+.rte-btn:hover{background:var(--border);color:var(--ink);}
+.rte-btn.active{background:var(--ink);color:#fff;}
+.rte-divider{width:1px;height:16px;background:var(--border);margin:0 4px;}
+.rte-editor{min-height:110px;max-height:320px;overflow-y:auto;padding:12px 14px;font-family:'thermal-variable','Georgia',serif;font-size:14px;line-height:1.7;color:var(--ink);outline:none;cursor:text;}
+.rte-editor:empty::before{content:attr(data-placeholder);color:var(--muted);pointer-events:none;}
+.rte-editor b,.rte-editor strong{font-weight:600;}
+.rte-editor i,.rte-editor em{font-style:italic;}
+.rte-editor u{text-decoration:underline;text-underline-offset:2px;}
+.rte-editor a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;}
+.rte-editor ul{padding-left:20px;margin:6px 0;}
+.rte-editor li{margin-bottom:3px;}
+.rte-editor blockquote{border-left:3px solid var(--pink);margin:8px 0;padding:6px 12px;color:var(--muted);font-style:italic;background:var(--cream);border-radius:0 6px 6px 0;}
+.rte-composer .rte-editor{min-height:80px;}
+  
 /* library detail */
 .lib-detail-banner{width:100%;height:280px;background:var(--ink);position:relative;overflow:hidden;margin-bottom:0}
 .lib-detail-banner-img{width:100%;height:100%;object-fit:cover;opacity:0.7}
