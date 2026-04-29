@@ -4601,11 +4601,11 @@ function setReplyParent(replyId, authorName) {
 // ── Post a reply ────────────────────────────────────────
 async function postReply() {
   if (!_activeThread) return;
-  const composer = document.querySelector('.composer-textarea');
-  const sendBtn = document.querySelector('.composer-send');
-  const body = composer?.value.trim();
-  if (!body) return;
-
+  
+ const sendBtn = document.querySelector('.composer-send');
+const body = rteGetHTML('replyEditor');
+if (!body || body === '<br>') return;
+  
   sendBtn.textContent = 'Posting...';
   sendBtn.disabled = true;
 
