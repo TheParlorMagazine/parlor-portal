@@ -4230,33 +4230,38 @@ if (themeName) loadRelatedItems(item.id, themeName);
   if (!libraryItemId) return;
   try {
     const itemTitle = window._currentLibItem?.fields?.['Title'] || '';
-const res = await fetch(`https://parlor-portal.vercel.app/api/threads?libraryTitle=${encodeURIComponent(itemTitle)}`);
+    const res = await fetch(`https://parlor-portal.vercel.app/api/threads?libraryTitle=${encodeURIComponent(itemTitle)}`);
     const data = await res.json();
     const threads = data.records || [];
     const promptCard = document.getElementById('discPromptCard');
     const noPromptCard = document.getElementById('discNoPromptCard');
-    const repliesHead = document.querySelector('.disc-replies-head');
     const repliesContainer = document.querySelector('.disc-replies');
     if (!repliesContainer) return;
 
+    // Prompt card — show only if a discussion prompt exists for this piece
+    const hasPrompt = window._currentLibItem?.fields?.['Discussion Prompt'];
+    if (promptCard) promptCard.style.display = hasPrompt ? '' : 'none';
+
+    // No-threads card — show only if no threads exist about this piece
+    if (noPromptCard) noPromptCard.style.display = threads.length ? 'none' : '';
+
+    // Threads list — show only if threads exist
     if (!threads.length) {
-      if (promptCard) promptCard.style.display = 'none';
-      if (noPromptCard) noPromptCard.style.display = '';
+      repliesContainer.style.display = 'none';
       return;
     }
 
-    if (noPromptCard) noPromptCard.style.display = 'none';
-    if (promptCard) promptCard.style.display = '';
-
+    repliesContainer.style.display = '';
     const AVATAR_COLORS = ['disc-av-gold', 'disc-av-pink', 'disc-av-sage'];
     let html = `<div class="disc-replies-head">Threads about this piece <span class="disc-count">${threads.length}</span></div>`;
     threads.forEach(t => {
       const f = t.fields;
       const initial = (f['Author Name'] || 'M').charAt(0).toUpperCase();
       const colorClass = AVATAR_COLORS[initial.charCodeAt(0) % AVATAR_COLORS.length];
+      const avatarUrl = f['Author Avatar'] || '';
       html += `
         <div class="disc-reply" style="cursor:pointer" onclick="navigate('forum');setTimeout(()=>openForumThread('${t.id}'),300)">
-          <div class="disc-av ${colorClass}">${initial}</div>
+          <div class="disc-av ${colorClass}" style="${avatarUrl ? `background-image:url(${avatarUrl});background-size:cover;background-position:center;` : ''}">${avatarUrl ? '' : initial}</div>
           <div>
             <div class="disc-reply-name">${f['Author Name'] || 'Member'}</div>
             <div class="disc-reply-text" style="font-weight:500;font-style:normal;">${f['Title'] || ''}</div>
@@ -4266,6 +4271,7 @@ const res = await fetch(`https://parlor-portal.vercel.app/api/threads?libraryTit
     });
     html += `<div class="disc-input-wrap"><button class="disc-join-btn" onclick="navigate('forum')">Go to Reading Room →</button></div>`;
     repliesContainer.innerHTML = html;
+
   } catch(e) {
     console.error('loadLibraryDiscussions error:', e);
   }
