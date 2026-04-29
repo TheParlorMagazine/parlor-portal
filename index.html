@@ -4659,8 +4659,9 @@ if (_activeThread) {
       })
     }).catch(() => {});
 
-    composer.value = '';
-    composer.placeholder = 'What are you thinking? Quote a passage, ask a question, push back...';
+    rteClear('replyEditor');
+const replyEditor = document.getElementById('replyEditor');
+if (replyEditor) replyEditor.dataset.placeholder = 'What are you thinking? Quote a passage, ask a question, push back...';
     _replyParentId = null;
     _replyParentName = null;
 
