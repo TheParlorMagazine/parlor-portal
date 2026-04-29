@@ -5201,6 +5201,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
   const opText = document.querySelector('.op-text');
   if (opText) opText.innerHTML = '';
+  
+  // Clear hardcoded dashboard feed
+  document.querySelectorAll('.feed-item').forEach(el => {
+    el.style.display = 'none';
+  });
 });
   
  // ── Auto-linkify pasted URLs ──
