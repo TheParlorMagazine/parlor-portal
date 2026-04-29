@@ -2852,6 +2852,12 @@ let _libraryItems = [];
       suggestions.classList.remove('visible');
     }
   });
+  document.addEventListener('click', e => {
+  if (!e.target.closest('#composerIdentityTrigger') && !e.target.closest('#composerDropdown')) {
+    const d = document.getElementById('composerDropdown');
+    if (d) d.style.display = 'none';
+  }
+});
 })();
 
 // ── LIBRARY DETAIL TOGGLE ────────────────────────────────
