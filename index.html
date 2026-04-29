@@ -4645,9 +4645,9 @@ if (!body || body === '<br>') return;
       body: JSON.stringify({
         threadId: _activeThread.id,
         body,
-        authorName: window.parlorMember?.name || 'Member',
-        authorMemberId: window.parlorMember?.memberId || '',
-        authorType: 'Member',
+        authorName: _postAsEditor ? 'Parlor Editors' : (window.parlorMember?.name || 'Member'),
+authorMemberId: _postAsEditor ? 'admin' : (window.parlorMember?.memberId || ''),
+authorType: _postAsEditor ? 'editor' : 'Member',
         parentReplyId: _replyParentId || '',
       })
     });
