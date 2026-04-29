@@ -1882,7 +1882,28 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
           </div>
         </div>
 </div>
-
+<!-- ══ RTE LINK MODAL ══ -->
+<div id="rteLinkModalBg" style="display:none;position:fixed;inset:0;background:rgba(26,23,16,0.5);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--paper);border:1px solid var(--border);border-radius:12px;padding:24px;width:420px;max-width:92vw;box-shadow:0 8px 40px rgba(0,0,0,0.18);">
+    <div style="font-family:'thermal-variable',Georgia,serif;font-size:17px;font-weight:500;margin-bottom:16px;">Insert link</div>
+    <label style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:5px;">URL</label>
+    <input id="rteLinkUrl" type="url" placeholder="https://..." 
+      style="width:100%;font-family:'thermal-variable',Georgia,serif;font-size:14px;color:var(--ink);background:var(--white);border:1px solid var(--border);border-radius:8px;padding:9px 12px;outline:none;margin-bottom:16px;transition:border-color 0.15s;"
+      onfocus="this.style.borderColor='var(--pinkborder)'" 
+      onblur="this.style.borderColor='var(--border)'">
+    <label style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:5px;">Display text (optional)</label>
+    <input id="rteLinkText" type="text" placeholder="Leave blank to use URL" 
+      style="width:100%;font-family:'thermal-variable',Georgia,serif;font-size:14px;color:var(--ink);background:var(--white);border:1px solid var(--border);border-radius:8px;padding:9px 12px;outline:none;margin-bottom:20px;transition:border-color 0.15s;"
+      onfocus="this.style.borderColor='var(--pinkborder)'"
+      onblur="this.style.borderColor='var(--border)'">
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <button onclick="closeRteLinkModal()" 
+        style="background:none;border:1px solid var(--border);color:var(--muted);padding:8px 17px;border-radius:8px;font-family:'thermal-variable',Georgia,serif;font-size:13px;cursor:pointer;">Cancel</button>
+      <button onclick="applyRteLink()" 
+        style="background:var(--ink);color:#fff;border:none;padding:8px 20px;border-radius:8px;font-family:'thermal-variable',Georgia,serif;font-size:13px;font-weight:500;cursor:pointer;">Insert link</button>
+    </div>
+  </div>
+</div>
 <script>
 var VERCEL_FORUM_URL = 'https://parlor-portal.vercel.app';
 var _threads_forum = [];
@@ -5013,28 +5034,5 @@ document.addEventListener('DOMContentLoaded', function() {
   if (composerSend) composerSend.onclick = postReply;
 });
 </script>
-      
-<!-- ══ RTE LINK MODAL ══ -->
-<div id="rteLinkModalBg" style="display:none;position:fixed;inset:0;background:rgba(26,23,16,0.5);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:var(--paper);border:1px solid var(--border);border-radius:12px;padding:24px;width:420px;max-width:92vw;box-shadow:0 8px 40px rgba(0,0,0,0.18);">
-    <div style="font-family:'thermal-variable',Georgia,serif;font-size:17px;font-weight:500;margin-bottom:16px;">Insert link</div>
-    <label style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:5px;">URL</label>
-    <input id="rteLinkUrl" type="url" placeholder="https://..." 
-      style="width:100%;font-family:'thermal-variable',Georgia,serif;font-size:14px;color:var(--ink);background:var(--white);border:1px solid var(--border);border-radius:8px;padding:9px 12px;outline:none;margin-bottom:16px;transition:border-color 0.15s;"
-      onfocus="this.style.borderColor='var(--pinkborder)'" 
-      onblur="this.style.borderColor='var(--border)'">
-    <label style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:5px;">Display text (optional)</label>
-    <input id="rteLinkText" type="text" placeholder="Leave blank to use URL" 
-      style="width:100%;font-family:'thermal-variable',Georgia,serif;font-size:14px;color:var(--ink);background:var(--white);border:1px solid var(--border);border-radius:8px;padding:9px 12px;outline:none;margin-bottom:20px;transition:border-color 0.15s;"
-      onfocus="this.style.borderColor='var(--pinkborder)'"
-      onblur="this.style.borderColor='var(--border)'">
-    <div style="display:flex;justify-content:flex-end;gap:10px;">
-      <button onclick="closeRteLinkModal()" 
-        style="background:none;border:1px solid var(--border);color:var(--muted);padding:8px 17px;border-radius:8px;font-family:'thermal-variable',Georgia,serif;font-size:13px;cursor:pointer;">Cancel</button>
-      <button onclick="applyRteLink()" 
-        style="background:var(--ink);color:#fff;border:none;padding:8px 20px;border-radius:8px;font-family:'thermal-variable',Georgia,serif;font-size:13px;font-weight:500;cursor:pointer;">Insert link</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>
