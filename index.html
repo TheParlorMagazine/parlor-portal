@@ -4395,6 +4395,7 @@ async function openForumThread(threadId) {
   _activeThread = thread;
 
   showForumDetail();
+initComposerIdentity();
 
 // Update composer avatar
 const composerAv = document.querySelector('.composer-av');
