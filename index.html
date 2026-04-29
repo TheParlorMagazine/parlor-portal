@@ -4747,7 +4747,8 @@ function rteLink(editorId) {
   document.getElementById('rteLinkUrl').value = '';
   document.getElementById('rteLinkText').value = selectedText;
   const bg = document.getElementById('rteLinkModalBg');
-  bg.style.display = 'flex';
+  bg.style.top = (document.documentElement.scrollTop || document.body.scrollTop) + 'px';
+bg.style.display = 'flex';
   setTimeout(() => document.getElementById('rteLinkUrl').focus(), 50);
 }
 
