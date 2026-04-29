@@ -4416,6 +4416,20 @@ async function openForumThread(threadId) {
 
   showForumDetail();
 
+// Update composer avatar
+const composerAv = document.querySelector('.composer-av');
+if (composerAv) {
+  const avatarUrl = window.parlorMember?.avatar || '';
+  const initial = (window.parlorMember?.name || 'M').charAt(0).toUpperCase();
+  if (avatarUrl) {
+    composerAv.style.backgroundImage = `url(${avatarUrl})`;
+    composerAv.style.backgroundSize = 'cover';
+    composerAv.style.backgroundPosition = 'center';
+    composerAv.textContent = '';
+  } else {
+    composerAv.textContent = initial;
+  }
+}
   const f = thread.fields;
   const CATEGORY_CLASS = {
     'Discussion': 'ttag-discuss',
