@@ -4413,7 +4413,7 @@ function renderForumThreadList() {
       ? `<span class="ttag ttag-qa">Writer Q&A</span>` : '';
 
       return `
-  <div class="thread-card" onclick="openForumThread('${t.id}')">
+  <div class="thread-card" onclick="openThreadPreview('${t.id}')">
     <div class="tav ${colorClass}">${(f['Author Type'] || '').toLowerCase() === 'editor' ? '<img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : initial}</div>
     <div class="thread-body">
           <div class="thread-tags">
@@ -4459,6 +4459,61 @@ function renderForumThreadList() {
       el.textContent = _threads_forum.length;
     }
   });
+}
+function openThreadPreview(threadId) {
+  const thread = _threads_forum.find(t => t.id === threadId);
+  if (!thread) return;
+  _activeThread = thread;
+  const f = thread.fields;
+
+  const CATEGORY_CLASS = {
+    'Discussion': 'ttag-discuss',
+    'Question': 'ttag-discuss',
+    'Essay response': 'ttag-essay',
+    'Library link': 'ttag-library',
+    'Writer Q&A': 'ttag-qa',
+  };
+
+  const catClass = CATEGORY_CLASS[f['Category']] || 'ttag-discuss';
+  document.getElementById('previewTags').innerHTML =
+    `<span class="ttag ${catClass}">${f['Category'] || 'Discussion'}</span>` +
+    (f['Linked Library Item'] ? `<span class="ttag ttag-library">Library link</span>` : '');
+
+  document.getElementById('previewTitle').textContent = f['Title'] || '';
+
+  const initial = (f['Author Name'] || 'M').charAt(0).toUpperCase();
+  const isEditor = (f['Author Type'] || '').toLowerCase() === 'editor';
+  document.getElementById('previewMeta').innerHTML = `
+    <div style="width:22px;height:22px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:500;background:var(--goldlight);flex-shrink:0;">
+      ${isEditor ? `<img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png" style="width:100%;height:100%;object-fit:cover;">` : initial}
+    </div>
+    <span style="font-weight:500;color:var(--ink);">${f['Author Name'] || 'Member'}</span>
+    <div class="meta-dot"></div>
+    <span>${timeAgo(f['Created at'])}</span>
+    <div class="meta-dot"></div>
+    <span>${f['Reply Count'] || 0} replies</span>`;
+
+  const bodyHTML = (f['Body'] || '').split('\n\n').filter(Boolean)
+    .map(p => `<p style="margin-bottom:1em;">${p}</p>`).join('') || `<p>${f['Body'] || ''}</p>`;
+  document.getElementById('previewBody').innerHTML = bodyHTML;
+
+  document.getElementById('previewVotes').innerHTML = `
+    <svg viewBox="0 0 16 16" fill="none" style="width:12px;height:12px"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    ${f['Upvote Count'] || 0} upvotes`;
+  document.getElementById('previewReplies').textContent = `${f['Reply Count'] || 0} replies`;
+
+  document.getElementById('previewOpenBtn').onclick = () => {
+    closeThreadPreview();
+    openForumThread(threadId);
+  };
+
+  document.getElementById('threadPreviewBg').style.display = 'block';
+  document.getElementById('threadPreviewSheet').style.display = 'block';
+}
+
+function closeThreadPreview() {
+  document.getElementById('threadPreviewBg').style.display = 'none';
+  document.getElementById('threadPreviewSheet').style.display = 'none';
 }
 
 // ── Open a thread detail ────────────────────────────────
