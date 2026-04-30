@@ -2309,9 +2309,9 @@ if (isFree && !libItem) {
     body: JSON.stringify({
       title, body, category,
       linkedLibraryItem: libItem || '',
-      authorMemberId: window.parlorMember?.memberId || '',
-      authorName: window.parlorMember?.name || 'Member',
-      authorType: 'Member',
+      authorMemberId: _threadPostAsEditor ? 'admin' : (window.parlorMember?.memberId || ''),
+authorName: _threadPostAsEditor ? 'Parlor Editors' : (window.parlorMember?.name || 'Member'),
+authorType: _threadPostAsEditor ? 'Editor' : 'Member',
     })
   })
   .then(r => r.json())
