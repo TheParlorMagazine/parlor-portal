@@ -4378,7 +4378,7 @@ function renderForumThreadList() {
   if (pinnedBanner && pinned.length) {
     const p = pinned[0];
     const f = p.fields;
-    pinnedBanner.onclick = () => openForumThread(p.id);
+   pinnedBanner.onclick = () => openThreadPreview(p.id);
     pinnedBanner.querySelector('.pinned-title').textContent = f['Title'] || '';
     pinnedBanner.querySelector('.pinned-meta').textContent =
       `${f['Reply Count'] || 0} replies · ${timeAgo(f['Created at'])}`;
