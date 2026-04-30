@@ -2199,7 +2199,11 @@ const isFree = !isAdmin && (!window.parlorMember ||
     document.getElementById('threadLibrarySelect').required = false;
     document.getElementById('threadUpgradeNudge').style.display = 'none';
   }
-
+// Show post-as toggle for admins
+  const threadPostAs = document.getElementById('threadPostAs');
+  if (threadPostAs) threadPostAs.style.display = isAdmin ? '' : 'none';
+  if (isAdmin) initComposerIdentity();
+  
   document.getElementById('newThreadModal').classList.add('open');
 }
 function toggleThreadForm() {
