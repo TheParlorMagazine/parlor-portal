@@ -4908,7 +4908,47 @@ function toggleComposerDropdown() {
   if (!dropdown) return;
   dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
 }
+let _threadPostAsEditor = false;
 
+function toggleThreadPostAsDropdown() {
+  const d = document.getElementById('threadPostAsDropdown');
+  if (d) d.style.display = d.style.display === 'none' ? 'block' : 'none';
+}
+
+function selectThreadPostAs(asEditor) {
+  _threadPostAsEditor = asEditor;
+  document.getElementById('threadPostAsDropdown').style.display = 'none';
+  renderThreadPostAsIdentity();
+}
+
+function renderThreadPostAsIdentity() {
+  const av = document.getElementById('threadPostAsAv');
+  const name = document.getElementById('threadPostAsName');
+  const dropdownAv = document.getElementById('threadPostAsDropdownAv');
+  const dropdownName = document.getElementById('threadPostAsDropdownName');
+
+  const memberName = window.parlorMember?.name || 'You';
+  const avatarUrl = window.parlorMember?.avatar || '';
+  const initial = memberName.charAt(0).toUpperCase();
+
+  if (dropdownAv) {
+    if (avatarUrl) { dropdownAv.style.backgroundImage = `url(${avatarUrl})`; dropdownAv.style.backgroundSize = 'cover'; dropdownAv.textContent = ''; }
+    else { dropdownAv.textContent = initial; }
+  }
+  if (dropdownName) dropdownName.textContent = memberName;
+
+  if (_threadPostAsEditor) {
+    if (av) { av.style.backgroundImage = 'url(https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png)'; av.style.backgroundSize = 'cover'; av.textContent = ''; }
+    if (name) name.textContent = 'Parlor Editors';
+  } else {
+    if (av) {
+      if (avatarUrl) { av.style.backgroundImage = `url(${avatarUrl})`; av.style.backgroundSize = 'cover'; av.textContent = ''; }
+      else { av.style.backgroundImage = ''; av.textContent = initial; }
+    }
+    if (name) name.textContent = memberName;
+  }
+}
+  
 function selectPostAs(asEditor) {
   _postAsEditor = asEditor;
   document.getElementById('composerDropdown').style.display = 'none';
