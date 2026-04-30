@@ -4478,7 +4478,23 @@ function openThreadPreview(threadId) {
   document.getElementById('previewTags').innerHTML =
     `<span class="ttag ${catClass}">${f['Category'] || 'Discussion'}</span>` +
     (f['Linked Library Item'] ? `<span class="ttag ttag-library">Library link</span>` : '');
-
+// Library link card
+  const previewLibLink = document.getElementById('previewLibLink');
+  if (previewLibLink) {
+    if (f['Linked Library Item'] && f['Linked Library Item Title']?.[0]) {
+      previewLibLink.style.display = 'flex';
+      previewLibLink.querySelector('.llc-title').textContent = f['Linked Library Item Title'][0];
+      const linkedRecordId = Array.isArray(f['Linked Library Item']) ? f['Linked Library Item'][0] : null;
+      previewLibLink.onclick = linkedRecordId ? () => {
+        closeThreadPreview();
+        navigate('library');
+        setTimeout(() => openLibraryItem(linkedRecordId), 300);
+      } : null;
+      previewLibLink.style.cursor = linkedRecordId ? 'pointer' : 'default';
+    } else {
+      previewLibLink.style.display = 'none';
+    }
+  }
   document.getElementById('previewTitle').textContent = f['Title'] || '';
 
   const initial = (f['Author Name'] || 'M').charAt(0).toUpperCase();
