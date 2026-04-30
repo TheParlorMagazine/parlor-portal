@@ -946,6 +946,25 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
           <button class="modal-lib-remove" onclick="clearLibraryLink()" title="Remove link">×</button>
         </div>
       </div>
+      <div id="threadPostAs" style="display:none;margin-bottom:14px;">
+  <div style="position:relative;display:inline-block;">
+    <div style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:4px 8px;border:1px solid var(--border);border-radius:20px;" onclick="toggleThreadPostAsDropdown()">
+      <div id="threadPostAsAv" style="width:22px;height:22px;border-radius:50%;background:var(--pink);color:#000;font-size:8px;font-weight:500;display:flex;align-items:center;justify-content:center;overflow:hidden;"></div>
+      <span id="threadPostAsName" style="font-size:12.5px;color:var(--ink);font-weight:500;"></span>
+      <svg viewBox="0 0 10 6" fill="none" style="width:10px;height:10px"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+    <div id="threadPostAsDropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--paper);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);z-index:200;min-width:180px;overflow:hidden;">
+      <div onclick="selectThreadPostAs(false)" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background=''">
+        <div id="threadPostAsDropdownAv" style="width:26px;height:26px;border-radius:50%;background:var(--pink);color:#000;font-size:9.5px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;"></div>
+        <span id="threadPostAsDropdownName" style="font-size:13px;font-weight:500;color:var(--ink);"></span>
+      </div>
+      <div onclick="selectThreadPostAs(true)" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-top:1px solid var(--border);" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background=''">
+        <div style="width:26px;height:26px;border-radius:50%;background-image:url(https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png);background-size:cover;background-position:center;flex-shrink:0;"></div>
+        <span style="font-size:13px;font-weight:500;color:var(--ink);">Parlor Editors</span>
+      </div>
+    </div>
+  </div>
+</div>
       <label class="form-label">Title</label>
       <input class="form-input" id="threadTitleInput" type="text" placeholder="What's on your mind?">
       <label class="form-label">Your thoughts</label>
