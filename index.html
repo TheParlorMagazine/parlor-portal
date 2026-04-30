@@ -2164,12 +2164,16 @@ function openModal() {
   document.getElementById('modalLibLink').style.display = 'none';
   document.getElementById('modalPostFeedback').textContent = '';
 
-  const isFree = !window.parlorMember ||
+  const isAdmin = window.parlorMember?.badges?.some(b =>
+    (typeof b === 'string' ? b : b._id || b.id) === '2324c632-278b-4bf2-a1c0-3c9a45a8ef2b'
+  );
+
+const isFree = !isAdmin && (!window.parlorMember ||
     (!['The Printing Press', "The Reader's Circle"].includes(window.parlorMember.plan) &&
      ![
        'fccb348a-7433-4080-8699-9ef8c0e7a519',
        'c666f321-47e5-40c1-bc2a-565a2f52f64d'
-     ].includes(window.parlorMember.planId));
+     ].includes(window.parlorMember.planId)));
 
   if (isFree) {
     // Free user mode
