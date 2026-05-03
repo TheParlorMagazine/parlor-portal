@@ -2259,6 +2259,11 @@ function clearLibraryLink() {
 function closeModal() {
   document.getElementById('newThreadModal').classList.remove('open');
   _modalLibraryItem = null;
+  window._selectedLibraryItemTitle = null;
+  const lbs = document.getElementById('threadLibrarySearch');
+  if (lbs) lbs.value = '';
+  const lbsug = document.getElementById('threadLibrarySuggestions');
+  if (lbsug) lbsug.style.display = 'none';
 }
 
 function postThread() {
