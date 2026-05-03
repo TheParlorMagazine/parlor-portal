@@ -3588,11 +3588,13 @@ async function sendMessage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          memberId: isAdmin ? r.id : (window.parlorMember?.memberId || ''),
-          memberName: isAdmin ? r.name : (window.parlorMember?.name || 'Member'),
-          subject,
-          firstMessage: body,
-          initiatedBy: isAdmin ? 'Admin' : 'Member',
+  memberId: isAdmin ? r.id : (window.parlorMember?.memberId || ''),
+  memberName: isAdmin ? r.name : (window.parlorMember?.name || 'Member'),
+  subject,
+  firstMessage: body,
+  initiatedBy: isAdmin ? 'Admin' : 'Member',
+  memberAvatar: isAdmin ? '' : (window.parlorMember?.avatar || ''),
+})
         })
       });
       const threadData = await threadRes.json();
