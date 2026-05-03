@@ -2212,7 +2212,6 @@ if (lbs) lbs.value = '';
     window._selectedLibraryItemTitle = null;
 const lbs2 = document.getElementById('threadLibrarySearch');
 if (lbs2) lbs2.value = '';
-    document.getElementById('threadLibrarySelect').required = false;
     document.getElementById('threadUpgradeNudge').style.display = 'none';
   }
 // Show post-as toggle for admins
@@ -2239,7 +2238,8 @@ function openModalWithLibraryItem(title, type) {
   document.getElementById('threadTitleInput').value = '';
   document.getElementById('threadBodyInput').value = '';
   document.getElementById('threadCategorySelect').value = 'Library link';
-  document.getElementById('threadLibrarySelect').value = itemTitle;
+  document.getElementById('threadLibrarySearch').value = itemTitle;
+window._selectedLibraryItemTitle = itemTitle;
   document.getElementById('modalPostFeedback').textContent = '';
 
   // Show linked item banner
@@ -2252,7 +2252,8 @@ function openModalWithLibraryItem(title, type) {
 function clearLibraryLink() {
   _modalLibraryItem = null;
   document.getElementById('modalLibLink').style.display = 'none';
-  document.getElementById('threadLibrarySelect').value = '';
+  document.getElementById('threadLibrarySearch').value = '';
+window._selectedLibraryItemTitle = null;
   if (document.getElementById('threadCategorySelect').value === 'Library link') {
     document.getElementById('threadCategorySelect').value = 'Discussion';
   }
