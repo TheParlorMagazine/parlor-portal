@@ -34,6 +34,7 @@ module.exports = async function handler(req, res) {
               'Author Name': authorName,
               'Author Member ID': authorMemberId,
               'Author Type': authorType || 'member',
+              'Author Avatar': req.body.authorAvatar || '',
               'Upvote Count': 0,
               'Parent Reply ID': parentReplyId || '',
             }
