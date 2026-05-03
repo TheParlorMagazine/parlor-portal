@@ -2265,7 +2265,7 @@ function postThread() {
   const title    = document.getElementById('threadTitleInput').value.trim();
   const body     = document.getElementById('threadBodyInput').value.trim();
   const category = document.getElementById('threadCategorySelect').value;
-  const libItem  = document.getElementById('threadLibrarySelect').value;
+  const libItem = window._selectedLibraryItemTitle || document.getElementById('threadLibrarySearch')?.value.trim() || '';
   const feedback = document.getElementById('modalPostFeedback');
   const btn      = document.getElementById('modalPostBtn');
 
