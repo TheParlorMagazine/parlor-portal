@@ -997,16 +997,11 @@ html,body{font-family:'thermal-variable','Georgia',serif;background:var(--paper)
           </select>
         </div>
         <div><label class="form-label">Link to library item</label>
-         <select class="form-select" id="threadLibrarySelect">
-  <option value="" disabled selected>Select an article</option>
-  <option value="The Samizdat Underground: Literature as Survival">The Samizdat Underground</option>
-  <option value="WPA Labor Series: The Right to Organise">WPA Labor Series</option>
-  <option value="The Wretched of the Earth">Wretched of the Earth</option>
-  <option value="Notes Toward a Politics of Location">Notes Toward a Politics of Location</option>
-  <option value="I Am Not Your Negro">I Am Not Your Negro</option>
-  <option value="Conversation with adrienne maree brown">adrienne maree brown conversation</option>
-</select>
-        </div>
+  <div style="position:relative;">
+    <input type="text" id="threadLibrarySearch" class="form-input" style="margin-bottom:0;" placeholder="Search library..." oninput="searchLibraryForModal(this.value)" autocomplete="off">
+    <div id="threadLibrarySuggestions" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--paper);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.08);z-index:300;overflow:hidden;margin-top:4px;max-height:200px;overflow-y:auto;"></div>
+  </div>
+</div>
       </div>
       <div id="threadUpgradeNudge" style="display:none;margin-top:-6px;margin-bottom:14px;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);">
   🔒 Start open discussions and explore full forum access with a <a href="https://www.theparlormagazine.com/checkout-relay?planId=fccb348a-7433-4080-8699-9ef8c0e7a519" target="_top" style="color:var(--ink);font-weight:500;text-underline-offset:3px;">Membership</a>
