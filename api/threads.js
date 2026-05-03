@@ -38,6 +38,7 @@ if (req.method === 'GET') {
               'Author Name': authorName,
               'Author Member ID': authorMemberId,
               'Author Type': authorType || 'member',
+              'Author Avatar': req.body.authorAvatar || '',
               Category: category,
               'Linked Library Item': linkedLibraryItem ? [linkedLibraryItem] : [],
               'Upvote Count': 0,
