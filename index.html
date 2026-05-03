@@ -4962,21 +4962,16 @@ function renderThreadPostAsIdentity() {
   const name = document.getElementById('threadPostAsName');
   const dropdownAv = document.getElementById('threadPostAsDropdownAv');
   const dropdownName = document.getElementById('threadPostAsDropdownName');
-
   const memberName = window.parlorMember?.name || 'You';
   const avatarUrl = window.parlorMember?.avatar || '';
   const initial = memberName.charAt(0).toUpperCase();
 
   if (dropdownAv) {
     if (avatarUrl) {
-      dropdownAv.style.backgroundImage = `url(${avatarUrl})`;
-      dropdownAv.style.backgroundSize = 'cover';
-      dropdownAv.style.backgroundPosition = 'center';
-      dropdownAv.style.background = '';
+      dropdownAv.style.cssText = `width:26px;height:26px;border-radius:50%;background-image:url(${avatarUrl});background-size:cover;background-position:center;flex-shrink:0;color:#000;font-size:9.5px;font-weight:500;display:flex;align-items:center;justify-content:center;`;
       dropdownAv.textContent = '';
     } else {
-      dropdownAv.style.backgroundImage = '';
-      dropdownAv.style.background = 'var(--pink)';
+      dropdownAv.style.cssText = `width:26px;height:26px;border-radius:50%;background:var(--pink);color:#000;font-size:9.5px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;`;
       dropdownAv.textContent = initial;
     }
   }
@@ -4984,23 +4979,17 @@ function renderThreadPostAsIdentity() {
 
   if (_threadPostAsEditor) {
     if (av) {
-      av.style.backgroundImage = 'url(https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png)';
-      av.style.backgroundSize = 'cover';
-      av.style.backgroundPosition = 'center';
+      av.style.cssText = `width:22px;height:22px;border-radius:50%;background-image:url(https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png);background-size:cover;background-position:center;overflow:hidden;color:#000;font-size:8px;font-weight:500;display:flex;align-items:center;justify-content:center;`;
       av.textContent = '';
     }
     if (name) name.textContent = 'Parlor Editors';
   } else {
     if (av) {
       if (avatarUrl) {
-        av.style.backgroundImage = `url(${avatarUrl})`;
-        av.style.backgroundSize = 'cover';
-        av.style.backgroundPosition = 'center';
-        av.style.background = '';
+        av.style.cssText = `width:22px;height:22px;border-radius:50%;background-image:url(${avatarUrl});background-size:cover;background-position:center;overflow:hidden;color:#000;font-size:8px;font-weight:500;display:flex;align-items:center;justify-content:center;`;
         av.textContent = '';
       } else {
-        av.style.backgroundImage = '';
-        av.style.background = 'var(--pink)';
+        av.style.cssText = `width:22px;height:22px;border-radius:50%;background:var(--pink);color:#000;font-size:8px;font-weight:500;display:flex;align-items:center;justify-content:center;overflow:hidden;`;
         av.textContent = initial;
       }
     }
