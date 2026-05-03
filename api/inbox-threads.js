@@ -44,6 +44,7 @@ module.exports = async function handler(req, res) {
               'Last Message Date': now,
               'Status': 'Unread',
               'Initiated By': initiatedBy || 'Admin',
+              'Member Avatar': req.body.memberAvatar || '',
             }
           }]
         }),
