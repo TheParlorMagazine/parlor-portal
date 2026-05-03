@@ -4813,7 +4813,7 @@ function renderParticipants(replies) {
     const f = r.fields;
     const name = f['Author Name'] || 'Member';
     const type = f['Author Type'] || 'member';
-    if (!authorMap[name]) authorMap[name] = { name, type, count: 0 };
+    if (!authorMap[name]) authorMap[name] = { name, type, count: 0, avatar: f['Author Avatar'] || '' };
     authorMap[name].count++;
   });
 
