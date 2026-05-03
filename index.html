@@ -2322,6 +2322,7 @@ if (linkRequired && !libItem) {
       authorMemberId: _threadPostAsEditor ? 'admin' : (window.parlorMember?.memberId || ''),
 authorName: _threadPostAsEditor ? 'Parlor Editors' : (window.parlorMember?.name || 'Member'),
 authorType: _threadPostAsEditor ? 'Editor' : 'Member',
+      authorAvatar: _threadPostAsEditor ? '' : (window.parlorMember?.avatar || ''),
     })
   })
   .then(r => r.json())
