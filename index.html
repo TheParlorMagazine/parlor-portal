@@ -4926,22 +4926,21 @@ function renderThreadPostAsIdentity() {
   const avatarUrl = window.parlorMember?.avatar || '';
   const initial = memberName.charAt(0).toUpperCase();
 
-  // Populate dropdown personal option
   if (dropdownAv) {
     if (avatarUrl) {
       dropdownAv.style.backgroundImage = `url(${avatarUrl})`;
       dropdownAv.style.backgroundSize = 'cover';
       dropdownAv.style.backgroundPosition = 'center';
-      dropdownAv.style.backgroundRepeat = 'no-repeat';
+      dropdownAv.style.background = '';
       dropdownAv.textContent = '';
     } else {
       dropdownAv.style.backgroundImage = '';
+      dropdownAv.style.background = 'var(--pink)';
       dropdownAv.textContent = initial;
     }
   }
   if (dropdownName) dropdownName.textContent = memberName;
 
-  // Populate the trigger pill
   if (_threadPostAsEditor) {
     if (av) {
       av.style.backgroundImage = 'url(https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png)';
@@ -4956,10 +4955,11 @@ function renderThreadPostAsIdentity() {
         av.style.backgroundImage = `url(${avatarUrl})`;
         av.style.backgroundSize = 'cover';
         av.style.backgroundPosition = 'center';
-        av.style.backgroundRepeat = 'no-repeat';
+        av.style.background = '';
         av.textContent = '';
       } else {
         av.style.backgroundImage = '';
+        av.style.background = 'var(--pink)';
         av.textContent = initial;
       }
     }
