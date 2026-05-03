@@ -2217,7 +2217,7 @@ if (lbs2) lbs2.value = '';
 // Show post-as toggle for admins
   const threadPostAs = document.getElementById('threadPostAs');
   if (threadPostAs) threadPostAs.style.display = isAdmin ? '' : 'none';
-  if (isAdmin) renderThreadPostAsIdentity();
+  if (isAdmin) setTimeout(renderThreadPostAsIdentity, 50);
   
   document.getElementById('newThreadModal').classList.add('open');
 }
