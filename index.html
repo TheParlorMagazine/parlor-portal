@@ -4761,7 +4761,7 @@ async function loadReplies(threadId) {
       replyEl.className = 'reply';
       replyEl.dataset.replyId = reply.id;
       replyEl.innerHTML = `
-        <div class="reply-av ${colorClass}">${initial}</div>
+        <div class="reply-av ${colorClass}" style="${f['Author Avatar'] ? `background-image:url(${f['Author Avatar']});background-size:cover;background-position:center;` : ''}">${f['Author Avatar'] ? '' : initial}</div>
         <div>
           <div class="reply-header">
             <span class="reply-name">${f['Author Name'] || 'Member'}</span>
