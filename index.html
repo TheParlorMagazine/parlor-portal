@@ -3335,7 +3335,7 @@ function renderThreadList() {
     return `
       <div class="inbox-msg-item ${isUnread ? 'unread' : ''} ${_activeThreadId === t.id ? 'active' : ''}" onclick="openThread('${t.id}')">
         <div class="inbox-msg-row">
-          <div class="inbox-msg-av ${!window._inboxIsAdmin ? 'av-parlor-editors' : ''}">${!window._inboxIsAdmin ? '' : initial}</div>
+          <div class="inbox-msg-av" style="${f['Member Avatar'] ? `background-image:url(${f['Member Avatar']});background-size:cover;background-position:center;` : ''}">${f['Member Avatar'] ? '' : initial}</div>
           <div class="inbox-msg-sender">${name}</div>
           <div class="inbox-msg-time">${date}</div>
           ${isUnread ? '<div class="inbox-msg-unread-dot"></div>' : ''}
