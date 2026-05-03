@@ -4873,6 +4873,7 @@ if (!body || body === '<br>') return;
         authorName: _postAsEditor ? 'Parlor Editors' : (window.parlorMember?.name || 'Member'),
 authorMemberId: _postAsEditor ? 'admin' : (window.parlorMember?.memberId || ''),
 authorType: _postAsEditor ? 'Editor' : 'Member',
+        authorAvatar: _postAsEditor ? '' : (window.parlorMember?.avatar || ''),
         parentReplyId: _replyParentId || '',
       })
     });
