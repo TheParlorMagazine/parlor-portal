@@ -2197,8 +2197,9 @@ const isFree = !isAdmin && (!window.parlorMember ||
     document.getElementById('threadBodyInput').placeholder = 'Respond to the article, ask a question, or share a passage that struck you…';
     document.getElementById('threadCategorySelect').value = 'Essay response';
     document.getElementById('threadCategorySelect').disabled = true;
-    document.getElementById('threadLibrarySelect').value = '';
-    document.getElementById('threadLibrarySelect').required = true;
+    window._selectedLibraryItemTitle = null;
+const lbs = document.getElementById('threadLibrarySearch');
+if (lbs) lbs.value = '';
     // Show upgrade nudge
     document.getElementById('threadUpgradeNudge').style.display = 'block';
   } else {
@@ -2208,8 +2209,9 @@ const isFree = !isAdmin && (!window.parlorMember ||
     document.getElementById('threadBodyInput').value = '';
     document.getElementById('threadBodyInput').placeholder = 'Share what you\'re thinking, a question, a passage that struck you...';
     document.getElementById('threadCategorySelect').value = 'Discussion';
-    document.getElementById('threadCategorySelect').disabled = false;
-    document.getElementById('threadLibrarySelect').value = '';
+    window._selectedLibraryItemTitle = null;
+const lbs2 = document.getElementById('threadLibrarySearch');
+if (lbs2) lbs2.value = '';
     document.getElementById('threadLibrarySelect').required = false;
     document.getElementById('threadUpgradeNudge').style.display = 'none';
   }
