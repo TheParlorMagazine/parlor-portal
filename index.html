@@ -5376,7 +5376,9 @@ if ((f['Author Type'] || '').toLowerCase() === 'editor') {
 }
     el.querySelector('.feed-tag').className = `feed-tag ${catClass}`;
     el.querySelector('.feed-tag').textContent = f['Category'] || 'Discussion';
-    el.querySelector('.feed-title').textContent = f['Title'] || '';
+    const createdAt = new Date(f['Created at']);
+const isNew = (Date.now() - createdAt.getTime()) < 86400000;
+el.querySelector('.feed-title').innerHTML = (f['Pinned'] ? '<span style="font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-right:6px;">📌 Pinned</span>' : '') + (f['Title'] || '') + (isNew ? ' <span style="background:var(--pink);color:#000;font-size:9px;font-weight:500;padding:2px 6px;border-radius:20px;margin-left:6px;vertical-align:middle;">New</span>' : '');
     el.querySelector('.feed-meta').textContent = `${f['Author Name'] || 'Member'} · ${timeAgo(f['Created at'])} · ${f['Reply Count'] || 0} replies`;
     el.querySelector('.feed-votes').textContent = `↑ ${f['Upvote Count'] || 0}`;
     el.style.display = 'flex';
