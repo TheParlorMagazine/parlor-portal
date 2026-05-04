@@ -3332,13 +3332,13 @@ function renderThreadList() {
     const date = f['Last Message Date'] ? new Date(f['Last Message Date']).toLocaleDateString(undefined, { month:'short', day:'numeric' }) : '';
     const name = window._inboxIsAdmin ? (f['Member Name'] || 'Member') : 'Parlor Editors';
     const initial = name.charAt(0).toUpperCase();
-    return `
-      <div class="inbox-msg-item ${isUnread ? 'unread' : ''} ${_activeThreadId === t.id ? 'active' : ''}" onclick="openThread('${t.id}')">
-        <div class="inbox-msg-row">
-          const avatarStyle = window._inboxIsAdmin 
+      const avatarStyle = window._inboxIsAdmin 
   ? (f['Member Avatar'] ? 'background-image:url(' + f['Member Avatar'] + ');background-size:cover;background-position:center;' : '')
   : 'background-image:url(https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png);background-size:cover;background-position:center;';
 const avatarContent = window._inboxIsAdmin ? (f['Member Avatar'] ? '' : initial) : '';
+    return `
+      <div class="inbox-msg-item ${isUnread ? 'unread' : ''} ${_activeThreadId === t.id ? 'active' : ''}" onclick="openThread('${t.id}')">
+        <div class="inbox-msg-row">
 <div class="inbox-msg-av" style="${avatarStyle}">${avatarContent}</div>
           <div class="inbox-msg-time">${date}</div>
           ${isUnread ? '<div class="inbox-msg-unread-dot"></div>' : ''}
