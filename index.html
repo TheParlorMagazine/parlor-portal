@@ -4518,7 +4518,7 @@ function renderForumThreadList() {
 
       return `
   <div class="thread-card" onclick="openThreadPreview('${t.id}')">
-    <div class="tav ${(f['Author Type'] || '').toLowerCase() === 'editor' || f['Author Avatar'] ? '' : colorClass}" style="${(f['Author Type'] || '').toLowerCase() === 'editor' ? 'background:none;' : f['Author Avatar'] ? `background:none;background-image:url(${f['Author Avatar']});background-size:cover;background-position:center;` : ''}">${(f['Author Type'] || '').toLowerCase() === 'editor' ? '<img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : f['Author Avatar'] ? '' : initial}</div>
+    <div class="tav ${colorClass}" style="${(f['Author Type'] || '').toLowerCase() === 'editor' ? 'background:none;' : f['Author Avatar'] ? 'background:none;background-image:url(' + f['Author Avatar'] + ');background-size:cover;background-position:center;' : ''}">${(f['Author Type'] || '').toLowerCase() === 'editor' ? '<img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : f['Author Avatar'] ? '' : initial}</div>
           <div class="thread-tags">
             ${qaTag || `<span class="ttag ${catClass}">${f['Category'] || 'Discussion'}</span>`}
             ${libLink}
