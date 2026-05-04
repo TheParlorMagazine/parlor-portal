@@ -68,7 +68,10 @@ if (req.method === 'GET') {
 
     const updates = {};
     if (incrementUpvote !== undefined) updates['Upvote Count'] = (fields['Upvote Count'] || 0) + incrementUpvote;
-    if (incrementReplyCount !== undefined) updates['Reply Count'] = Math.max(0, (fields['Reply Count'] || 0) + incrementReplyCount);
+    if (incrementReplyCount !== undefined) {
+  updates['Reply Count'] = Math.max(0, (fields['Reply Count'] || 0) + incrementReplyCount);
+  updates['Last Activity'] = new Date().toISOString();
+}
 
     const patchRes = await fetch(
       `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Threads/${threadId}`,
