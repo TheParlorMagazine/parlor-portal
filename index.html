@@ -5354,7 +5354,9 @@ async function loadDashboardFeed() {
     'Essay response': 'tag-e', 'Library link': 'tag-e', 'Writer Q&A': 'tag-q',
   };
 
-  const top = _threads_forum.slice(0, 3);
+  const pinned = _threads_forum.filter(t => t.fields['Pinned']);
+const unpinned = _threads_forum.filter(t => !t.fields['Pinned']);
+const top = [...pinned, ...unpinned].slice(0, 3);
 
   allFeedItems.forEach((el, i) => {
     const t = top[i];
