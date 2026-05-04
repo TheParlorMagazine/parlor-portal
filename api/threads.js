@@ -13,7 +13,7 @@ if (req.method === 'GET') {
     filter = encodeURIComponent(`{Published}=1`);
   }
   const response = await fetch(
-    `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Threads?filterByFormula=${filter}&sort[0][field]=Created at&sort[0][direction]=desc`,
+    `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Threads?filterByFormula=${filter}&sort[0][field]=Last%20Activity&sort[0][direction]=desc&sort[1][field]=Created%20at&sort[1][direction]=desc`,
     { headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` } }
   );
   const data = await response.json();
