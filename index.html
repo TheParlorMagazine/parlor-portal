@@ -3598,8 +3598,7 @@ async function sendMessage() {
   initiatedBy: isAdmin ? 'Admin' : 'Member',
   memberAvatar: isAdmin ? '' : (window.parlorMember?.avatar || ''),
 })
-        })
-      });
+        });
       const threadData = await threadRes.json();
       const newThreadId = String(threadData.records?.[0]?.id || '');
 console.log('newThreadId:', newThreadId);
