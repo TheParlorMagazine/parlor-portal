@@ -3365,6 +3365,26 @@ async function openThread(threadId) {
   const thread = _threads.find(t => t.id === threadId);
   const f = thread?.fields || {};
   document.getElementById('inboxSubject').textContent = f['Subject'] || '';
+  const bodyAv = document.querySelector('.inbox-body-av');
+if (bodyAv) {
+  if (window._inboxIsAdmin) {
+    const memberAvatar = f['Member Avatar'] || '';
+    const memberInitial = (f['Member Name'] || 'M').charAt(0).toUpperCase();
+    if (memberAvatar) {
+      bodyAv.style.backgroundImage = 'url(' + memberAvatar + ')';
+      bodyAv.style.backgroundSize = 'cover';
+      bodyAv.style.backgroundPosition = 'center';
+      bodyAv.textContent = '';
+    } else {
+      bodyAv.textContent = memberInitial;
+    }
+  } else {
+    bodyAv.style.backgroundImage = 'url(https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png)';
+    bodyAv.style.backgroundSize = 'cover';
+    bodyAv.style.backgroundPosition = 'center';
+    bodyAv.textContent = '';
+  }
+}
   document.getElementById('inboxSender').textContent = window._inboxIsAdmin ? (f['Member Name'] || 'Member') : 'Parlor Editors';
   document.getElementById('inboxDate').textContent = f['Last Message Date'] ? new Date(f['Last Message Date']).toLocaleDateString() : '';
 
