@@ -5341,13 +5341,11 @@ async function loadDashboardFeed() {
   const allFeedItems = document.querySelectorAll('.feed-item');
   if (!allFeedItems.length) return;
 
-  if (!_threads_forum.length) {
-    try {
-      const res = await fetch(`https://parlor-portal.vercel.app/api/threads`);
-      const data = await res.json();
-      _threads_forum = data.records || [];
-    } catch(e) { return; }
-  }
+  try {
+  const res = await fetch(`https://parlor-portal.vercel.app/api/threads`);
+  const data = await res.json();
+  _threads_forum = data.records || [];
+} catch(e) { return; }
 
   const CATEGORY_CLASS = {
     'Discussion': 'tag-d', 'Question': 'tag-d',
