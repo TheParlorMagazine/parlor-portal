@@ -44,6 +44,7 @@ if (req.method === 'GET') {
               'Upvote Count': 0,
               'Reply Count': 0,
               Published: true,
+              'Last Activity': new Date().toISOString(),
             }
           }]
         }),
