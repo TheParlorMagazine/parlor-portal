@@ -3335,8 +3335,10 @@ function renderThreadList() {
     return `
       <div class="inbox-msg-item ${isUnread ? 'unread' : ''} ${_activeThreadId === t.id ? 'active' : ''}" onclick="openThread('${t.id}')">
         <div class="inbox-msg-row">
-          <div class="inbox-msg-av" style="${window._inboxIsAdmin ? (f['Member Avatar'] ? `background-image:url(${f['Member Avatar']});background-size:cover;background-position:center;` : '') : 'background-image:url(https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png);background-size:cover;background-position:center;'}">${window._inboxIsAdmin ? (f['Member Avatar'] ? '' : initial) : ''}</div>
-          <div class="inbox-msg-sender">${name}</div>
+          const avatarStyle = window._inboxIsAdmin 
+  ? (f['Member Avatar'] ? 'background-image:url(' + f['Member Avatar'] + ');background-size:cover;background-position:center;' : '')
+  : 'background-image:url(https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png);background-size:cover;background-position:center;';
+const avatarContent = window._inboxIsAdmin ? (f['Member Avatar'] ? '' : initial) : '';
           <div class="inbox-msg-time">${date}</div>
           ${isUnread ? '<div class="inbox-msg-unread-dot"></div>' : ''}
         </div>
