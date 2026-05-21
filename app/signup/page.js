@@ -14,29 +14,35 @@ export default function SignupPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  async function handleSignup(e) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+ async function handleSignup(e) {
+  e.preventDefault()
+  setLoading(true)
+  setError('')
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: name },
-        emailRedirectTo: `${window.location.origin}/auth/callback`
-      }
-    })
-
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-      return
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { full_name: name },
+      emailRedirectTo: `${window.location.origin}/auth/callback`
     }
+  })
 
-    setSuccess(true)
+  if (error) {
+    setError(error.message)
     setLoading(false)
+    return
   }
+
+  await fetch('/api/send-welcome', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, name })
+  })
+
+  setSuccess(true)
+  setLoading(false)
+}
 
   if (success) return (
     <div style={styles.wrap}>
