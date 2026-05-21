@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 const PLAN_URLS = {
@@ -8,7 +8,7 @@ const PLAN_URLS = {
   'price_1TZZ1cK5nyqAS54Z7Epcfq6E': 'https://buy.stripe.com/dRm14o3wo2ihbYhbSJabK01',
 }
 
-export default function CheckoutRelay() {
+function CheckoutRelayInner() {
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -26,5 +26,17 @@ export default function CheckoutRelay() {
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Georgia,serif',color:'#888'}}>
       Redirecting to checkout...
     </div>
+  )
+}
+
+export default function CheckoutRelay() {
+  return (
+    <Suspense fallback={
+      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Georgia,serif',color:'#888'}}>
+        Loading...
+      </div>
+    }>
+      <CheckoutRelayInner />
+    </Suspense>
   )
 }
