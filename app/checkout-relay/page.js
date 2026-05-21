@@ -4,8 +4,8 @@ import { useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 const PLAN_URLS = {
-  'https://buy.stripe.com/4gMcN65Ew9KJbYh4qhabK00',
-  'https://buy.stripe.com/dRm14o3wo2ihbYhbSJabK01',
+  'price_1TZYzvK5nyqAS54Z7D3vJBMV': 'https://buy.stripe.com/4gMcN65Ew9KJbYh4qhabK00',
+  'price_1TZZ1cK5nyqAS54Z7Epcfq6E': 'https://buy.stripe.com/dRm14o3wo2ihbYhbSJabK01',
 }
 
 export default function CheckoutRelay() {
