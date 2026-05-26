@@ -480,24 +480,46 @@ function AddWriterModal({ supabase, onSave, onClose }) {
   const [profileUrl, setProfileUrl] = useState('')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [dragging, setDragging] = useState(false)
   const [error, setError] = useState('')
   const photoFileRef = useRef(null)
+
+  async function uploadFile(file) {
+    if (!file || !file.type.startsWith('image/')) return
+    setUploading(true)
+    const ext = file.name.split('.').pop()
+    const filePath = `authors/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const { error: uploadError } = await supabase.storage.from('Media').upload(filePath, file, {
+      cacheControl: '3600', contentType: file.type,
+    })
+    if (!uploadError) {
+      const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(filePath)
+      setPhotoUrl(publicUrl)
+    }
+    setUploading(false)
+  }
 
   async function handlePhotoUpload(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    setUploading(true)
-    const ext = file.name.split('.').pop()
-    const path = `authors/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error: uploadError } = await supabase.storage.from('Media').upload(path, file, {
-      cacheControl: '3600', contentType: file.type,
-    })
-    if (!uploadError) {
-      const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)
-      setPhotoUrl(publicUrl)
-    }
-    setUploading(false)
+    await uploadFile(file)
     e.target.value = ''
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault()
+    setDragging(true)
+  }
+
+  function handleDragLeave() {
+    setDragging(false)
+  }
+
+  function handleDrop(e) {
+    e.preventDefault()
+    setDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) uploadFile(file)
   }
 
   async function handleSave() {
@@ -524,10 +546,25 @@ function AddWriterModal({ supabase, onSave, onClose }) {
 
         {/* Photo */}
         <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ width: '52px', height: '52px', borderRadius: '50%', overflow: 'hidden', background: '#1c1c1c', border: '1px solid rgba(255,255,255,0.07)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {photoUrl
-              ? <img src={photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <span style={{ fontSize: '20px', color: '#333' }}>👤</span>
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            title="Drag an image here to upload"
+            style={{
+              width: '52px', height: '52px', borderRadius: '50%', overflow: 'hidden',
+              background: dragging ? 'rgba(242,184,198,0.12)' : '#1c1c1c',
+              border: `1.5px ${dragging ? 'dashed #f2b8c6' : 'solid rgba(255,255,255,0.07)'}`,
+              flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'border-color 0.15s, background 0.15s',
+              cursor: 'copy',
+            }}
+          >
+            {uploading
+              ? <span style={{ fontSize: '10px', color: '#f2b8c6' }}>…</span>
+              : photoUrl
+                ? <img src={photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <span style={{ fontSize: '20px', color: dragging ? '#f2b8c6' : '#333' }}>👤</span>
             }
           </div>
           <div style={{ flex: 1 }}>
@@ -982,6 +1019,7 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
   const [savedId, setSavedId] = useState(articleId)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [previewUrl, setPreviewUrl] = useState(null)
   const [lastSavedAt, setLastSavedAt] = useState(null)
   const [savedDisplay, setSavedDisplay] = useState('')
   const [isDirty, setIsDirty] = useState(false)
@@ -1107,6 +1145,14 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [])
 
+  useEffect(() => {
+    function onMessage(e) {
+      if (e.data === 'close-preview') setPreviewUrl(null)
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
+
   async function handlePreview() {
     const slug = formRef.current.slug
     if (!slug || slug === 'article-slug') {
@@ -1123,10 +1169,8 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
           body: JSON.stringify({ slug, code: formRef.current.body || '' }),
         })
       } catch {}
-      window.open(`/preview/${slug}`, '_blank')
-    } else {
-      window.open(`/post/${slug}`, '_blank')
     }
+    setPreviewUrl(`/preview/${slug}`)
   }
 
   async function handleDelete() {
@@ -1569,6 +1613,20 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
           )}
         </aside>
       </div>
+
+      {/* Preview modal */}
+      {previewUrl && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          display: 'flex', flexDirection: 'column',
+          background: '#000',
+        }}>
+          <iframe
+            src={previewUrl}
+            style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }}
+          />
+        </div>
+      )}
     </div>
   )
 }

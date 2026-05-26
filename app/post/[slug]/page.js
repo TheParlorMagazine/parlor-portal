@@ -6,6 +6,8 @@ import ArticleBody from './_components/ArticleBody'
 import { createClient } from '../../../lib/supabase'
 import { existsSync } from 'fs'
 import path from 'path'
+import SiteHeader from '../../_components/SiteHeader'
+import SiteFooter from '../../_components/SiteFooter'
 
 const db = createClient()
 
@@ -49,7 +51,7 @@ export async function generateMetadata({ params }) {
   const { slug } = await params
   const { data: article } = await db
     .from('articles')
-    .select('title, subtitle, cover_image, published_at, author_name')
+    .select('title, subtitle, cover_image_url, published_at, author_name')
     .eq('slug', slug)
     .eq('published', true)
     .single()
@@ -68,15 +70,15 @@ export async function generateMetadata({ params }) {
       type: 'article',
       publishedTime: article.published_at || undefined,
       authors: article.author_name ? [article.author_name] : [],
-      images: article.cover_image
-        ? [{ url: article.cover_image, width: 1200, height: 630, alt: article.title }]
+      images: article.cover_image_url
+        ? [{ url: article.cover_image_url, width: 1200, height: 630, alt: article.title }]
         : [],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: article.cover_image ? [article.cover_image] : [],
+      images: article.cover_image_url ? [article.cover_image_url] : [],
     },
   }
 }
@@ -135,7 +137,7 @@ export default async function ArticlePage({ params }) {
   if (article.category) {
     const { data } = await db
       .from('articles')
-      .select('id, slug, title, cover_image, category, published_at, author_name')
+      .select('id, slug, title, cover_image_url, category, published_at, author_name')
       .eq('published', true)
       .eq('category', article.category)
       .neq('id', article.id)
@@ -146,7 +148,7 @@ export default async function ArticlePage({ params }) {
   if (related.length === 0) {
     const { data } = await db
       .from('articles')
-      .select('id, slug, title, cover_image, category, published_at, author_name')
+      .select('id, slug, title, cover_image_url, category, published_at, author_name')
       .eq('published', true)
       .neq('id', article.id)
       .order('published_at', { ascending: false })
@@ -181,7 +183,7 @@ export default async function ArticlePage({ params }) {
     '@type': 'Article',
     headline: article.title,
     description: article.subtitle || '',
-    image: article.cover_image || undefined,
+    image: article.cover_image_url || undefined,
     datePublished: article.published_at || undefined,
     author: article.author_name
       ? { '@type': 'Person', name: article.author_name }
@@ -199,64 +201,7 @@ export default async function ArticlePage({ params }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Nav */}
-      <header style={{
-        borderBottom: '1px solid #f0e8e0',
-        padding: '0 24px',
-        position: 'sticky', top: 0,
-        background: 'rgba(255,255,255,0.95)',
-        backdropFilter: 'blur(8px)',
-        zIndex: 50,
-      }}>
-        <div style={{
-          maxWidth: '900px', margin: '0 auto',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          height: '56px',
-        }}>
-          <a
-            href="/"
-            style={{
-              fontFamily: "'Playfair Display', Georgia, serif",
-              fontSize: '20px', fontWeight: '700', color: '#0a0a0a',
-              textDecoration: 'none', letterSpacing: '-0.01em',
-            }}
-          >
-            The Parlor
-          </a>
-          <nav style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-            <a
-              href="/plans"
-              style={{
-                fontFamily: "'Source Serif 4', Georgia, serif",
-                fontSize: '14px', color: '#555', textDecoration: 'none',
-              }}
-            >
-              Membership
-            </a>
-            {userId ? (
-              <a
-                href="/dashboard"
-                style={{
-                  fontFamily: "'Source Serif 4', Georgia, serif",
-                  fontSize: '14px', color: '#c4364a', textDecoration: 'none',
-                }}
-              >
-                My account
-              </a>
-            ) : (
-              <a
-                href="/login"
-                style={{
-                  fontFamily: "'Source Serif 4', Georgia, serif",
-                  fontSize: '14px', color: '#c4364a', textDecoration: 'none',
-                }}
-              >
-                Sign in
-              </a>
-            )}
-          </nav>
-        </div>
-      </header>
+      <SiteHeader hideOnScroll />
 
       <main style={{ background: '#fff', minHeight: '100vh' }}>
 
@@ -338,10 +283,10 @@ export default async function ArticlePage({ params }) {
         </div>
 
         {/* Cover image */}
-        {article.cover_image && (
+        {article.cover_image_url && (
           <div style={{ maxWidth: '900px', margin: '0 auto 48px', padding: '0 24px' }}>
             <img
-              src={article.cover_image}
+              src={article.cover_image_url}
               alt={article.title}
               style={{
                 width: '100%', aspectRatio: '16/9', objectFit: 'cover',
@@ -444,9 +389,9 @@ export default async function ArticlePage({ params }) {
                   href={`/post/${r.slug}`}
                   style={{ textDecoration: 'none', display: 'block' }}
                 >
-                  {r.cover_image && (
+                  {r.cover_image_url && (
                     <img
-                      src={r.cover_image}
+                      src={r.cover_image_url}
                       alt={r.title}
                       style={{
                         width: '100%', aspectRatio: '3/2', objectFit: 'cover',
@@ -485,25 +430,7 @@ export default async function ArticlePage({ params }) {
 
       </main>
 
-      {/* Footer */}
-      <footer style={{ borderTop: '1px solid #f0e8e0', padding: '32px 24px', textAlign: 'center' }}>
-        <a
-          href="/"
-          style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: '16px', fontWeight: '700', color: '#0a0a0a',
-            textDecoration: 'none', display: 'block', marginBottom: '10px',
-          }}
-        >
-          The Parlor
-        </a>
-        <div style={{
-          fontFamily: "'Source Serif 4', Georgia, serif",
-          fontSize: '13px', color: '#bbb',
-        }}>
-          © {new Date().getFullYear()} The Parlor Magazine
-        </div>
-      </footer>
+      <SiteFooter />
     </>
   )
 }
