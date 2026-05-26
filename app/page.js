@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createClient } from '../lib/supabase'
 
 const FIRST_EAGER = 5
 const LOOKAHEAD = 3
@@ -93,8 +94,20 @@ export default function HomePage() {
   const [memberOpen, setMemberOpen] = useState(false)
   const [ribbonCollapsed, setRibbonCollapsed] = useState(false)
   const [ribbonScrolling, setRibbonScrolling] = useState(false)
+  const [member, setMember] = useState(null)
   const aboutRef = useRef(null)
   const memberRef = useRef(null)
+  const supabase = createClient()
+
+  useEffect(() => {
+    async function loadMember() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase.from('members').select('role').eq('id', user.id).single()
+      setMember({ ...user, role: data?.role ?? null })
+    }
+    loadMember()
+  }, [])
 
   const items = ARTICLES.filter(a => !a.featured).sort((a, b) => parseDateSafe(b.date) - parseDateSafe(a.date))
   const slidesHTML = items.map(slideHTML).join('')
@@ -812,10 +825,45 @@ export default function HomePage() {
                 <div className={`member-chevron${memberOpen ? ' open' : ''}`}></div>
               </button>
               <div className={`member-dropdown${memberOpen ? ' open' : ''}`}>
-                <a href="/dashboard" className="member-dropdown-item">
-                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 2h3a1 1 0 011 1v10a1 1 0 01-1 1h-3M7 11l3-3-3-3M10 8H3"/></svg>
-                  Log in
-                </a>
+                {member ? (
+                  <>
+                    <a href="/dashboard" className="member-dropdown-item">
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="5" height="5" rx="0.5"/><rect x="9" y="2" width="5" height="5" rx="0.5"/><rect x="2" y="9" width="5" height="5" rx="0.5"/><rect x="9" y="9" width="5" height="5" rx="0.5"/></svg>
+                      Member Portal
+                    </a>
+                    <a href="/account/subscriptions" className="member-dropdown-item">
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4h12M2 8h8M2 12h10"/></svg>
+                      My subscriptions
+                    </a>
+                    <a href="/account/wishlist" className="member-dropdown-item">
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 13.5S2 9.5 2 5.5A3.5 3.5 0 018 3a3.5 3.5 0 016 2c0 4-6 8.5-6 8.5z"/></svg>
+                      Wishlist
+                    </a>
+                    <a href="/account/orders" className="member-dropdown-item">
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 2h2l2 7h6l2-5H5"/><circle cx="7" cy="13" r="1"/><circle cx="12" cy="13" r="1"/></svg>
+                      My orders
+                    </a>
+                    <a href="/account/settings" className="member-dropdown-item">
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/></svg>
+                      Account settings
+                    </a>
+                    {member.role === 'admin' && (
+                      <a href="/admin" className="member-dropdown-item">
+                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 2l1.5 3h3l-2.5 2 1 3L8 8.5 5 10l1-3L3.5 5h3z"/></svg>
+                        Admin Dashboard
+                      </a>
+                    )}
+                    <a href="/logout" className="member-dropdown-item">
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 2h3a1 1 0 011 1v10a1 1 0 01-1 1h-3M7 11l3-3-3-3M10 8H3"/></svg>
+                      Log out
+                    </a>
+                  </>
+                ) : (
+                  <a href="/login" className="member-dropdown-item">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 2h3a1 1 0 011 1v10a1 1 0 01-1 1h-3M7 11l3-3-3-3M10 8H3"/></svg>
+                    Log in
+                  </a>
+                )}
               </div>
             </div>
 

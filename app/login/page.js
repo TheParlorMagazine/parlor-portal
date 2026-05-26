@@ -11,6 +11,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [googleHovered, setGoogleHovered] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -30,7 +32,21 @@ export default function LoginPage() {
       return
     }
 
-    router.push('/dashboard')
+    router.push('/')
+  }
+
+  async function handleForgotPassword() {
+    if (!email) {
+      setError('Enter your email address above, then click "Forgot password?".')
+      return
+    }
+    setResetLoading(true)
+    setError('')
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`
+    })
+    setResetLoading(false)
+    setResetSent(true)
   }
 
   async function handleGoogleLogin() {
@@ -150,17 +166,35 @@ export default function LoginPage() {
           </div>
 
           <div style={{ marginBottom: '24px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '10px',
-              fontWeight: '500',
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              color: '#888',
-              marginBottom: '6px'
-            }}>
-              Password
-            </label>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <label style={{
+                fontSize: '10px',
+                fontWeight: '500',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                color: '#888',
+              }}>
+                Password
+              </label>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={resetLoading}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  fontSize: '11px',
+                  color: '#888',
+                  cursor: resetLoading ? 'not-allowed' : 'pointer',
+                  fontFamily: 'Georgia, serif',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: '2px',
+                }}
+              >
+                {resetLoading ? 'Sending…' : 'Forgot password?'}
+              </button>
+            </div>
             <input
               type="password"
               value={password}
@@ -208,6 +242,17 @@ export default function LoginPage() {
           >
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
+
+          {resetSent && (
+            <div style={{
+              marginTop: '16px',
+              fontSize: '13px',
+              color: '#555',
+              textAlign: 'center',
+            }}>
+              Check your inbox — we sent a password reset link to <strong>{email}</strong>.
+            </div>
+          )}
         </form>
       </div>
     </div>

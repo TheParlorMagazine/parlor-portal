@@ -17,7 +17,7 @@ export default function AuthCallback() {
         router.push('/login?error=confirmation_failed')
         return
       }
-      router.push('/dashboard')
+      router.push('/')
     }
     handleCallback()
   }, [])
