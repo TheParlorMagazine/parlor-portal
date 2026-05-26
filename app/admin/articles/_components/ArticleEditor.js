@@ -1107,6 +1107,28 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [])
 
+  async function handlePreview() {
+    const slug = formRef.current.slug
+    if (!slug || slug === 'article-slug') {
+      setSaveError('A slug is required before previewing.')
+      return
+    }
+    const saved = await performSave({ published: false })
+    if (!saved) return
+    if (formRef.current.template === 'custom') {
+      try {
+        await fetch('/api/save-custom-component', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, code: formRef.current.body || '' }),
+        })
+      } catch {}
+      window.open(`/preview/${slug}`, '_blank')
+    } else {
+      window.open(`/post/${slug}`, '_blank')
+    }
+  }
+
   async function handleDelete() {
     const title = formRef.current.title || 'this article'
     if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return
@@ -1252,6 +1274,9 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
           </span>
           <button onClick={handleSaveDraft} disabled={saving} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.12)', color: '#888', padding: '7px 16px', borderRadius: '6px', fontSize: '12px', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: "'Source Serif 4', Georgia, serif", opacity: saving ? 0.6 : 1 }}>
             Save Draft
+          </button>
+          <button onClick={handlePreview} disabled={saving} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.12)', color: '#888', padding: '7px 16px', borderRadius: '6px', fontSize: '12px', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: "'Source Serif 4', Georgia, serif", opacity: saving ? 0.6 : 1 }}>
+            Preview
           </button>
           <button onClick={handlePublish} disabled={saving} style={{ background: '#f2b8c6', color: '#0a0a0a', border: 'none', padding: '7px 18px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: "'Source Serif 4', Georgia, serif", opacity: saving ? 0.7 : 1 }}>
             {form.published ? 'Save & Publish' : 'Publish'}
