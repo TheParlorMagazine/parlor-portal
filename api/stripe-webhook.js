@@ -37,6 +37,35 @@ module.exports = async function handler(req, res) {
 
     case 'checkout.session.completed': {
       const session = event.data.object
+
+      // ── One-time item purchase ────────────────────────────
+      if (session.mode === 'payment' && session.metadata?.articleId) {
+        const memberId = session.client_reference_id
+
+        // Look up member by stripe customer if client_reference_id is missing
+        let resolvedMemberId = memberId
+        if (!resolvedMemberId && session.customer) {
+          const { data: m } = await supabase
+            .from('members')
+            .select('id')
+            .eq('stripe_customer_id', session.customer)
+            .single()
+          resolvedMemberId = m?.id
+        }
+
+        if (resolvedMemberId) {
+          await supabase.from('item_purchases').insert([{
+            member_id: resolvedMemberId,
+            article_id: session.metadata.articleId,
+            item_type: session.metadata.itemType || 'article',
+            stripe_payment_intent_id: session.payment_intent,
+            amount: session.amount_total ? session.amount_total / 100 : 2.50,
+          }])
+        }
+        break
+      }
+
+      // ── Subscription signup ───────────────────────────────
       if (session.mode !== 'subscription') break
 
       // Get the subscription to find the price
