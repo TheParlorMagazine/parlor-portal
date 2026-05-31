@@ -341,7 +341,7 @@ export default function RichTextEditor({ content, onChange, placeholder }) {
 
   return (
     <>
-      <div style={{ border: '1px solid #e8e8e8', borderRadius: '10px', overflow: 'visible', background: '#fff', position: 'relative' }}>
+      <div style={{ border: '1px solid #e8e8e8', borderRadius: '10px', overflow: 'hidden', background: '#fff', position: 'relative', minHeight: '60vh' }}>
         <style dangerouslySetInnerHTML={{ __html: editorCSS }} />
 
         {/* Toolbar */}
