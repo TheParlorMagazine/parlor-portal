@@ -48,7 +48,9 @@ const HIGHLIGHT_COLORS = [
 const editorCSS = `
 .ProseMirror {
   outline: none;
-  min-height: 480px;
+  min-height: calc(100vh - 300px);
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
   font-family: 'Source Serif 4', Georgia, serif;
   font-size: 17px;
   line-height: 1.78;
