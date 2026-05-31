@@ -1329,10 +1329,10 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
       </div>
 
       {/* ─── Content row ─────────────────────────────────────── */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
         {/* Writing surface */}
-        <div style={{ flex: 1, overflowY: 'auto', background: '#fff', padding: '56px 72px 80px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', background: '#fff', padding: '56px 32px 80px 72px' }}>
           <div style={{ maxWidth: '700px' }}>
 
             <AutoTextarea
