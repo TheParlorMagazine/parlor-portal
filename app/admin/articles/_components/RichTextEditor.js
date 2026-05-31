@@ -1,6 +1,6 @@
 'use client'
 
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
@@ -15,6 +15,7 @@ import { AudioBlock } from './AudioBlockExtension'
 import { VideoBlock } from './VideoBlockExtension'
 import { EmbedBlock } from './EmbedBlockExtension'
 import MediaLibraryModal from './MediaLibraryModal'
+import { createClient } from '../../../../lib/supabase'
 
 // ── Color palettes ───────────────────────────────────────────
 const TEXT_COLORS = [
@@ -101,8 +102,9 @@ const editorCSS = `
 .ProseMirror a { color: #b07085; text-decoration: underline; cursor: pointer; }
 .ProseMirror img {
   max-width: 100%; height: auto;
-  border-radius: 6px; display: block; margin: 1.2em 0;
+  border-radius: 6px; display: block;
 }
+.ProseMirror::after { content: ''; display: table; clear: both; }
 .ProseMirror mark { border-radius: 2px; padding: 0 2px; }
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
@@ -278,17 +280,181 @@ function ColorPalette({ colors, onSelect, currentColor }) {
   )
 }
 
+// ── Image alignment icons ─────────────────────────────────────
+function ImgAlignLeft() {
+  return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="2" width="6" height="5" rx="1" fill="currentColor" opacity="0.75"/><line x1="9" y1="3.5" x2="14" y2="3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="9" y1="5.5" x2="14" y2="5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="1" y1="9.5" x2="14" y2="9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="1" y1="12" x2="11" y2="12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+}
+function ImgAlignCenter() {
+  return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="4" y="1" width="7" height="5" rx="1" fill="currentColor" opacity="0.75"/><line x1="1" y1="8.5" x2="14" y2="8.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="3" y1="11" x2="12" y2="11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+}
+function ImgAlignRight() {
+  return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="8" y="2" width="6" height="5" rx="1" fill="currentColor" opacity="0.75"/><line x1="1" y1="3.5" x2="6" y2="3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="1" y1="5.5" x2="6" y2="5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="1" y1="9.5" x2="14" y2="9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="4" y1="12" x2="14" y2="12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+}
+function ImgFloatLeft() {
+  return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" fill="currentColor" opacity="0.75"/><line x1="9" y1="2" x2="14" y2="2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="9" y1="4.5" x2="14" y2="4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="9" y1="7" x2="14" y2="7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="1" y1="10" x2="14" y2="10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="1" y1="12.5" x2="14" y2="12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+}
+function ImgFloatRight() {
+  return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="8" y="1" width="6" height="6" rx="1" fill="currentColor" opacity="0.75"/><line x1="1" y1="2" x2="6" y2="2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="1" y1="4.5" x2="6" y2="4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="1" y1="7" x2="6" y2="7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="1" y1="10" x2="14" y2="10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="1" y1="12.5" x2="14" y2="12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+}
+
+const IMG_ALIGN_OPTIONS = [
+  { key: 'left',        icon: <ImgAlignLeft />,  label: 'Align left' },
+  { key: 'center',      icon: <ImgAlignCenter />, label: 'Align center' },
+  { key: 'right',       icon: <ImgAlignRight />,  label: 'Align right' },
+  { key: 'float-left',  icon: <ImgFloatLeft />,   label: 'Float left — text wraps right' },
+  { key: 'float-right', icon: <ImgFloatRight />,  label: 'Float right — text wraps left' },
+]
+
+const imgInputStyle = {
+  width: '100%', padding: '5px 9px',
+  background: '#f7f7f7', border: '1px solid #e0e0e0',
+  borderRadius: '5px', fontSize: '12px',
+  fontFamily: "'Source Serif 4', Georgia, serif",
+  outline: 'none', boxSizing: 'border-box', color: '#333',
+}
+
+// ── Image NodeView ────────────────────────────────────────────
+function ImageNodeView({ node, updateAttributes, selected }) {
+  const [hovered, setHovered] = useState(false)
+  const { src, alt, caption, align } = node.attrs
+  const showControls = selected || hovered
+
+  const wrapperStyle = {
+    display: 'block', margin: '1.2em 0',
+    ...(align === 'float-left'  && { float: 'left',  marginRight: '1.2em', marginBottom: '0.5em', marginLeft: 0,  maxWidth: '50%' }),
+    ...(align === 'float-right' && { float: 'right', marginLeft:  '1.2em', marginBottom: '0.5em', marginRight: 0, maxWidth: '50%' }),
+  }
+
+  const imgStyle = {
+    maxWidth: '100%', height: 'auto', display: 'block', borderRadius: '6px',
+    ...(align === 'center' && { marginLeft: 'auto', marginRight: 'auto' }),
+    ...(align === 'right'  && { marginLeft: 'auto', marginRight: 0 }),
+    ...(align === 'left'   && { marginLeft: 0, marginRight: 'auto' }),
+    ...(showControls && { outline: '2px solid #f2b8c6', outlineOffset: '2px' }),
+  }
+
+  return (
+    <NodeViewWrapper style={wrapperStyle} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      <figure style={{ margin: 0, position: 'relative' }} contentEditable={false}>
+        <img src={src} alt={alt || ''} style={imgStyle} />
+
+        {showControls && (
+          <div
+            contentEditable={false}
+            style={{
+              position: 'absolute', top: '8px', left: '50%', transform: 'translateX(-50%)',
+              display: 'flex', gap: '2px', padding: '4px 6px',
+              background: 'rgba(10,10,10,0.82)', borderRadius: '8px',
+              zIndex: 10, boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            {IMG_ALIGN_OPTIONS.map(a => (
+              <button
+                key={a.key}
+                type="button"
+                title={a.label}
+                onMouseDown={e => { e.preventDefault(); e.stopPropagation(); updateAttributes({ align: a.key }) }}
+                style={{
+                  width: '28px', height: '28px', border: 'none', borderRadius: '5px',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: align === a.key ? 'rgba(242,184,198,0.3)' : 'transparent',
+                  color: align === a.key ? '#f2b8c6' : 'rgba(255,255,255,0.6)',
+                  transition: 'background 0.1s, color 0.1s',
+                }}
+              >
+                {a.icon}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {showControls && (
+          <div contentEditable={false} style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <input
+              type="text"
+              value={alt || ''}
+              onChange={e => updateAttributes({ alt: e.target.value })}
+              onKeyDown={e => e.stopPropagation()}
+              onKeyUp={e => e.stopPropagation()}
+              placeholder="Alt text…"
+              style={imgInputStyle}
+            />
+            <input
+              type="text"
+              value={caption || ''}
+              onChange={e => updateAttributes({ caption: e.target.value })}
+              onKeyDown={e => e.stopPropagation()}
+              onKeyUp={e => e.stopPropagation()}
+              placeholder="Caption (optional)…"
+              style={imgInputStyle}
+            />
+          </div>
+        )}
+
+        {!showControls && caption && (
+          <figcaption style={{
+            marginTop: '6px', fontSize: '13px', color: '#888',
+            fontStyle: 'italic', lineHeight: '1.4',
+            fontFamily: "'Source Serif 4', Georgia, serif",
+          }}>
+            {caption}
+          </figcaption>
+        )}
+      </figure>
+    </NodeViewWrapper>
+  )
+}
+
+// ── Custom Image extension ────────────────────────────────────
+const CustomImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      align: {
+        default: 'center',
+        parseHTML: el => el.getAttribute('data-align') || 'center',
+        renderHTML: attrs => ({ 'data-align': attrs.align }),
+      },
+      caption: {
+        default: '',
+        parseHTML: el => el.getAttribute('data-caption') || '',
+        renderHTML: attrs => attrs.caption ? { 'data-caption': attrs.caption } : {},
+      },
+    }
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageNodeView)
+  },
+})
+
 // ── Main editor ──────────────────────────────────────────────
 export default function RichTextEditor({ content, onChange, placeholder }) {
   const [openMenu, setOpenMenu] = useState(null)
   const [showMediaLibrary, setShowMediaLibrary] = useState(false)
+
+  const supabase = createClient()
+  const editorRef = useRef(null)
+  const uploadFnRef = useRef(null)
+
+  async function uploadBodyImage(file) {
+    const ext = file.name.split('.').pop()
+    const path = `body/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const { error } = await supabase.storage.from('Media').upload(path, file, {
+      cacheControl: '3600', contentType: file.type,
+    })
+    if (error) return null
+    const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)
+    return publicUrl
+  }
+  uploadFnRef.current = uploadBodyImage
 
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] } }),
       Underline,
       Link.configure({ openOnClick: false, autolink: false }),
-      Image,
+      CustomImage,
       Placeholder.configure({ placeholder: placeholder || 'Write your article…' }),
       TextStyle,
       Color,
@@ -300,8 +466,28 @@ export default function RichTextEditor({ content, onChange, placeholder }) {
     ],
     content: content || '',
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
-    editorProps: { attributes: { spellcheck: 'true' } },
+    editorProps: {
+      attributes: { spellcheck: 'true' },
+      handleDrop: (view, event, _slice, moved) => {
+        if (moved) return false
+        const files = Array.from(event.dataTransfer?.files || [])
+        const imgFile = files.find(f => f.type.startsWith('image/'))
+        if (!imgFile) return false
+        event.preventDefault()
+        const posResult = view.posAtCoords({ left: event.clientX, top: event.clientY })
+        uploadFnRef.current?.(imgFile).then(url => {
+          if (!url || !editorRef.current) return
+          const pos = posResult?.pos ?? editorRef.current.state.doc.content.size
+          editorRef.current.chain()
+            .insertContentAt(pos, { type: 'image', attrs: { src: url, align: 'center' } })
+            .run()
+        })
+        return true
+      },
+    },
   })
+
+  useEffect(() => { editorRef.current = editor }, [editor])
 
   useEffect(() => {
     if (editor && content && editor.isEmpty) {

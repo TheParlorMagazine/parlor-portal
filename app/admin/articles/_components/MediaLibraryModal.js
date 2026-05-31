@@ -11,6 +11,7 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
   const [files, setFiles] = useState([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -40,6 +41,19 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
     await loadFiles()
     setUploading(false)
     e.target.value = ''
+  }
+
+  async function handleDrop(e) {
+    e.preventDefault()
+    setDragOver(false)
+    const file = Array.from(e.dataTransfer.files || []).find(f => f.type.startsWith('image/'))
+    if (!file) return
+    setUploading(true)
+    const ext = file.name.split('.').pop()
+    const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    await supabase.storage.from('Media').upload(path, file, { cacheControl: '3600', contentType: file.type })
+    await loadFiles()
+    setUploading(false)
   }
 
   function getUrl(name) {
@@ -133,7 +147,27 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
         </div>
 
         {/* Grid */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+        <div
+          style={{
+            flex: 1, overflowY: 'auto', padding: '16px 20px', position: 'relative',
+            outline: dragOver ? '2px dashed rgba(242,184,198,0.5)' : '2px dashed transparent',
+            outlineOffset: '-8px', transition: 'outline-color 0.15s',
+          }}
+          onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false) }}
+          onDrop={handleDrop}
+        >
+          {dragOver && (
+            <div style={{
+              position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', zIndex: 10, pointerEvents: 'none',
+              background: 'rgba(242,184,198,0.04)',
+            }}>
+              <span style={{ color: '#f2b8c6', fontSize: '13px', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+                Drop to upload
+              </span>
+            </div>
+          )}
           {loading ? (
             <div style={{ textAlign: 'center', padding: '48px 0', color: '#444', fontSize: '13px' }}>
               Loading…

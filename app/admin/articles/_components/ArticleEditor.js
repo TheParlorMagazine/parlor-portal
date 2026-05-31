@@ -79,6 +79,7 @@ function initForm(data) {
     plan_access: ["Reader's Circle", 'Printing Press'],
     stripe_product_id: null, stripe_price_id: null,
     meta_title: '', meta_description: '',
+    cover_image_alt: '', cover_image_caption: '',
   }
   return {
     ...data,
@@ -92,6 +93,8 @@ function initForm(data) {
     paywall_type: (data.paywall_type === 'members' || !data.paywall_type) ? 'free' : data.paywall_type,
     paywall_price: data.paywall_price != null ? String(data.paywall_price) : '2.50',
     plan_access: Array.isArray(data.plan_access) ? data.plan_access : ["Reader's Circle", 'Printing Press'],
+    cover_image_alt: data.cover_image_alt || '',
+    cover_image_caption: data.cover_image_caption || '',
   }
 }
 
@@ -128,6 +131,8 @@ function buildPayload(form, overrides = {}) {
     stripe_price_id: form.stripe_price_id || null,
     meta_title: form.meta_title || null,
     meta_description: form.meta_description || null,
+    cover_image_alt: form.cover_image_alt || null,
+    cover_image_caption: form.cover_image_caption || null,
     ...overrides,
   }
 }
@@ -1542,6 +1547,12 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
           {/* Cover Image */}
           <SideSection title="Cover Image">
             <CoverImagePicker value={form.cover_image_url} onChange={v => update('cover_image_url', v)} />
+            {form.cover_image_url && (
+              <div style={{ marginTop: '10px' }}>
+                <SideInput label="Alt Text" value={form.cover_image_alt} onChange={v => update('cover_image_alt', v)} placeholder="Describe the image…" />
+                <SideInput label="Caption" value={form.cover_image_caption} onChange={v => update('cover_image_caption', v)} placeholder="Optional caption…" />
+              </div>
+            )}
           </SideSection>
 
           {/* Author */}
