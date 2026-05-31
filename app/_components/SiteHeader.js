@@ -58,6 +58,7 @@ export default function SiteHeader({ hideOnScroll = false }) {
           --sh-pink: #f2b8c6;
           --sh-white: #ffffff;
         }
+        body { margin: 0; }
         .site-header {
           background: var(--sh-white);
           position: sticky;
