@@ -1332,8 +1332,8 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
         {/* Writing surface */}
-        <div style={{ flex: 1, overflowY: 'auto', background: '#fff', padding: '56px 32px 80px 72px' }}>
-          <div style={{ maxWidth: '700px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', background: '#fff', padding: '56px 40px 80px' }}>
+          <div>
 
             <AutoTextarea
               value={form.title}
