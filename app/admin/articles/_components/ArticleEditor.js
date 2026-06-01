@@ -1278,13 +1278,13 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
       }}>
         {/* Left: breadcrumb */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-          <Link href="/admin/articles" style={{ color: '#555', textDecoration: 'none', fontSize: '12px', letterSpacing: '0.02em' }}>
+          <Link href="/admin/articles" style={{ color: '#aaa', textDecoration: 'none', fontSize: '12px', letterSpacing: '0.02em' }}>
             ← Articles
           </Link>
           {form.title && (
             <>
-              <span style={{ color: '#2a2a2a', fontSize: '12px' }}>/</span>
-              <span style={{ fontSize: '12px', color: '#777', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ color: '#555', fontSize: '12px' }}>/</span>
+              <span style={{ fontSize: '12px', color: '#aaa', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {form.title}
               </span>
             </>
@@ -1292,7 +1292,7 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
         </div>
 
         {/* Center: word count */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '11px', color: '#444' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '11px', color: '#aaa' }}>
           {words > 0 && (
             <span style={{ fontFamily: "'Source Serif 4', Georgia, serif" }}>
               {words.toLocaleString()} words · {mins} min read

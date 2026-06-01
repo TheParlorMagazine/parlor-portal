@@ -81,7 +81,7 @@ export default function AdminArticlesPage() {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '48px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <Link href="/admin" style={{ color: '#444', textDecoration: 'none', fontSize: '12px' }}>
+            <Link href="/admin" style={{ color: '#aaa', textDecoration: 'none', fontSize: '12px' }}>
               ← Admin
             </Link>
             <h1 style={{
@@ -92,7 +92,7 @@ export default function AdminArticlesPage() {
               Articles
             </h1>
             <span style={{
-              fontSize: '12px', color: '#444',
+              fontSize: '12px', color: '#aaa',
               background: '#1a1a1a', padding: '3px 10px', borderRadius: '20px',
             }}>
               {articles.length}
@@ -131,7 +131,7 @@ export default function AdminArticlesPage() {
               borderBottom: '1px solid rgba(255,255,255,0.04)',
             }}>
               {['Title', 'Author', 'Category', 'Date', 'Status', ''].map(h => (
-                <div key={h} style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3a3a3a' }}>
+                <div key={h} style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#aaa' }}>
                   {h}
                 </div>
               ))}
@@ -223,7 +223,7 @@ function ArticleRow({ article, isLast, deleting, onDelete }) {
             fontFamily: "'Source Serif 4', Georgia, serif",
           }}
         >
-          {deleting ? '…' : 'Del'}
+          {deleting ? '…' : 'Delete'}
         </button>
       </div>
     </div>
