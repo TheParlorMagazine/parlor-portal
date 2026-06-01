@@ -53,6 +53,7 @@ export default function EditArticlePage() {
 
       setArticle(data)
       setLoading(false)
+      window.scrollTo(0, 0)
     }
 
     init()
