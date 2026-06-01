@@ -1497,7 +1497,7 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
                     value={scheduleDraft}
                     onChange={e => setScheduleDraft(e.target.value)}
                     min={toLocalInput(new Date().toISOString())}
-                    style={{ ...sideInput, marginBottom: '8px' }}
+                    style={{ ...sideInput, marginBottom: '8px', accentColor: '#f2b8c6' }}
                   />
                   {scheduleDraft && (
                     <button
