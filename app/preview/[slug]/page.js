@@ -3,8 +3,6 @@ import path from 'path'
 import { createClient } from '@supabase/supabase-js'
 import ArticleBody from '../../post/[slug]/_components/ArticleBody'
 import PreviewBanner from './PreviewBanner'
-import SiteHeader from '../../_components/SiteHeader'
-import SiteFooter from '../../_components/SiteFooter'
 
 // Use service role key to bypass RLS so drafts are visible in preview
 const db = createClient(
@@ -30,7 +28,7 @@ function parseHtmlAttrs(str) {
 function parseBodySegments(html) {
   if (!html) return []
   const segments = []
-  const pat = /<div\s+data-type="(audio-block|video-block|embed-block)"([^>]*)>\s*<\/div>/gi
+  const pat = /<div\s+data-type="(audio-block|video-block|embed-block|album-block)"([^>]*)>\s*<\/div>/gi
   let last = 0
   let m
   while ((m = pat.exec(html)) !== null) {
@@ -93,7 +91,6 @@ export default async function PreviewPage({ params }) {
   return (
     <>
       <PreviewBanner />
-      <SiteHeader hideOnScroll />
 
       <main style={{ background: '#fff', minHeight: '100vh' }}>
 
@@ -261,8 +258,6 @@ export default async function PreviewPage({ params }) {
         )}
 
       </main>
-
-      <SiteFooter />
     </>
   )
 }

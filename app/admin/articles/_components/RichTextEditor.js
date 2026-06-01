@@ -14,6 +14,7 @@ import { useEffect, useState, useRef } from 'react'
 import { AudioBlock } from './AudioBlockExtension'
 import { VideoBlock } from './VideoBlockExtension'
 import { EmbedBlock } from './EmbedBlockExtension'
+import { AlbumBlock, AlbumInsertModal } from './AlbumBlockExtension'
 import MediaLibraryModal from './MediaLibraryModal'
 import { createClient } from '../../../../lib/supabase'
 
@@ -137,6 +138,9 @@ function IconLink() {
 }
 function IconImage() {
   return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+}
+function IconAlbum() {
+  return <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="1" width="5" height="5" rx="0.5"/><rect x="7" y="1" width="5" height="5" rx="0.5"/><rect x="1" y="7" width="5" height="5" rx="0.5"/><rect x="7" y="7" width="5" height="5" rx="0.5"/></svg>
 }
 function IconAudio() {
   return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
@@ -432,6 +436,7 @@ const CustomImage = Image.extend({
 export default function RichTextEditor({ content, onChange, placeholder }) {
   const [openMenu, setOpenMenu] = useState(null)
   const [showMediaLibrary, setShowMediaLibrary] = useState(false)
+  const [showAlbumModal, setShowAlbumModal] = useState(false)
 
   const supabase = createClient()
   const editorRef = useRef(null)
@@ -463,6 +468,7 @@ export default function RichTextEditor({ content, onChange, placeholder }) {
       AudioBlock,
       VideoBlock,
       EmbedBlock,
+      AlbumBlock,
     ],
     content: content || '',
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
@@ -621,6 +627,9 @@ export default function RichTextEditor({ content, onChange, placeholder }) {
           <TBtn onClick={() => setShowMediaLibrary(true)} active={false} title="Insert image">
             <IconImage />
           </TBtn>
+          <TBtn onClick={() => setShowAlbumModal(true)} active={false} title="Insert album">
+            <IconAlbum />
+          </TBtn>
           <Sep />
 
           {/* Audio / Video / Embed */}
@@ -738,6 +747,19 @@ export default function RichTextEditor({ content, onChange, placeholder }) {
             setShowMediaLibrary(false)
           }}
           onClose={() => setShowMediaLibrary(false)}
+        />
+      )}
+
+      {showAlbumModal && (
+        <AlbumInsertModal
+          onInsert={({ layout, images }) => {
+            editor.chain().focus().insertAlbumBlock({
+              layout,
+              images: JSON.stringify(images),
+            }).run()
+            setShowAlbumModal(false)
+          }}
+          onClose={() => setShowAlbumModal(false)}
         />
       )}
     </>

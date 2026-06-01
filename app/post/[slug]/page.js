@@ -29,7 +29,7 @@ function parseHtmlAttrs(str) {
 function parseBodySegments(html) {
   if (!html) return []
   const segments = []
-  const pat = /<div\s+data-type="(audio-block|video-block|embed-block)"([^>]*)>\s*<\/div>/gi
+  const pat = /<div\s+data-type="(audio-block|video-block|embed-block|album-block)"([^>]*)>\s*<\/div>/gi
   let last = 0
   let m
   while ((m = pat.exec(html)) !== null) {

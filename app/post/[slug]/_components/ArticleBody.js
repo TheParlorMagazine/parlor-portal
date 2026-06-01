@@ -86,6 +86,48 @@ const PROSE_STYLES = `
   }
 `
 
+function AlbumRenderer({ layout, images }) {
+  const captionStyle = { fontSize: '12px', color: '#888', marginTop: '5px', fontStyle: 'italic', lineHeight: '1.4', fontFamily: "'Source Serif 4', Georgia, serif" }
+
+  if (layout === 'carousel') {
+    return (
+      <div style={{ margin: '2em 0', overflowX: 'auto', display: 'flex', gap: '12px', paddingBottom: '8px' }}>
+        {images.map((img, i) => (
+          <figure key={i} style={{ margin: 0, flexShrink: 0 }}>
+            <img src={img.src} alt={img.alt || ''} style={{ height: '260px', width: 'auto', borderRadius: '6px', display: 'block' }} />
+            {img.caption && <figcaption style={captionStyle}>{img.caption}</figcaption>}
+          </figure>
+        ))}
+      </div>
+    )
+  }
+
+  if (layout === 'masonry') {
+    return (
+      <div style={{ margin: '2em 0', columnCount: 2, columnGap: '12px' }}>
+        {images.map((img, i) => (
+          <figure key={i} style={{ margin: '0 0 12px', breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+            <img src={img.src} alt={img.alt || ''} style={{ width: '100%', borderRadius: '6px', display: 'block' }} />
+            {img.caption && <figcaption style={captionStyle}>{img.caption}</figcaption>}
+          </figure>
+        ))}
+      </div>
+    )
+  }
+
+  const cols = layout === 'grid-3' ? 3 : 2
+  return (
+    <div style={{ margin: '2em 0', display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '12px' }}>
+      {images.map((img, i) => (
+        <figure key={i} style={{ margin: 0 }}>
+          <img src={img.src} alt={img.alt || ''} style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: '6px', display: 'block' }} />
+          {img.caption && <figcaption style={captionStyle}>{img.caption}</figcaption>}
+        </figure>
+      ))}
+    </div>
+  )
+}
+
 function truncateHtmlAtParagraphs(html, maxParagraphs) {
   const parts = html.split('</p>')
   if (parts.length <= maxParagraphs + 1) return html
@@ -273,6 +315,13 @@ export default function ArticleBody({
               dangerouslySetInnerHTML={{ __html: html }}
             />
           )
+        }
+
+        if (seg.kind === 'album-block') {
+          let images = []
+          try { images = JSON.parse(seg.attrs['data-images'] || '[]') } catch {}
+          if (!images.length) return null
+          return <AlbumRenderer key={i} layout={seg.attrs['data-layout'] || 'grid-2'} images={images} />
         }
 
         return null
