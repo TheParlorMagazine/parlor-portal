@@ -82,6 +82,7 @@ function initForm(data) {
     stripe_product_id: null, stripe_price_id: null,
     meta_title: '', meta_description: '',
     cover_image_alt: '', cover_image_caption: '',
+    scheduled_at: null,
   }
   return {
     ...data,
@@ -97,6 +98,7 @@ function initForm(data) {
     plan_access: Array.isArray(data.plan_access) ? data.plan_access : ["Reader's Circle", 'Printing Press'],
     cover_image_alt: data.cover_image_alt || '',
     cover_image_caption: data.cover_image_caption || '',
+    scheduled_at: data.scheduled_at || null,
   }
 }
 
@@ -135,6 +137,7 @@ function buildPayload(form, overrides = {}) {
     meta_description: form.meta_description || null,
     cover_image_alt: form.cover_image_alt || null,
     cover_image_caption: form.cover_image_caption || null,
+    scheduled_at: form.scheduled_at || null,
     ...overrides,
   }
 }
@@ -1031,6 +1034,8 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
   const [savedDisplay, setSavedDisplay] = useState('')
   const [isDirty, setIsDirty] = useState(false)
   const [postInfoOpen, setPostInfoOpen] = useState(false)
+  const [schedulingOpen, setSchedulingOpen] = useState(false)
+  const [scheduleDraft, setScheduleDraft] = useState('')
   const [stripeStatus, setStripeStatus] = useState(
     () => initialData?.stripe_product_id ? 'done' : ''
   )
@@ -1262,7 +1267,37 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
     }
   }
 
+  function toLocalInput(iso) {
+    if (!iso) return ''
+    const d = new Date(iso)
+    const pad = n => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
+  function formatScheduled(iso) {
+    if (!iso) return ''
+    const d = new Date(iso)
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+      ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+
+  async function handleSchedule() {
+    if (!scheduleDraft || saving) return
+    const isoDate = new Date(scheduleDraft).toISOString()
+    const ok = await performSave({ scheduled_at: isoDate, published: false })
+    if (ok) {
+      setForm(prev => ({ ...prev, scheduled_at: isoDate, published: false }))
+      setSchedulingOpen(false)
+    }
+  }
+
+  async function handleClearSchedule() {
+    const ok = await performSave({ scheduled_at: null })
+    if (ok) setForm(prev => ({ ...prev, scheduled_at: null }))
+  }
+
   const { words, chars, mins } = getTextStats(form.body)
+  const isScheduled = !!form.scheduled_at && !form.published
 
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: '#0a0a0a' }}>
@@ -1317,11 +1352,11 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '5px',
             padding: '4px 10px', borderRadius: '20px', fontSize: '11px',
-            background: form.published ? 'rgba(242,184,198,0.12)' : 'rgba(255,255,255,0.05)',
-            color: form.published ? '#f2b8c6' : '#555',
+            background: form.published ? 'rgba(242,184,198,0.12)' : isScheduled ? 'rgba(160,180,242,0.12)' : 'rgba(255,255,255,0.05)',
+            color: form.published ? '#f2b8c6' : isScheduled ? '#a0b4f2' : '#555',
           }}>
-            <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: form.published ? '#f2b8c6' : '#444' }} />
-            {form.published ? 'Published' : 'Draft'}
+            <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: form.published ? '#f2b8c6' : isScheduled ? '#a0b4f2' : '#444' }} />
+            {form.published ? 'Published' : isScheduled ? 'Scheduled' : 'Draft'}
           </span>
           <button onClick={handleSaveDraft} disabled={saving} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.12)', color: '#888', padding: '7px 16px', borderRadius: '6px', fontSize: '12px', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: "'Source Serif 4', Georgia, serif", opacity: saving ? 0.6 : 1 }}>
             Save Draft
@@ -1429,6 +1464,62 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
                 Featured
               </span>
               <Toggle checked={form.featured} onChange={v => update('featured', v)} />
+            </div>
+
+            {/* Schedule */}
+            <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={isScheduled || schedulingOpen}
+                  onChange={e => {
+                    if (e.target.checked) {
+                      setSchedulingOpen(true)
+                      setScheduleDraft(form.scheduled_at ? toLocalInput(form.scheduled_at) : '')
+                    } else {
+                      setSchedulingOpen(false)
+                      setScheduleDraft('')
+                      if (form.scheduled_at) handleClearSchedule()
+                    }
+                  }}
+                  style={{ width: '14px', height: '14px', accentColor: '#f2b8c6', cursor: 'pointer', flexShrink: 0 }}
+                />
+                <span style={{ fontSize: '13px', color: isScheduled && !schedulingOpen ? '#a0b4f2' : '#888', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+                  {isScheduled && !schedulingOpen
+                    ? `Scheduled: ${formatScheduled(form.scheduled_at)}`
+                    : 'Schedule for later'}
+                </span>
+              </label>
+              {schedulingOpen && (
+                <div style={{ marginTop: '12px' }}>
+                  <input
+                    type="datetime-local"
+                    value={scheduleDraft}
+                    onChange={e => setScheduleDraft(e.target.value)}
+                    min={toLocalInput(new Date().toISOString())}
+                    style={{ ...sideInput, marginBottom: '8px' }}
+                  />
+                  {scheduleDraft && (
+                    <button
+                      type="button"
+                      onClick={handleSchedule}
+                      disabled={saving}
+                      style={{
+                        width: '100%', padding: '8px',
+                        background: 'rgba(160,180,242,0.15)',
+                        border: '1px solid rgba(160,180,242,0.3)',
+                        borderRadius: '6px', color: '#a0b4f2',
+                        fontSize: '12px', fontWeight: '600',
+                        cursor: saving ? 'not-allowed' : 'pointer',
+                        fontFamily: "'Source Serif 4', Georgia, serif",
+                        opacity: saving ? 0.7 : 1,
+                      }}
+                    >
+                      {saving ? 'Saving…' : isScheduled ? 'Reschedule' : 'Schedule'}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Template */}

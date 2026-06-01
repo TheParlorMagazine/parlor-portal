@@ -45,7 +45,7 @@ export default function AdminArticlesPage() {
 
       const { data } = await supabase
         .from('articles')
-        .select('id, title, author_name, category, created_at, published')
+        .select('id, title, author_name, category, created_at, published, scheduled_at')
         .order('created_at', { ascending: false })
 
       if (cancelled) return
@@ -277,16 +277,21 @@ function ArticleRow({ article, isLast, deleting, onDelete }) {
           : '—'}
       </div>
       <div>
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: '5px',
-          fontSize: '11px',
-          padding: '3px 9px', borderRadius: '20px',
-          background: article.published ? 'rgba(242,184,198,0.12)' : 'rgba(255,255,255,0.04)',
-          color: article.published ? '#f2b8c6' : '#444',
-        }}>
-          <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: article.published ? '#f2b8c6' : '#333', flexShrink: 0 }} />
-          {article.published ? 'Live' : 'Draft'}
-        </span>
+        {(() => {
+          const sched = !article.published && article.scheduled_at && new Date(article.scheduled_at) > new Date()
+          const schedDate = sched ? new Date(article.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
+          return (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: '5px',
+              fontSize: '11px', padding: '3px 9px', borderRadius: '20px',
+              background: article.published ? 'rgba(242,184,198,0.12)' : sched ? 'rgba(160,180,242,0.12)' : 'rgba(255,255,255,0.04)',
+              color: article.published ? '#f2b8c6' : sched ? '#a0b4f2' : '#444',
+            }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: article.published ? '#f2b8c6' : sched ? '#a0b4f2' : '#333', flexShrink: 0 }} />
+              {article.published ? 'Live' : sched ? `Sched. ${schedDate}` : 'Draft'}
+            </span>
+          )
+        })()}
       </div>
       <div style={{ display: 'flex', gap: '7px', justifyContent: 'flex-end' }}>
         <Link href={`/admin/articles/${article.id}/edit`} style={{ textDecoration: 'none' }}>
