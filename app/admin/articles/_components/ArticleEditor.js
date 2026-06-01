@@ -34,6 +34,8 @@ const ARTICLE_CATEGORIES = [
   'Op-Ed',
   'Interview',
   'Investigation',
+  'Review',
+  'Profile',
 ]
 
 function slugify(str) {
