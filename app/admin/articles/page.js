@@ -10,6 +10,7 @@ export default function AdminArticlesPage() {
   const [articles, setArticles] = useState([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState(null)
+  const [exporting, setExporting] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -64,6 +65,80 @@ export default function AdminArticlesPage() {
     setDeletingId(null)
   }
 
+  async function handleExportCSV() {
+    setExporting(true)
+    const { data } = await supabase
+      .from('articles')
+      .select('*')
+      .order('created_at', { ascending: false })
+    setExporting(false)
+    if (!data) return
+
+    function stripHtml(html) {
+      return (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    }
+
+    function countWords(html) {
+      const text = stripHtml(html)
+      return text ? text.split(' ').filter(Boolean).length : 0
+    }
+
+    function parsePaywalledElements(html) {
+      if (!html) return ''
+      const results = []
+      const pat = /<div\s+data-type="(audio-block|video-block)"([^>]*)>/gi
+      let m
+      while ((m = pat.exec(html)) !== null) {
+        const type = m[1]
+        const attrsStr = m[2]
+        const paywalled = /\bpaywalled="true"/.test(attrsStr)
+        if (!paywalled) continue
+        const titleMatch = attrsStr.match(/\btitle="([^"]*)"/)
+        const priceMatch = attrsStr.match(/\bprice="([^"]*)"/)
+        const label = type === 'audio-block' ? 'Audio' : 'Video'
+        const title = titleMatch ? titleMatch[1] : ''
+        const price = priceMatch ? priceMatch[1] : ''
+        results.push(`${label}${title ? `: ${title}` : ''}${price ? ` ($${price})` : ''}`)
+      }
+      return results.join('; ')
+    }
+
+    function csvCell(val) {
+      return `"${String(val ?? '').replace(/"/g, '""')}"`
+    }
+
+    const headers = ['Title', 'Slug', 'Author', 'Vertical', 'Category', 'Tags', 'Status', 'Featured', 'Access', 'Paywall Price', 'Paywalled Elements', 'Publish Date', 'Word Count', 'Excerpt', 'Meta Title', 'Meta Description', 'Cover Image URL']
+
+    const rows = data.map(a => [
+      a.title || '',
+      a.slug || '',
+      a.author_name || '',
+      a.category || '',
+      a.article_category || '',
+      Array.isArray(a.tags) ? a.tags.join('; ') : (a.tags || ''),
+      a.published ? 'Published' : 'Draft',
+      a.featured ? 'Yes' : 'No',
+      a.paywall_type === 'paywall' ? 'Paywall' : 'Free',
+      a.paywall_type === 'paywall' ? (a.paywall_price ?? '') : '',
+      parsePaywalledElements(a.body),
+      a.published_at ? new Date(a.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '',
+      countWords(a.body),
+      a.excerpt || '',
+      a.meta_title || '',
+      a.meta_description || '',
+      a.cover_image_url || '',
+    ])
+
+    const csv = [headers, ...rows].map(row => row.map(csvCell).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `articles-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   if (loading) return (
     <div style={{
       minHeight: '100vh', background: '#0a0a0a',
@@ -98,17 +173,32 @@ export default function AdminArticlesPage() {
               {articles.length}
             </span>
           </div>
-          <Link href="/admin/articles/new" style={{ textDecoration: 'none' }}>
-            <button style={{
-              background: '#f2b8c6', color: '#0a0a0a',
-              border: 'none', padding: '10px 20px', borderRadius: '7px',
-              fontFamily: "'Source Serif 4', Georgia, serif",
-              fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-              letterSpacing: '0.01em',
-            }}>
-              + New Article
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={handleExportCSV}
+              disabled={exporting}
+              style={{
+                background: 'none', border: '1px solid rgba(255,255,255,0.12)',
+                color: '#aaa', padding: '10px 18px', borderRadius: '7px',
+                fontFamily: "'Source Serif 4', Georgia, serif",
+                fontSize: '13px', cursor: exporting ? 'not-allowed' : 'pointer',
+                opacity: exporting ? 0.6 : 1,
+              }}
+            >
+              {exporting ? 'Exporting…' : 'Export CSV'}
             </button>
-          </Link>
+            <Link href="/admin/articles/new" style={{ textDecoration: 'none' }}>
+              <button style={{
+                background: '#f2b8c6', color: '#0a0a0a',
+                border: 'none', padding: '10px 20px', borderRadius: '7px',
+                fontFamily: "'Source Serif 4', Georgia, serif",
+                fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                letterSpacing: '0.01em',
+              }}>
+                + New Article
+              </button>
+            </Link>
+          </div>
         </div>
 
         {/* Table */}
