@@ -3,6 +3,7 @@ import path from 'path'
 import { createClient } from '@supabase/supabase-js'
 import ArticleBody from '../../post/[slug]/_components/ArticleBody'
 import PreviewBanner from './PreviewBanner'
+import ScrollToTop from '../../_components/ScrollToTop'
 
 // Use service role key to bypass RLS so drafts are visible in preview
 const db = createClient(
@@ -90,6 +91,7 @@ export default async function PreviewPage({ params }) {
 
   return (
     <>
+      <ScrollToTop />
       <PreviewBanner />
 
       <main style={{ background: '#fff', minHeight: '100vh' }}>

@@ -8,6 +8,7 @@ import { existsSync } from 'fs'
 import path from 'path'
 import SiteHeader from '../../_components/SiteHeader'
 import SiteFooter from '../../_components/SiteFooter'
+import ScrollToTop from '../../_components/ScrollToTop'
 
 const db = createClient()
 
@@ -196,6 +197,7 @@ export default async function ArticlePage({ params }) {
 
   return (
     <>
+      <ScrollToTop />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
