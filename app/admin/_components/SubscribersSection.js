@@ -52,8 +52,8 @@ function SubscriberProfile({ member, onClose, onUpdate, supabase }) {
   useEffect(() => {
     // Build synthetic timeline from available data
     const events = []
-    if (member.created_at) events.push({ date: member.created_at, event: 'Signed up', detail: member.plan ? `${member.plan} plan` : '' })
-    if (member.role) events.push({ date: member.updated_at || member.created_at, event: 'Role assigned', detail: member.role })
+    if (member.joined_at) events.push({ date: member.joined_at, event: 'Signed up', detail: member.plan ? `${member.plan} plan` : '' })
+    if (member.role) events.push({ date: member.updated_at || member.joined_at, event: 'Role assigned', detail: member.role })
     if (member.onboarding_sent_at) events.push({ date: member.onboarding_sent_at, event: 'Onboarding email sent', detail: '' })
     if (member.first_article_read_at) events.push({ date: member.first_article_read_at, event: 'First article read', detail: '' })
     if (member.upgraded_at) events.push({ date: member.upgraded_at, event: 'Upgraded to paid', detail: '' })
@@ -87,7 +87,7 @@ function SubscriberProfile({ member, onClose, onUpdate, supabase }) {
 
   const displayName = member.name || member.full_name || member.display_name || null
   const displayEmail = member.email || null
-  const plan = member.plan || member.subscription_plan || null
+  const plan = member.plan || null
   const status = member.status || member.subscription_status || 'active'
   const planC = planColor(plan)
   const statusC = statusColor(status)
@@ -148,7 +148,7 @@ function SubscriberProfile({ member, onClose, onUpdate, supabase }) {
               {/* Key info grid */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
                 {[
-                  { label: 'Member since', value: member.created_at ? new Date(member.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '—' },
+                  { label: 'Member since', value: member.joined_at ? new Date(member.joined_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '—' },
                   { label: 'Plan', value: plan || 'Free' },
                   { label: 'Status', value: status },
                   { label: 'Last active', value: member.last_active || member.last_sign_in_at ? new Date(member.last_active || member.last_sign_in_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' },
@@ -290,7 +290,7 @@ export default function SubscribersSection({ supabase }) {
   const TEAM_ROLES = ['admin', 'editor', 'writer', 'finance_admin', 'social_admin']
 
   useEffect(() => {
-    supabase.from('members').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+    supabase.from('members').select('*').order('joined_at', { ascending: false }).then(({ data }) => {
       setAll((data || []).filter(m => !m.role || !TEAM_ROLES.includes(m.role)))
       setLoading(false)
     })
@@ -302,7 +302,7 @@ export default function SubscribersSection({ supabase }) {
       (m.email || '').toLowerCase().includes(search_) ||
       (m.name || m.full_name || '').toLowerCase().includes(search_) ||
       m.id.toLowerCase().includes(search_)
-    const plan = m.plan || m.subscription_plan || 'free'
+    const plan = m.plan || 'free'
     const status = m.status || m.subscription_status || 'active'
     const matchPlan = filterPlan === 'all' || plan === filterPlan
     const matchStatus = filterStatus === 'all' || status === filterStatus
@@ -323,9 +323,9 @@ export default function SubscribersSection({ supabase }) {
         m.id,
         m.name || m.full_name || '',
         m.email || '',
-        m.plan || m.subscription_plan || 'free',
+        m.plan || 'free',
         m.status || m.subscription_status || 'active',
-        m.created_at ? new Date(m.created_at).toLocaleDateString('en-US') : '',
+        m.joined_at ? new Date(m.joined_at).toLocaleDateString('en-US') : '',
         m.last_active ? new Date(m.last_active).toLocaleDateString('en-US') : '',
         m.onboarding_sent || m.onboarding_sent_at ? 'Yes' : 'No',
       ]),
@@ -408,7 +408,7 @@ export default function SubscribersSection({ supabase }) {
             </thead>
             <tbody>
               {filtered.map((m, i) => {
-                const plan = m.plan || m.subscription_plan || 'free'
+                const plan = m.plan || 'free'
                 const status = m.status || m.subscription_status || 'active'
                 const planC = planColor(plan)
                 const statusC = statusColor(status)
@@ -433,7 +433,7 @@ export default function SubscribersSection({ supabase }) {
                     <td style={tdStyle}><Badge text={plan} style={planC} /></td>
                     <td style={tdStyle}><Badge text={status} style={statusC} /></td>
                     <td style={{ ...tdStyle, fontSize: '12px' }}>
-                      {m.created_at ? new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                      {m.joined_at ? new Date(m.joined_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                     </td>
                     <td style={{ ...tdStyle, fontSize: '12px', color: '#aaa' }}>
                       {m.last_active ? new Date(m.last_active).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}

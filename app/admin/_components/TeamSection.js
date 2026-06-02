@@ -122,7 +122,7 @@ function TeamMemberRow({ member, isLast, onRoleChange, onDeactivate }) {
 
       {/* Added */}
       <td style={{ ...tdStyle, fontSize: '12px', color: '#aaa', width: '110px' }}>
-        {member.created_at ? new Date(member.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+        {member.joined_at ? new Date(member.joined_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
       </td>
 
       {/* Last active */}
@@ -151,7 +151,7 @@ export default function TeamSection({ supabase }) {
   const TEAM_ROLES = ['admin', 'editor', 'writer', 'finance_admin', 'social_admin']
 
   useEffect(() => {
-    supabase.from('members').select('*').in('role', TEAM_ROLES).order('created_at', { ascending: false }).then(({ data }) => {
+    supabase.from('members').select('*').in('role', TEAM_ROLES).order('joined_at', { ascending: false }).then(({ data }) => {
       setTeam(data || [])
       setLoading(false)
     })

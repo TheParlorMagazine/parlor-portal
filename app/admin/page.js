@@ -180,7 +180,7 @@ function DashboardHome({ supabase }) {
 
       const [artRes, membersRes, activityRes, invRes, socialRes] = await Promise.allSettled([
         supabase.from('articles').select('id,title,author_name,published_at,scheduled_at,published').order('published_at', { ascending: false }),
-        supabase.from('members').select('id,role,created_at,plan,status,email,name,onboarding_sent,onboarding_sent_at').order('created_at', { ascending: false }),
+        supabase.from('members').select('id,role,joined_at,plan,status,email,name,onboarding_sent,onboarding_sent_at').order('joined_at', { ascending: false }),
         supabase.from('member_events').select('*').order('created_at', { ascending: false }).limit(15),
         supabase.from('invoices').select('id,status,amount,created_at').order('created_at', { ascending: false }),
         supabase.from('social_posts').select('id,scheduled_at,status,content').order('scheduled_at', { ascending: false }),
@@ -204,7 +204,7 @@ function DashboardHome({ supabase }) {
           }))
         : members.slice(0, 8).map(m => ({
             id: m.id,
-            date: m.created_at,
+            date: m.joined_at,
             label: 'Subscribed',
             detail: (m.plan && m.plan !== 'free') ? `${m.plan.charAt(0).toUpperCase() + m.plan.slice(1)} plan` : 'Free plan',
           }))
@@ -225,7 +225,7 @@ function DashboardHome({ supabase }) {
 
   const subscribers = data.allMembers.filter(m => !m.role || !TEAM_ROLES.includes(m.role))
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
-  const newThisWeek = subscribers.filter(m => m.created_at > weekAgo).length
+  const newThisWeek = subscribers.filter(m => m.joined_at > weekAgo).length
   const paid = subscribers.filter(m => m.plan === 'paid' || m.plan === 'print').length
   const free = subscribers.filter(m => !m.plan || m.plan === 'free').length
   const onboardingSent = data.allMembers.filter(m => m.onboarding_sent || m.onboarding_sent_at).length
@@ -348,7 +348,7 @@ function RolesSection({ supabase }) {
   const [localRoles, setLocalRoles] = useState({})
 
   useEffect(() => {
-    supabase.from('members').select('id,role,created_at,email,name,full_name,plan').order('created_at', { ascending: false }).then(({ data }) => {
+    supabase.from('members').select('id,role,joined_at,email,name,full_name,plan').order('joined_at', { ascending: false }).then(({ data }) => {
       setMembers(data || [])
       const init = {}
       ;(data || []).forEach(m => { init[m.id] = m.role || '' })
@@ -433,7 +433,7 @@ function RolesSection({ supabase }) {
                       <div style={{ fontSize: '12px', color: '#aaa', marginTop: '1px' }}>{displayEmail || m.id}</div>
                     </td>
                     <td style={{ ...tdStyle, fontSize: '12px', color: '#aaa' }}>{m.plan || 'free'}</td>
-                    <td style={{ ...tdStyle, fontSize: '12px', color: '#aaa' }}>{fmtDate(m.created_at)}</td>
+                    <td style={{ ...tdStyle, fontSize: '12px', color: '#aaa' }}>{fmtDate(m.joined_at)}</td>
                     <td style={{ ...tdStyle, width: '200px' }}>
                       <select
                         value={currentRole}
