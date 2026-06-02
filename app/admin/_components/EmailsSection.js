@@ -225,10 +225,13 @@ function TemplateEditorModal({ template, footer, onSave, onClose }) {
 }
 
 // ── Default data ──────────────────────────────────────────────
+// Welcome email body sourced from lib/emails.js (${name} → {{name}})
+const WELCOME_BODY_HTML = '<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;padding:40px 20px;color:#0a0a0a;"><div style="margin-bottom:32px;"><img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png" width="48" height="48" style="border-radius:50%;" /></div><h1 style="font-size:28px;font-weight:700;margin-bottom:8px;line-height:1.2;">Welcome to The Parlor, {{name}}.</h1><p style="font-size:16px;line-height:1.7;color:#444;margin-bottom:24px;">We\'re glad you\'re here. The Parlor is a space for slow reading, critical thinking, and community — and you\'re now part of it.</p><p style="font-size:15px;line-height:1.7;color:#444;margin-bottom:32px;">Your account is ready. Head to your dashboard to explore the library, join the reading room, and see what\'s coming up.</p><a href="https://parlor-portal.vercel.app/dashboard" style="display:inline-block;background:#0a0a0a;color:#ffffff;padding:13px 28px;font-family:Georgia,serif;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:0.02em;">Go to your dashboard →</a><div style="margin-top:48px;padding-top:24px;border-top:1px solid #e8d4d8;"><p style="font-size:12px;color:#888;line-height:1.6;">The Parlor Magazine · <a href="https://www.theparlormagazine.com" style="color:#888;">theparlormagazine.com</a></p></div></div>'
+
 const DEFAULT_TEMPLATES = [
-  { id: 'welcome',      name: 'Welcome Email',              subject: 'Welcome to The Parlor', body_html: '<h1>Welcome to The Parlor</h1><p>Thank you for joining our community of readers. We\'re thrilled to have you.</p><p>Start exploring our latest articles and find your next great read.</p><p>— The Parlor Team</p>' },
-  { id: 'new_article',  name: 'New Article Notification',   subject: 'New from The Parlor: {{title}}', body_html: '<h2>New from The Parlor</h2><p>A new article has just been published that we think you\'ll love.</p><p><strong>{{title}}</strong></p><p>{{excerpt}}</p><p><a href="{{url}}">Read the full article →</a></p>' },
-  { id: 'invoice',      name: 'Invoice Receipt',            subject: 'Your receipt from The Parlor', body_html: '<h2>Payment Confirmed</h2><p>Thank you for your payment. Your subscription is active.</p><p><strong>Amount:</strong> {{amount}}</p><p><strong>Date:</strong> {{date}}</p><p>If you have any questions, reply to this email.</p>' },
+  { id: 'welcome',     name: 'Welcome Email',             template_type: 'welcome',      subject: 'Welcome to The Parlor',           body_html: WELCOME_BODY_HTML },
+  { id: 'new_article', name: 'New Article Notification',  template_type: 'new_article',  subject: 'New from The Parlor: {{title}}',   body_html: '<h2>New from The Parlor</h2><p>A new article has just been published.</p><p><strong>{{title}}</strong></p><p>{{excerpt}}</p><p><a href="{{url}}">Read the full article →</a></p>' },
+  { id: 'invoice',     name: 'Invoice Receipt',           template_type: 'invoice',       subject: 'Your receipt from The Parlor',    body_html: '<h2>Payment Confirmed</h2><p>Thank you for your payment. Your subscription is active.</p><p><strong>Amount:</strong> {{amount}}</p><p><strong>Date:</strong> {{date}}</p><p>If you have any questions, reply to this email.</p>' },
 ]
 
 const DEFAULT_AUTOMATIONS = [
@@ -264,8 +267,28 @@ export default function EmailsSection({ supabase }) {
       supabase.from('email_automations').select('*').order('id'),
       supabase.from('email_logs').select('*').order('sent_at', { ascending: false }).limit(100),
       supabase.from('email_settings').select('*').eq('id', 1).single(),
-    ]).then(([tRes, aRes, lRes, sRes]) => {
-      setTemplates(tRes.status === 'fulfilled' && tRes.value.data?.length ? tRes.value.data : DEFAULT_TEMPLATES)
+    ]).then(async ([tRes, aRes, lRes, sRes]) => {
+      // Templates: if table exists but is empty, seed the welcome template
+      if (tRes.status === 'fulfilled' && !tRes.value.error) {
+        const rows = tRes.value.data || []
+        if (rows.length === 0) {
+          const now = new Date().toISOString()
+          const seed = { ...DEFAULT_TEMPLATES[0], last_edited_at: now, created_at: now }
+          await supabase.from('email_templates').insert(seed)
+          setTemplates([seed, ...DEFAULT_TEMPLATES.slice(1)])
+        } else {
+          // Ensure welcome is first
+          const sorted = [...rows].sort((a, b) => {
+            if (a.template_type === 'welcome') return -1
+            if (b.template_type === 'welcome') return 1
+            return new Date(b.last_edited_at) - new Date(a.last_edited_at)
+          })
+          setTemplates(sorted)
+        }
+      } else {
+        // Table doesn't exist yet — show defaults as fallback
+        setTemplates(DEFAULT_TEMPLATES)
+      }
       setAutomations(aRes.status === 'fulfilled' && aRes.value.data?.length ? aRes.value.data : DEFAULT_AUTOMATIONS)
       setSentLog(lRes.status === 'fulfilled' ? (lRes.value.data || []) : [])
       if (sRes.status === 'fulfilled' && sRes.value.data) setSettings(sRes.value.data)
@@ -275,10 +298,8 @@ export default function EmailsSection({ supabase }) {
 
   async function saveTemplate(updated) {
     const now = new Date().toISOString()
-    const payload = { ...updated, last_edited_at: now }
-    const { error } = payload.id && !DEFAULT_TEMPLATES.find(d => d.id === payload.id)
-      ? await supabase.from('email_templates').update(payload).eq('id', payload.id)
-      : await supabase.from('email_templates').upsert(payload)
+    const payload = { ...updated, last_edited_at: now, created_at: updated.created_at || now }
+    const { error } = await supabase.from('email_templates').upsert(payload)
     if (!error) {
       setTemplates(prev => {
         const exists = prev.find(t => t.id === updated.id)
@@ -361,7 +382,10 @@ export default function EmailsSection({ supabase }) {
                     {templates.map((t, i) => (
                       <tr key={t.id} style={{ borderBottom: i === templates.length - 1 ? 'none' : '1px solid #f5f5f5' }}>
                         <td style={tdStyle}>
-                          <div style={{ fontWeight: '500', color: '#0a0a0a', fontSize: '13px' }}>{t.name}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontWeight: '500', color: '#0a0a0a', fontSize: '13px' }}>{t.name}</span>
+                            {t.template_type && <span style={{ padding: '1px 7px', background: '#f5f5f5', borderRadius: '3px', fontSize: '10px', color: '#aaa', fontFamily: ff, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t.template_type}</span>}
+                          </div>
                         </td>
                         <td style={{ ...tdStyle, fontSize: '12px', color: '#888', maxWidth: '260px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {t.subject || <span style={{ fontStyle: 'italic', color: '#ccc' }}>No subject</span>}
