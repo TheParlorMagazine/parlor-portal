@@ -5,7 +5,6 @@ import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import SubscribersSection from './_components/SubscribersSection'
-import TeamSection from './_components/TeamSection'
 
 // ── Role definitions ──────────────────────────────────────────
 const ROLE_OPTIONS = [
@@ -60,7 +59,6 @@ const NAV = [
   ]},
   { section: 'Community', items: [
     { key: 'subscribers', label: 'Subscribers' },
-    { key: 'team',        label: 'Team' },
     { key: 'pitches',     label: 'Pitches' },
   ]},
   { section: 'Finance', items: [
@@ -338,134 +336,264 @@ function DashboardHome({ supabase }) {
   )
 }
 
-// ── Roles & Permissions ───────────────────────────────────────
+// ── Roles & Permissions (merged with Team) ────────────────────
+
+const TEAM_ROLES = ['admin', 'editor', 'writer', 'finance_admin', 'social_admin']
+
+const ROLE_STYLES = {
+  admin:         { color: '#c4364a', bg: 'rgba(196,54,74,0.1)' },
+  editor:        { color: '#4a6fd4', bg: 'rgba(160,180,242,0.12)' },
+  writer:        { color: '#2d8f5a', bg: 'rgba(110,201,154,0.12)' },
+  finance_admin: { color: '#d4844a', bg: 'rgba(242,196,110,0.12)' },
+  social_admin:  { color: '#8a4ad4', bg: 'rgba(200,160,242,0.12)' },
+}
+
+const ROLE_ACCESS = {
+  admin:         ['Dashboard', 'Articles', 'Writers', 'Media', 'Subscribers', 'Invoices', 'Social', 'Settings'],
+  editor:        ['Articles', 'Writers', 'Media'],
+  writer:        ['Writer Dashboard'],
+  finance_admin: ['Invoices'],
+  social_admin:  ['Scheduled Posts'],
+}
+
+function RoleBadge({ role }) {
+  const s = ROLE_STYLES[role]
+  const label = ROLE_OPTIONS.find(r => r.value === role)?.label || role
+  if (!s) return null
+  return <span style={{ display: 'inline-block', padding: '2px 9px', borderRadius: '20px', fontSize: '11px', fontWeight: '500', fontFamily: ff, background: s.bg, color: s.color }}>{label}</span>
+}
+
 function RolesSection({ supabase }) {
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [activityMap, setActivityMap] = useState({})  // { [memberId]: { lastLogin, actions: [] } }
   const [search, setSearch] = useState('')
+  const [addRoles, setAddRoles] = useState({})        // pending role selections in "Add" section
   const [saving, setSaving] = useState({})
   const [saved, setSaved] = useState({})
-  const [localRoles, setLocalRoles] = useState({})
+  const [deactivating, setDeactivating] = useState({})
 
   useEffect(() => {
-    supabase.from('members').select('id,role,joined_at,email,name,full_name,plan').order('joined_at', { ascending: false }).then(({ data }) => {
+    supabase.from('members').select('*').order('joined_at', { ascending: false }).then(({ data }) => {
       setMembers(data || [])
-      const init = {}
-      ;(data || []).forEach(m => { init[m.id] = m.role || '' })
-      setLocalRoles(init)
       setLoading(false)
+    })
+
+    // Load activity: try activity_logs, synthesize from articles as fallback
+    Promise.allSettled([
+      supabase.from('activity_logs').select('user_id,action,target,description,created_at').order('created_at', { ascending: false }).limit(200),
+      supabase.from('articles').select('id,title,published_at,updated_at,author_name,user_id').order('updated_at', { ascending: false }).limit(100),
+      supabase.from('writers').select('id,name,updated_at,user_id').order('updated_at', { ascending: false }).limit(50),
+    ]).then(([logRes, artRes, writersRes]) => {
+      const logs    = logRes.status === 'fulfilled'     ? (logRes.value.data || [])     : []
+      const articles = artRes.status === 'fulfilled'    ? (artRes.value.data || [])     : []
+      const writers  = writersRes.status === 'fulfilled' ? (writersRes.value.data || []) : []
+
+      // Build activity map keyed by user_id / member id
+      const map = {}
+
+      // From explicit activity log
+      logs.forEach(l => {
+        if (!l.user_id) return
+        if (!map[l.user_id]) map[l.user_id] = { lastLogin: null, actions: [] }
+        map[l.user_id].actions.push({ date: l.created_at, text: l.description || l.action || 'Action' })
+      })
+
+      // Synthesize from articles (match by user_id if available)
+      articles.forEach(a => {
+        const uid = a.user_id
+        if (!uid) return
+        if (!map[uid]) map[uid] = { lastLogin: null, actions: [] }
+        const verb = a.published_at ? 'Published article' : 'Updated article'
+        map[uid].actions.push({ date: a.updated_at || a.published_at, text: `${verb}: ${a.title || 'Untitled'}` })
+      })
+
+      // Synthesize from writers
+      writers.forEach(w => {
+        const uid = w.user_id
+        if (!uid) return
+        if (!map[uid]) map[uid] = { lastLogin: null, actions: [] }
+        map[uid].actions.push({ date: w.updated_at, text: `Updated writer profile: ${w.name || ''}` })
+      })
+
+      // Sort each member's actions by date desc, keep 3
+      Object.keys(map).forEach(id => {
+        map[id].actions.sort((a, b) => new Date(b.date) - new Date(a.date))
+        map[id].actions = map[id].actions.slice(0, 3)
+      })
+
+      setActivityMap(map)
     })
   }, [])
 
-  async function saveRole(id) {
+  async function saveRole(id, role) {
     setSaving(prev => ({ ...prev, [id]: true }))
-    const role = localRoles[id] || null
-    await supabase.from('members').update({ role }).eq('id', id)
-    setMembers(prev => prev.map(m => m.id === id ? { ...m, role } : m))
+    await supabase.from('members').update({ role: role || null }).eq('id', id)
+    setMembers(prev => prev.map(m => m.id === id ? { ...m, role: role || null } : m))
     setSaving(prev => ({ ...prev, [id]: false }))
     setSaved(prev => ({ ...prev, [id]: true }))
     setTimeout(() => setSaved(prev => ({ ...prev, [id]: false })), 2000)
   }
 
-  const filtered = members.filter(m => {
-    const q = search.toLowerCase()
-    return !q || (m.email || '').toLowerCase().includes(q) || (m.name || m.full_name || '').toLowerCase().includes(q) || m.id.includes(q)
-  })
+  async function toggleDeactivate(id) {
+    const m = members.find(m => m.id === id)
+    const isInactive = m?.status === 'inactive' || m?.deactivated
+    setDeactivating(prev => ({ ...prev, [id]: true }))
+    const update = isInactive ? { status: 'active', deactivated: false } : { status: 'inactive', deactivated: true }
+    await supabase.from('members').update(update).eq('id', id)
+    setMembers(prev => prev.map(m => m.id === id ? { ...m, ...update } : m))
+    setDeactivating(prev => ({ ...prev, [id]: false }))
+  }
 
-  const thStyle = { fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#aaa', fontFamily: ff, padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid #f0f0f0', background: '#fafafa', fontWeight: '500' }
-  const tdStyle = { padding: '12px 16px', fontFamily: ff, verticalAlign: 'middle' }
+  const teamMembers = members.filter(m => m.role && TEAM_ROLES.includes(m.role))
+  const subscribers = members.filter(m => !m.role || !TEAM_ROLES.includes(m.role))
+  const q = search.toLowerCase()
+  const filteredSubs = q ? subscribers.filter(m =>
+    (m.email || '').toLowerCase().includes(q) ||
+    (m.name || m.full_name || '').toLowerCase().includes(q) ||
+    m.id.toLowerCase().includes(q)
+  ) : []
+
+  const sectionLabel = { fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.16em', color: '#aaa', fontFamily: ff, marginBottom: '14px', display: 'block' }
+  const tdStyle = { padding: '14px 16px', fontFamily: ff, verticalAlign: 'top' }
 
   return (
     <div>
-      <div style={{ marginBottom: '24px' }}>
+      <div style={{ marginBottom: '28px' }}>
         <h1 style={{ fontFamily: ffH, fontSize: '26px', fontWeight: '700', color: '#0a0a0a', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Roles & Permissions</h1>
-        <div style={{ fontSize: '13px', color: '#888', fontFamily: ff }}>Assign roles to any registered subscriber</div>
+        <div style={{ fontSize: '13px', color: '#888', fontFamily: ff }}>Manage team access and assign roles to subscribers</div>
       </div>
 
-      {/* Role legend */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '24px' }}>
-        {ROLE_OPTIONS.filter(r => r.value).map(r => (
-          <div key={r.value} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '8px', padding: '12px 14px' }}>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: '#333', fontFamily: ff, marginBottom: '3px' }}>{r.label}</div>
-            <div style={{ fontSize: '11px', color: '#aaa', fontFamily: ff }}>{r.desc}</div>
-          </div>
-        ))}
+      {/* ── Current Team ── */}
+      <span style={sectionLabel}>Current Team ({loading ? '…' : teamMembers.length})</span>
+      <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', overflow: 'hidden', marginBottom: '40px' }}>
+        {loading ? (
+          <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#ccc', fontFamily: ff, fontStyle: 'italic' }}>Loading…</div>
+        ) : teamMembers.length === 0 ? (
+          <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#ccc', fontFamily: ff, fontStyle: 'italic' }}>No team members yet. Use "Add Team Member" below.</div>
+        ) : teamMembers.map((m, i) => {
+          const displayName  = m.name || m.full_name || m.display_name || null
+          const displayEmail = m.email || null
+          const isInactive   = m.status === 'inactive' || m.deactivated
+          const activity     = activityMap[m.id]
+          const lastLogin    = m.last_active || m.last_login || m.last_sign_in_at
+          const access       = ROLE_ACCESS[m.role] || []
+          return (
+            <div key={m.id} style={{ borderBottom: i === teamMembers.length - 1 ? 'none' : '1px solid #f5f5f5', padding: '16px', display: 'grid', gridTemplateColumns: '1fr auto', gap: '16px', opacity: isInactive ? 0.55 : 1 }}>
+              {/* Left: identity + role + access + activity */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#f0e8e0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: ffH, fontSize: '13px', fontWeight: '700', color: DARK_PINK, flexShrink: 0 }}>
+                    {(displayName || displayEmail || 'U')[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '500', color: '#0a0a0a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {displayName || <span style={{ color: '#bbb', fontStyle: 'italic', fontWeight: '400' }}>No name</span>}
+                      {isInactive && <span style={{ fontSize: '10px', color: '#c04040', background: 'rgba(224,112,112,0.1)', padding: '1px 6px', borderRadius: '3px' }}>Inactive</span>}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#aaa' }}>{displayEmail || m.id.slice(0, 20) + '…'}</div>
+                  </div>
+                  <RoleBadge role={m.role} />
+                </div>
+
+                {/* Access chips */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
+                  {access.map(a => (
+                    <span key={a} style={{ display: 'inline-block', padding: '2px 7px', background: '#f5f5f5', borderRadius: '3px', fontSize: '11px', color: '#666', fontFamily: ff }}>{a}</span>
+                  ))}
+                </div>
+
+                {/* Activity summary */}
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '11px', color: '#aaa', fontFamily: ff }}>
+                    Last login: {lastLogin ? timeAgo(lastLogin) : '—'}
+                  </span>
+                  {activity?.actions?.length > 0 && (
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      {activity.actions.map((act, j) => (
+                        <span key={j} style={{ fontSize: '11px', color: '#bbb', fontFamily: ff }}>
+                          {act.text}
+                          <span style={{ color: '#ddd', marginLeft: '4px' }}>· {timeAgo(act.date)}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right: actions */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end', flexShrink: 0 }}>
+                <button
+                  onClick={() => toggleDeactivate(m.id)}
+                  disabled={!!deactivating[m.id]}
+                  style={{ padding: '5px 12px', background: 'none', border: `1px solid ${isInactive ? 'rgba(110,201,154,0.3)' : 'rgba(224,112,112,0.2)'}`, borderRadius: '5px', color: isInactive ? '#2d8f5a' : '#c04040', fontSize: '11px', cursor: 'pointer', fontFamily: ff }}
+                >
+                  {deactivating[m.id] ? '…' : isInactive ? 'Reactivate' : 'Deactivate'}
+                </button>
+                <button
+                  onClick={() => { if (window.confirm('Remove this member\'s role? They will become a regular subscriber.')) saveRole(m.id, '') }}
+                  disabled={!!saving[m.id]}
+                  style={{ padding: '5px 12px', background: 'none', border: '1px solid #e8e8e8', borderRadius: '5px', color: '#aaa', fontSize: '11px', cursor: 'pointer', fontFamily: ff }}
+                >
+                  {saved[m.id] ? 'Removed ✓' : saving[m.id] ? '…' : 'Remove role'}
+                </button>
+              </div>
+            </div>
+          )
+        })}
       </div>
 
-      {/* Search */}
+      {/* ── Add Team Member ── */}
+      <span style={sectionLabel}>Add Team Member</span>
       <input
         type="text"
         value={search}
         onChange={e => setSearch(e.target.value)}
-        placeholder="Search by name, email, or ID…"
-        style={{ padding: '8px 12px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '13px', fontFamily: ff, color: '#0a0a0a', outline: 'none', width: '280px', marginBottom: '14px', boxSizing: 'border-box' }}
+        placeholder="Search subscribers by name, email, or ID…"
+        style={{ padding: '8px 12px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '13px', fontFamily: ff, color: '#0a0a0a', outline: 'none', width: '320px', marginBottom: '12px', boxSizing: 'border-box' }}
       />
-
-      {/* Table */}
-      <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', overflow: 'hidden' }}>
-        {loading ? (
-          <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#ccc', fontFamily: ff, fontStyle: 'italic' }}>Loading…</div>
-        ) : filtered.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#ccc', fontFamily: ff, fontStyle: 'italic' }}>No members found.</div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Member</th>
-                <th style={thStyle}>Plan</th>
-                <th style={thStyle}>Joined</th>
-                <th style={thStyle}>Role</th>
-                <th style={thStyle}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((m, i) => {
-                const displayName = m.name || m.full_name || null
-                const displayEmail = m.email || null
-                const currentRole = localRoles[m.id] ?? (m.role || '')
-                const isDirty = currentRole !== (m.role || '')
-                return (
-                  <tr key={m.id} style={{ borderBottom: i === filtered.length - 1 ? 'none' : '1px solid #f5f5f5' }}>
-                    <td style={tdStyle}>
-                      <div style={{ fontSize: '13px', fontWeight: '500', color: '#0a0a0a' }}>
-                        {displayName || <span style={{ color: '#bbb', fontStyle: 'italic', fontWeight: '400' }}>No name</span>}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#aaa', marginTop: '1px' }}>{displayEmail || m.id}</div>
-                    </td>
-                    <td style={{ ...tdStyle, fontSize: '12px', color: '#aaa' }}>{m.plan || 'free'}</td>
-                    <td style={{ ...tdStyle, fontSize: '12px', color: '#aaa' }}>{fmtDate(m.joined_at)}</td>
-                    <td style={{ ...tdStyle, width: '200px' }}>
-                      <select
-                        value={currentRole}
-                        onChange={e => setLocalRoles(prev => ({ ...prev, [m.id]: e.target.value }))}
-                        style={{ padding: '6px 10px', background: '#fff', border: `1px solid ${isDirty ? DARK_PINK : '#e0e0e0'}`, borderRadius: '6px', fontSize: '12px', fontFamily: ff, color: '#0a0a0a', outline: 'none', cursor: 'pointer', width: '100%' }}
-                      >
-                        {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                      </select>
-                    </td>
-                    <td style={{ ...tdStyle, width: '80px', textAlign: 'right' }}>
-                      <button
-                        onClick={() => saveRole(m.id)}
-                        disabled={!!saving[m.id] || !isDirty}
-                        style={{
-                          padding: '5px 14px', borderRadius: '5px', fontSize: '12px', cursor: saving[m.id] || !isDirty ? 'not-allowed' : 'pointer', fontFamily: ff,
-                          background: saved[m.id] ? 'rgba(110,201,154,0.12)' : isDirty ? PINK : '#f5f5f5',
-                          border: `1px solid ${saved[m.id] ? 'rgba(110,201,154,0.3)' : isDirty ? 'rgba(242,184,198,0.4)' : '#e0e0e0'}`,
-                          color: saved[m.id] ? '#2d8f5a' : isDirty ? '#0a0a0a' : '#ccc',
-                          opacity: saving[m.id] ? 0.6 : 1,
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {saved[m.id] ? '✓' : saving[m.id] ? '…' : 'Save'}
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {!q && (
+        <div style={{ fontSize: '12px', color: '#ccc', fontFamily: ff, fontStyle: 'italic', marginBottom: '12px' }}>
+          Type to search subscribers and assign them a role.
+        </div>
+      )}
+      {q && filteredSubs.length === 0 && (
+        <div style={{ fontSize: '13px', color: '#ccc', fontFamily: ff, fontStyle: 'italic', padding: '16px 0' }}>No subscribers found.</div>
+      )}
+      {filteredSubs.length > 0 && (
+        <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', overflow: 'hidden' }}>
+          {filteredSubs.slice(0, 10).map((m, i) => {
+            const displayName  = m.name || m.full_name || null
+            const displayEmail = m.email || null
+            const pendingRole  = addRoles[m.id] || ''
+            return (
+              <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderBottom: i === Math.min(filteredSubs.length, 10) - 1 ? 'none' : '1px solid #f5f5f5' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '13px', fontWeight: '500', color: '#0a0a0a' }}>
+                    {displayName || <span style={{ color: '#bbb', fontStyle: 'italic', fontWeight: '400' }}>No name</span>}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#aaa' }}>{displayEmail || m.id.slice(0, 20) + '…'}</div>
+                </div>
+                <select
+                  value={pendingRole}
+                  onChange={e => setAddRoles(prev => ({ ...prev, [m.id]: e.target.value }))}
+                  style={{ padding: '6px 10px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '12px', fontFamily: ff, color: '#0a0a0a', outline: 'none', cursor: 'pointer' }}
+                >
+                  <option value="">Select role…</option>
+                  {ROLE_OPTIONS.filter(r => r.value).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+                <button
+                  onClick={() => { if (pendingRole) { saveRole(m.id, pendingRole); setAddRoles(prev => ({ ...prev, [m.id]: '' })); setSearch('') } }}
+                  disabled={!pendingRole || !!saving[m.id]}
+                  style={{ padding: '6px 16px', background: pendingRole ? PINK : '#f5f5f5', border: `1px solid ${pendingRole ? 'rgba(242,184,198,0.4)' : '#e0e0e0'}`, borderRadius: '6px', color: pendingRole ? '#0a0a0a' : '#ccc', fontSize: '12px', fontWeight: '600', cursor: pendingRole ? 'pointer' : 'not-allowed', fontFamily: ff }}
+                >
+                  {saving[m.id] ? '…' : saved[m.id] ? 'Added ✓' : 'Add'}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -488,7 +616,6 @@ function MainContent({ section, supabase }) {
   switch (section) {
     case 'dashboard':   return <DashboardHome supabase={supabase} />
     case 'subscribers': return <SubscribersSection supabase={supabase} />
-    case 'team':        return <TeamSection supabase={supabase} />
     case 'roles':       return <RolesSection supabase={supabase} />
     case 'pitches':     return <ComingSoon title="Pitches" />
     case 'invoices':    return <ComingSoon title="Invoices" />
