@@ -5,6 +5,8 @@ import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import SubscribersSection from './_components/SubscribersSection'
+import PlansSection from './_components/PlansSection'
+import AnalyticsSection from './_components/AnalyticsSection'
 
 // ── Role definitions ──────────────────────────────────────────
 const ROLE_OPTIONS = [
@@ -58,8 +60,12 @@ const NAV = [
     { key: 'media',     label: 'Media',       href: '/admin/media' },
   ]},
   { section: 'Community', items: [
-    { key: 'subscribers', label: 'Subscribers' },
-    { key: 'pitches',     label: 'Pitches' },
+    { key: 'subscribers',  label: 'Subscribers' },
+    { key: 'pitches',      label: 'Pitches' },
+  ]},
+  { section: 'Plans', items: [
+    { key: 'plan-circle', label: "Reader's Circle" },
+    { key: 'plan-press',  label: 'Printing Press' },
   ]},
   { section: 'Finance', items: [
     { key: 'invoices',  label: 'Invoices' },
@@ -69,6 +75,7 @@ const NAV = [
   ]},
   { section: 'Settings', items: [
     { key: 'roles',       label: 'Roles & Permissions' },
+    { key: 'analytics',   label: 'Analytics' },
     { key: 'publication', label: 'Publication Settings' },
   ]},
 ]
@@ -141,196 +148,218 @@ function Sidebar({ active, setActive, onSignOut }) {
   )
 }
 
-// ── Widget (light theme) ──────────────────────────────────────
-function Widget({ title, action, children, span }) {
-  return (
-    <div style={{
-      background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px',
-      overflow: 'hidden', gridColumn: span ? `span ${span}` : undefined,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 18px', borderBottom: '1px solid #f0f0f0' }}>
-        <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#aaa', fontFamily: ff }}>{title}</span>
-        {action}
-      </div>
-      <div style={{ padding: '14px 18px' }}>{children}</div>
-    </div>
-  )
-}
-
-function EmptyRow({ text }) {
-  return <div style={{ fontSize: '12px', color: '#ccc', fontStyle: 'italic', fontFamily: ff, padding: '6px 0' }}>{text}</div>
+// ── Activity feed icons (inline SVG) ─────────────────────────
+function FeedIcon({ type }) {
+  const iconStyle = { width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
+  const icons = {
+    article:    { bg: 'rgba(196,54,74,0.1)',   el: <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke={DARK_PINK} strokeWidth="1.5" strokeLinecap="round"><rect x="2" y="1" width="10" height="12" rx="1"/><line x1="4" y1="5" x2="10" y2="5"/><line x1="4" y1="7.5" x2="10" y2="7.5"/><line x1="4" y1="10" x2="7" y2="10"/></svg> },
+    subscriber: { bg: 'rgba(110,201,154,0.15)', el: <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#2d8f5a" strokeWidth="1.5" strokeLinecap="round"><circle cx="7" cy="5" r="2.5"/><path d="M2 12c0-4 10-4 10 0"/></svg> },
+    invoice:    { bg: 'rgba(212,132,74,0.12)',  el: <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#d4844a" strokeWidth="1.5" strokeLinecap="round"><rect x="2" y="1" width="10" height="12" rx="1"/><line x1="4" y1="5" x2="10" y2="5"/><line x1="4" y1="8" x2="8" y2="8"/></svg> },
+    pitch:      { bg: 'rgba(160,180,242,0.15)', el: <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#4a6fd4" strokeWidth="1.5" strokeLinecap="round"><rect x="1" y="3" width="12" height="9" rx="1"/><path d="M1 5l6 4 6-4"/></svg> },
+    scheduled:  { bg: 'rgba(138,74,212,0.1)',   el: <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#8a4ad4" strokeWidth="1.5" strokeLinecap="round"><rect x="1" y="2" width="12" height="11" rx="1"/><line x1="4" y1="1" x2="4" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="1" y1="6" x2="13" y2="6"/></svg> },
+  }
+  const { bg, el } = icons[type] || icons.article
+  return <div style={{ ...iconStyle, background: bg }}>{el}</div>
 }
 
 // ── Dashboard Home ────────────────────────────────────────────
-function DashboardHome({ supabase }) {
+function DashboardHome({ supabase, setActiveSection }) {
+  const [subExpanded, setSubExpanded] = useState(false)
+  const [pvStats, setPvStats] = useState({ pageViews: null, sessions: null, topPath: null, topSource: null })
   const [data, setData] = useState({
     recentArticles: [], scheduledArticles: [],
-    allMembers: [], subActivity: [],
-    invoices: [], socialPosts: [],
+    allMembers: [], invoices: [], pitches: [],
     loaded: false,
   })
 
   useEffect(() => {
     let cancelled = false
-    async function load() {
-      const now = new Date().toISOString()
-      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
+    const now     = new Date().toISOString()
+    const today   = now.slice(0, 10)
 
-      const [artRes, membersRes, activityRes, invRes, socialRes] = await Promise.allSettled([
-        supabase.from('articles').select('id,title,author_name,published_at,scheduled_at,published').order('published_at', { ascending: false }),
-        supabase.from('members').select('id,role,joined_at,plan,status,email,name,onboarding_sent,onboarding_sent_at').order('joined_at', { ascending: false }),
-        supabase.from('member_events').select('*').order('created_at', { ascending: false }).limit(15),
-        supabase.from('invoices').select('id,status,amount,created_at').order('created_at', { ascending: false }),
-        supabase.from('social_posts').select('id,scheduled_at,status,content').order('scheduled_at', { ascending: false }),
-      ])
-
+    Promise.allSettled([
+      supabase.from('articles').select('id,title,author_name,published_at,scheduled_at,published,slug').order('published_at', { ascending: false }),
+      supabase.from('members').select('id,role,joined_at,plan,status,email,name,onboarding_sent,onboarding_sent_at').order('joined_at', { ascending: false }),
+      supabase.from('invoices').select('id,status,amount,created_at').order('created_at', { ascending: false }),
+      supabase.from('pitches').select('id,title,author_name,created_at,status').order('created_at', { ascending: false }),
+      supabase.from('page_views').select('page_path,visitor_id,referrer,created_at').gte('created_at', today + 'T00:00:00').order('created_at', { ascending: false }).limit(2000),
+    ]).then(([artRes, memRes, invRes, pitchRes, pvRes]) => {
       if (cancelled) return
-
-      const articles = artRes.status === 'fulfilled' ? (artRes.value.data || []) : []
-      const members  = membersRes.status === 'fulfilled' ? (membersRes.value.data || []) : []
-      const events   = activityRes.status === 'fulfilled' ? (activityRes.value.data || []) : []
-      const invoices = invRes.status === 'fulfilled' ? (invRes.value.data || []) : []
-      const socialPosts = socialRes.status === 'fulfilled' ? (socialRes.value.data || []) : []
-
-      // Build subscriber activity feed: use real events if available, else synthesize from recent joins
-      const activityFeed = events.length > 0
-        ? events.map(e => ({
-            id: e.id,
-            date: e.created_at,
-            label: e.event_type || e.type || 'Event',
-            detail: e.detail || e.description || '',
-          }))
-        : members.slice(0, 8).map(m => ({
-            id: m.id,
-            date: m.joined_at,
-            label: 'Subscribed',
-            detail: (m.plan && m.plan !== 'free') ? `${m.plan.charAt(0).toUpperCase() + m.plan.slice(1)} plan` : 'Free plan',
-          }))
+      const articles = artRes.status === 'fulfilled'  ? (artRes.value.data  || []) : []
+      const members  = memRes.status === 'fulfilled'  ? (memRes.value.data  || []) : []
+      const invoices = invRes.status === 'fulfilled'  ? (invRes.value.data  || []) : []
+      const pitches  = pitchRes.status === 'fulfilled'? (pitchRes.value.data|| []) : []
+      const pv       = pvRes.status === 'fulfilled'   ? (pvRes.value.data   || []) : []
 
       setData({
-        recentArticles: articles.filter(a => a.published).slice(0, 5),
+        recentArticles: articles.filter(a => a.published).slice(0, 8),
         scheduledArticles: articles.filter(a => !a.published && a.scheduled_at && a.scheduled_at > now).sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)).slice(0, 5),
         allMembers: members,
-        subActivity: activityFeed,
         invoices,
-        socialPosts,
+        pitches,
         loaded: true,
       })
-    }
-    load()
+
+      // Analytics strip
+      if (pv.length) {
+        const fiveMinAgo = new Date(Date.now() - 300000).toISOString()
+        const sessions   = pv.filter(v => v.created_at > fiveMinAgo).length
+        const pathCounts = {}
+        pv.forEach(v => { if (v.page_path) pathCounts[v.page_path] = (pathCounts[v.page_path] || 0) + 1 })
+        const topPath   = Object.entries(pathCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null
+        const refCounts = {}
+        pv.forEach(v => { if (v.referrer) { try { const h = new URL(v.referrer).hostname; refCounts[h] = (refCounts[h] || 0) + 1 } catch {} } })
+        const topSource = Object.entries(refCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Direct'
+        setPvStats({ pageViews: pv.length, sessions, topPath, topSource })
+      }
+    })
     return () => { cancelled = true }
   }, [])
 
-  const subscribers = data.allMembers.filter(m => !m.role || !TEAM_ROLES.includes(m.role))
-  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
-  const newThisWeek = subscribers.filter(m => m.joined_at > weekAgo).length
-  const paid = subscribers.filter(m => m.plan === 'paid' || m.plan === 'print').length
-  const free = subscribers.filter(m => !m.plan || m.plan === 'free').length
-  const onboardingSent = data.allMembers.filter(m => m.onboarding_sent || m.onboarding_sent_at).length
+  const subscribers  = data.allMembers.filter(m => !m.role || !TEAM_ROLES.includes(m.role))
+  const weekAgo      = new Date(Date.now() - 7 * 86400000).toISOString()
+  const newThisWeek  = subscribers.filter(m => m.joined_at > weekAgo).length
+  const circleCount  = subscribers.filter(m => ["Reader's Circle",'readers_circle','circle'].includes(m.plan)).length
+  const pressCount   = subscribers.filter(m => ['Printing Press','printing_press','press','print'].includes(m.plan)).length
+  const freeCount    = subscribers.filter(m => !m.plan || m.plan === 'free').length
+  const onboarding   = subscribers.filter(m => m.onboarding_sent || m.onboarding_sent_at).length
 
-  const rowS = { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f5f5f5', gap: '8px', fontFamily: ff }
-  const titleS = { fontSize: '13px', color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }
-  const metaS  = { fontSize: '11px', color: '#aaa', flexShrink: 0 }
+  // ── Build unified activity feed ──
+  const feed = []
+  data.recentArticles.forEach(a => feed.push({
+    type: 'article', icon: 'article',
+    text: `Article published: ${a.title || 'Untitled'}`,
+    meta: a.author_name,
+    date: a.published_at,
+    href: `/admin/articles/${a.id}/edit`,
+  }))
+  data.scheduledArticles.forEach(a => feed.push({
+    type: 'scheduled', icon: 'scheduled',
+    text: `Article scheduled: ${a.title || 'Untitled'}`,
+    meta: `for ${fmtDate(a.scheduled_at)}`,
+    date: a.scheduled_at,
+    href: `/admin/articles/${a.id}/edit`,
+  }))
+  data.allMembers.slice(0, 8).forEach(m => feed.push({
+    type: 'subscriber', icon: 'subscriber',
+    text: `New subscriber: ${m.email || m.name || m.id.slice(0, 12)}`,
+    meta: m.plan || 'free',
+    date: m.joined_at,
+  }))
+  data.invoices.slice(0, 5).forEach(inv => feed.push({
+    type: 'invoice', icon: 'invoice',
+    text: `Invoice ${inv.status === 'paid' ? 'paid' : 'created'}${inv.amount ? `: $${inv.amount}` : ''}`,
+    meta: inv.status,
+    date: inv.created_at,
+  }))
+  data.pitches.slice(0, 5).forEach(p => feed.push({
+    type: 'pitch', icon: 'pitch',
+    text: `New pitch received${p.title ? `: ${p.title}` : ''}`,
+    meta: p.author_name || '',
+    date: p.created_at,
+  }))
+  feed.sort((a, b) => new Date(b.date) - new Date(a.date))
 
   return (
     <div>
-      <div style={{ marginBottom: '28px' }}>
+      <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontFamily: ffH, fontSize: '26px', fontWeight: '700', color: '#0a0a0a', margin: 0, letterSpacing: '-0.01em' }}>Dashboard</h1>
         <div style={{ fontSize: '13px', color: '#888', marginTop: '4px', fontFamily: ff }}>Live overview</div>
       </div>
 
-      {/* Stat row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
-        {[
-          { label: 'Total Subscribers', value: subscribers.length },
-          { label: 'New This Week',     value: newThisWeek, accent: DARK_PINK },
-          { label: 'Paid',              value: paid, accent: '#2d8f5a' },
-          { label: 'Free',              value: free },
-        ].map(s => (
-          <div key={s.label} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', padding: '16px 18px' }}>
-            <div style={{ fontSize: '26px', fontWeight: '700', color: s.accent || '#0a0a0a', fontFamily: ffH, lineHeight: 1 }}>{s.value}</div>
-            <div style={{ fontSize: '11px', color: '#aaa', marginTop: '5px', fontFamily: ff, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Secondary stats */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
-        {[
-          { label: 'Onboarding Email Sent', value: onboardingSent },
-          { label: 'Pending Invoices', value: data.invoices.filter(i => i.status !== 'paid').length },
-          { label: 'Scheduled Posts', value: data.socialPosts.filter(p => p.status !== 'sent').length },
-          { label: 'Team Members', value: data.allMembers.filter(m => m.role && TEAM_ROLES.includes(m.role)).length },
-        ].map(s => (
-          <div key={s.label} style={{ flex: 1, background: '#fff', border: '1px solid #e8e8e8', borderRadius: '8px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ fontSize: '18px', fontWeight: '700', color: '#0a0a0a', fontFamily: ffH }}>{s.value}</div>
-            <div style={{ fontSize: '11px', color: '#aaa', fontFamily: ff }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Widgets */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        {/* Subscriber Activity */}
-        <Widget title="Subscriber Activity">
-          {data.subActivity.length === 0 && <EmptyRow text="No recent activity." />}
-          {data.subActivity.map((ev, i) => (
-            <div key={ev.id || i} style={{ ...rowS }}>
-              <span style={titleS}>
-                <span style={{ color: '#888', marginRight: '4px' }}>{ev.detail || 'Subscriber'}</span>
-                {' '}
-                <span style={{ color: DARK_PINK }}>{ev.label}</span>
-              </span>
-              <span style={metaS}>{timeAgo(ev.date)}</span>
-            </div>
-          ))}
-        </Widget>
-
-        {/* Recent articles */}
-        <Widget
-          title="Recently Published"
-          action={<Link href="/admin/articles" style={{ fontSize: '11px', color: DARK_PINK, textDecoration: 'none' }}>View all →</Link>}
+      {/* ── 1. Subscriber Overview (collapsible) ── */}
+      <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', marginBottom: '14px', overflow: 'hidden' }}>
+        <button
+          type="button"
+          onClick={() => setSubExpanded(v => !v)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '14px 18px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: ff }}
         >
-          {data.recentArticles.length === 0 && <EmptyRow text="No published articles yet." />}
-          {data.recentArticles.map(a => (
-            <div key={a.id} style={{ ...rowS }}>
-              <span style={titleS}>{a.title || 'Untitled'}</span>
-              <span style={metaS}>{a.author_name || '—'}</span>
-              <span style={{ ...metaS, minWidth: '72px', textAlign: 'right' }}>{fmtDate(a.published_at)}</span>
-            </div>
-          ))}
-        </Widget>
-
-        {/* Scheduled */}
-        <Widget
-          title="Scheduled Articles"
-          action={<Link href="/admin/articles" style={{ fontSize: '11px', color: DARK_PINK, textDecoration: 'none' }}>Manage →</Link>}
-        >
-          {data.scheduledArticles.length === 0 && <EmptyRow text="No articles scheduled." />}
-          {data.scheduledArticles.map(a => (
-            <div key={a.id} style={{ ...rowS }}>
-              <span style={titleS}>{a.title || 'Untitled'}</span>
-              <span style={{ ...metaS, color: '#4a6fd4', minWidth: '130px', textAlign: 'right' }}>{fmtDateTime(a.scheduled_at)}</span>
-            </div>
-          ))}
-        </Widget>
-
-        {/* Invoices */}
-        <Widget title="Invoices">
-          {data.invoices.length === 0 ? <EmptyRow text="No invoices on record." /> : (
-            <>
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-                {[{ label: 'Paid', val: data.invoices.filter(i => i.status === 'paid').length, color: '#2d8f5a' },
-                  { label: 'Pending', val: data.invoices.filter(i => i.status !== 'paid').length, color: '#d4844a' }].map(s => (
-                  <div key={s.label} style={{ flex: 1, background: '#f9f9f9', borderRadius: '6px', padding: '10px 12px' }}>
-                    <div style={{ fontSize: '18px', fontWeight: '700', color: s.color, fontFamily: ffH }}>{s.val}</div>
-                    <div style={{ fontSize: '10px', color: '#aaa', marginTop: '2px', fontFamily: ff }}>{s.label}</div>
-                  </div>
-                ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <span style={{ fontFamily: ffH, fontSize: '20px', fontWeight: '700', color: '#0a0a0a' }}>{subscribers.length}</span>
+            <span style={{ fontSize: '13px', color: '#888' }}>Total Subscribers</span>
+            {newThisWeek > 0 && <span style={{ fontSize: '11px', background: 'rgba(110,201,154,0.12)', color: '#2d8f5a', padding: '2px 8px', borderRadius: '20px', fontFamily: ff }}>+{newThisWeek} this week</span>}
+          </div>
+          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ transition: 'transform 0.2s', transform: subExpanded ? 'rotate(180deg)' : 'none', flexShrink: 0 }}>
+            <path d="M1 1l4 4 4-4" stroke="#aaa" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        {subExpanded && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', borderTop: '1px solid #f5f5f5' }}>
+            {[
+              { label: 'Total',            value: subscribers.length },
+              { label: 'New This Week',    value: newThisWeek, color: '#2d8f5a' },
+              { label: "Reader's Circle",  value: circleCount, sub: '$10/mo', color: '#4a6fd4' },
+              { label: 'Printing Press',   value: pressCount,  sub: '$25/mo', color: DARK_PINK },
+              { label: 'Free',             value: freeCount },
+              { label: 'Onboarding Sent',  value: onboarding },
+            ].map((s, i) => (
+              <div key={s.label} style={{ padding: '16px 14px', borderRight: i < 5 ? '1px solid #f5f5f5' : 'none' }}>
+                <div style={{ fontSize: '22px', fontWeight: '700', color: s.color || '#0a0a0a', fontFamily: ffH, lineHeight: 1 }}>{s.value}</div>
+                <div style={{ fontSize: '11px', color: '#aaa', marginTop: '4px', fontFamily: ff }}>{s.label}</div>
+                {s.sub && <div style={{ fontSize: '11px', color: s.color, marginTop: '2px', fontFamily: ff }}>{s.sub}</div>}
               </div>
-            </>
-          )}
-        </Widget>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── 2. Analytics Strip ── */}
+      <div style={{ display: 'flex', background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', marginBottom: '24px', overflow: 'hidden' }}>
+        {[
+          { label: 'Active Sessions',   value: pvStats.sessions ?? '—', tag: pvStats.sessions !== null ? 'live' : null, tagColor: '#2d8f5a', tagBg: 'rgba(110,201,154,0.12)' },
+          { label: 'Page Views Today',  value: pvStats.pageViews ?? '—' },
+          { label: 'Top Article Today', value: pvStats.topPath ? pvStats.topPath.split('/').filter(Boolean).pop() || pvStats.topPath : '—' },
+          { label: 'Top Traffic Source',value: pvStats.topSource || '—' },
+        ].map((s, i) => (
+          <div key={s.label} style={{ flex: 1, padding: '14px 16px', borderRight: '1px solid #f5f5f5' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              <span style={{ fontSize: '20px', fontWeight: '700', color: '#0a0a0a', fontFamily: ffH, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.value}</span>
+              {s.tag && <span style={{ fontSize: '9px', background: s.tagBg, color: s.tagColor, padding: '1px 5px', borderRadius: '3px', textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>{s.tag}</span>}
+            </div>
+            <div style={{ fontSize: '11px', color: '#aaa', marginTop: '3px', fontFamily: ff }}>{s.label}</div>
+          </div>
+        ))}
+        <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <button onClick={() => setActiveSection('analytics')} style={{ padding: '7px 14px', background: 'none', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '12px', color: '#555', cursor: 'pointer', fontFamily: ff, whiteSpace: 'nowrap' }}>
+            View Full Analytics →
+          </button>
+        </div>
+      </div>
+
+      {/* ── 3. Recent Activity Feed ── */}
+      <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 18px', borderBottom: '1px solid #f0f0f0' }}>
+          <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#aaa', fontFamily: ff }}>Recent Activity</span>
+          <span style={{ fontSize: '11px', color: '#ccc', fontFamily: ff }}>All areas · chronological</span>
+        </div>
+        {!data.loaded ? (
+          <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#ccc', fontFamily: ff, fontStyle: 'italic' }}>Loading…</div>
+        ) : feed.length === 0 ? (
+          <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#ccc', fontFamily: ff, fontStyle: 'italic' }}>No recent activity yet.</div>
+        ) : (
+          <div>
+            {feed.slice(0, 25).map((item, i) => (
+              <div
+                key={i}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 18px', borderBottom: i < Math.min(feed.length, 25) - 1 ? '1px solid #f9f9f9' : 'none' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <FeedIcon type={item.icon} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', color: '#0a0a0a', fontFamily: ff, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.href
+                      ? <Link href={item.href} style={{ color: '#0a0a0a', textDecoration: 'none' }} onMouseEnter={e => e.target.style.color = DARK_PINK} onMouseLeave={e => e.target.style.color = '#0a0a0a'}>{item.text}</Link>
+                      : item.text
+                    }
+                  </div>
+                  {item.meta && <div style={{ fontSize: '11px', color: '#bbb', fontFamily: ff, marginTop: '1px' }}>{item.meta}</div>}
+                </div>
+                <span style={{ fontSize: '11px', color: '#ccc', fontFamily: ff, flexShrink: 0 }}>{timeAgo(item.date)}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -734,16 +763,19 @@ function ComingSoon({ title }) {
 }
 
 // ── Content router ────────────────────────────────────────────
-function MainContent({ section, supabase }) {
+function MainContent({ section, supabase, setActiveSection }) {
   switch (section) {
-    case 'dashboard':   return <DashboardHome supabase={supabase} />
-    case 'subscribers': return <SubscribersSection supabase={supabase} />
-    case 'roles':       return <RolesSection supabase={supabase} />
-    case 'pitches':     return <ComingSoon title="Pitches" />
-    case 'invoices':    return <ComingSoon title="Invoices" />
-    case 'social':      return <ComingSoon title="Scheduled Posts" />
-    case 'publication': return <ComingSoon title="Publication Settings" />
-    default:            return <DashboardHome supabase={supabase} />
+    case 'dashboard':    return <DashboardHome supabase={supabase} setActiveSection={setActiveSection} />
+    case 'subscribers':  return <SubscribersSection supabase={supabase} />
+    case 'roles':        return <RolesSection supabase={supabase} />
+    case 'analytics':    return <AnalyticsSection supabase={supabase} />
+    case 'plan-circle':  return <PlansSection supabase={supabase} plan="circle" />
+    case 'plan-press':   return <PlansSection supabase={supabase} plan="press" />
+    case 'pitches':      return <ComingSoon title="Pitches" />
+    case 'invoices':     return <ComingSoon title="Invoices" />
+    case 'social':       return <ComingSoon title="Scheduled Posts" />
+    case 'publication':  return <ComingSoon title="Publication Settings" />
+    default:             return <DashboardHome supabase={supabase} setActiveSection={setActiveSection} />
   }
 }
 
@@ -784,7 +816,7 @@ export default function AdminPage() {
     <div style={{ minHeight: '100vh', background: '#f5f5f5', fontFamily: ff }}>
       <Sidebar active={activeSection} setActive={setActiveSection} onSignOut={handleSignOut} />
       <main style={{ marginLeft: '220px', minHeight: '100vh', padding: '40px 48px', color: '#0a0a0a' }}>
-        <MainContent section={activeSection} supabase={supabase} />
+        <MainContent section={activeSection} supabase={supabase} setActiveSection={setActiveSection} />
       </main>
     </div>
   )
