@@ -7,6 +7,7 @@ import Link from 'next/link'
 import SubscribersSection from './_components/SubscribersSection'
 import PlansSection from './_components/PlansSection'
 import AnalyticsSection from './_components/AnalyticsSection'
+import EmailsSection from './_components/EmailsSection'
 
 // ── Role definitions ──────────────────────────────────────────
 const ROLE_OPTIONS = [
@@ -61,6 +62,7 @@ const NAV = [
   ]},
   { section: 'Community', items: [
     { key: 'subscribers',  label: 'Subscribers' },
+    { key: 'emails',       label: 'Emails' },
     { key: 'pitches',      label: 'Pitches' },
   ]},
   { section: 'Plans', items: [
@@ -767,6 +769,7 @@ function MainContent({ section, supabase, setActiveSection }) {
   switch (section) {
     case 'dashboard':    return <DashboardHome supabase={supabase} setActiveSection={setActiveSection} />
     case 'subscribers':  return <SubscribersSection supabase={supabase} />
+    case 'emails':       return <EmailsSection supabase={supabase} />
     case 'roles':        return <RolesSection supabase={supabase} />
     case 'analytics':    return <AnalyticsSection supabase={supabase} />
     case 'plan-circle':  return <PlansSection supabase={supabase} plan="circle" />
