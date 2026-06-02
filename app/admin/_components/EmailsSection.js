@@ -260,7 +260,7 @@ const STATUS_COLORS = {
 
 // ── Main EmailsSection ────────────────────────────────────────
 export default function EmailsSection({ supabase }) {
-  const [tab, setTab]               = useState('templates')
+  const [tab, setTab]               = useState('campaigns')
   const [templates, setTemplates]   = useState([])
   const [automations, setAutomations] = useState([])
   const [sentLog, setSentLog]       = useState([])
@@ -360,13 +360,17 @@ export default function EmailsSection({ supabase }) {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid #e8e8e8', marginBottom: '24px' }}>
-          {[['templates','Templates'],['automations','Automations'],['sent','Sent'],['settings','Settings']].map(([key, label]) => (
-            <button key={key} onClick={() => setTab(key)} style={{ padding: '10px 20px', border: 'none', background: 'none', cursor: 'pointer', fontFamily: ff, fontSize: '13px', color: tab === key ? DP : '#888', borderBottom: tab === key ? `2px solid ${DP}` : '2px solid transparent', marginBottom: '-1px', transition: 'color 0.12s' }}>
+        <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid #e8e8e8', marginBottom: '24px', overflowX: 'auto' }}>
+          {[['campaigns','Campaigns'],['templates','Templates'],['segments','Segments'],['import','Import'],['automations','Automations'],['sent','Sent'],['settings','Settings']].map(([key, label]) => (
+            <button key={key} onClick={() => setTab(key)} style={{ padding: '10px 18px', border: 'none', background: 'none', cursor: 'pointer', fontFamily: ff, fontSize: '13px', color: tab === key ? DP : '#888', borderBottom: tab === key ? `2px solid ${DP}` : '2px solid transparent', marginBottom: '-1px', transition: 'color 0.12s', whiteSpace: 'nowrap' }}>
               {label}
             </button>
           ))}
         </div>
+
+        {tab === 'campaigns'   && <CampaignsTab supabase={supabase} />}
+        {tab === 'segments'    && <SegmentsTab  supabase={supabase} />}
+        {tab === 'import'      && <ImportTab    supabase={supabase} />}
 
         {/* ── Templates tab ── */}
         {tab === 'templates' && (

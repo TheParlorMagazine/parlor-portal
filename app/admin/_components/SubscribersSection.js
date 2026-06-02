@@ -402,6 +402,7 @@ export default function SubscribersSection({ supabase }) {
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Joined</th>
                 <th style={thStyle}>Last Active</th>
+                <th style={thStyle}>Score</th>
                 <th style={thStyle}>Onboarding</th>
                 <th style={thStyle}></th>
               </tr>
@@ -437,6 +438,11 @@ export default function SubscribersSection({ supabase }) {
                     </td>
                     <td style={{ ...tdStyle, fontSize: '12px', color: '#aaa' }}>
                       {m.last_active ? new Date(m.last_active).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
+                    </td>
+                    <td style={{ ...tdStyle, fontSize: '12px' }}>
+                      {m.engagement_score != null
+                        ? <span style={{ fontWeight: '600', color: m.engagement_score >= 20 ? '#2d8f5a' : m.engagement_score >= 10 ? '#d4844a' : '#aaa' }}>{m.engagement_score}</span>
+                        : <span style={{ color: '#bbb' }}>—</span>}
                     </td>
                     <td style={{ ...tdStyle, fontSize: '12px' }}>
                       {m.onboarding_sent || m.onboarding_sent_at
