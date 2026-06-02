@@ -387,12 +387,24 @@ function RolesSection({ supabase }) {
   const [saving, setSaving] = useState({})
   const [saved, setSaved] = useState({})
   const [deactivating, setDeactivating] = useState({})
+  const [expanded, setExpanded] = useState({})
 
   // Load team members + activity
   useEffect(() => {
     supabase.from('members').select('*').order('joined_at', { ascending: false }).then(({ data }) => {
       const d = data || []
       setMembers(d)
+      // Fetch emails for members missing them via service-role API route
+      const missing = d.filter(m => !m.email)
+      if (missing.length > 0) {
+        fetch('/api/admin/user-emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: missing.map(m => m.id) }),
+        }).then(r => r.json()).then(({ emails }) => {
+          if (emails) setMembers(prev => prev.map(m => ({ ...m, email: m.email || emails[m.id] || null })))
+        }).catch(() => {})
+      }
       const rs = {}, as = {}
       d.forEach(m => {
         rs[m.id] = m.role || ''
@@ -649,7 +661,23 @@ function RolesSection({ supabase }) {
               </button>
             </div>
 
-            {/* Body: access toggles + activity */}
+            {/* Collapse toggle bar */}
+            <button
+              type="button"
+              onClick={() => setExpanded(prev => ({ ...prev, [m.id]: !prev[m.id] }))}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 16px', background: '#fafafa', border: 'none', borderTop: '1px solid #f5f5f5', cursor: 'pointer', fontFamily: ff, textAlign: 'left' }}
+            >
+              <div style={{ display: 'flex', gap: '24px' }}>
+                <span style={{ fontSize: '12px', color: '#aaa' }}>{access.size}/{ACCESS_SECTIONS.length} permissions enabled</span>
+                <span style={{ fontSize: '12px', color: '#aaa' }}>Last login: {lastLogin ? timeAgo(lastLogin) : '—'}</span>
+              </div>
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ transition: 'transform 0.2s', transform: expanded[m.id] ? 'rotate(180deg)' : 'none', flexShrink: 0 }}>
+                <path d="M1 1l4 4 4-4" stroke="#aaa" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+
+            {/* Body: access toggles + activity (collapsible) */}
+            {expanded[m.id] && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', borderTop: '1px solid #f5f5f5' }}>
               {/* Access toggles */}
               <div style={{ padding: '14px 16px', borderRight: '1px solid #f5f5f5' }}>
@@ -684,6 +712,7 @@ function RolesSection({ supabase }) {
                 )}
               </div>
             </div>
+            )}
           </div>
         )
       })}
