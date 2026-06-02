@@ -338,8 +338,6 @@ function DashboardHome({ supabase }) {
 
 // ── Roles & Permissions (merged with Team) ────────────────────
 
-const TEAM_ROLES = ['admin', 'editor', 'writer', 'finance_admin', 'social_admin']
-
 const ROLE_STYLES = {
   admin:         { color: '#c4364a', bg: 'rgba(196,54,74,0.1)' },
   editor:        { color: '#4a6fd4', bg: 'rgba(160,180,242,0.12)' },
