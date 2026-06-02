@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import CampaignsTab from './CampaignsTab'
+import SegmentsTab  from './SegmentsTab'
+import ImportTab    from './ImportTab'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
@@ -240,6 +243,12 @@ const DEFAULT_AUTOMATIONS = [
   { id: 'scheduled_live',   name: 'Scheduled Article Going Live',       trigger: 'Scheduled article auto-publishes', template: 'New Article Notification',  enabled: false, last_sent_at: null, sent_count: 0 },
   { id: 'invoice_confirm',  name: 'Invoice / Payment Confirmation',     trigger: 'Payment received',                 template: 'Invoice Receipt',           enabled: true,  last_sent_at: null, sent_count: 0 },
   { id: 'password_reset',   name: 'Password Reset',                     trigger: 'Password reset requested',         template: null,                        enabled: true,  last_sent_at: null, sent_count: 0 },
+  { id: 'event_signup',     name: 'Event Signup Confirmation',          trigger: 'Subscriber signs up for event',    template: null,                        enabled: false, last_sent_at: null, sent_count: 0 },
+  { id: 'upgrade_paid',     name: 'Upgrade to Paid',                    trigger: 'Subscriber upgrades to paid plan', template: null,                        enabled: false, last_sent_at: null, sent_count: 0 },
+  { id: 'downgrade',        name: 'Downgrade / Cancellation',           trigger: 'Subscriber downgrades or cancels', template: null,                        enabled: false, last_sent_at: null, sent_count: 0 },
+  { id: 'inactivity_30d',   name: 'Re-engagement (30-day inactivity)',  trigger: 'No login in 30 days',              template: null,                        enabled: false, last_sent_at: null, sent_count: 0 },
+  { id: 'article_first',    name: 'First Article Read Milestone',       trigger: 'Subscriber reads first article',   template: null,                        enabled: false, last_sent_at: null, sent_count: 0 },
+  { id: 'article_tenth',    name: '10th Article Read Milestone',        trigger: 'Subscriber reads 10th article',    template: null,                        enabled: false, last_sent_at: null, sent_count: 0 },
 ]
 
 const STATUS_COLORS = {
