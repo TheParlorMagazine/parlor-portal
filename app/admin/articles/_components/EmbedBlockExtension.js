@@ -2,6 +2,7 @@
 
 import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
+import { useState, useEffect } from 'react'
 
 // ── URL → embed converter ─────────────────────────────────────
 function urlToEmbed(raw) {
@@ -76,6 +77,29 @@ function isPlainUrl(val) {
   return (v.startsWith('http://') || v.startsWith('https://')) && !v.includes('<')
 }
 
+function isFullHtmlDoc(html) {
+  const t = html.trim().toLowerCase()
+  return t.startsWith('<!doctype') || t.startsWith('<html')
+}
+
+function BlobIframe({ html }) {
+  const [src, setSrc] = useState(null)
+  useEffect(() => {
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    setSrc(url)
+    return () => URL.revokeObjectURL(url)
+  }, [html])
+  if (!src) return null
+  return (
+    <iframe
+      src={src}
+      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+      style={{ width: '100%', height: '500px', border: 'none', display: 'block', borderRadius: '4px' }}
+    />
+  )
+}
+
 // ── NodeView ──────────────────────────────────────────────────
 function EmbedBlockView({ node, updateAttributes, selected }) {
   const { html } = node.attrs
@@ -113,7 +137,10 @@ function EmbedBlockView({ node, updateAttributes, selected }) {
         {html.trim() && (
           <div style={{ borderTop: '1px solid #f0f0f0', padding: '12px 16px' }}>
             <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#ccc', marginBottom: '8px' }}>Preview</div>
-            <div dangerouslySetInnerHTML={{ __html: html }} />
+            {isFullHtmlDoc(html)
+              ? <BlobIframe html={html} />
+              : <div dangerouslySetInnerHTML={{ __html: html }} />
+            }
           </div>
         )}
       </div>
