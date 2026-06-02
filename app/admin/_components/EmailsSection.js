@@ -158,7 +158,7 @@ function EmailBodyEditor({ content, onChange }) {
 // ── Template Editor Modal (full-screen overlay) ───────────────
 function TemplateEditorModal({ template, footer, onSave, onClose }) {
   const [subject, setSubject]     = useState(template?.subject || '')
-  const [bodyHtml, setBodyHtml]   = useState(template?.body_html || '')
+  const [bodyHtml, setBodyHtml]   = useState(template?.body_html || template?.body || '')
   const [previewMode, setPreview] = useState('desktop')
   const [saving, setSaving]       = useState(false)
 
@@ -268,16 +268,16 @@ export default function EmailsSection({ supabase }) {
       supabase.from('email_logs').select('*').order('sent_at', { ascending: false }).limit(100),
       supabase.from('email_settings').select('*').eq('id', 1).single(),
     ]).then(async ([tRes, aRes, lRes, sRes]) => {
-      // Templates: if table exists but is empty, seed the welcome template
+      // Templates: normalise body_html (fall back to body), sort welcome first
       if (tRes.status === 'fulfilled' && !tRes.value.error) {
-        const rows = tRes.value.data || []
+        const rows = (tRes.value.data || []).map(r => ({
+          ...r,
+          body_html: r.body_html || r.body || '',
+        }))
         if (rows.length === 0) {
-          const now = new Date().toISOString()
-          const seed = { ...DEFAULT_TEMPLATES[0], last_edited_at: now, created_at: now }
-          await supabase.from('email_templates').insert(seed)
-          setTemplates([seed, ...DEFAULT_TEMPLATES.slice(1)])
+          // Table exists but empty — show defaults (SQL seed not yet run)
+          setTemplates(DEFAULT_TEMPLATES)
         } else {
-          // Ensure welcome is first
           const sorted = [...rows].sort((a, b) => {
             if (a.template_type === 'welcome') return -1
             if (b.template_type === 'welcome') return 1
@@ -286,7 +286,6 @@ export default function EmailsSection({ supabase }) {
           setTemplates(sorted)
         }
       } else {
-        // Table doesn't exist yet — show defaults as fallback
         setTemplates(DEFAULT_TEMPLATES)
       }
       setAutomations(aRes.status === 'fulfilled' && aRes.value.data?.length ? aRes.value.data : DEFAULT_AUTOMATIONS)
@@ -298,7 +297,13 @@ export default function EmailsSection({ supabase }) {
 
   async function saveTemplate(updated) {
     const now = new Date().toISOString()
-    const payload = { ...updated, last_edited_at: now, created_at: updated.created_at || now }
+    const payload = {
+      ...updated,
+      body_html: updated.body_html || '',
+      body: updated.body_html || updated.body || '',
+      last_edited_at: now,
+      created_at: updated.created_at || now,
+    }
     const { error } = await supabase.from('email_templates').upsert(payload)
     if (!error) {
       setTemplates(prev => {
