@@ -95,6 +95,7 @@ export default function HomePage() {
   const [ribbonCollapsed, setRibbonCollapsed] = useState(false)
   const [ribbonScrolling, setRibbonScrolling] = useState(false)
   const [member, setMember] = useState(null)
+  const [articles, setArticles] = useState(ARTICLES)
   const aboutRef = useRef(null)
   const memberRef = useRef(null)
   const supabase = createClient()
@@ -109,7 +110,31 @@ export default function HomePage() {
     loadMember()
   }, [])
 
-  const items = ARTICLES.filter(a => !a.featured).sort((a, b) => parseDateSafe(b.date) - parseDateSafe(a.date))
+  useEffect(() => {
+    async function loadArticles() {
+      const { data, error } = await supabase
+        .from('articles')
+        .select('slug, title, subtitle, cover_image_url, author_name, author_photo_url, author_profile_url, category, date_published')
+        .eq('published', true)
+        .order('date_published', { ascending: false })
+        .limit(12)
+      if (error || !data?.length) return
+      setArticles(data.map(a => ({
+        url: a.slug ? `/post/${a.slug}` : '#',
+        cover: a.cover_image_url || '',
+        title: a.title || '',
+        excerpt: a.subtitle || '',
+        category: a.category || '',
+        authorName: a.author_name || '',
+        authorPhoto: a.author_photo_url || '',
+        authorProfile: a.author_profile_url || '',
+        date: a.date_published || '',
+      })))
+    }
+    loadArticles()
+  }, [])
+
+  const items = articles.filter(a => !a.featured).sort((a, b) => parseDateSafe(b.date) - parseDateSafe(a.date))
   const slidesHTML = items.map(slideHTML).join('')
 
   useEffect(() => {
@@ -274,7 +299,7 @@ export default function HomePage() {
       if (swiperInstance) { try { swiperInstance.destroy() } catch (e) {} }
       if (_equalizeCards) window.removeEventListener('resize', _equalizeCards)
     }
-  }, [])
+  }, [slidesHTML])
 
   return (
     <>
@@ -698,7 +723,7 @@ export default function HomePage() {
           box-shadow: 0 12px 32px rgba(17,24,39,.12), 0 2px 8px rgba(17,24,39,.06);
         }
         .media { position: relative; }
-        .cover { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+        .cover { width: 100%; aspect-ratio: 16/9; object-fit: cover; object-position: top; display: block; }
         .meta { padding: 10px 14px 12px; display: grid; gap: 6px; grid-template-rows: 32px auto auto 1fr; }
         .byline { display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.2; min-height: 32px; color: #6b7280; }
         .avatarWrap { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex: 0 0 32px; }

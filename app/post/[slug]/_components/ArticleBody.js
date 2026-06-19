@@ -69,6 +69,62 @@ const PROSE_STYLES = `
     max-width: 100%;
     border-radius: 4px;
     margin: 1.5em 0;
+    height: auto;
+  }
+  .parlor-prose img[data-align="center"] {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .parlor-prose img[data-align="left"] {
+    display: block;
+    margin-left: 0;
+    margin-right: auto;
+  }
+  .parlor-prose img[data-align="right"] {
+    display: block;
+    margin-left: auto;
+    margin-right: 0;
+  }
+  .parlor-prose img[data-align="float-left"] {
+    float: left;
+    margin: 0.25em 1.75em 0.75em 0;
+    max-width: 45%;
+    border-radius: 4px;
+  }
+  .parlor-prose img[data-align="float-right"] {
+    float: right;
+    margin: 0.25em 0 0.75em 1.75em;
+    max-width: 45%;
+    border-radius: 4px;
+  }
+  .parlor-prose figure {
+    margin: 1.5em 0;
+  }
+  .parlor-prose figure img {
+    margin: 0;
+  }
+  .parlor-prose figure[data-align="float-left"] {
+    float: left;
+    margin: 0.25em 1.75em 0.75em 0;
+    max-width: 45%;
+  }
+  .parlor-prose figure[data-align="float-right"] {
+    float: right;
+    margin: 0.25em 0 0.75em 1.75em;
+    max-width: 45%;
+  }
+  .parlor-prose figcaption {
+    font-size: 13px;
+    color: #888;
+    font-style: italic;
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+  .parlor-prose::after {
+    content: '';
+    display: table;
+    clear: both;
   }
   .parlor-prose pre {
     background: #f8f4f0;
@@ -125,6 +181,23 @@ function AlbumRenderer({ layout, images }) {
         </figure>
       ))}
     </div>
+  )
+}
+
+// Wrap <img data-caption="..."> in <figure> with <figcaption>, hoisting data-align to the figure
+function processImageCaptions(html) {
+  return html.replace(
+    /<img([^>]*?)data-caption="([^"]*)"([^>]*?)>/gi,
+    (match, before, caption, after) => {
+      if (!caption.trim()) return match
+      // Extract data-align from the img attrs to move to figure
+      const alignMatch = (before + after).match(/data-align="([^"]*)"/)
+      const align = alignMatch ? alignMatch[1] : ''
+      const figAttr = align ? ` data-align="${align}"` : ''
+      // Remove data-align from img attrs so it doesn't double-apply
+      const imgAttrs = (before + after).replace(/\s*data-align="[^"]*"/g, '')
+      return `<figure${figAttr}><img${imgAttrs}><figcaption>${caption}</figcaption></figure>`
+    }
   )
 }
 
@@ -247,7 +320,7 @@ export default function ArticleBody({
         <style>{PROSE_STYLES}</style>
         <div
           className="parlor-prose"
-          dangerouslySetInnerHTML={{ __html: truncatedHtml }}
+          dangerouslySetInnerHTML={{ __html: processImageCaptions(truncatedHtml) }}
         />
         <ArticlePaywallOverlay
           paywallType={paywallType}
@@ -269,7 +342,7 @@ export default function ArticleBody({
             <div
               key={i}
               className="parlor-prose"
-              dangerouslySetInnerHTML={{ __html: seg.content }}
+              dangerouslySetInnerHTML={{ __html: processImageCaptions(seg.content) }}
             />
           )
         }

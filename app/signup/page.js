@@ -1,11 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 
 export default function SignupPage() {
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
+
+  useEffect(() => {
+    const prefill = searchParams.get('email')
+    if (prefill) setEmail(prefill)
+  }, [])
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
@@ -37,6 +44,13 @@ export default function SignupPage() {
   }
 
   await fetch('/api/send-welcome', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, name })
+  })
+
+  // Add to newsletter mailing list
+  await fetch('/api/newsletter/subscribe', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, name })

@@ -1,7 +1,8 @@
 'use client'
 
-import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react'
+import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer, NodeViewContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import { Paragraph } from '@tiptap/extension-paragraph'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
@@ -17,6 +18,10 @@ import { EmbedBlock } from './EmbedBlockExtension'
 import { AlbumBlock, AlbumInsertModal } from './AlbumBlockExtension'
 import MediaLibraryModal from './MediaLibraryModal'
 import { createClient } from '../../../../lib/supabase'
+import ImageEditor from '../../_components/ImageEditor'
+
+// Module-level ref so ImageNodeView (outside React tree) can fire editor-level callbacks
+const imageCtxRef = { current: null }
 
 // ── Color palettes ───────────────────────────────────────────
 const TEXT_COLORS = [
@@ -107,6 +112,10 @@ const editorCSS = `
 }
 .ProseMirror::after { content: ''; display: table; clear: both; }
 .ProseMirror mark { border-radius: 2px; padding: 0 2px; }
+.ProseMirror strong, .ProseMirror b { font-weight: 800; }
+.ProseMirror p.indent-1 { margin-left: 2em; }
+.ProseMirror p.indent-2 { margin-left: 4em; }
+.ProseMirror p.indent-3 { margin-left: 6em; }
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left; color: #c5c5c5;
@@ -318,7 +327,7 @@ const imgInputStyle = {
 }
 
 // ── Image NodeView ────────────────────────────────────────────
-function ImageNodeView({ node, updateAttributes, selected }) {
+function ImageNodeView({ node, updateAttributes, selected, deleteNode }) {
   const [hovered, setHovered] = useState(false)
   const { src, alt, caption, align } = node.attrs
   const showControls = selected || hovered
@@ -337,10 +346,22 @@ function ImageNodeView({ node, updateAttributes, selected }) {
     ...(showControls && { outline: '2px solid #f2b8c6', outlineOffset: '2px' }),
   }
 
+  function handleContextMenu(e) {
+    e.preventDefault()
+    e.stopPropagation()
+    imageCtxRef.current?.({ x: e.clientX, y: e.clientY, src, updateAttributes, deleteNode })
+  }
+
   return (
-    <NodeViewWrapper style={wrapperStyle} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+    <NodeViewWrapper
+      style={wrapperStyle}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onContextMenu={handleContextMenu}
+      data-drag-handle
+    >
       <figure style={{ margin: 0, position: 'relative' }} contentEditable={false}>
-        <img src={src} alt={alt || ''} style={imgStyle} />
+        <img src={src} alt={alt || ''} style={imgStyle} draggable="false" />
 
         {showControls && (
           <div
@@ -410,8 +431,23 @@ function ImageNodeView({ node, updateAttributes, selected }) {
   )
 }
 
+// ── Custom Paragraph (supports indent class) ──────────────────
+const CustomParagraph = Paragraph.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      class: {
+        default: null,
+        parseHTML: el => el.getAttribute('class') || null,
+        renderHTML: attrs => attrs.class ? { class: attrs.class } : {},
+      },
+    }
+  },
+})
+
 // ── Custom Image extension ────────────────────────────────────
 const CustomImage = Image.extend({
+  draggable: true,
   addAttributes() {
     return {
       ...this.parent?.(),
@@ -438,9 +474,22 @@ export default function RichTextEditor({ content, onChange, placeholder }) {
   const [showMediaLibrary, setShowMediaLibrary] = useState(false)
   const [showAlbumModal, setShowAlbumModal] = useState(false)
 
+  // Image right-click context menu
+  const [imgCtxMenu, setImgCtxMenu]     = useState(null) // { x, y, src, updateAttributes, deleteNode }
+  const [imgRenameSrc, setImgRenameSrc] = useState(null) // { src, newName, updateAttributes }
+  const [imgEditing, setImgEditing]     = useState(null) // { src, folder, fileName }
+
   const supabase = createClient()
   const editorRef = useRef(null)
   const uploadFnRef = useRef(null)
+
+  // Register context menu callback for ImageNodeView
+  useEffect(() => {
+    imageCtxRef.current = ({ x, y, src, updateAttributes, deleteNode }) => {
+      setImgCtxMenu({ x, y, src, updateAttributes, deleteNode })
+    }
+    return () => { imageCtxRef.current = null }
+  }, [])
 
   async function uploadBodyImage(file) {
     const ext = file.name.split('.').pop()
@@ -456,7 +505,8 @@ export default function RichTextEditor({ content, onChange, placeholder }) {
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] } }),
+      StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] }, paragraph: false }),
+      CustomParagraph,
       Underline,
       Link.configure({ openOnClick: false, autolink: false }),
       CustomImage,
@@ -523,6 +573,26 @@ export default function RichTextEditor({ content, onChange, placeholder }) {
   const currentTextColor = editor.getAttributes('textStyle').color || null
   const currentHighlight = editor.getAttributes('highlight').color || null
   const inListItem = editor.isActive('listItem')
+  const currentIndent = (() => {
+    const attrs = editor.getAttributes('paragraph')
+    const cls = attrs?.class || ''
+    if (cls.includes('indent-3')) return 3
+    if (cls.includes('indent-2')) return 2
+    if (cls.includes('indent-1')) return 1
+    return 0
+  })()
+  function indentMore() {
+    if (inListItem) { editor.chain().focus().sinkListItem('listItem').run(); return }
+    const next = Math.min(currentIndent + 1, 3)
+    const cls = next > 0 ? `indent-${next}` : ''
+    editor.chain().focus().updateAttributes('paragraph', { class: cls || null }).run()
+  }
+  function indentLess() {
+    if (inListItem) { editor.chain().focus().liftListItem('listItem').run(); return }
+    const next = Math.max(currentIndent - 1, 0)
+    const cls = next > 0 ? `indent-${next}` : ''
+    editor.chain().focus().updateAttributes('paragraph', { class: cls || null }).run()
+  }
 
   function applyHeading(level) {
     if (level === null) {
@@ -718,15 +788,14 @@ export default function RichTextEditor({ content, onChange, placeholder }) {
 
           {/* Indent / Dedent */}
           <TBtn
-            onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
-            disabled={!inListItem}
+            onClick={indentMore}
             title="Increase indent"
           >
             <IconIndentMore />
           </TBtn>
           <TBtn
-            onClick={() => editor.chain().focus().liftListItem('listItem').run()}
-            disabled={!inListItem}
+            onClick={indentLess}
+            disabled={!inListItem && currentIndent === 0}
             title="Decrease indent"
           >
             <IconIndentLess />
@@ -760,6 +829,52 @@ export default function RichTextEditor({ content, onChange, placeholder }) {
             setShowAlbumModal(false)
           }}
           onClose={() => setShowAlbumModal(false)}
+        />
+      )}
+
+      {/* Image right-click context menu */}
+      {imgCtxMenu && (
+        <div onClick={() => setImgCtxMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 2000 }}>
+          <div onClick={e => e.stopPropagation()} style={{ position: 'fixed', top: imgCtxMenu.y, left: imgCtxMenu.x, background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 2001, minWidth: '150px' }}>
+            {[
+              { label: 'Edit Image', color: '#e0e0e0', action: () => {
+                const url = imgCtxMenu.src
+                const match = url.match(/\/Media\/(.+?)\/([^/?]+)(\?|$)/)
+                setImgEditing({ src: url, folder: match?.[1] || 'body', fileName: match?.[2] || 'image.jpg', updateAttributes: imgCtxMenu.updateAttributes })
+                setImgCtxMenu(null)
+              }},
+              { label: 'Replace Image', color: '#e0e0e0', action: () => {
+                setShowMediaLibrary(true)
+                setImgCtxMenu(null)
+              }},
+              { label: 'Delete', color: '#f87171', action: () => {
+                imgCtxMenu.deleteNode()
+                setImgCtxMenu(null)
+              }},
+            ].map(({ label, color, action }) => (
+              <button key={label} type="button" onClick={action}
+                style={{ display: 'block', width: '100%', padding: '9px 14px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '13px', color, fontFamily: "'Source Serif 4', Georgia, serif" }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Image editor launched from body image right-click */}
+      {imgEditing && (
+        <ImageEditor
+          imageUrl={imgEditing.src}
+          fileName={imgEditing.fileName}
+          folder={imgEditing.folder}
+          supabase={supabase}
+          onSave={newUrl => {
+            imgEditing.updateAttributes({ src: newUrl })
+            setImgEditing(null)
+          }}
+          onClose={() => setImgEditing(null)}
         />
       )}
     </>

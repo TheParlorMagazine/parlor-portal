@@ -2,8 +2,9 @@
 
 import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../../../lib/supabase'
+import ImageEditor from '../../_components/ImageEditor'
 
 // ── Editor NodeView ───────────────────────────────────────────
 function AlbumBlockView({ node, selected }) {
@@ -74,6 +75,12 @@ export function AlbumInsertModal({ onInsert, onClose }) {
   const [loading, setLoading] = useState(true)
   const [layout, setLayout] = useState('grid-2')
   const [selected, setSelected] = useState([]) // [{ src, alt, caption }]
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [contextMenu, setContextMenu] = useState(null) // { x, y, file }
+  const [editingFile, setEditingFile] = useState(null) // { file, newName }
+  const [editingImage, setEditingImage] = useState(null) // file
+  const dragIndex = useRef(null)
 
   useEffect(() => { loadFiles() }, [folder])
 
@@ -84,6 +91,34 @@ export function AlbumInsertModal({ onInsert, onClose }) {
     })
     setFiles((data || []).filter(f => f.name !== '.emptyFolderPlaceholder'))
     setLoading(false)
+  }
+
+  async function deleteFile(file) {
+    await supabase.storage.from('Media').remove([`${folder}/${file.name}`])
+    setSelected(prev => prev.filter(s => s.src !== getUrl(file.name)))
+    loadFiles()
+  }
+
+  async function renameFile(file, newName) {
+    const ext = file.name.split('.').pop()
+    const safeName = newName.trim().replace(/[^a-zA-Z0-9._-]/g, '-') + '.' + ext
+    const oldPath = `${folder}/${file.name}`
+    const newPath = `${folder}/${safeName}`
+    await supabase.storage.from('Media').move(oldPath, newPath)
+    loadFiles()
+  }
+
+  async function uploadFiles(fileList) {
+    const imageFiles = Array.from(fileList).filter(f => f.type.startsWith('image/'))
+    if (!imageFiles.length) return
+    setUploading(true)
+    await Promise.all(imageFiles.map(async file => {
+      const ext = file.name.split('.').pop()
+      const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      await supabase.storage.from('Media').upload(path, file, { cacheControl: '3600', contentType: file.type })
+    }))
+    setUploading(false)
+    loadFiles()
   }
 
   function getUrl(name) {
@@ -152,11 +187,24 @@ export function AlbumInsertModal({ onInsert, onClose }) {
         {/* Body: image grid + selected panel */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
           {/* Image grid */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
+          <div
+            style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', position: 'relative', border: isDragOver ? '2px dashed #f2b8c6' : '2px dashed transparent', borderRadius: '8px', transition: 'border-color 0.15s' }}
+            onDragOver={e => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer.types.includes('Files')) setIsDragOver(true) }}
+            onDragLeave={e => { e.stopPropagation(); setIsDragOver(false) }}
+            onDrop={e => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); if (e.dataTransfer.files?.length) uploadFiles(e.dataTransfer.files) }}
+          >
+            {isDragOver && (
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(242,184,198,0.08)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, pointerEvents: 'none' }}>
+                <span style={{ color: '#f2b8c6', fontSize: '13px', fontWeight: '600' }}>Drop to upload</span>
+              </div>
+            )}
+            {uploading && (
+              <div style={{ textAlign: 'center', padding: '12px 0', color: '#f2b8c6', fontSize: '12px' }}>Uploading…</div>
+            )}
             {loading ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: '#444', fontSize: '13px' }}>Loading…</div>
             ) : files.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: '#333', fontSize: '13px', fontStyle: 'italic' }}>No images in this folder.</div>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#333', fontSize: '13px', fontStyle: 'italic' }}>No images in this folder. Drag images here to upload.</div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
                 {files.map(file => {
@@ -166,6 +214,7 @@ export function AlbumInsertModal({ onInsert, onClose }) {
                     <div
                       key={file.id || file.name}
                       onClick={() => toggleImage(url)}
+                      onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, file }) }}
                       style={{ position: 'relative', aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', border: `2px solid ${isSelected ? '#f2b8c6' : 'rgba(255,255,255,0.06)'}`, background: '#1a1a1a', transition: 'border-color 0.12s' }}
                     >
                       <img src={url} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -190,9 +239,31 @@ export function AlbumInsertModal({ onInsert, onClose }) {
               <div style={{ padding: '24px 14px', fontSize: '12px', color: '#333', fontStyle: 'italic' }}>Click images to add them.</div>
             ) : (
               <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {selected.map(img => (
-                  <div key={img.src} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                    <img src={img.src} alt="" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
+                {selected.map((img, i) => (
+                  <div
+                    key={img.src}
+                    draggable="true"
+                    onDragStart={e => { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move'; dragIndex.current = i }}
+                    onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+                    onDrop={e => {
+                      e.preventDefault()
+                      const from = dragIndex.current
+                      dragIndex.current = null
+                      if (from === null || from === i) return
+                      setSelected(prev => {
+                        const next = [...prev]
+                        const [moved] = next.splice(from, 1)
+                        next.splice(i, 0, moved)
+                        return next
+                      })
+                    }}
+                    onDragEnd={() => { dragIndex.current = null }}
+                    style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', color: '#333', paddingTop: '13px', flexShrink: 0, cursor: 'grab' }}>
+                      <svg width="10" height="14" viewBox="0 0 10 14" fill="none"><circle cx="3" cy="2" r="1.2" fill="#555"/><circle cx="7" cy="2" r="1.2" fill="#555"/><circle cx="3" cy="7" r="1.2" fill="#555"/><circle cx="7" cy="7" r="1.2" fill="#555"/><circle cx="3" cy="12" r="1.2" fill="#555"/><circle cx="7" cy="12" r="1.2" fill="#555"/></svg>
+                    </div>
+                    <img src={img.src} alt="" draggable="false" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
                       <input type="text" value={img.alt} onChange={e => updateImage(img.src, 'alt', e.target.value)} onKeyDown={e => e.stopPropagation()} placeholder="Alt text…" style={selInputStyle} />
                       <input type="text" value={img.caption} onChange={e => updateImage(img.src, 'caption', e.target.value)} onKeyDown={e => e.stopPropagation()} placeholder="Caption (optional)…" style={selInputStyle} />
@@ -220,6 +291,85 @@ export function AlbumInsertModal({ onInsert, onClose }) {
           </button>
         </div>
       </div>
+
+      {/* Context menu */}
+      {contextMenu && (
+        <div
+          onClick={() => setContextMenu(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 1100 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 1101, minWidth: '140px' }}
+          >
+            <button
+              type="button"
+              onClick={() => { setEditingImage(contextMenu.file); setContextMenu(null) }}
+              style={{ display: 'block', width: '100%', padding: '10px 16px', background: 'none', border: 'none', color: '#e0e0e0', fontSize: '13px', textAlign: 'left', cursor: 'pointer', fontFamily: "'Source Serif 4', Georgia, serif" }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => { setEditingFile({ file: contextMenu.file, newName: contextMenu.file.name.replace(/\.[^.]+$/, '') }); setContextMenu(null) }}
+              style={{ display: 'block', width: '100%', padding: '10px 16px', background: 'none', border: 'none', color: '#e0e0e0', fontSize: '13px', textAlign: 'left', cursor: 'pointer', fontFamily: "'Source Serif 4', Georgia, serif" }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+            >
+              Rename
+            </button>
+            <button
+              type="button"
+              onClick={() => { if (window.confirm(`Delete "${contextMenu.file.name}"? This cannot be undone.`)) deleteFile(contextMenu.file); setContextMenu(null) }}
+              style={{ display: 'block', width: '100%', padding: '10px 16px', background: 'none', border: 'none', color: '#f87171', fontSize: '13px', textAlign: 'left', cursor: 'pointer', fontFamily: "'Source Serif 4', Georgia, serif" }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.1)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Image editor */}
+      {editingImage && (
+        <ImageEditor
+          imageUrl={getUrl(editingImage.name)}
+          fileName={editingImage.name}
+          folder={folder}
+          supabase={supabase}
+          onSave={newUrl => {
+            setEditingImage(null)
+            loadFiles()
+            // auto-select the newly saved image
+            setSelected(prev => [...prev, { src: newUrl, alt: '', caption: '' }])
+          }}
+          onClose={() => setEditingImage(null)}
+        />
+      )}
+
+      {/* Rename modal */}
+      {editingFile && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#1a1a1a', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', padding: '24px', width: '360px', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#e0e0e0', marginBottom: '14px', fontFamily: "'Playfair Display', Georgia, serif" }}>Rename file</div>
+            <input
+              autoFocus
+              type="text"
+              value={editingFile.newName}
+              onChange={e => setEditingFile(prev => ({ ...prev, newName: e.target.value }))}
+              onKeyDown={e => { e.stopPropagation(); if (e.key === 'Enter') { renameFile(editingFile.file, editingFile.newName); setEditingFile(null) } if (e.key === 'Escape') setEditingFile(null) }}
+              style={{ ...selInputStyle, width: '100%', fontSize: '13px', padding: '8px 10px', marginBottom: '14px' }}
+            />
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setEditingFile(null)} style={{ padding: '7px 14px', background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#666', fontSize: '12px', cursor: 'pointer' }}>Cancel</button>
+              <button type="button" onClick={() => { renameFile(editingFile.file, editingFile.newName); setEditingFile(null) }} style={{ padding: '7px 14px', background: '#f2b8c6', border: 'none', borderRadius: '6px', color: '#0a0a0a', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>Rename</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

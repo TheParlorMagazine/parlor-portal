@@ -178,12 +178,21 @@ export default async function PreviewPage({ params }) {
           <div style={{ maxWidth: '900px', margin: '0 auto 48px', padding: '0 24px' }}>
             <img
               src={article.cover_image_url}
-              alt={article.title}
+              alt={article.cover_image_alt || article.title}
               style={{
                 width: '100%', aspectRatio: '16/9', objectFit: 'cover',
                 borderRadius: '4px', display: 'block',
               }}
             />
+            {article.cover_image_caption && (
+              <p style={{
+                margin: '10px 0 0', fontSize: '13px', lineHeight: '1.5',
+                color: '#888', fontStyle: 'italic',
+                fontFamily: "'Source Serif 4', Georgia, serif",
+              }}>
+                {article.cover_image_caption}
+              </p>
+            )}
           </div>
         )}
 

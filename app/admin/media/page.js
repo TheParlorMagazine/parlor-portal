@@ -4,6 +4,14 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import ImageEditor from '../_components/ImageEditor'
+
+const menuBtnStyle = {
+  display: 'block', width: '100%', padding: '9px 14px',
+  background: 'none', border: 'none', textAlign: 'left',
+  cursor: 'pointer', fontSize: '13px',
+  fontFamily: "'Source Serif 4', Georgia, serif",
+}
 
 const FOLDERS = ['all', 'body', 'covers', 'authors']
 
@@ -16,8 +24,11 @@ export default function AdminMediaPage() {
   const [filesLoading, setFilesLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
-  const [copiedUrl, setCopiedUrl] = useState(null)
-  const [dragging, setDragging] = useState(false)
+  const [copiedUrl, setCopiedUrl]     = useState(null)
+  const [dragging, setDragging]       = useState(false)
+  const [ctxMenu, setCtxMenu]         = useState(null) // { x, y, file }
+  const [renamingFile, setRenamingFile] = useState(null)
+  const [editingImage, setEditingImage] = useState(null)
   const fileInputRef = useRef(null)
 
   // Admin check
@@ -105,6 +116,13 @@ export default function AdminMediaPage() {
     await supabase.storage.from('Media').remove([`${file.folder}/${file.name}`])
     setFiles(prev => prev.filter(f => f.name !== file.name || f.folder !== file.folder))
     setDeletingId(null)
+  }
+
+  async function renameFile(file, newName) {
+    const ext = file.name.split('.').pop()
+    const safe = newName.trim().replace(/[^a-zA-Z0-9._-]/g, '-') + '.' + ext
+    await supabase.storage.from('Media').move(`${file.folder}/${file.name}`, `${file.folder}/${safe}`)
+    loadFiles()
   }
 
   async function copyUrl(file) {
@@ -240,23 +258,75 @@ export default function AdminMediaPage() {
                 deleting={deletingId === (file.id || file.name)}
                 onCopy={() => copyUrl(file)}
                 onDelete={() => handleDelete(file)}
+                onContextMenu={e => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, file }) }}
                 showFolder={folder === 'all'}
               />
             ))}
           </div>
         )}
       </div>
+
+      {/* Context menu */}
+      {ctxMenu && (
+        <div onClick={() => setCtxMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 1200 }}>
+          <div onClick={e => e.stopPropagation()} style={{ position: 'fixed', top: ctxMenu.y, left: ctxMenu.x, background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 1201, minWidth: '140px' }}>
+            {[
+              { label: 'Edit',     color: '#e0e0e0', action: () => { setEditingImage(ctxMenu.file); setCtxMenu(null) } },
+              { label: 'Rename',   color: '#e0e0e0', action: () => { setRenamingFile({ file: ctxMenu.file, newName: ctxMenu.file.name.replace(/\.[^.]+$/, '') }); setCtxMenu(null) } },
+              { label: 'Copy URL', color: '#e0e0e0', action: () => { copyUrl(ctxMenu.file); setCtxMenu(null) } },
+              { label: 'Delete',   color: '#f87171', action: () => { handleDelete(ctxMenu.file); setCtxMenu(null) } },
+            ].map(({ label, color, action }) => (
+              <button key={label} type="button" onClick={action}
+                style={{ ...menuBtnStyle, color }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Rename modal */}
+      {renamingFile && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#1a1a1a', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', padding: '24px', width: '360px', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#e0e0e0', marginBottom: '14px', fontFamily: "'Playfair Display', Georgia, serif" }}>Rename file</div>
+            <input autoFocus type="text" value={renamingFile.newName}
+              onChange={e => setRenamingFile(p => ({ ...p, newName: e.target.value }))}
+              onKeyDown={e => { if (e.key === 'Enter') { renameFile(renamingFile.file, renamingFile.newName); setRenamingFile(null) } if (e.key === 'Escape') setRenamingFile(null) }}
+              style={{ width: '100%', padding: '8px 10px', background: '#2a2a2a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '5px', color: '#e0e0e0', fontSize: '13px', outline: 'none', marginBottom: '14px', boxSizing: 'border-box' }} />
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setRenamingFile(null)} style={{ padding: '7px 14px', background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#666', fontSize: '12px', cursor: 'pointer' }}>Cancel</button>
+              <button type="button" onClick={() => { renameFile(renamingFile.file, renamingFile.newName); setRenamingFile(null) }} style={{ padding: '7px 14px', background: '#f2b8c6', border: 'none', borderRadius: '6px', color: '#0a0a0a', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>Rename</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image editor */}
+      {editingImage && (
+        <ImageEditor
+          imageUrl={getUrl(editingImage)}
+          fileName={editingImage.name}
+          folder={editingImage.folder}
+          supabase={supabase}
+          onSave={() => { setEditingImage(null); loadFiles() }}
+          onClose={() => setEditingImage(null)}
+        />
+      )}
     </div>
   )
 }
 
-function MediaCard({ file, url, copied, deleting, onCopy, onDelete, showFolder }) {
+function MediaCard({ file, url, copied, deleting, onCopy, onDelete, onContextMenu, showFolder }) {
   const [hovered, setHovered] = useState(false)
 
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onContextMenu={onContextMenu}
       style={{
         borderRadius: '9px',
         overflow: 'hidden',

@@ -15,14 +15,15 @@ function AudioPaywallOverlay({ price, onReplay }) {
   return (
     <div style={{
       position: 'absolute', inset: 0, zIndex: 10,
-      background: 'rgba(255,255,255,0.96)',
+      background: 'rgba(253,249,247,0.97)',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      padding: '24px', gap: '12px',
+      padding: '20px 24px', gap: '10px',
       fontFamily: "'Source Serif 4', Georgia, serif",
-      backdropFilter: 'blur(2px)',
+      backdropFilter: 'blur(4px)',
+      borderRadius: '12px',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-        <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
           <rect x="2" y="7" width="10" height="7" rx="1.5" fill="#0a0a0a" />
           <path d="M4 7V5a3 3 0 016 0v2" stroke="#0a0a0a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
         </svg>
@@ -30,48 +31,36 @@ function AudioPaywallOverlay({ price, onReplay }) {
           Members-only audio
         </span>
       </div>
-      <p style={{ fontSize: '13px', color: '#777', margin: 0, textAlign: 'center', maxWidth: '280px', lineHeight: '1.5' }}>
+      <p style={{ fontSize: '13px', color: '#777', margin: 0, textAlign: 'center', lineHeight: '1.5' }}>
         You've heard the preview. Unlock the full episode with a membership.
       </p>
 
-      <a
-        href="/plans"
-        style={{
-          display: 'block', width: '100%', maxWidth: '280px',
-          padding: '11px 0', background: '#0a0a0a', borderRadius: '6px',
+      {/* Buttons side by side */}
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', marginTop: '4px' }}>
+        <a href="/plans" style={{
+          padding: '9px 18px', background: '#0a0a0a', borderRadius: '6px',
           color: '#fff', fontFamily: "'Source Serif 4', Georgia, serif",
-          fontSize: '14px', fontWeight: '600', textAlign: 'center', textDecoration: 'none',
-        }}
-      >
-        Become a member — from $10/mo
-      </a>
-
-      {price && (
-        <>
-          <div style={{ fontSize: '12px', color: '#bbb' }}>or</div>
-          <a
-            href="/plans"
-            style={{
-              display: 'block', width: '100%', maxWidth: '280px',
-              padding: '10px 0', border: '1px solid #0a0a0a', borderRadius: '6px',
-              color: '#0a0a0a', fontFamily: "'Source Serif 4', Georgia, serif",
-              fontSize: '14px', fontWeight: '600', textAlign: 'center', textDecoration: 'none',
-              background: 'transparent',
-            }}
-          >
-            Unlock this episode — ${parseFloat(price).toFixed(2)}
+          fontSize: '13px', fontWeight: '600', textAlign: 'center', textDecoration: 'none', whiteSpace: 'nowrap',
+        }}>
+          Become a member — from $10/mo
+        </a>
+        {price && (
+          <a href="/plans" style={{
+            padding: '9px 18px', border: '1px solid #0a0a0a', borderRadius: '6px',
+            color: '#0a0a0a', fontFamily: "'Source Serif 4', Georgia, serif",
+            fontSize: '13px', fontWeight: '600', textAlign: 'center', textDecoration: 'none',
+            background: 'transparent', whiteSpace: 'nowrap',
+          }}>
+            Unlock — ${parseFloat(price).toFixed(2)}
           </a>
-        </>
-      )}
+        )}
+      </div>
 
-      <button
-        onClick={onReplay}
-        style={{
-          background: 'none', border: 'none', cursor: 'pointer', marginTop: '4px',
-          fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '12px', color: '#bbb',
-          textDecoration: 'underline', textUnderlineOffset: '2px',
-        }}
-      >
+      <button onClick={onReplay} style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '12px', color: '#bbb',
+        textDecoration: 'underline', textUnderlineOffset: '2px',
+      }}>
         ↺ Replay preview
       </button>
     </div>
@@ -116,6 +105,7 @@ export default function PublicAudioPlayer({ url, title, duration, transcript, ha
       a.pause()
       setPlaying(false)
       setShowPaywall(true)
+      setShowTranscript(false)
     }
   }
 
@@ -150,7 +140,13 @@ export default function PublicAudioPlayer({ url, title, duration, transcript, ha
       border: '1px solid #f0e8e0', borderRadius: '12px', overflow: 'hidden',
       margin: '32px 0', background: '#fdf9f7',
       fontFamily: "'Source Serif 4', Georgia, serif",
+      position: 'relative',
     }}>
+      {/* Paywall overlay covers the entire card */}
+      {showPaywall && (
+        <AudioPaywallOverlay price={price} onReplay={handleReplay} />
+      )}
+
       {/* Header */}
       <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0e8e0', display: 'flex', alignItems: 'center', gap: '12px' }}>
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
@@ -174,10 +170,6 @@ export default function PublicAudioPlayer({ url, title, duration, transcript, ha
 
       {/* Player */}
       <div style={{ padding: '16px 20px', position: 'relative' }}>
-        {showPaywall && (
-          <AudioPaywallOverlay price={price} onReplay={handleReplay} />
-        )}
-
         <audio
           ref={audioRef}
           src={url}

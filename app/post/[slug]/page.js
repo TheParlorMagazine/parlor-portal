@@ -9,6 +9,7 @@ import path from 'path'
 import SiteHeader from '../../_components/SiteHeader'
 import SiteFooter from '../../_components/SiteFooter'
 import ScrollToTop from '../../_components/ScrollToTop'
+import SubscribeWall from './_components/SubscribeWall'
 
 const db = createClient()
 
@@ -289,14 +290,26 @@ export default async function ArticlePage({ params }) {
           <div style={{ maxWidth: '900px', margin: '0 auto 48px', padding: '0 24px' }}>
             <img
               src={article.cover_image_url}
-              alt={article.title}
+              alt={article.cover_image_alt || article.title}
               style={{
                 width: '100%', aspectRatio: '16/9', objectFit: 'cover',
                 borderRadius: '4px', display: 'block',
               }}
             />
+            {article.cover_image_caption && (
+              <p style={{
+                margin: '10px 0 0', fontSize: '13px', lineHeight: '1.5',
+                color: '#888', fontStyle: 'italic',
+                fontFamily: "'Source Serif 4', Georgia, serif",
+              }}>
+                {article.cover_image_caption}
+              </p>
+            )}
           </div>
         )}
+
+        {/* Subscribe wall — only for guests */}
+        {!userId && <SubscribeWall />}
 
         {/* Article body */}
         <div style={{ maxWidth: '720px', margin: '0 auto', padding: '0 24px 80px' }}>

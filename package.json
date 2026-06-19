@@ -7,6 +7,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@imgly/background-removal": "^1.7.0",
     "@supabase/ssr": "^0.3.0",
     "@supabase/supabase-js": "^2",
     "@tiptap/extension-color": "^3.23.6",
@@ -19,10 +20,12 @@
     "@tiptap/extension-underline": "^3.23.6",
     "@tiptap/react": "^3.23.6",
     "@tiptap/starter-kit": "^3.23.6",
+    "fabric": "^7.4.0",
     "next": "^16.2.6",
     "react": "^18",
     "react-dom": "^18",
     "resend": "^3.2.0",
-    "stripe": "^14.0.0"
+    "stripe": "^14.0.0",
+    "tui-image-editor": "^3.15.3"
   }
 }
