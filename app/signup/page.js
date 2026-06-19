@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 
-export default function SignupPage() {
+function SignupForm() {
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
+  const returnTo = searchParams.get('returnTo') || '/'
 
   useEffect(() => {
     const prefill = searchParams.get('email')
@@ -33,7 +34,7 @@ export default function SignupPage() {
     password,
     options: {
       data: { full_name: name },
-      emailRedirectTo: `${window.location.origin}/auth/callback`
+      emailRedirectTo: `${window.location.origin}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`
     }
   })
 
@@ -65,7 +66,7 @@ export default function SignupPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`
+        redirectTo: `${window.location.origin}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`
       }
     })
     if (error) {
@@ -194,4 +195,12 @@ const styles = {
   btn: { display:'block', width:'100%', padding:'11px', background:'#0a0a0a', color:'#ffffff', border:'none', borderRadius:'8px', fontFamily:'Georgia, serif', fontSize:'14px', fontWeight:'500', cursor:'pointer', textAlign:'center', textDecoration:'none', marginTop:'8px' },
   footer: { marginTop:'20px', fontSize:'13px', color:'#888', textAlign:'center' },
   link: { color:'#0a0a0a', fontWeight:'500' }
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
+  )
 }

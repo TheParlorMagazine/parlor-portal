@@ -98,16 +98,6 @@ export default async function PreviewPage({ params }) {
 
         {/* Article header */}
         <div style={{ maxWidth: '720px', margin: '0 auto', padding: '56px 24px 0' }}>
-          {article.category && (
-            <div style={{
-              fontFamily: "'Source Serif 4', Georgia, serif",
-              fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.12em',
-              color: '#c4364a', marginBottom: '18px',
-            }}>
-              {article.category}
-            </div>
-          )}
-
           <h1 style={{
             fontFamily: "'Playfair Display', Georgia, serif",
             fontSize: 'clamp(30px, 5vw, 52px)', lineHeight: '1.15',

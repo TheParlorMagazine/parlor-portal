@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import PublicAudioPlayer from './PublicAudioPlayer'
 import PublicVideoEmbed from './PublicVideoEmbed'
 
@@ -142,20 +143,55 @@ const PROSE_STYLES = `
   }
 `
 
+function Carousel({ images }) {
+  const [index, setIndex] = useState(0)
+  const captionStyle = { fontSize: '12px', color: '#888', marginTop: '8px', fontStyle: 'italic', lineHeight: '1.4', fontFamily: "'Source Serif 4', Georgia, serif", textAlign: 'center' }
+  const img = images[index]
+  const atStart = index === 0
+  const atEnd   = index === images.length - 1
+
+  const chevron = (dir) => (
+    <button
+      onClick={() => setIndex(i => i + dir)}
+      style={{
+        position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+        [dir === -1 ? 'left' : 'right']: '10px',
+        background: 'rgba(0,0,0,0.45)', border: 'none', borderRadius: '50%',
+        width: 40, height: 40, cursor: 'pointer', color: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 20, lineHeight: 1, transition: 'opacity 0.2s',
+        zIndex: 2,
+      }}
+      aria-label={dir === -1 ? 'Previous' : 'Next'}
+    >
+      {dir === -1 ? '‹' : '›'}
+    </button>
+  )
+
+  return (
+    <div style={{ margin: '2em 0' }}>
+      <div style={{ position: 'relative', userSelect: 'none' }}>
+        <img
+          src={img.src} alt={img.alt || ''}
+          style={{ width: '100%', borderRadius: '8px', display: 'block', maxHeight: '520px', objectFit: 'cover' }}
+        />
+        {!atStart && chevron(-1)}
+        {!atEnd   && chevron(1)}
+        {/* Counter */}
+        <div style={{ position: 'absolute', bottom: 10, right: 14, background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: 12, padding: '3px 8px', borderRadius: 20, fontFamily: "'Source Serif 4', Georgia, serif" }}>
+          {index + 1} / {images.length}
+        </div>
+      </div>
+      {img.caption && <p style={captionStyle}>{img.caption}</p>}
+    </div>
+  )
+}
+
 function AlbumRenderer({ layout, images }) {
   const captionStyle = { fontSize: '12px', color: '#888', marginTop: '5px', fontStyle: 'italic', lineHeight: '1.4', fontFamily: "'Source Serif 4', Georgia, serif" }
 
   if (layout === 'carousel') {
-    return (
-      <div style={{ margin: '2em 0', overflowX: 'auto', display: 'flex', gap: '12px', paddingBottom: '8px' }}>
-        {images.map((img, i) => (
-          <figure key={i} style={{ margin: 0, flexShrink: 0 }}>
-            <img src={img.src} alt={img.alt || ''} style={{ height: '260px', width: 'auto', borderRadius: '6px', display: 'block' }} />
-            {img.caption && <figcaption style={captionStyle}>{img.caption}</figcaption>}
-          </figure>
-        ))}
-      </div>
-    )
+    return <Carousel images={images} />
   }
 
   if (layout === 'masonry') {

@@ -3,25 +3,17 @@
 import { useState, useEffect, useRef } from 'react'
 
 export default function SubscribeWall() {
-  const [visible, setVisible]     = useState(false)
-  const [dismissed, setDismissed] = useState(false)
-  const [email, setEmail]         = useState('')
-  const [status, setStatus] = useState('idle')
+  const [visible, setVisible] = useState(false)
+  const [email, setEmail]     = useState('')
   const scrollCount = useRef(0)
   const lastY       = useRef(0)
 
   useEffect(() => {
-    // Check if already subscribed/dismissed this session
-    if (sessionStorage.getItem('parlor-sub-dismissed')) {
-      setDismissed(true)
-      return
-    }
-
     function onScroll() {
       const y = window.scrollY
-      if (y > lastY.current + 10) {        // scrolling down
+      if (y > lastY.current + 10) {
         scrollCount.current += 1
-        if (scrollCount.current >= 2) {    // second downward scroll gesture
+        if (scrollCount.current >= 2) {
           setVisible(true)
         }
       }
@@ -32,22 +24,37 @@ export default function SubscribeWall() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  function dismiss() {
-    sessionStorage.setItem('parlor-sub-dismissed', '1')
-    setDismissed(true)
-    setVisible(false)
-  }
+  // Lock body scroll when wall is visible
+  useEffect(() => {
+    if (!visible) return
+    const scrollY = window.scrollY
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.left = '0'
+    document.body.style.right = '0'
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.left = ''
+      document.body.style.right = ''
+      document.body.style.overflow = ''
+      window.scrollTo(0, scrollY)
+    }
+  }, [visible])
 
   function handleSubmit(e) {
     e.preventDefault()
     if (!email.trim()) return
-    // Redirect to signup with email pre-filled and source tag
-    const params = new URLSearchParams({ email: email.trim(), source: 'article-wall' })
-    sessionStorage.setItem('parlor-sub-dismissed', '1')
+    const params = new URLSearchParams({
+      email: email.trim(),
+      source: 'article-wall',
+      returnTo: window.location.pathname,
+    })
     window.location.href = `/signup?${params}`
   }
 
-  if (dismissed || !visible) return null
+  if (!visible) return null
 
   return (
     <>
@@ -59,7 +66,6 @@ export default function SubscribeWall() {
           backdropFilter: 'blur(6px)',
           WebkitBackdropFilter: 'blur(6px)',
         }}
-        onClick={dismiss}
       />
 
       {/* Wall card */}
@@ -76,13 +82,6 @@ export default function SubscribeWall() {
         <div style={{ position: 'absolute', top: 0, right: 0, width: 120, height: 120, backgroundImage: "url('/corner-flourish.png')", backgroundSize: 'contain', backgroundRepeat: 'no-repeat', opacity: 0.25, transform: 'scaleX(-1)' }} />
 
         <div style={{ maxWidth: 640, margin: '0 auto', textAlign: 'center', position: 'relative' }}>
-
-          {/* Close */}
-          <button
-            onClick={dismiss}
-            style={{ position: 'absolute', top: -16, right: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: '#c47080', lineHeight: 1, padding: 4 }}
-            aria-label="Close"
-          >×</button>
 
           <p style={{ fontSize: 13, color: '#c47080', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, margin: '0 0 10px' }}>Keep reading</p>
           <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(28px, 5vw, 44px)', fontWeight: 700, color: '#1a1a1a', margin: '0 0 10px', lineHeight: 1.15 }}>
@@ -132,7 +131,7 @@ export default function SubscribeWall() {
 
           <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>
             Already a subscriber?{' '}
-            <a href="/login" style={{ color: '#c47080', textDecoration: 'underline', textUnderlineOffset: 2 }}>Sign in here</a>
+            <a href={`/login?returnTo=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '/')}`} style={{ color: '#c47080', textDecoration: 'underline', textUnderlineOffset: 2 }}>Sign in here</a>
           </p>
         </div>
       </div>

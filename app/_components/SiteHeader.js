@@ -10,7 +10,7 @@ const ABOUT_LINKS = [
   { label: "Contact Us", href: "/contact" },
 ]
 
-export default function SiteHeader({ hideOnScroll = false }) {
+export default function SiteHeader({ hideOnScroll = false, activeCategory = null }) {
   const [aboutOpen, setAboutOpen] = useState(false)
   const [memberOpen, setMemberOpen] = useState(false)
   const [member, setMember] = useState(null)
@@ -197,6 +197,8 @@ export default function SiteHeader({ hideOnScroll = false }) {
         }
         .header-section-link:hover { color: var(--sh-white); }
         .header-section-link:hover::after { transform: scaleX(1); }
+        .header-section-link.active { color: var(--sh-white); }
+        .header-section-link.active::after { transform: scaleX(1); background: var(--sh-pink); }
         @media (max-width: 900px) {
           .header-top { padding: 12px 20px; }
           .header-bottom { gap: 20px; padding: 10px 20px; overflow-x: auto; }
@@ -296,9 +298,20 @@ export default function SiteHeader({ hideOnScroll = false }) {
 
         <nav className="header-bottom">
           <a href="/" className="header-section-link">Home</a>
-          {NAV_LINKS.map(link => (
-            <a key={link} href={`/${link.toLowerCase().replace(/ & /g,'-').replace(/ /g,'-')}`} className="header-section-link">{link}</a>
-          ))}
+          {NAV_LINKS.map(link => {
+            const isActive = activeCategory &&
+              activeCategory.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-') ===
+              link.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')
+            return (
+              <a
+                key={link}
+                href={`/${link.toLowerCase().replace(/ & /g,'-').replace(/ /g,'-')}`}
+                className={`header-section-link${isActive ? ' active' : ''}`}
+              >
+                {link}
+              </a>
+            )
+          })}
         </nav>
       </header>
     </>
