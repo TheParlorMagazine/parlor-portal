@@ -7,7 +7,7 @@ import { createClient } from '../../../../lib/supabase'
 import ImageEditor from '../../_components/ImageEditor'
 
 // ── Editor NodeView ───────────────────────────────────────────
-function AlbumBlockView({ node, selected }) {
+function AlbumBlockView({ node, selected, updateAttributes }) {
   let images = []
   try { images = JSON.parse(node.attrs.images || '[]') } catch {}
   const { layout } = node.attrs
@@ -33,7 +33,7 @@ function AlbumBlockView({ node, selected }) {
           </span>
         </div>
         {images.length > 0 && (
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
             {images.slice(0, 6).map((img, i) => (
               <div key={i} style={{ width: '60px', height: '60px', borderRadius: '4px', overflow: 'hidden', background: '#e0e0e0', flexShrink: 0 }}>
                 <img src={img.src} alt={img.alt || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -46,6 +46,27 @@ function AlbumBlockView({ node, selected }) {
             )}
           </div>
         )}
+        {/* Layout switcher */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingTop: images.length ? '8px' : 0, borderTop: images.length ? '1px solid #ebebeb' : 'none' }}>
+          <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#ccc', marginRight: '2px' }}>Layout:</span>
+          {Object.entries(layoutLabels).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => updateAttributes({ layout: key })}
+              style={{
+                padding: '3px 10px', border: 'none', borderRadius: '20px', cursor: 'pointer',
+                fontSize: '10px', fontFamily: "'Source Serif 4', Georgia, serif",
+                background: layout === key ? '#f2b8c6' : '#ebebeb',
+                color: layout === key ? '#0a0a0a' : '#999',
+                fontWeight: layout === key ? '600' : '400',
+                transition: 'background 0.15s, color 0.15s',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
     </NodeViewWrapper>
   )
