@@ -18,7 +18,7 @@ export async function GET(request) {
 
   const { data, error } = await supabase
     .from('articles')
-    .update({ published: true, published_at: now })
+    .update({ published: true, date_published: now })
     .lte('scheduled_at', now)
     .eq('published', false)
     .not('scheduled_at', 'is', null)

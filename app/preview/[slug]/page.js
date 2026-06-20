@@ -91,8 +91,8 @@ export default async function PreviewPage({ params }) {
 
   const segments = parseBodySegments(article.body || '').map(seg => ({ ...seg, hasAccess: true }))
 
-  const publishedDate = article.published_at
-    ? new Date(article.published_at).toLocaleDateString('en-US', {
+  const publishedDate = article.date_published
+    ? new Date(article.date_published).toLocaleDateString('en-US', {
         year: 'numeric', month: 'long', day: 'numeric',
       })
     : null

@@ -181,7 +181,7 @@ function DashboardHome({ supabase, setActiveSection }) {
     const today   = now.slice(0, 10)
 
     Promise.allSettled([
-      supabase.from('articles').select('id,title,author_name,published_at,scheduled_at,published,slug').order('published_at', { ascending: false }),
+      supabase.from('articles').select('id,title,author_name,date_published,scheduled_at,published,slug').order('date_published', { ascending: false }),
       supabase.from('members').select('id,role,joined_at,plan,subscription_status,email,full_name,onboarding_sent,onboarding_sent_at,deactivated').order('joined_at', { ascending: false }),
       supabase.from('invoices').select('id,status,amount,created_at').order('created_at', { ascending: false }),
       supabase.from('pitches').select('id,title,author_name,created_at,status').order('created_at', { ascending: false }),
@@ -243,7 +243,7 @@ function DashboardHome({ supabase, setActiveSection }) {
     type: 'article', icon: 'article',
     text: `Article published: ${a.title || 'Untitled'}`,
     meta: a.author_name,
-    date: a.published_at,
+    date: a.date_published,
     href: `/admin/articles/${a.id}/edit`,
   }))
   data.scheduledArticles.forEach(a => feed.push({
@@ -470,8 +470,8 @@ function RolesSection({ supabase }) {
     })
 
     Promise.allSettled([
-      supabase.from('activity_logs').select('user_id,action,description,created_at').order('created_at', { ascending: false }).limit(200),
-      supabase.from('articles').select('id,title,published_at,updated_at,user_id').order('updated_at', { ascending: false }).limit(100),
+      supabase.from('activity_log').select('user_id,action_type,action_detail,created_at').order('created_at', { ascending: false }).limit(200),
+      supabase.from('articles').select('id,title,date_published,updated_at,user_id').order('updated_at', { ascending: false }).limit(100),
       supabase.from('writers').select('id,name,updated_at,user_id').order('updated_at', { ascending: false }).limit(50),
     ]).then(([logRes, artRes, writersRes]) => {
       const logs    = logRes.status === 'fulfilled'     ? (logRes.value.data || []) : []
@@ -481,12 +481,12 @@ function RolesSection({ supabase }) {
       logs.forEach(l => {
         if (!l.user_id) return
         if (!map[l.user_id]) map[l.user_id] = []
-        map[l.user_id].push({ date: l.created_at, text: l.description || l.action || 'Action' })
+        map[l.user_id].push({ date: l.created_at, text: l.action_detail || l.action_type || 'Action' })
       })
       articles.forEach(a => {
         if (!a.user_id) return
         if (!map[a.user_id]) map[a.user_id] = []
-        map[a.user_id].push({ date: a.updated_at || a.published_at, text: `${a.published_at ? 'Published' : 'Updated'} article: ${a.title || 'Untitled'}` })
+        map[a.user_id].push({ date: a.updated_at || a.date_published, text: `${a.date_published ? 'Published' : 'Updated'} article: ${a.title || 'Untitled'}` })
       })
       writers.forEach(w => {
         if (!w.user_id) return

@@ -53,7 +53,7 @@ export async function generateMetadata({ params }) {
   const { slug } = await params
   const { data: article } = await db
     .from('articles')
-    .select('title, subtitle, cover_image_url, published_at, author_name')
+    .select('title, subtitle, cover_image_url, date_published, author_name')
     .eq('slug', slug)
     .eq('published', true)
     .single()
@@ -70,7 +70,7 @@ export async function generateMetadata({ params }) {
       title,
       description,
       type: 'article',
-      publishedTime: article.published_at || undefined,
+      publishedTime: article.date_published || undefined,
       authors: article.author_name ? [article.author_name] : [],
       images: article.cover_image_url
         ? [{ url: article.cover_image_url, width: 1200, height: 630, alt: article.title }]
@@ -147,21 +147,21 @@ export default async function ArticlePage({ params }) {
   if (article.category) {
     const { data } = await db
       .from('articles')
-      .select('id, slug, title, cover_image_url, category, published_at, author_name')
+      .select('id, slug, title, cover_image_url, category, date_published, author_name')
       .eq('published', true)
       .eq('category', article.category)
       .neq('id', article.id)
-      .order('published_at', { ascending: false })
+      .order('date_published', { ascending: false })
       .limit(3)
     related = data || []
   }
   if (related.length === 0) {
     const { data } = await db
       .from('articles')
-      .select('id, slug, title, cover_image_url, category, published_at, author_name')
+      .select('id, slug, title, cover_image_url, category, date_published, author_name')
       .eq('published', true)
       .neq('id', article.id)
-      .order('published_at', { ascending: false })
+      .order('date_published', { ascending: false })
       .limit(3)
     related = data || []
   }
@@ -182,8 +182,8 @@ export default async function ArticlePage({ params }) {
     }
   }
 
-  const publishedDate = article.published_at
-    ? new Date(article.published_at).toLocaleDateString('en-US', {
+  const publishedDate = article.date_published
+    ? new Date(article.date_published).toLocaleDateString('en-US', {
         year: 'numeric', month: 'long', day: 'numeric',
       })
     : null
@@ -194,7 +194,7 @@ export default async function ArticlePage({ params }) {
     headline: article.title,
     description: article.subtitle || '',
     image: article.cover_image_url || undefined,
-    datePublished: article.published_at || undefined,
+    datePublished: article.date_published || undefined,
     author: article.author_name
       ? { '@type': 'Person', name: article.author_name }
       : undefined,

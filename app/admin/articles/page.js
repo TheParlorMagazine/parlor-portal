@@ -121,7 +121,7 @@ export default function AdminArticlesPage() {
       a.paywall_type === 'paywall' ? 'Paywall' : 'Free',
       a.paywall_type === 'paywall' ? (a.paywall_price ?? '') : '',
       parsePaywalledElements(a.body),
-      a.published_at ? new Date(a.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '',
+      a.date_published ? new Date(a.date_published).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '',
       countWords(a.body),
       a.excerpt || '',
       a.meta_title || '',
