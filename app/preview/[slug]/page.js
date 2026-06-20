@@ -254,12 +254,10 @@ export default async function PreviewPage({ params }) {
                   </div>
                 )}
                 {article.author_bio && (
-                  <p style={{
-                    fontFamily: "'Source Serif 4', Georgia, serif",
-                    fontSize: '15px', lineHeight: '1.65', color: '#555', margin: 0,
-                  }}>
-                    {article.author_bio}
-                  </p>
+                  <div
+                    style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '15px', lineHeight: '1.65', color: '#555', margin: 0 }}
+                    dangerouslySetInnerHTML={{ __html: article.author_bio }}
+                  />
                 )}
               </div>
             </div>

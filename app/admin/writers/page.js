@@ -1,9 +1,13 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Underline from '@tiptap/extension-underline'
+import TipTapLink from '@tiptap/extension-link'
 
 function slugify(str) {
   return str.toLowerCase()
@@ -142,7 +146,7 @@ function WriterRow({ writer, deleting, onEdit, onDelete }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '15px', color: '#e0e0e0', marginBottom: '2px' }}>{writer.name}</div>
-        {writer.bio && <div style={{ fontSize: '12px', color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{writer.bio}</div>}
+        {writer.bio && <div style={{ fontSize: '12px', color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{writer.bio.replace(/<[^>]+>/g, '')}</div>}
       </div>
       {writer.profile_url && (
         <a href={writer.profile_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#444', textDecoration: 'none' }}>↗</a>
@@ -155,6 +159,92 @@ function WriterRow({ writer, deleting, onEdit, onDelete }) {
           {deleting ? '…' : 'Del'}
         </button>
       </div>
+    </div>
+  )
+}
+
+// ── Mini rich-text editor for bio ────────────────────────────
+function BioProse({ value, onChange }) {
+  const [linkPrompt, setLinkPrompt] = useState(false)
+  const [linkUrl, setLinkUrl]       = useState('')
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({ heading: false, blockquote: false, code: false, codeBlock: false, horizontalRule: false, bulletList: false, orderedList: false, listItem: false }),
+      Underline,
+      TipTapLink.configure({ openOnClick: false }),
+    ],
+    content: value || '',
+    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    editorProps: {
+      attributes: {
+        style: [
+          'min-height:80px', 'outline:none', 'font-size:13px',
+          "font-family:'Source Serif 4',Georgia,serif", 'color:#e0e0e0',
+          'line-height:1.6', 'padding:9px 12px', 'white-space:pre-wrap',
+        ].join(';'),
+      },
+    },
+  })
+
+  const btn = (active, onClick, title, children) => (
+    <button
+      type="button"
+      title={title}
+      onMouseDown={e => { e.preventDefault(); onClick() }}
+      style={{
+        background: active ? 'rgba(242,184,198,0.18)' : 'none',
+        border: 'none', borderRadius: '4px', color: active ? '#f2b8c6' : '#666',
+        cursor: 'pointer', padding: '3px 7px', fontSize: '12px', lineHeight: 1,
+        fontFamily: "'Source Serif 4',Georgia,serif",
+      }}
+    >{children}</button>
+  )
+
+  function applyLink() {
+    if (!editor) return
+    const url = linkUrl.trim()
+    if (!url) { editor.chain().focus().unsetLink().run(); setLinkPrompt(false); return }
+    editor.chain().focus().setLink({ href: url.startsWith('http') ? url : 'https://' + url }).run()
+    setLinkPrompt(false)
+    setLinkUrl('')
+  }
+
+  if (!editor) return null
+
+  return (
+    <div style={{ border: '1px solid rgba(255,255,255,0.07)', borderRadius: '6px', background: '#1c1c1c', overflow: 'hidden' }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '5px 8px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
+        {btn(editor.isActive('bold'),      () => editor.chain().focus().toggleBold().run(),      'Bold',      <strong>B</strong>)}
+        {btn(editor.isActive('italic'),    () => editor.chain().focus().toggleItalic().run(),    'Italic',    <em>I</em>)}
+        {btn(editor.isActive('underline'), () => editor.chain().focus().toggleUnderline().run(), 'Underline', <span style={{ textDecoration: 'underline' }}>U</span>)}
+        <div style={{ width: '1px', height: '14px', background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
+        {btn(editor.isActive('link'), () => {
+          if (editor.isActive('link')) { editor.chain().focus().unsetLink().run() }
+          else { setLinkUrl(editor.isActive('link') ? editor.getAttributes('link').href : ''); setLinkPrompt(true) }
+        }, 'Link', '🔗')}
+        {editor.isActive('link') && btn(false, () => editor.chain().focus().unsetLink().run(), 'Remove link', '✕')}
+      </div>
+
+      {/* Link input */}
+      {linkPrompt && (
+        <div style={{ display: 'flex', gap: '6px', padding: '6px 8px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161616' }}>
+          <input
+            autoFocus
+            type="text"
+            value={linkUrl}
+            onChange={e => setLinkUrl(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); applyLink() } if (e.key === 'Escape') { setLinkPrompt(false); setLinkUrl('') } }}
+            placeholder="https://…"
+            style={{ flex: 1, background: '#1c1c1c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#e0e0e0', fontSize: '12px', padding: '4px 8px', outline: 'none', fontFamily: "'Source Serif 4',Georgia,serif" }}
+          />
+          <button type="button" onMouseDown={e => { e.preventDefault(); applyLink() }} style={{ background: '#f2b8c6', border: 'none', borderRadius: '4px', color: '#0a0a0a', fontSize: '11px', fontWeight: '600', padding: '4px 10px', cursor: 'pointer' }}>Apply</button>
+          <button type="button" onMouseDown={e => { e.preventDefault(); setLinkPrompt(false); setLinkUrl('') }} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#555', fontSize: '11px', padding: '4px 8px', cursor: 'pointer' }}>Cancel</button>
+        </div>
+      )}
+
+      <EditorContent editor={editor} />
     </div>
   )
 }
@@ -266,7 +356,7 @@ function WriterFormModal({ supabase, initial, onSave, onClose }) {
         </div>
         <div style={{ marginBottom: '12px' }}>
           <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#4a4a4a', marginBottom: '5px' }}>Bio</div>
-          <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Short bio…" rows={2} style={{ ...sideInput, resize: 'vertical' }} />
+          <BioProse value={bio} onChange={setBio} />
         </div>
         <div style={{ marginBottom: '20px' }}>
           <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#4a4a4a', marginBottom: '5px' }}>Profile URL</div>
