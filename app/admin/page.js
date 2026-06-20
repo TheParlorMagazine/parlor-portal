@@ -8,6 +8,7 @@ import SubscribersSection from './_components/SubscribersSection'
 import PlansSection from './_components/PlansSection'
 import AnalyticsSection from './_components/AnalyticsSection'
 import EmailsSection from './_components/EmailsSection'
+import LiveVisitors from './_components/LiveVisitors'
 
 // ── Role definitions ──────────────────────────────────────────
 const ROLE_OPTIONS = [
@@ -279,6 +280,9 @@ function DashboardHome({ supabase, setActiveSection }) {
         <h1 style={{ fontFamily: ffH, fontSize: '26px', fontWeight: '700', color: '#0a0a0a', margin: 0, letterSpacing: '-0.01em' }}>Dashboard</h1>
         <div style={{ fontSize: '13px', color: '#888', marginTop: '4px', fontFamily: ff }}>Live overview</div>
       </div>
+
+      {/* ── 0. Live Visitors ── */}
+      <LiveVisitors supabase={supabase} />
 
       {/* ── 1. Subscriber Overview (collapsible) ── */}
       <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', marginBottom: '14px', overflow: 'hidden' }}>

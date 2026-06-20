@@ -38,42 +38,88 @@ async function getCountry() {
   }
 }
 
+const PING_INTERVAL = 30000 // 30 seconds
+
 export default function PageViewTracker() {
-  const pathname = usePathname()
-  const lastPath = useRef(null)
-  const supabase = createClient()
+  const pathname    = usePathname()
+  const lastPath    = useRef(null)
+  const pingRef     = useRef(null)
+  const visitorRef  = useRef(null)
+  const sessionRef  = useRef(null)
+  const countryRef  = useRef(null)
+  const supabase    = createClient()
+
+  // Upsert active session (called on load + every 30s)
+  async function pingSession(page, country) {
+    if (!visitorRef.current) return
+    try {
+      await supabase.from('active_sessions').upsert({
+        visitor_id:   visitorRef.current,
+        session_id:   sessionRef.current,
+        current_page: page,
+        country:      country,
+        device_type:  getDeviceType(),
+        referrer:     document.referrer || null,
+        last_seen:    new Date().toISOString(),
+      }, { onConflict: 'visitor_id' })
+    } catch {}
+  }
+
+  // Remove session when visitor leaves
+  async function removeSession() {
+    if (!visitorRef.current) return
+    try {
+      await supabase.from('active_sessions').delete().eq('visitor_id', visitorRef.current)
+    } catch {}
+  }
 
   useEffect(() => {
-    // Don't track admin pages
     if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard')) return
-    // Don't double-track the same path
-    if (pathname === lastPath.current) return
-    lastPath.current = pathname
 
-    async function track() {
+    async function init() {
       try {
-        const visitorId  = getOrCreate('parlor_visitor_id', uuid)
-        const sessionId  = getOrCreate('parlor_session_id', uuid)
-        const referrer   = document.referrer || null
-        const deviceType = getDeviceType()
-        const country    = await getCountry()
+        visitorRef.current = getOrCreate('parlor_visitor_id', uuid)
+        sessionRef.current = getOrCreate('parlor_session_id', uuid)
+        countryRef.current = await getCountry()
 
-        supabase.from('page_views').insert({
-          page_path:   pathname,
-          visitor_id:  visitorId,
-          session_id:  sessionId,
-          referrer,
-          device_type: deviceType,
-          country,
-          created_at:  new Date().toISOString(),
-        }).then(({ error }) => {
-          if (error) console.warn('Page view tracking error:', error.message)
-        })
-      } catch (e) {
-        // Never let tracking errors break the page
-      }
+        // Log page view
+        if (pathname !== lastPath.current) {
+          lastPath.current = pathname
+          supabase.from('page_views').insert({
+            page_path:   pathname,
+            visitor_id:  visitorRef.current,
+            session_id:  sessionRef.current,
+            referrer:    document.referrer || null,
+            device_type: getDeviceType(),
+            country:     countryRef.current,
+            created_at:  new Date().toISOString(),
+          }).then(({ error }) => {
+            if (error) console.warn('Page view tracking error:', error.message)
+          })
+        }
+
+        // Upsert active session immediately
+        await pingSession(pathname, countryRef.current)
+
+        // Keep session alive every 30s
+        clearInterval(pingRef.current)
+        pingRef.current = setInterval(() => {
+          pingSession(pathname, countryRef.current)
+        }, PING_INTERVAL)
+
+      } catch {}
     }
-    track()
+
+    init()
+
+    // Clean up on unmount / tab close
+    const handleUnload = () => removeSession()
+    window.addEventListener('beforeunload', handleUnload)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload)
+      clearInterval(pingRef.current)
+    }
   }, [pathname])
 
   return null
