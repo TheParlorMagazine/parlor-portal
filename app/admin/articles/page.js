@@ -244,7 +244,22 @@ export default function AdminArticlesPage() {
 }
 
 function ArticleRow({ article, isLast, deleting, onDelete }) {
-  const [hovered, setHovered] = useState(false)
+  const [hovered, setHovered]       = useState(false)
+  const [editingDate, setEditingDate] = useState(false)
+  const [dateValue, setDateValue]     = useState(
+    article.date_published ? new Date(article.date_published).toISOString().slice(0, 10) : ''
+  )
+  const [savingDate, setSavingDate]   = useState(false)
+  const supabase = createClient()
+
+  async function saveDate(val) {
+    setSavingDate(true)
+    const iso = val ? new Date(val).toISOString() : null
+    await supabase.from('articles').update({ date_published: iso, published_at: iso }).eq('id', article.id)
+    setDateValue(val)
+    setSavingDate(false)
+    setEditingDate(false)
+  }
 
   return (
     <div
@@ -272,9 +287,30 @@ function ArticleRow({ article, isLast, deleting, onDelete }) {
         {article.category || '—'}
       </div>
       <div style={{ fontSize: '12px', color: '#444' }}>
-        {article.created_at
-          ? new Date(article.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-          : '—'}
+        {editingDate ? (
+          <input
+            autoFocus
+            type="date"
+            value={dateValue}
+            onChange={e => setDateValue(e.target.value)}
+            onBlur={() => saveDate(dateValue)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') saveDate(dateValue)
+              if (e.key === 'Escape') setEditingDate(false)
+            }}
+            style={{ background: '#1a1a1a', border: '1px solid rgba(242,184,198,0.4)', borderRadius: '4px', color: '#e0e0e0', fontSize: '11px', padding: '3px 6px', outline: 'none', width: '120px' }}
+          />
+        ) : (
+          <span
+            onClick={() => setEditingDate(true)}
+            title="Click to edit date"
+            style={{ cursor: 'pointer', borderBottom: '1px dashed #444', paddingBottom: '1px' }}
+          >
+            {savingDate ? '…' : dateValue
+              ? new Date(dateValue).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+              : <span style={{ color: '#333' }}>Set date</span>}
+          </span>
+        )}
       </div>
       <div>
         {(() => {
