@@ -427,33 +427,49 @@ export default function AnalyticsSection({ supabase }) {
       )}
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h1 style={{ fontFamily: ffH, fontSize: '26px', fontWeight: '700', color: '#0a0a0a', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Analytics</h1>
-          <div style={{ fontSize: '13px', color: '#888', fontFamily: ff }}>
-            Right-click to download annual report · sourced from <code style={{ fontSize: '12px', background: '#f5f5f5', padding: '1px 5px', borderRadius: '3px' }}>page_views</code>
+      <div style={{ marginBottom: '28px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h1 style={{ fontFamily: ffH, fontSize: '26px', fontWeight: '700', color: '#0a0a0a', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Analytics</h1>
+            <div style={{ fontSize: '13px', color: '#aaa', fontFamily: ff }}>
+              {MONTHS_FULL[selectedMonth]} {selectedYear} · right-click to download annual report
+            </div>
           </div>
-        </div>
 
-        {/* Year tabs + month dropdown */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Year pills */}
+          {/* Year pills — clicking expands months below */}
           <div style={{ display: 'flex', gap: '4px' }}>
-            {years.map(y => (
-              <button key={y} onClick={() => { setSelectedYear(y); setSelectedMonth(y === now.getFullYear() ? now.getMonth() : 0) }}
-                style={{ padding: '6px 14px', border: '1px solid', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', fontFamily: ff, fontWeight: '600',
-                  background: selectedYear === y ? '#0a0a0a' : '#fff', color: selectedYear === y ? '#fff' : '#888', borderColor: selectedYear === y ? '#0a0a0a' : '#e8e8e8' }}>
+            {years.filter(y => y >= 2025).map(y => (
+              <button key={y}
+                onClick={() => {
+                  if (selectedYear === y) return // already selected, do nothing
+                  setSelectedYear(y)
+                  setSelectedMonth(y === now.getFullYear() ? now.getMonth() : 0)
+                }}
+                style={{ padding: '6px 16px', border: '1px solid', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', fontFamily: ff, fontWeight: '600',
+                  background: selectedYear === y ? '#0a0a0a' : '#fff',
+                  color:      selectedYear === y ? '#fff'    : '#888',
+                  borderColor: selectedYear === y ? '#0a0a0a' : '#e8e8e8' }}>
                 {y}
               </button>
             ))}
           </div>
-          {/* Month dropdown */}
-          <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}
-            style={{ padding: '6px 10px', border: '1px solid #e8e8e8', borderRadius: '8px', fontFamily: ff, fontSize: '12px', color: '#555', background: '#fff', cursor: 'pointer', outline: 'none' }}>
-            {MONTHS_FULL.map((m, i) => (
-              <option key={i} value={i}>{m}</option>
-            ))}
-          </select>
+        </div>
+
+        {/* Month pills — shown below, attached to selected year */}
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '12px' }}>
+          {MONTHS.map((m, i) => {
+            // Don't show future months
+            if (selectedYear === now.getFullYear() && i > now.getMonth()) return null
+            return (
+              <button key={i} onClick={() => setSelectedMonth(i)}
+                style={{ padding: '4px 12px', border: '1px solid', borderRadius: '20px', fontSize: '11px', cursor: 'pointer', fontFamily: ff,
+                  background: selectedMonth === i ? '#c4364a' : '#fff',
+                  color:      selectedMonth === i ? '#fff'    : '#aaa',
+                  borderColor: selectedMonth === i ? '#c4364a' : '#e8e8e8' }}>
+                {m}
+              </button>
+            )
+          })}
         </div>
       </div>
 
