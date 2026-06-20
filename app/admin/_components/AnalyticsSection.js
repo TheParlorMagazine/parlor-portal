@@ -412,7 +412,16 @@ export default function AnalyticsSection({ supabase }) {
       {/* Right-click context menu */}
       {contextMenu && (
         <div
-          style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, background: '#fff', border: '1px solid #e8e8e8', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 1000, overflow: 'hidden', minWidth: '200px' }}
+          style={{
+            position: 'fixed',
+            top: contextMenu.y,
+            // If too close to right edge, anchor from right instead
+            ...(contextMenu.x + 240 > window.innerWidth
+              ? { right: window.innerWidth - contextMenu.x }
+              : { left: contextMenu.x }),
+            background: '#fff', border: '1px solid #e8e8e8', borderRadius: '8px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 1000, overflow: 'hidden', minWidth: '220px'
+          }}
           onClick={e => e.stopPropagation()}
         >
           <button
