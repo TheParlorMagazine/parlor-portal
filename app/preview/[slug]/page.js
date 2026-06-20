@@ -69,7 +69,7 @@ export default async function PreviewPage({ params }) {
   // Fall back to standard article template — fetch draft or published
   const { data: article } = await db
     .from('articles')
-    .select('*')
+    .select('*, writers(name, bio, photo_url, profile_url)')
     .eq('slug', slug)
     .single()
 
@@ -79,6 +79,14 @@ export default async function PreviewPage({ params }) {
         No article found for slug <code>{slug}</code>.
       </div>
     )
+  }
+
+  // Always use live writer profile data when available, fall back to article snapshot
+  if (article.writers) {
+    article.author_name        = article.writers.name        || article.author_name
+    article.author_bio         = article.writers.bio         || article.author_bio
+    article.author_photo_url   = article.writers.photo_url   || article.author_photo_url
+    article.author_profile_url = article.writers.profile_url || article.author_profile_url
   }
 
   const segments = parseBodySegments(article.body || '').map(seg => ({ ...seg, hasAccess: true }))

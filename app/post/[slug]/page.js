@@ -90,12 +90,20 @@ export default async function ArticlePage({ params }) {
 
   const { data: article } = await db
     .from('articles')
-    .select('*')
+    .select('*, writers(name, bio, photo_url, profile_url)')
     .eq('slug', slug)
     .eq('published', true)
     .single()
 
   if (!article) notFound()
+
+  // Always use live writer profile data when available, fall back to article snapshot
+  if (article.writers) {
+    article.author_name     = article.writers.name        || article.author_name
+    article.author_bio      = article.writers.bio         || article.author_bio
+    article.author_photo_url   = article.writers.photo_url    || article.author_photo_url
+    article.author_profile_url = article.writers.profile_url  || article.author_profile_url
+  }
 
   // Authenticated user
   const cookieStore = await cookies()
