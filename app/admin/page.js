@@ -226,7 +226,10 @@ function DashboardHome({ supabase, setActiveSection }) {
     return () => { cancelled = true }
   }, [])
 
-  const subscribers  = data.allMembers.filter(m => !m.role || !TEAM_ROLES.includes(m.role))
+  const subscribers  = data.allMembers.filter(m =>
+    m.role !== 'super_admin' &&
+    !(m.email || '').toLowerCase().endsWith('@theparlormagazine.com')
+  )
   const weekAgo      = new Date(Date.now() - 7 * 86400000).toISOString()
   const newThisWeek  = subscribers.filter(m => m.joined_at > weekAgo).length
   const circleCount  = subscribers.filter(m => ["Reader's Circle",'readers_circle','circle'].includes(m.plan)).length
@@ -252,7 +255,7 @@ function DashboardHome({ supabase, setActiveSection }) {
   }))
   data.allMembers.slice(0, 8).forEach(m => feed.push({
     type: 'subscriber', icon: 'subscriber',
-    text: `New subscriber: ${m.email || m.name || m.id.slice(0, 12)}`,
+    text: `New subscriber: ${m.email || m.full_name || m.id.slice(0, 12)}`,
     meta: m.plan || 'free',
     date: m.joined_at,
   }))
