@@ -76,6 +76,7 @@ function initForm(data) {
     video_url: '', video_type: '',
     transcript: '',
     featured: false, published: false,
+    date_published: null,
     template: 'standard',
     paywall_type: 'free', paywall_price: '2.50',
     plan_access: ["Reader's Circle", 'Printing Press'],
@@ -99,6 +100,9 @@ function initForm(data) {
     cover_image_alt: data.cover_image_alt || '',
     cover_image_caption: data.cover_image_caption || '',
     scheduled_at: data.scheduled_at || null,
+    date_published: data.date_published
+      ? new Date(data.date_published).toISOString().slice(0, 10)
+      : null,
   }
 }
 
@@ -138,6 +142,7 @@ function buildPayload(form, overrides = {}) {
     cover_image_alt: form.cover_image_alt || null,
     cover_image_caption: form.cover_image_caption || null,
     scheduled_at: form.scheduled_at || null,
+    date_published: form.date_published ? new Date(form.date_published).toISOString() : null,
     ...overrides,
   }
 }
@@ -1464,6 +1469,17 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
                 Featured
               </span>
               <Toggle checked={form.featured} onChange={v => update('featured', v)} />
+            </div>
+
+            {/* Publish date */}
+            <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+              <SideLabel>Publish date</SideLabel>
+              <input
+                type="date"
+                value={form.date_published || ''}
+                onChange={e => update('date_published', e.target.value || null)}
+                style={{ ...sideInput, width: '100%', marginTop: '6px' }}
+              />
             </div>
 
             {/* Schedule */}
