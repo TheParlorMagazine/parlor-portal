@@ -167,17 +167,15 @@ function StatPill({ label, value, color }) {
   )
 }
 
-// ── Month picker helpers ──────────────────────────────────────
-function getMonthOptions() {
-  const options = []
+// ── Date helpers ─────────────────────────────────────────────
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
+function getAvailableYears() {
   const now = new Date()
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    const value = d.toISOString().slice(0, 7) // YYYY-MM
-    options.push({ label, value })
-  }
-  return options
+  const years = []
+  for (let y = now.getFullYear(); y >= 2024; y--) years.push(y)
+  return years
 }
 
 function monthRange(ym) {
@@ -187,10 +185,135 @@ function monthRange(ym) {
   return { start, end }
 }
 
+function yearRange(year) {
+  return {
+    start: new Date(year, 0, 1).toISOString(),
+    end:   new Date(year + 1, 0, 1).toISOString(),
+  }
+}
+
+// ── PDF Report Generator ──────────────────────────────────────
+function generateReport({ year, yearData, memberCount, paidCount }) {
+  const totalViews     = yearData.reduce((s, m) => s + (m.totalViews || 0), 0)
+  const totalVisitors  = yearData.reduce((s, m) => s + (m.uniqueVisitors || 0), 0)
+  const peakMonth      = yearData.reduce((best, m) => (!best || m.totalViews > best.totalViews) ? m : best, null)
+  const topArticles    = {}
+  yearData.forEach(m => m.topArticles?.forEach(a => { topArticles[a.title] = (topArticles[a.title] || 0) + a.views }))
+  const topArts        = Object.entries(topArticles).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  const topCountries   = {}
+  yearData.forEach(m => m.byCountry?.forEach(c => { topCountries[c.country] = (topCountries[c.country] || 0) + c.count }))
+  const topC           = Object.entries(topCountries).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  const monthlyViews   = yearData.map((m, i) => ({ month: MONTHS[i], views: m.totalViews || 0 }))
+  const maxBar         = Math.max(...monthlyViews.map(m => m.views), 1)
+
+  const barSVG = monthlyViews.map((m, i) => {
+    const h = Math.max(2, (m.views / maxBar) * 80)
+    const x = i * 38 + 4
+    return `<rect x="${x}" y="${88 - h}" width="30" height="${h}" fill="#c4364a" rx="3" opacity="0.85"/>
+            <text x="${x + 15}" y="106" text-anchor="middle" font-size="9" fill="#aaa" font-family="Georgia,serif">${m.month}</text>
+            ${m.views > 0 ? `<text x="${x + 15}" y="${84 - h}" text-anchor="middle" font-size="8" fill="#c4364a" font-family="Georgia,serif">${m.views}</text>` : ''}`
+  }).join('')
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>The Parlor — ${year} Analytics Report</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Georgia', serif; background: #fff; color: #0a0a0a; padding: 60px; max-width: 900px; margin: 0 auto; }
+  @media print { body { padding: 40px; } .no-print { display: none; } }
+  h1 { font-size: 42px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.14em; color: #aaa; margin-bottom: 24px; font-weight: 400; }
+  h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: #aaa; margin-bottom: 14px; font-weight: 400; }
+  .header { border-bottom: 2px solid #c4364a; padding-bottom: 28px; margin-bottom: 40px; }
+  .logo { font-size: 14px; color: #c4364a; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 32px; font-style: italic; }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 48px; }
+  .stat { border: 1px solid #f0e8e0; border-radius: 10px; padding: 20px; }
+  .stat-val { font-size: 36px; font-weight: 700; color: #0a0a0a; line-height: 1; margin-bottom: 6px; }
+  .stat-val.pink { color: #c4364a; }
+  .stat-val.green { color: #2d8f5a; }
+  .stat-val.blue { color: #4a6fd4; }
+  .stat-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #aaa; }
+  .section { margin-bottom: 48px; }
+  .chart-wrap { background: #fafafa; border-radius: 10px; padding: 20px 16px 8px; margin-bottom: 8px; }
+  .bar-list { display: flex; flex-direction: column; gap: 10px; }
+  .bar-row { display: flex; align-items: center; gap: 12px; }
+  .bar-label { font-size: 12px; color: #555; width: 180px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { flex: 1; height: 6px; background: #f0ebe8; border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; background: #c4364a; }
+  .bar-fill.blue { background: #4a6fd4; }
+  .bar-num { font-size: 11px; color: #aaa; width: 40px; text-align: right; flex-shrink: 0; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+  .footer { border-top: 1px solid #f0e8e0; padding-top: 20px; margin-top: 48px; font-size: 11px; color: #ccc; display: flex; justify-content: space-between; }
+  .peak-badge { display: inline-block; background: #fce8ed; color: #c4364a; padding: 4px 12px; border-radius: 20px; font-size: 11px; margin-left: 8px; }
+  .btn { display: inline-block; margin-bottom: 32px; padding: 10px 24px; background: #0a0a0a; color: #fff; border: none; border-radius: 6px; font-family: Georgia,serif; font-size: 13px; cursor: pointer; }
+</style></head><body>
+<button class="btn no-print" onclick="window.print()">⬇ Save as PDF</button>
+<div class="header">
+  <div class="logo">The Parlor Magazine</div>
+  <h1>${year} Annual Report</h1>
+  <h2>Analytics & Growth Overview</h2>
+</div>
+
+<div class="stats-grid">
+  <div class="stat"><div class="stat-val pink">${totalViews.toLocaleString()}</div><div class="stat-lbl">Total Page Views</div></div>
+  <div class="stat"><div class="stat-val">${totalVisitors.toLocaleString()}</div><div class="stat-lbl">Unique Visitors</div></div>
+  <div class="stat"><div class="stat-val green">${memberCount || '—'}</div><div class="stat-lbl">Site Members</div></div>
+  <div class="stat"><div class="stat-val blue">${paidCount || '—'}</div><div class="stat-lbl">Paid Subscribers</div></div>
+</div>
+
+<div class="section">
+  <h3>Monthly Page Views ${peakMonth?.totalViews ? `<span class="peak-badge">Peak: ${MONTHS_FULL[yearData.indexOf(peakMonth)]} (${peakMonth.totalViews.toLocaleString()} views)</span>` : ''}</h3>
+  <div class="chart-wrap">
+    <svg viewBox="0 0 ${12 * 38 + 8} 115" style="width:100%;display:block">
+      ${barSVG}
+    </svg>
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="section">
+    <h3>Top Articles</h3>
+    <div class="bar-list">
+      ${topArts.length ? topArts.map(([title, views]) => `
+        <div class="bar-row">
+          <span class="bar-label" title="${title}">${title}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round((views/topArts[0][1])*100)}%"></div></div>
+          <span class="bar-num">${views}</span>
+        </div>`).join('') : '<p style="font-size:12px;color:#ccc;font-style:italic">No article data</p>'}
+    </div>
+  </div>
+  <div class="section">
+    <h3>Top Countries</h3>
+    <div class="bar-list">
+      ${topC.length ? topC.map(([country, count]) => `
+        <div class="bar-row">
+          <span class="bar-label">${country}</span>
+          <div class="bar-track"><div class="bar-fill blue" style="width:${Math.round((count/topC[0][1])*100)}%"></div></div>
+          <span class="bar-num">${count}</span>
+        </div>`).join('') : '<p style="font-size:12px;color:#ccc;font-style:italic">No country data</p>'}
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>The Parlor Magazine · ${year} Annual Report</span>
+  <span>Generated ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+</div>
+</body></html>`
+
+  const win = window.open('', '_blank')
+  win.document.write(html)
+  win.document.close()
+}
+
 // ── Main ──────────────────────────────────────────────────────
 export default function AnalyticsSection({ supabase }) {
-  const monthOptions = getMonthOptions()
-  const [selectedMonth, setSelectedMonth] = useState(monthOptions[0].value)
+  const now          = new Date()
+  const years        = getAvailableYears()
+  const [selectedYear, setSelectedYear]   = useState(now.getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth()) // 0-indexed
+  const [contextMenu, setContextMenu]     = useState(null)
+  const [yearDataCache, setYearDataCache] = useState({}) // year → [monthData x12]
+  const [memberStats, setMemberStats]     = useState({ total: 0, paid: 0 })
   const [data, setData] = useState({
     totalViews: null, uniqueVisitors: null,
     dailySessions: [], topArticles: [], topReferrers: [],
@@ -198,131 +321,145 @@ export default function AnalyticsSection({ supabase }) {
     loaded: false,
   })
 
-  const load = useCallback((ym) => {
-    const { start, end } = monthRange(ym)
-
-    Promise.all([
-      supabase
-        .from('page_views')
-        .select('id, page_path, visitor_id, created_at, referrer, device_type, country, session_id')
-        .gte('created_at', start)
-        .lt('created_at', end)
-        .order('created_at', { ascending: false })
-        .limit(20000),
-      supabase
-        .from('articles')
-        .select('slug, title')
-        .eq('published', true),
-    ]).then(([{ data: views = [] }, { data: articles = [] }]) => {
-      // Build slug → title lookup
-      const slugToTitle = Object.fromEntries((articles || []).map(a => [a.slug, a.title]))
-
-      if (!views?.length) {
-        setData({ totalViews: 0, uniqueVisitors: 0, dailySessions: [], topArticles: [], topReferrers: [], byDevice: [], byCountry: [], newVsReturning: { new: 0, returning: 0 }, loaded: true })
-        return
-      }
-
-        const uniqueVisitors = new Set(views.map(v => v.visitor_id)).size
-        const totalViews     = views.length
-
-        // Daily sessions
-        const dayCounts = {}
-        views.forEach(v => {
-          const day = v.created_at?.slice(0, 10)
-          if (day) dayCounts[day] = (dayCounts[day] || 0) + 1
-        })
-        const [year, month] = ym.split('-').map(Number)
-        const daysInMonth = new Date(year, month, 0).getDate()
-        const dailySessions = []
-        for (let d = 1; d <= daysInMonth; d++) {
-          const key = `${ym}-${String(d).padStart(2, '0')}`
-          const lbl = `${month}/${d}`
-          dailySessions.push({ label: lbl, value: dayCounts[key] || 0 })
-        }
-
-        // Top articles — only /post/ paths, show title instead of slug
-        const pathCounts = {}
-        views.forEach(v => {
-          if (v.page_path?.startsWith('/post/')) {
-            pathCounts[v.page_path] = (pathCounts[v.page_path] || 0) + 1
-          }
-        })
-        const topArticles = Object.entries(pathCounts)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 8)
-          .map(([path, views]) => {
-            const slug  = path.replace('/post/', '')
-            const title = slugToTitle[slug] || slug
-            return { path, title, views }
-          })
-
-        // Referrers
-        const refCounts = {}
-        views.forEach(v => {
-          try {
-            const src = v.referrer ? (new URL(v.referrer).hostname || 'Direct') : 'Direct'
-            refCounts[src] = (refCounts[src] || 0) + 1
-          } catch { refCounts['Direct'] = (refCounts['Direct'] || 0) + 1 }
-        })
-        const topReferrers = Object.entries(refCounts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([source, visits]) => ({ source, visits }))
-
-        // Device
-        const devCounts = {}
-        views.forEach(v => { const d = v.device_type || 'Unknown'; devCounts[d] = (devCounts[d] || 0) + 1 })
-        const byDevice = Object.entries(devCounts).sort((a, b) => b[1] - a[1]).map(([device, count]) => ({ device, count }))
-
-        // Country — all countries, not just top 8, for the map
-        const countryCounts = {}
-        views.forEach(v => { if (v.country && v.country !== 'Unknown') { countryCounts[v.country] = (countryCounts[v.country] || 0) + 1 } })
-        const byCountry = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).map(([country, count]) => ({ country, count }))
-
-        // New vs returning
-        const visitorCounts = {}
-        views.forEach(v => { if (v.visitor_id) visitorCounts[v.visitor_id] = (visitorCounts[v.visitor_id] || 0) + 1 })
-        const returning = Object.values(visitorCounts).filter(c => c > 1).length
-        const newV = uniqueVisitors - returning
-
-        setData({ totalViews, uniqueVisitors, dailySessions, topArticles, topReferrers, byDevice, byCountry, newVsReturning: { new: newV, returning }, loaded: true })
+  // Load member stats once
+  useEffect(() => {
+    supabase.from('members').select('id, plan', { count: 'exact' }).then(({ data: members }) => {
+      const total = (members || []).filter(m => m.role !== 'admin' && !((m.email||'').endsWith('@theparlormagazine.com'))).length
+      const paid  = (members || []).filter(m => ["Reader's Circle",'Printing Press','circle','press'].includes(m.plan)).length
+      setMemberStats({ total, paid })
     })
   }, [supabase])
 
-  useEffect(() => { load(selectedMonth) }, [selectedMonth, load])
+  const processViews = useCallback((views, articles, ym) => {
+    if (!views?.length) return { totalViews: 0, uniqueVisitors: 0, dailySessions: [], topArticles: [], topReferrers: [], byDevice: [], byCountry: [], newVsReturning: { new: 0, returning: 0 }, loaded: true }
+    const slugToTitle    = Object.fromEntries((articles || []).map(a => [a.slug, a.title]))
+    const uniqueVisitors = new Set(views.map(v => v.visitor_id)).size
+    const totalViews     = views.length
+    const dayCounts      = {}
+    views.forEach(v => { const day = v.created_at?.slice(0, 10); if (day) dayCounts[day] = (dayCounts[day] || 0) + 1 })
+    const [year, month]  = ym.split('-').map(Number)
+    const daysInMonth    = new Date(year, month, 0).getDate()
+    const dailySessions  = []
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = `${ym}-${String(d).padStart(2, '0')}`
+      dailySessions.push({ label: `${month}/${d}`, value: dayCounts[key] || 0 })
+    }
+    const pathCounts = {}
+    views.forEach(v => { if (v.page_path?.startsWith('/post/')) pathCounts[v.page_path] = (pathCounts[v.page_path] || 0) + 1 })
+    const topArticles = Object.entries(pathCounts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([path, views]) => ({ path, title: slugToTitle[path.replace('/post/', '')] || path.replace('/post/', ''), views }))
+    const refCounts = {}
+    views.forEach(v => { try { const src = v.referrer ? (new URL(v.referrer).hostname || 'Direct') : 'Direct'; refCounts[src] = (refCounts[src] || 0) + 1 } catch { refCounts['Direct'] = (refCounts['Direct'] || 0) + 1 } })
+    const topReferrers = Object.entries(refCounts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([source, visits]) => ({ source, visits }))
+    const devCounts = {}
+    views.forEach(v => { const d = v.device_type || 'Unknown'; devCounts[d] = (devCounts[d] || 0) + 1 })
+    const byDevice = Object.entries(devCounts).sort((a, b) => b[1] - a[1]).map(([device, count]) => ({ device, count }))
+    const countryCounts = {}
+    views.forEach(v => { if (v.country && v.country !== 'Unknown') countryCounts[v.country] = (countryCounts[v.country] || 0) + 1 })
+    const byCountry = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).map(([country, count]) => ({ country, count }))
+    const visitorCounts = {}
+    views.forEach(v => { if (v.visitor_id) visitorCounts[v.visitor_id] = (visitorCounts[v.visitor_id] || 0) + 1 })
+    const returning = Object.values(visitorCounts).filter(c => c > 1).length
+    return { totalViews, uniqueVisitors, dailySessions, topArticles, topReferrers, byDevice, byCountry, newVsReturning: { new: uniqueVisitors - returning, returning }, loaded: true }
+  }, [])
 
+  const load = useCallback((year, month) => {
+    const ym = `${year}-${String(month + 1).padStart(2, '0')}`
+    const { start, end } = monthRange(ym)
+    Promise.all([
+      supabase.from('page_views').select('id,page_path,visitor_id,created_at,referrer,device_type,country,session_id').gte('created_at', start).lt('created_at', end).order('created_at', { ascending: false }).limit(20000),
+      supabase.from('articles').select('slug,title').eq('published', true),
+    ]).then(([{ data: views }, { data: articles }]) => {
+      setData(processViews(views || [], articles || [], ym))
+    })
+  }, [supabase, processViews])
+
+  // Load year data for report (all 12 months)
+  const loadYearForReport = useCallback(async (year) => {
+    if (yearDataCache[year]) return yearDataCache[year]
+    const { start, end } = yearRange(year)
+    const [{ data: views }, { data: articles }] = await Promise.all([
+      supabase.from('page_views').select('id,page_path,visitor_id,created_at,referrer,device_type,country').gte('created_at', start).lt('created_at', end).limit(100000),
+      supabase.from('articles').select('slug,title').eq('published', true),
+    ])
+    const yearData = Array.from({ length: 12 }, (_, i) => {
+      const ym = `${year}-${String(i + 1).padStart(2, '0')}`
+      const monthViews = (views || []).filter(v => v.created_at?.startsWith(ym))
+      return processViews(monthViews, articles || [], ym)
+    })
+    setYearDataCache(prev => ({ ...prev, [year]: yearData }))
+    return yearData
+  }, [supabase, processViews, yearDataCache])
+
+  useEffect(() => { load(selectedYear, selectedMonth) }, [selectedYear, selectedMonth, load])
+
+  const ym = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`
   const noData = data.loaded && data.totalViews === 0
 
+  const handleRightClick = (e) => {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY })
+  }
+
+  const handleDownloadReport = async () => {
+    setContextMenu(null)
+    const yearData = await loadYearForReport(selectedYear)
+    generateReport({ year: selectedYear, yearData, memberCount: memberStats.total, paidCount: memberStats.paid })
+  }
+
   return (
-    <div>
+    <div onContextMenu={handleRightClick} onClick={() => contextMenu && setContextMenu(null)}>
+
+      {/* Right-click context menu */}
+      {contextMenu && (
+        <div
+          style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, background: '#fff', border: '1px solid #e8e8e8', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 1000, overflow: 'hidden', minWidth: '200px' }}
+          onClick={e => e.stopPropagation()}
+        >
+          <button
+            onClick={handleDownloadReport}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '11px 16px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: ff, fontSize: '13px', color: '#0a0a0a', textAlign: 'left' }}
+            onMouseEnter={e => e.currentTarget.style.background = '#f9f9f9'}
+            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+          >
+            <span>📄</span> Download {selectedYear} Annual Report
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontFamily: ffH, fontSize: '26px', fontWeight: '700', color: '#0a0a0a', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Analytics</h1>
           <div style={{ fontSize: '13px', color: '#888', fontFamily: ff }}>
-            Sourced from <code style={{ fontSize: '12px', background: '#f5f5f5', padding: '1px 5px', borderRadius: '3px' }}>page_views</code> table
+            Right-click to download annual report · sourced from <code style={{ fontSize: '12px', background: '#f5f5f5', padding: '1px 5px', borderRadius: '3px' }}>page_views</code>
           </div>
         </div>
-        {/* Month picker */}
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {monthOptions.slice(0, 6).map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => setSelectedMonth(opt.value)}
-              style={{
-                padding: '5px 12px', border: '1px solid', borderRadius: '20px',
-                fontSize: '11px', cursor: 'pointer', fontFamily: ff,
-                background: selectedMonth === opt.value ? '#0a0a0a' : '#fff',
-                color:      selectedMonth === opt.value ? '#fff'    : '#888',
-                borderColor: selectedMonth === opt.value ? '#0a0a0a' : '#e8e8e8',
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
+
+        {/* Year tabs + month dropdown */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Year pills */}
+          <div style={{ display: 'flex', gap: '4px' }}>
+            {years.map(y => (
+              <button key={y} onClick={() => { setSelectedYear(y); setSelectedMonth(y === now.getFullYear() ? now.getMonth() : 0) }}
+                style={{ padding: '6px 14px', border: '1px solid', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', fontFamily: ff, fontWeight: '600',
+                  background: selectedYear === y ? '#0a0a0a' : '#fff', color: selectedYear === y ? '#fff' : '#888', borderColor: selectedYear === y ? '#0a0a0a' : '#e8e8e8' }}>
+                {y}
+              </button>
+            ))}
+          </div>
+          {/* Month dropdown */}
+          <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}
+            style={{ padding: '6px 10px', border: '1px solid #e8e8e8', borderRadius: '8px', fontFamily: ff, fontSize: '12px', color: '#555', background: '#fff', cursor: 'pointer', outline: 'none' }}>
+            {MONTHS_FULL.map((m, i) => (
+              <option key={i} value={i}>{m}</option>
+            ))}
+          </select>
         </div>
       </div>
 
       {noData && (
         <div style={{ background: '#f9f9f9', border: '1px solid #e8e8e8', borderRadius: '8px', padding: '20px', textAlign: 'center', fontSize: '13px', color: '#aaa', fontFamily: ff, fontStyle: 'italic', marginBottom: '20px' }}>
-          No data for {monthOptions.find(o => o.value === selectedMonth)?.label}.
+          No data for {MONTHS_FULL[selectedMonth]} {selectedYear}.
         </div>
       )}
 
@@ -335,7 +472,7 @@ export default function AnalyticsSection({ supabase }) {
       </div>
 
       {/* Sessions chart */}
-      <SectionBox title={`Sessions — ${monthOptions.find(o => o.value === selectedMonth)?.label}`}>
+      <SectionBox title={`Sessions — ${MONTHS_FULL[selectedMonth]} ${selectedYear}`}>
         {data.dailySessions.length > 0 ? (
           <>
             <BarChart data={data.dailySessions} color={PINK} height={100} />
@@ -374,25 +511,14 @@ export default function AnalyticsSection({ supabase }) {
       </SectionBox>
 
       {/* Choropleth map */}
-      <SectionBox
-        title="Visitors by Country"
-        action={
-          data.byCountry.length > 0 && (
-            <span style={{ fontSize: '11px', color: '#aaa', fontFamily: ff }}>
-              {data.byCountry.length} countr{data.byCountry.length === 1 ? 'y' : 'ies'}
-            </span>
-          )
-        }
-      >
+      <SectionBox title="Visitors by Country" action={data.byCountry.length > 0 && <span style={{ fontSize: '11px', color: '#aaa', fontFamily: ff }}>{data.byCountry.length} countr{data.byCountry.length === 1 ? 'y' : 'ies'}</span>}>
         {data.byCountry.length === 0 ? (
           <div style={{ fontSize: '12px', color: '#ccc', fontFamily: ff, fontStyle: 'italic' }}>No country data yet.</div>
         ) : (
           <>
             <ChoroplethMap byCountry={data.byCountry} />
             <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
-              {data.byCountry.slice(0, 10).map((c, i) => (
-                <HBar key={i} label={c.country} value={c.count} max={data.byCountry[0].count} color="#8a4ad4" />
-              ))}
+              {data.byCountry.slice(0, 10).map((c, i) => <HBar key={i} label={c.country} value={c.count} max={data.byCountry[0].count} color="#8a4ad4" />)}
             </div>
           </>
         )}
