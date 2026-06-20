@@ -168,6 +168,7 @@ function FeedIcon({ type }) {
 function DashboardHome({ supabase, setActiveSection }) {
   const [subExpanded, setSubExpanded] = useState(false)
   const [pvStats, setPvStats] = useState({ pageViews: null, sessions: null, topPath: null, topSource: null })
+  const [newsletterCount, setNewsletterCount] = useState(null)
   const [data, setData] = useState({
     recentArticles: [], scheduledArticles: [],
     allMembers: [], invoices: [], pitches: [],
@@ -215,6 +216,13 @@ function DashboardHome({ supabase, setActiveSection }) {
         setPvStats({ pageViews: pv.length, sessions, topPath, topSource })
       }
     })
+
+    // Newsletter count from Resend
+    fetch('/api/admin/newsletter-count')
+      .then(r => r.json())
+      .then(({ count }) => { if (!cancelled && count != null) setNewsletterCount(count) })
+      .catch(() => {})
+
     return () => { cancelled = true }
   }, [])
 
@@ -276,9 +284,16 @@ function DashboardHome({ supabase, setActiveSection }) {
           onClick={() => setSubExpanded(v => !v)}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '14px 18px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: ff }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <span style={{ fontFamily: ffH, fontSize: '20px', fontWeight: '700', color: '#0a0a0a' }}>{subscribers.length}</span>
-            <span style={{ fontSize: '13px', color: '#888' }}>Total Subscribers</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              <span style={{ fontFamily: ffH, fontSize: '20px', fontWeight: '700', color: '#0a0a0a' }}>{subscribers.length}</span>
+              <span style={{ fontSize: '12px', color: '#aaa' }}>Site Members</span>
+            </div>
+            <div style={{ width: '1px', height: '18px', background: '#e8e8e8' }} />
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              <span style={{ fontFamily: ffH, fontSize: '20px', fontWeight: '700', color: '#0a0a0a' }}>{newsletterCount != null ? newsletterCount : '—'}</span>
+              <span style={{ fontSize: '12px', color: '#aaa' }}>Newsletter</span>
+            </div>
             {newThisWeek > 0 && <span style={{ fontSize: '11px', background: 'rgba(110,201,154,0.12)', color: '#2d8f5a', padding: '2px 8px', borderRadius: '20px', fontFamily: ff }}>+{newThisWeek} this week</span>}
           </div>
           <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ transition: 'transform 0.2s', transform: subExpanded ? 'rotate(180deg)' : 'none', flexShrink: 0 }}>
@@ -286,16 +301,17 @@ function DashboardHome({ supabase, setActiveSection }) {
           </svg>
         </button>
         {subExpanded && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', borderTop: '1px solid #f5f5f5' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderTop: '1px solid #f5f5f5' }}>
             {[
-              { label: 'Total',            value: subscribers.length },
+              { label: 'Site Members',     value: subscribers.length },
+              { label: 'Newsletter',       value: newsletterCount != null ? newsletterCount : '—' },
               { label: 'New This Week',    value: newThisWeek, color: '#2d8f5a' },
               { label: "Reader's Circle",  value: circleCount, sub: '$10/mo', color: '#4a6fd4' },
               { label: 'Printing Press',   value: pressCount,  sub: '$25/mo', color: DARK_PINK },
               { label: 'Free',             value: freeCount },
               { label: 'Onboarding Sent',  value: onboarding },
             ].map((s, i) => (
-              <div key={s.label} style={{ padding: '16px 14px', borderRight: i < 5 ? '1px solid #f5f5f5' : 'none' }}>
+              <div key={s.label} style={{ padding: '16px 14px', borderRight: i < 6 ? '1px solid #f5f5f5' : 'none' }}>
                 <div style={{ fontSize: '22px', fontWeight: '700', color: s.color || '#0a0a0a', fontFamily: ffH, lineHeight: 1 }}>{s.value}</div>
                 <div style={{ fontSize: '11px', color: '#aaa', marginTop: '4px', fontFamily: ff }}>{s.label}</div>
                 {s.sub && <div style={{ fontSize: '11px', color: s.color, marginTop: '2px', fontFamily: ff }}>{s.sub}</div>}
