@@ -51,7 +51,7 @@ function ChoroplethMap({ byCountry }) {
         projectionConfig={{ scale: 147 }}
         style={{ width: '100%', height: 'auto' }}
       >
-        <ZoomableGroup>
+        <ZoomableGroup zoom={1} minZoom={1} maxZoom={1}>
           <Geographies geography={GEO_URL}>
             {({ geographies }) =>
               geographies.map(geo => {
