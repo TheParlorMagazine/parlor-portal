@@ -44,7 +44,7 @@ function TeamMemberRow({ member, isLast, onRoleChange, onDeactivate }) {
   const displayName = member.name || member.full_name || member.display_name || null
   const displayEmail = member.email || null
   const access = ROLE_ACCESS[member.role] || []
-  const isInactive = member.status === 'inactive' || member.deactivated
+  const isInactive = member.subscription_status === 'inactive' || member.deactivated
 
   async function saveRole() {
     setSaving(true)
@@ -169,10 +169,10 @@ export default function TeamSection({ supabase }) {
 
   async function handleDeactivate(id) {
     const member = team.find(m => m.id === id)
-    const isInactive = member?.status === 'inactive' || member?.deactivated
+    const isInactive = member?.subscription_status === 'inactive' || member?.deactivated
     const newStatus = isInactive ? 'active' : 'inactive'
-    await supabase.from('members').update({ status: newStatus, deactivated: !isInactive }).eq('id', id)
-    setTeam(prev => prev.map(m => m.id === id ? { ...m, status: newStatus, deactivated: !isInactive } : m))
+    await supabase.from('members').update({ subscription_status: newStatus, deactivated: !isInactive }).eq('id', id)
+    setTeam(prev => prev.map(m => m.id === id ? { ...m, subscription_status: newStatus, deactivated: !isInactive } : m))
   }
 
   const thStyle = { fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#aaa', fontFamily: ff, padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid #f0f0f0', background: '#fafafa', fontWeight: '500' }

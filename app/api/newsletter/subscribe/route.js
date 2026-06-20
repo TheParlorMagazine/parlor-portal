@@ -40,7 +40,7 @@ export async function POST(req) {
       email: cleanEmail,
       name: name?.trim() || null,
       plan: 'free',
-      status: 'active',
+      subscription_status: 'active',
       joined_at: new Date().toISOString(),
     },
     { onConflict: 'email', ignoreDuplicates: true }

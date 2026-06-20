@@ -182,7 +182,7 @@ function DashboardHome({ supabase, setActiveSection }) {
 
     Promise.allSettled([
       supabase.from('articles').select('id,title,author_name,published_at,scheduled_at,published,slug').order('published_at', { ascending: false }),
-      supabase.from('members').select('id,role,joined_at,plan,status,email,name,onboarding_sent,onboarding_sent_at').order('joined_at', { ascending: false }),
+      supabase.from('members').select('id,role,joined_at,plan,subscription_status,email,full_name,onboarding_sent,onboarding_sent_at,deactivated').order('joined_at', { ascending: false }),
       supabase.from('invoices').select('id,status,amount,created_at').order('created_at', { ascending: false }),
       supabase.from('pitches').select('id,title,author_name,created_at,status').order('created_at', { ascending: false }),
       supabase.from('page_views').select('page_path,visitor_id,referrer,created_at').gte('created_at', today + 'T00:00:00').order('created_at', { ascending: false }).limit(2000),
@@ -523,9 +523,9 @@ function RolesSection({ supabase }) {
 
   async function toggleDeactivate(id) {
     const m = members.find(m => m.id === id)
-    const isInactive = m?.status === 'inactive' || m?.deactivated
+    const isInactive = m?.subscription_status === 'inactive' || m?.deactivated
     setDeactivating(prev => ({ ...prev, [id]: true }))
-    const update = isInactive ? { status: 'active', deactivated: false } : { status: 'inactive', deactivated: true }
+    const update = isInactive ? { subscription_status: 'active', deactivated: false } : { subscription_status: 'inactive', deactivated: true }
     await supabase.from('members').update(update).eq('id', id)
     setMembers(prev => prev.map(m => m.id === id ? { ...m, ...update } : m))
     setDeactivating(prev => ({ ...prev, [id]: false }))
@@ -662,7 +662,7 @@ function RolesSection({ supabase }) {
       ) : filtered.map(m => {
         const displayName  = m.name || m.full_name || m.display_name || null
         const displayEmail = m.email || null
-        const isInactive   = m.status === 'inactive' || m.deactivated
+        const isInactive   = m.subscription_status === 'inactive' || m.deactivated
         const activity     = activityMap[m.id] || []
         const lastLogin    = m.last_active || m.last_login || m.last_sign_in_at
         const access       = accessState[m.id] || new Set()

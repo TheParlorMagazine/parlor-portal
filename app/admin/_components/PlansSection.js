@@ -46,7 +46,7 @@ export default function PlansSection({ supabase, plan: planKey }) {
 
   useEffect(() => {
     setLoading(true)
-    supabase.from('members').select('id,name,full_name,email,joined_at,status')
+    supabase.from('members').select('id,full_name,email,joined_at,subscription_status')
       .in('plan', plan.matchValues)
       .order('joined_at', { ascending: false })
       .then(({ data }) => {
@@ -55,8 +55,8 @@ export default function PlansSection({ supabase, plan: planKey }) {
       })
   }, [planKey])
 
-  const active  = members.filter(m => !m.status || m.status === 'active').length
-  const churned = members.filter(m => m.status === 'churned' || m.status === 'cancelled').length
+  const active  = members.filter(m => !m.subscription_status || m.subscription_status === 'active').length
+  const churned = members.filter(m => m.subscription_status === 'churned' || m.subscription_status === 'cancelled').length
 
   const thStyle = { fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#aaa', fontFamily: ff, padding: '10px 16px', textAlign: 'left', background: '#fafafa', borderBottom: '1px solid #f0f0f0', fontWeight: '500' }
   const tdStyle = { padding: '11px 16px', fontSize: '13px', fontFamily: ff, verticalAlign: 'middle' }
@@ -151,8 +151,8 @@ export default function PlansSection({ supabase, plan: planKey }) {
               {members.map((m, i) => {
                 const name  = m.name || m.full_name || null
                 const email = m.email || null
-                const status = m.status || 'active'
-                const isActive = !m.status || m.status === 'active'
+                const status   = m.subscription_status || 'active'
+                const isActive = !m.subscription_status || m.subscription_status === 'active'
                 return (
                   <tr key={m.id} style={{ borderBottom: i === members.length - 1 ? 'none' : '1px solid #f5f5f5' }}>
                     <td style={tdStyle}>

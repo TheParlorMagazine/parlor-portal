@@ -21,7 +21,7 @@ export async function GET(request) {
 
   // Mark unsubscribed from newsletter in Supabase — account stays intact
   await supabase.from('members').update({
-    status: 'unsubscribed',
+    subscription_status: 'unsubscribed',
     unsubscribed_at: new Date().toISOString(),
   }).eq('id', id)
 
