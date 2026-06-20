@@ -1,4 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
+import { Resend } from 'resend'
+
+const AUDIENCE_ID = 'a90d5605-469b-41b4-b16f-86e26690ea96'
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
@@ -13,10 +16,28 @@ export async function GET(request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY
   )
 
+  // Fetch their email so we can update Resend too
+  const { data: member } = await supabase.from('members').select('email').eq('id', id).single()
+
+  // Mark unsubscribed from newsletter in Supabase — account stays intact
   await supabase.from('members').update({
     status: 'unsubscribed',
     unsubscribed_at: new Date().toISOString(),
   }).eq('id', id)
+
+  // Mark unsubscribed in Resend so they stop receiving campaign emails
+  if (member?.email) {
+    try {
+      const resend = new Resend(process.env.RESEND_API_KEY)
+      await resend.contacts.update({
+        audienceId: AUDIENCE_ID,
+        email: member.email,
+        unsubscribed: true,
+      })
+    } catch (e) {
+      console.error('Resend unsubscribe error:', e)
+    }
+  }
 
   const html = `<!DOCTYPE html>
 <html>
