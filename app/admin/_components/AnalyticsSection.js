@@ -200,18 +200,27 @@ export default function AnalyticsSection({ supabase }) {
 
   const load = useCallback((ym) => {
     const { start, end } = monthRange(ym)
-    supabase
-      .from('page_views')
-      .select('id, page_path, visitor_id, created_at, referrer, device_type, country, session_id')
-      .gte('created_at', start)
-      .lt('created_at', end)
-      .order('created_at', { ascending: false })
-      .limit(20000)
-      .then(({ data: views = [] }) => {
-        if (!views?.length) {
-          setData({ totalViews: 0, uniqueVisitors: 0, dailySessions: [], topArticles: [], topReferrers: [], byDevice: [], byCountry: [], newVsReturning: { new: 0, returning: 0 }, loaded: true })
-          return
-        }
+
+    Promise.all([
+      supabase
+        .from('page_views')
+        .select('id, page_path, visitor_id, created_at, referrer, device_type, country, session_id')
+        .gte('created_at', start)
+        .lt('created_at', end)
+        .order('created_at', { ascending: false })
+        .limit(20000),
+      supabase
+        .from('articles')
+        .select('slug, title')
+        .eq('published', true),
+    ]).then(([{ data: views = [] }, { data: articles = [] }]) => {
+      // Build slug → title lookup
+      const slugToTitle = Object.fromEntries((articles || []).map(a => [a.slug, a.title]))
+
+      if (!views?.length) {
+        setData({ totalViews: 0, uniqueVisitors: 0, dailySessions: [], topArticles: [], topReferrers: [], byDevice: [], byCountry: [], newVsReturning: { new: 0, returning: 0 }, loaded: true })
+        return
+      }
 
         const uniqueVisitors = new Set(views.map(v => v.visitor_id)).size
         const totalViews     = views.length
@@ -231,10 +240,21 @@ export default function AnalyticsSection({ supabase }) {
           dailySessions.push({ label: lbl, value: dayCounts[key] || 0 })
         }
 
-        // Top articles
+        // Top articles — only /post/ paths, show title instead of slug
         const pathCounts = {}
-        views.forEach(v => { if (v.page_path) pathCounts[v.page_path] = (pathCounts[v.page_path] || 0) + 1 })
-        const topArticles = Object.entries(pathCounts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([path, views]) => ({ path, views }))
+        views.forEach(v => {
+          if (v.page_path?.startsWith('/post/')) {
+            pathCounts[v.page_path] = (pathCounts[v.page_path] || 0) + 1
+          }
+        })
+        const topArticles = Object.entries(pathCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 8)
+          .map(([path, views]) => {
+            const slug  = path.replace('/post/', '')
+            const title = slugToTitle[slug] || slug
+            return { path, title, views }
+          })
 
         // Referrers
         const refCounts = {}
@@ -263,7 +283,7 @@ export default function AnalyticsSection({ supabase }) {
         const newV = uniqueVisitors - returning
 
         setData({ totalViews, uniqueVisitors, dailySessions, topArticles, topReferrers, byDevice, byCountry, newVsReturning: { new: newV, returning }, loaded: true })
-      })
+    })
   }, [supabase])
 
   useEffect(() => { load(selectedMonth) }, [selectedMonth, load])
@@ -334,7 +354,7 @@ export default function AnalyticsSection({ supabase }) {
         <SectionBox title="Top Articles by Views">
           {data.topArticles.length === 0
             ? <div style={{ fontSize: '12px', color: '#ccc', fontFamily: ff, fontStyle: 'italic' }}>No data yet.</div>
-            : data.topArticles.map((a, i) => <HBar key={i} label={a.path} value={a.views} max={data.topArticles[0].views} color={DARK_PINK} />)
+            : data.topArticles.map((a, i) => <HBar key={i} label={a.title} value={a.views} max={data.topArticles[0].views} color={DARK_PINK} />)
           }
         </SectionBox>
         <SectionBox title="Top Referral Sources">
