@@ -292,7 +292,7 @@ export default function SubscribersSection({ supabase }) {
   useEffect(() => {
     supabase.from('members').select('*').order('joined_at', { ascending: false }).then(({ data }) => {
       setAll((data || []).filter(m =>
-        m.role !== 'super_admin' &&
+        m.role !== 'admin' &&
         !(m.email || '').toLowerCase().endsWith('@theparlormagazine.com')
       ))
       setLoading(false)

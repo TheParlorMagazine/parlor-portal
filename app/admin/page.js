@@ -227,7 +227,7 @@ function DashboardHome({ supabase, setActiveSection }) {
   }, [])
 
   const subscribers  = data.allMembers.filter(m =>
-    m.role !== 'super_admin' &&
+    m.role !== 'admin' &&
     !(m.email || '').toLowerCase().endsWith('@theparlormagazine.com')
   )
   const weekAgo      = new Date(Date.now() - 7 * 86400000).toISOString()
