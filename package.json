@@ -20,10 +20,12 @@
     "@tiptap/extension-underline": "^3.23.6",
     "@tiptap/react": "^3.23.6",
     "@tiptap/starter-kit": "^3.23.6",
+    "d3-scale": "^4.0.2",
     "fabric": "^7.4.0",
     "next": "^16.2.6",
     "react": "^18",
     "react-dom": "^18",
+    "react-simple-maps": "^3.0.0",
     "resend": "^3.2.0",
     "stripe": "^14.0.0",
     "tui-image-editor": "^3.15.3"

@@ -24,6 +24,20 @@ function getDeviceType() {
   return 'desktop'
 }
 
+async function getCountry() {
+  try {
+    const cached = sessionStorage.getItem('parlor_country')
+    if (cached) return cached
+    const res = await fetch('https://ipapi.co/json/', { cache: 'no-store' })
+    const data = await res.json()
+    const country = data.country_name || null
+    if (country) sessionStorage.setItem('parlor_country', country)
+    return country
+  } catch {
+    return null
+  }
+}
+
 export default function PageViewTracker() {
   const pathname = usePathname()
   const lastPath = useRef(null)
@@ -36,25 +50,30 @@ export default function PageViewTracker() {
     if (pathname === lastPath.current) return
     lastPath.current = pathname
 
-    try {
-      const visitorId  = getOrCreate('parlor_visitor_id', uuid)
-      const sessionId  = getOrCreate('parlor_session_id', uuid)
-      const referrer   = document.referrer || null
-      const deviceType = getDeviceType()
+    async function track() {
+      try {
+        const visitorId  = getOrCreate('parlor_visitor_id', uuid)
+        const sessionId  = getOrCreate('parlor_session_id', uuid)
+        const referrer   = document.referrer || null
+        const deviceType = getDeviceType()
+        const country    = await getCountry()
 
-      supabase.from('page_views').insert({
-        page_path:   pathname,
-        visitor_id:  visitorId,
-        session_id:  sessionId,
-        referrer,
-        device_type: deviceType,
-        created_at:  new Date().toISOString(),
-      }).then(({ error }) => {
-        if (error) console.warn('Page view tracking error:', error.message)
-      })
-    } catch (e) {
-      // Never let tracking errors break the page
+        supabase.from('page_views').insert({
+          page_path:   pathname,
+          visitor_id:  visitorId,
+          session_id:  sessionId,
+          referrer,
+          device_type: deviceType,
+          country,
+          created_at:  new Date().toISOString(),
+        }).then(({ error }) => {
+          if (error) console.warn('Page view tracking error:', error.message)
+        })
+      } catch (e) {
+        // Never let tracking errors break the page
+      }
     }
+    track()
   }, [pathname])
 
   return null
