@@ -1145,8 +1145,11 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
   }
 
   async function handlePublish() {
-    const ok = await performSave({ published: true })
-    if (ok) setForm(prev => ({ ...prev, published: true }))
+    // Set date_published to today if not already set
+    const publishDate = form.date_published || new Date().toISOString().slice(0, 10)
+    if (!form.date_published) update('date_published', publishDate)
+    const ok = await performSave({ published: true, date_published: new Date(publishDate).toISOString() })
+    if (ok) setForm(prev => ({ ...prev, published: true, date_published: publishDate }))
   }
 
   saveDraftRef.current = handleSaveDraft
