@@ -45,7 +45,7 @@ export default function AdminArticlesPage() {
 
       const { data } = await supabase
         .from('articles')
-        .select('id, title, author_name, category, created_at, published, scheduled_at')
+        .select('id, title, author_name, category, created_at, published, scheduled_at, date_published')
         .order('created_at', { ascending: false })
 
       if (cancelled) return
