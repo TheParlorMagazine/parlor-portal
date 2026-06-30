@@ -55,7 +55,7 @@ export default function VerticalPage({ params }) {
       setLoading(true)
       const { data, error } = await supabase
         .from('articles')
-        .select('slug, title, excerpt, cover_image_url, author_name, author_photo_url, author_profile_url, category, date_published')
+        .select('slug, title, excerpt, cover_image_url, author_name, author_photo_url, author_profile_url, category, article_category, date_published')
         .eq('published', true)
         .eq('category', category)
         .order('date_published', { ascending: false })
@@ -108,8 +108,15 @@ export default function VerticalPage({ params }) {
           border-bottom: 1px solid #e5e7eb;
         }
         .strip:first-child { padding-top: 0; }
-        .strip-media { display: flex; align-items: center; height: 100%; max-height: 220px; align-self: center; }
+        .strip-media { position: relative; display: flex; align-items: center; height: 100%; max-height: 220px; align-self: center; }
         .strip-cover { width: 100%; height: 100%; max-height: 220px; object-fit: cover; object-position: top; display: block; }
+        .strip-pill {
+          position: absolute; top: 10px; left: 10px;
+          background: rgba(10,10,10,0.82); color: #ffffff;
+          font-family: 'Source Serif 4', Georgia, serif;
+          font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+          padding: 4px 10px;
+        }
         .strip-meta { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
         .byline { display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.2; color: #6b7280; }
         .avatarWrap { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex: 0 0 32px; }
@@ -152,6 +159,7 @@ export default function VerticalPage({ params }) {
                   {a.cover_image_url && (
                     <img className="strip-cover" src={wixCover(a.cover_image_url)} alt="" loading="lazy" decoding="async" />
                   )}
+                  {a.article_category && <span className="strip-pill">{esc(a.article_category)}</span>}
                 </a>
                 <div className="strip-meta">
                   <div className="byline">
