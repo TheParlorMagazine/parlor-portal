@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, forwardRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, forwardRef } from 'react'
+import { createPortal } from 'react-dom'
 import { createClient } from '../../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -71,6 +72,7 @@ function initForm(data) {
     author_name: '', author_photo_url: '', author_profile_url: '', author_bio: '',
     vertical: '', article_category: '', tags: '',
     issue_id: null,
+    section_id: null,
     body: '',
     audio_url: '', audio_title: '', audio_duration: '',
     video_url: '', video_type: '',
@@ -93,6 +95,7 @@ function initForm(data) {
     vertical: data.category || '',
     article_category: data.article_category || '',
     issue_id: data.issue_id || null,
+    section_id: data.section_id || null,
     template: data.template || 'standard',
     paywall_type: (data.paywall_type === 'members' || !data.paywall_type) ? 'free' : data.paywall_type,
     paywall_price: data.paywall_price != null ? String(data.paywall_price) : '2.50',
@@ -122,6 +125,7 @@ function buildPayload(form, overrides = {}) {
     article_category: form.article_category || null,
     tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
     issue_id: form.issue_id || null,
+    section_id: form.section_id || null,
     body: form.body || null,
     audio_url: form.audio_url || null,
     audio_title: form.audio_title || null,
@@ -178,7 +182,7 @@ function SideSection({ title, children }) {
       {title && (
         <div style={{
           fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.18em',
-          color: '#444', marginBottom: '14px', fontFamily: "'Source Serif 4', Georgia, serif",
+          color: '#9a9a9a', marginBottom: '14px', fontFamily: "'Source Serif 4', Georgia, serif",
         }}>
           {title}
         </div>
@@ -192,7 +196,7 @@ function SideLabel({ children }) {
   return (
     <div style={{
       fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em',
-      color: '#4a4a4a', marginBottom: '5px', fontFamily: "'Source Serif 4', Georgia, serif",
+      color: '#9a9a9a', marginBottom: '5px', fontFamily: "'Source Serif 4', Georgia, serif",
     }}>
       {children}
     </div>
@@ -244,6 +248,199 @@ function SectionDivider({ label }) {
   )
 }
 
+// ── Calendar (custom-styled date picker) ───────────────────
+
+function pad2(n) { return String(n).padStart(2, '0') }
+function dateKey(y, m, d) { return `${y}-${pad2(m + 1)}-${pad2(d)}` }
+
+function CalendarGrid({ selected, onSelect, onClear, onDone, minDate }) {
+  const seed = selected ? new Date(selected + 'T00:00:00') : new Date()
+  const [viewYear, setViewYear] = useState(seed.getFullYear())
+  const [viewMonth, setViewMonth] = useState(seed.getMonth())
+
+  const today = new Date()
+  const todayKey = dateKey(today.getFullYear(), today.getMonth(), today.getDate())
+  const min = minDate ? minDate.slice(0, 10) : null
+
+  const firstWeekday = new Date(viewYear, viewMonth, 1).getDay()
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
+  const cells = [...Array(firstWeekday).fill(null), ...Array(daysInMonth).keys()].map(v => v === null ? null : v + 1)
+
+  function shiftMonth(delta) {
+    let m = viewMonth + delta, y = viewYear
+    if (m < 0) { m = 11; y -= 1 }
+    else if (m > 11) { m = 0; y += 1 }
+    setViewMonth(m)
+    setViewYear(y)
+  }
+
+  const navBtnStyle = {
+    width: '22px', height: '22px', border: 'none', borderRadius: '5px',
+    background: 'transparent', color: '#999', fontSize: '15px', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+  }
+
+  return (
+    <div style={{
+      background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: '10px', padding: '14px', width: '236px',
+      boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
+      fontFamily: "'Source Serif 4', Georgia, serif",
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+        <button type="button" onClick={() => shiftMonth(-1)} style={navBtnStyle}>‹</button>
+        <span style={{ fontSize: '13px', color: '#e0e0e0' }}>
+          {new Date(viewYear, viewMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+        </span>
+        <button type="button" onClick={() => shiftMonth(1)} style={navBtnStyle}>›</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '2px' }}>
+        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+          <div key={i} style={{ fontSize: '10px', color: '#555', textAlign: 'center' }}>{d}</div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', rowGap: '2px' }}>
+        {cells.map((day, i) => {
+          if (day == null) return <div key={i} />
+          const key = dateKey(viewYear, viewMonth, day)
+          const isSelected = key === selected
+          const isToday = key === todayKey
+          const disabled = min ? key < min : false
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={disabled}
+              onClick={() => onSelect(key)}
+              style={{
+                width: '28px', height: '28px', margin: '0 auto', borderRadius: '50%', border: 'none',
+                background: isSelected ? '#f2b8c6' : 'transparent',
+                color: disabled ? '#3a3a3a' : isSelected ? '#0a0a0a' : isToday ? '#f2b8c6' : '#ccc',
+                fontSize: '12px', cursor: disabled ? 'not-allowed' : 'pointer',
+                fontWeight: isSelected || isToday ? 700 : 400,
+                boxShadow: isToday && !isSelected ? 'inset 0 0 0 1px rgba(242,184,198,0.45)' : 'none',
+                fontFamily: 'inherit',
+              }}
+            >
+              {day}
+            </button>
+          )
+        })}
+      </div>
+      <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <button type="button" onClick={onClear} style={{ background: 'none', border: 'none', color: '#666', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+            Clear
+          </button>
+          <button type="button" onClick={() => onSelect(todayKey)} style={{ background: 'none', border: 'none', color: '#f2b8c6', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+            Today
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={onDone}
+          style={{
+            width: '100%', padding: '7px', background: '#f2b8c6', border: 'none',
+            borderRadius: '6px', color: '#0a0a0a', fontSize: '12px', fontWeight: '600',
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function SideDatePicker({ value, onChange, placeholder = 'Select date…', minDate }) {
+  const [open, setOpen] = useState(false)
+  const [coords, setCoords] = useState(null)
+  const ref = useRef(null)
+  const triggerRef = useRef(null)
+  const popupRef = useRef(null)
+
+  useEffect(() => {
+    function handler(e) {
+      if (
+        ref.current && !ref.current.contains(e.target) &&
+        !e.target.closest('[data-calendar-popup]')
+      ) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    function updatePosition() {
+      const rect = triggerRef.current?.getBoundingClientRect()
+      if (rect) setCoords({ top: rect.bottom + 6, left: rect.left })
+    }
+    updatePosition()
+    window.addEventListener('scroll', updatePosition, true)
+    window.addEventListener('resize', updatePosition)
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true)
+      window.removeEventListener('resize', updatePosition)
+    }
+  }, [open])
+
+  // Clamp the popup so it never spills past the viewport edges
+  useLayoutEffect(() => {
+    if (!open || !coords || !popupRef.current) return
+    const margin = 8
+    const rect = popupRef.current.getBoundingClientRect()
+    let top = coords.top
+    let left = coords.left
+    if (rect.right > window.innerWidth - margin) {
+      left -= rect.right - (window.innerWidth - margin)
+    }
+    if (left < margin) left = margin
+    if (rect.bottom > window.innerHeight - margin) {
+      const triggerRect = triggerRef.current?.getBoundingClientRect()
+      if (triggerRect) top = Math.max(margin, triggerRect.top - rect.height - 6)
+    }
+    if (top !== coords.top || left !== coords.left) setCoords({ top, left })
+  }, [open, coords])
+
+  const display = value
+    ? new Date(value + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : ''
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        style={{
+          ...sideInput, width: '100%', textAlign: 'left', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          color: display ? '#e0e0e0' : '#555',
+        }}
+      >
+        <span>{display || placeholder}</span>
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, opacity: 0.6 }}>
+          <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="#999" strokeWidth="1.2" />
+          <path d="M2 6.5h12M5 1.5v3M11 1.5v3" stroke="#999" strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
+      </button>
+      {open && coords && typeof document !== 'undefined' && createPortal(
+        <div ref={popupRef} data-calendar-popup style={{ position: 'fixed', top: coords.top, left: coords.left, zIndex: 1000 }}>
+          <CalendarGrid
+            selected={value}
+            minDate={minDate}
+            onSelect={key => onChange(key)}
+            onClear={() => onChange(null)}
+            onDone={() => setOpen(false)}
+          />
+        </div>,
+        document.body
+      )}
+    </div>
+  )
+}
+
 const AutoTextarea = forwardRef(function AutoTextarea({ value, onChange, placeholder, style }, forwardedRef) {
   const innerRef = useRef(null)
 
@@ -284,7 +481,7 @@ function PostStat({ label, value, mono }) {
 
 // ── Cover Image Picker ─────────────────────────────────────
 
-function CoverImagePicker({ value, onChange }) {
+function CoverImagePicker({ value, onChange, folder = 'covers', addLabel = '+ Add cover image' }) {
   const supabase = createClient()
   const [open, setOpen] = useState(false)
   const [urlMode, setUrlMode] = useState(false)
@@ -297,7 +494,10 @@ function CoverImagePicker({ value, onChange }) {
 
   useEffect(() => {
     function handler(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target) &&
+        !e.target.closest('[data-calendar-popup]')
+      ) {
         setOpen(false)
         setUrlMode(false)
       }
@@ -311,7 +511,7 @@ function CoverImagePicker({ value, onChange }) {
     setUploading(true)
     setOpen(false)
     const ext = file.name.split('.').pop()
-    const storagePath = `covers/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const storagePath = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
     const { error } = await supabase.storage.from('Media').upload(storagePath, file, {
       cacheControl: '3600', contentType: file.type,
     })
@@ -461,7 +661,7 @@ function CoverImagePicker({ value, onChange }) {
               pointerEvents: dragOver ? 'none' : 'auto',
             }}
           >
-            {uploading ? 'Uploading…' : dragOver ? 'Drop image here' : '+ Add cover image'}
+            {uploading ? 'Uploading…' : dragOver ? 'Drop image here' : addLabel}
           </button>
           {dragOver && (
             <div
@@ -477,7 +677,7 @@ function CoverImagePicker({ value, onChange }) {
 
       {showLibrary && (
         <MediaLibraryModal
-          defaultFolder="covers"
+          defaultFolder={folder}
           onSelect={url => { onChange(url); setShowLibrary(false) }}
           onClose={() => setShowLibrary(false)}
         />
@@ -651,7 +851,10 @@ function WriterSelector({ supabase, authorId, onSelect }) {
 
   useEffect(() => {
     function handler(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setOpen(false)
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+        !e.target.closest('[data-calendar-popup]')
+      ) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -795,7 +998,10 @@ function IssuePicker({ supabase, issueId, onSelect }) {
 
   useEffect(() => {
     function handler(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+        !e.target.closest('[data-calendar-popup]')
+      ) {
         setOpen(false)
         setShowAdd(false)
       }
@@ -956,7 +1162,7 @@ function IssuePicker({ supabase, issueId, onSelect }) {
                       value={newTitle}
                       onChange={e => setNewTitle(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleSaveNewIssue()}
-                      placeholder="Borderlands of Identity"
+                      placeholder="Issue title"
                       style={sideInput}
                     />
                   </div>
@@ -967,7 +1173,7 @@ function IssuePicker({ supabase, issueId, onSelect }) {
                     </div>
                     <div>
                       <SideLabel>Pub date</SideLabel>
-                      <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} style={sideInput} />
+                      <SideDatePicker value={newDate} onChange={val => setNewDate(val || '')} />
                     </div>
                   </div>
                   {addError && (
@@ -983,9 +1189,9 @@ function IssuePicker({ supabase, issueId, onSelect }) {
                       style={{
                         flex: 1, padding: '8px', background: '#f2b8c6', border: 'none',
                         borderRadius: '5px', color: '#0a0a0a', fontSize: '12px', fontWeight: '600',
-                        cursor: addSaving ? 'not-allowed' : 'pointer',
+                        cursor: (addSaving || !newTitle.trim()) ? 'not-allowed' : 'pointer',
                         fontFamily: "'Source Serif 4', Georgia, serif",
-                        opacity: addSaving ? 0.7 : 1,
+                        opacity: (addSaving || !newTitle.trim()) ? 0.5 : 1,
                       }}
                     >
                       {addSaving ? 'Creating…' : 'Create issue'}
@@ -1019,6 +1225,241 @@ function IssuePicker({ supabase, issueId, onSelect }) {
             </button>
           )}
         </div>
+      )}
+    </div>
+  )
+}
+
+// ── Section Picker ──────────────────────────────────────────
+
+function SectionPicker({ supabase, issueId, sectionId, onSelect }) {
+  const [sections, setSections] = useState([])
+  const [loaded, setLoaded] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [showAdd, setShowAdd] = useState(false)
+  const [newTitle, setNewTitle] = useState('')
+  const [newSubtitle, setNewSubtitle] = useState('')
+  const [newIllustration, setNewIllustration] = useState('')
+  const [addSaving, setAddSaving] = useState(false)
+  const [addError, setAddError] = useState('')
+  const dropdownRef = useRef(null)
+
+  useEffect(() => {
+    setLoaded(false)
+    supabase.from('sections').select('*').eq('issue_id', issueId)
+      .order('position', { ascending: true, nullsFirst: false })
+      .order('title', { ascending: true })
+      .then(({ data }) => {
+        setSections(data || [])
+        setLoaded(true)
+      })
+  }, [issueId])
+
+  useEffect(() => {
+    function handler(e) {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+        !e.target.closest('[data-calendar-popup]')
+      ) {
+        setOpen(false)
+        setShowAdd(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const selected = sections.find(s => s.id === sectionId)
+
+  async function handleSaveNewSection() {
+    if (!newTitle.trim()) { setAddError('Title is required'); return }
+    setAddSaving(true)
+    setAddError('')
+    const { data, error } = await supabase
+      .from('sections')
+      .insert([{
+        issue_id: issueId,
+        title: newTitle.trim(),
+        slug: slugify(newTitle.trim()),
+        subtitle: newSubtitle.trim() || null,
+        illustration_url: newIllustration || null,
+      }])
+      .select()
+      .single()
+    if (error) { setAddError(error.message); setAddSaving(false); return }
+    setSections(prev => [...prev, data])
+    onSelect(data.id)
+    setOpen(false)
+    setShowAdd(false)
+    setNewTitle('')
+    setNewSubtitle('')
+    setNewIllustration('')
+    setAddSaving(false)
+  }
+
+  return (
+    <div ref={dropdownRef} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => { setOpen(v => !v); setShowAdd(false) }}
+        style={{
+          width: '100%', padding: '8px 11px',
+          background: '#1c1c1c', border: `1px solid ${open ? 'rgba(242,184,198,0.3)' : 'rgba(255,255,255,0.07)'}`,
+          borderRadius: '6px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          fontFamily: "'Source Serif 4', Georgia, serif",
+        }}
+      >
+        <span style={{ fontSize: '13px', color: selected ? '#e0e0e0' : '#555', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+          {selected ? selected.title : (loaded ? 'Select section…' : 'Loading…')}
+        </span>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ flexShrink: 0, marginLeft: '6px' }}>
+          <path d="M2 3.5l3 3 3-3" stroke="#555" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 200,
+          background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '8px', overflow: 'hidden',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+          maxHeight: '320px', overflowY: 'auto',
+        }}>
+          {!showAdd ? (
+            <>
+              {!loaded ? (
+                <div style={{ padding: '14px', fontSize: '12px', color: '#555', textAlign: 'center', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+                  Loading…
+                </div>
+              ) : sections.length === 0 ? (
+                <div style={{ padding: '14px', fontSize: '12px', color: '#555', textAlign: 'center', fontStyle: 'italic', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+                  No sections yet
+                </div>
+              ) : (
+                sections.map(section => (
+                  <button
+                    key={section.id}
+                    type="button"
+                    onClick={() => { onSelect(section.id); setOpen(false) }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '10px',
+                      width: '100%', padding: '10px 14px', border: 'none',
+                      background: section.id === sectionId ? 'rgba(242,184,198,0.1)' : 'transparent',
+                      borderBottom: '1px solid rgba(255,255,255,0.04)',
+                      cursor: 'pointer', fontFamily: "'Source Serif 4', Georgia, serif",
+                      textAlign: 'left',
+                    }}
+                  >
+                    {section.illustration_url
+                      ? <img src={section.illustration_url} alt="" style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }} />
+                      : <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: '#2e2e2e', flexShrink: 0 }} />
+                    }
+                    <span style={{ fontSize: '13px', color: '#e0e0e0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                      {section.title}
+                    </span>
+                    {section.id === sectionId && <span style={{ color: '#f2b8c6', fontSize: '11px', flexShrink: 0 }}>✓</span>}
+                  </button>
+                ))
+              )}
+              <button
+                type="button"
+                onClick={() => setShowAdd(true)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  width: '100%', padding: '10px 14px', border: 'none',
+                  borderTop: sections.length > 0 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+                  background: 'transparent', cursor: 'pointer',
+                  fontSize: '12px', color: '#f2b8c6',
+                  fontFamily: "'Source Serif 4', Georgia, serif",
+                }}
+              >
+                + Add new section
+              </button>
+            </>
+          ) : (
+            <div style={{ padding: '14px' }}>
+              <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#555', marginBottom: '12px', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+                New section
+              </div>
+              <div style={{ marginBottom: '8px' }}>
+                <SideLabel>Title</SideLabel>
+                <input
+                  autoFocus
+                  type="text"
+                  value={newTitle}
+                  onChange={e => setNewTitle(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSaveNewSection()}
+                  placeholder="Section title"
+                  style={sideInput}
+                />
+              </div>
+              <div style={{ marginBottom: '8px' }}>
+                <SideLabel>Subtitle</SideLabel>
+                <input
+                  type="text"
+                  value={newSubtitle}
+                  onChange={e => setNewSubtitle(e.target.value)}
+                  placeholder="Optional subtitle"
+                  style={sideInput}
+                />
+              </div>
+              <div style={{ marginBottom: '10px' }}>
+                <SideLabel>Illustration</SideLabel>
+                <CoverImagePicker
+                  value={newIllustration}
+                  onChange={setNewIllustration}
+                  folder="sections"
+                  addLabel="+ Add section illustration"
+                />
+              </div>
+              {addError && (
+                <div style={{ fontSize: '11px', color: '#e07070', marginBottom: '8px', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+                  {addError}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={handleSaveNewSection}
+                  disabled={addSaving || !newTitle.trim()}
+                  style={{
+                    flex: 1, padding: '8px', background: '#f2b8c6', border: 'none',
+                    borderRadius: '5px', color: '#0a0a0a', fontSize: '12px', fontWeight: '600',
+                    cursor: (addSaving || !newTitle.trim()) ? 'not-allowed' : 'pointer',
+                    fontFamily: "'Source Serif 4', Georgia, serif",
+                    opacity: (addSaving || !newTitle.trim()) ? 0.5 : 1,
+                  }}
+                >
+                  {addSaving ? 'Creating…' : 'Create section'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowAdd(false); setAddError('') }}
+                  style={{
+                    padding: '8px 10px', background: 'none',
+                    border: '1px solid rgba(255,255,255,0.1)', borderRadius: '5px',
+                    color: '#666', fontSize: '12px', cursor: 'pointer',
+                    fontFamily: "'Source Serif 4', Georgia, serif",
+                  }}
+                >
+                  ←
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Clear selection */}
+      {selected && (
+        <button
+          type="button"
+          onClick={() => onSelect(null)}
+          style={{ background: 'none', border: 'none', color: '#444', fontSize: '11px', cursor: 'pointer', padding: '4px 0 0', fontFamily: "'Source Serif 4', Georgia, serif" }}
+        >
+          Clear
+        </button>
       )}
     </div>
   )
@@ -1477,12 +1918,12 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
             {/* Publish date */}
             <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
               <SideLabel>Publish date</SideLabel>
-              <input
-                type="date"
-                value={form.date_published || ''}
-                onChange={e => update('date_published', e.target.value || null)}
-                style={{ ...sideInput, width: '100%', marginTop: '6px' }}
-              />
+              <div style={{ marginTop: '6px' }}>
+                <SideDatePicker
+                  value={form.date_published || ''}
+                  onChange={val => update('date_published', val)}
+                />
+              </div>
             </div>
 
             {/* Schedule */}
@@ -1511,12 +1952,24 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
               </label>
               {schedulingOpen && (
                 <div style={{ marginTop: '12px' }}>
+                  <SideDatePicker
+                    value={scheduleDraft ? scheduleDraft.split('T')[0] : ''}
+                    minDate={toLocalInput(new Date().toISOString()).slice(0, 10)}
+                    placeholder="Select date…"
+                    onChange={dateVal => {
+                      if (!dateVal) { setScheduleDraft(''); return }
+                      const time = scheduleDraft.split('T')[1] || '12:00'
+                      setScheduleDraft(`${dateVal}T${time}`)
+                    }}
+                  />
                   <input
-                    type="datetime-local"
-                    value={scheduleDraft}
-                    onChange={e => setScheduleDraft(e.target.value)}
-                    min={toLocalInput(new Date().toISOString())}
-                    style={{ ...sideInput, marginBottom: '8px', accentColor: '#f2b8c6' }}
+                    type="time"
+                    value={scheduleDraft ? scheduleDraft.split('T')[1] || '' : ''}
+                    onChange={e => {
+                      const datePart = scheduleDraft.split('T')[0] || toLocalInput(new Date().toISOString()).slice(0, 10)
+                      setScheduleDraft(`${datePart}T${e.target.value}`)
+                    }}
+                    style={{ ...sideInput, marginTop: '8px', marginBottom: '8px', accentColor: '#f2b8c6' }}
                   />
                   {scheduleDraft && (
                     <button
@@ -1696,8 +2149,21 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
             <IssuePicker
               supabase={supabase}
               issueId={form.issue_id}
-              onSelect={id => update('issue_id', id)}
+              onSelect={id => batchUpdate({ issue_id: id, section_id: null })}
             />
+            {form.issue_id && (
+              <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                <SideLabel>Section</SideLabel>
+                <div style={{ marginTop: '6px' }}>
+                  <SectionPicker
+                    supabase={supabase}
+                    issueId={form.issue_id}
+                    sectionId={form.section_id}
+                    onSelect={id => update('section_id', id)}
+                  />
+                </div>
+              </div>
+            )}
           </SideSection>
 
           {/* SEO */}
