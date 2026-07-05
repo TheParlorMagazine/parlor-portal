@@ -116,6 +116,7 @@ export default function HomePage() {
         .from('articles')
         .select('slug, title, subtitle, cover_image_url, author_name, author_photo_url, author_profile_url, category, date_published')
         .eq('published', true)
+        .is('issue_id', null)
         .order('date_published', { ascending: false })
         .limit(12)
       if (error || !data?.length) return
