@@ -11,7 +11,32 @@ function fmt(sec) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-function AudioPaywallOverlay({ price, onReplay }) {
+function AudioPaywallOverlay({ price, onReplay, stripePriceId, articleId, userId, pagePath }) {
+  async function handleUnlock() {
+    if (!stripePriceId) {
+      window.location.href = '/plans'
+      return
+    }
+    try {
+      const res = await fetch('/api/create-paywall-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stripePriceId,
+          articleId,
+          itemType: 'audio',
+          userId: userId || undefined,
+          successUrl: window.location.href + '?unlocked=1',
+          cancelUrl: window.location.href,
+        }),
+      })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+    } catch {
+      window.location.href = '/plans'
+    }
+  }
+
   return (
     <div style={{
       position: 'absolute', inset: 0, zIndex: 10,
@@ -37,7 +62,7 @@ function AudioPaywallOverlay({ price, onReplay }) {
 
       {/* Buttons side by side */}
       <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', marginTop: '4px' }}>
-        <a href="/plans" style={{
+        <a href={`/plans${pagePath ? `?returnTo=${encodeURIComponent(pagePath)}` : ''}`} style={{
           padding: '9px 18px', background: '#0a0a0a', borderRadius: '6px',
           color: '#fff', fontFamily: "'Source Serif 4', Georgia, serif",
           fontSize: '13px', fontWeight: '600', textAlign: 'center', textDecoration: 'none', whiteSpace: 'nowrap',
@@ -45,14 +70,14 @@ function AudioPaywallOverlay({ price, onReplay }) {
           Become a member — from $10/mo
         </a>
         {price && (
-          <a href="/plans" style={{
+          <button onClick={handleUnlock} style={{
             padding: '9px 18px', border: '1px solid #0a0a0a', borderRadius: '6px',
             color: '#0a0a0a', fontFamily: "'Source Serif 4', Georgia, serif",
-            fontSize: '13px', fontWeight: '600', textAlign: 'center', textDecoration: 'none',
-            background: 'transparent', whiteSpace: 'nowrap',
+            fontSize: '13px', fontWeight: '600', textAlign: 'center',
+            background: 'transparent', whiteSpace: 'nowrap', cursor: 'pointer',
           }}>
             Unlock — ${parseFloat(price).toFixed(2)}
-          </a>
+          </button>
         )}
       </div>
 
@@ -67,7 +92,7 @@ function AudioPaywallOverlay({ price, onReplay }) {
   )
 }
 
-export default function PublicAudioPlayer({ url, title, duration, transcript, hasAccess, price }) {
+export default function PublicAudioPlayer({ url, title, duration, transcript, hasAccess, price, stripePriceId, articleId, userId, pagePath }) {
   const paywalled = !hasAccess
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -144,7 +169,7 @@ export default function PublicAudioPlayer({ url, title, duration, transcript, ha
     }}>
       {/* Paywall overlay covers the entire card */}
       {showPaywall && (
-        <AudioPaywallOverlay price={price} onReplay={handleReplay} />
+        <AudioPaywallOverlay price={price} onReplay={handleReplay} stripePriceId={stripePriceId} articleId={articleId} userId={userId} pagePath={pagePath} />
       )}
 
       {/* Header */}

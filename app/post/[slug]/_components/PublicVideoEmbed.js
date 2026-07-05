@@ -31,7 +31,32 @@ function embedUrl(url, type) {
   return url
 }
 
-function VideoPaywallOverlay({ price, onReplay, isControllable }) {
+function VideoPaywallOverlay({ price, onReplay, isControllable, stripePriceId, articleId, userId, pagePath }) {
+  async function handleUnlock() {
+    if (!stripePriceId) {
+      window.location.href = '/plans'
+      return
+    }
+    try {
+      const res = await fetch('/api/create-paywall-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stripePriceId,
+          articleId,
+          itemType: 'video',
+          userId: userId || undefined,
+          successUrl: window.location.href + '?unlocked=1',
+          cancelUrl: window.location.href,
+        }),
+      })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+    } catch {
+      window.location.href = '/plans'
+    }
+  }
+
   return (
     <div style={{
       position: 'absolute', inset: 0, zIndex: 10,
@@ -57,7 +82,7 @@ function VideoPaywallOverlay({ price, onReplay, isControllable }) {
       </p>
 
       <a
-        href="/plans"
+        href={`/plans${pagePath ? `?returnTo=${encodeURIComponent(pagePath)}` : ''}`}
         style={{
           display: 'block', width: '100%', maxWidth: '280px',
           padding: '11px 0', background: '#fff', borderRadius: '6px',
@@ -72,18 +97,18 @@ function VideoPaywallOverlay({ price, onReplay, isControllable }) {
       {price && (
         <>
           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>or</div>
-          <a
-            href="/plans"
+          <button
+            onClick={handleUnlock}
             style={{
               display: 'block', width: '100%', maxWidth: '280px',
               padding: '10px 0', border: '1px solid rgba(255,255,255,0.4)', borderRadius: '6px',
               color: '#fff', fontFamily: "'Source Serif 4', Georgia, serif",
-              fontSize: '14px', fontWeight: '600', textAlign: 'center', textDecoration: 'none',
-              background: 'transparent',
+              fontSize: '14px', fontWeight: '600', textAlign: 'center',
+              background: 'transparent', cursor: 'pointer',
             }}
           >
             Unlock this video — ${parseFloat(price).toFixed(2)}
-          </a>
+          </button>
         </>
       )}
 
@@ -103,7 +128,7 @@ function VideoPaywallOverlay({ price, onReplay, isControllable }) {
   )
 }
 
-export default function PublicVideoEmbed({ url, title, duration, hasAccess, price }) {
+export default function PublicVideoEmbed({ url, title, duration, hasAccess, price, stripePriceId, articleId, userId, pagePath }) {
   const paywalled = !hasAccess
   const type = detectType(url)
   const isControllable = type === 'cloudinary' || type === 'direct'
@@ -198,6 +223,10 @@ export default function PublicVideoEmbed({ url, title, duration, hasAccess, pric
             price={price}
             onReplay={isControllable ? handleReplay : null}
             isControllable={isControllable}
+            stripePriceId={stripePriceId}
+            articleId={articleId}
+            userId={userId}
+            pagePath={pagePath}
           />
         )}
 

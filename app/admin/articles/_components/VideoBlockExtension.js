@@ -128,7 +128,7 @@ function PaywallOverlay({ price, onReplay }) {
 }
 
 function VideoBlockView({ node, updateAttributes, selected }) {
-  const { url, title, duration: durationLabel, transcript, paywalled, price, plan_access } = node.attrs
+  const { url, title, duration: durationLabel, transcript, paywalled, price, stripe_price_id, plan_access } = node.attrs
   const currentPlanAccess = Array.isArray(plan_access) ? plan_access : ["Reader's Circle", "Printing Press"]
   const type = detectType(url)
   const active = !!url.trim()
@@ -140,7 +140,43 @@ function VideoBlockView({ node, updateAttributes, selected }) {
   const [videoDuration, setVideoDuration] = useState(0)
   const [showPaywall, setShowPaywall] = useState(false)
   const [markerHovered, setMarkerHovered] = useState(false)
+  const [stripeStatus, setStripeStatus] = useState('')
+  const [stripeError, setStripeError] = useState('')
+  const creatingRef = useRef(false)
   const videoRef = useRef(null)
+
+  // Create a Stripe product/price for this block once it's restricted with a
+  // price set — covers both newly-restricted blocks and ones marked paywalled
+  // before this ever had checkout wiring.
+  useEffect(() => {
+    const amount = parseFloat(price)
+    if (!paywalled || !amount || amount <= 0 || stripe_price_id || creatingRef.current) return
+    creatingRef.current = true
+    setStripeStatus('creating')
+    setStripeError('')
+    fetch('/api/create-paywall-product', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title || 'Video', itemType: 'video', price: amount }),
+    })
+      .then(res => res.json().then(data => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        creatingRef.current = false
+        if (ok && data.stripe_price_id) {
+          updateAttributes({ stripe_product_id: data.stripe_product_id, stripe_price_id: data.stripe_price_id })
+          setStripeStatus('done')
+        } else {
+          setStripeStatus('error')
+          setStripeError(data.error || 'Unknown error')
+        }
+      })
+      .catch(err => {
+        creatingRef.current = false
+        setStripeStatus('error')
+        setStripeError(err.message || 'Network error')
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paywalled, price, stripe_price_id])
 
   const progress = videoDuration ? (currentTime / videoDuration) * 100 : 0
   const markerPct = paywalled && videoDuration > PREVIEW_LIMIT
@@ -481,6 +517,17 @@ function VideoBlockView({ node, updateAttributes, selected }) {
                     }}
                   />
                 </div>
+                {stripeStatus && (
+                  <div style={{
+                    fontSize: '10px', marginTop: '5px',
+                    fontFamily: "'Source Serif 4', Georgia, serif",
+                    color: stripeStatus === 'done' ? '#4a7a4a' : stripeStatus === 'error' ? '#c05050' : '#999',
+                  }}>
+                    {stripeStatus === 'creating' && 'Setting up payment…'}
+                    {stripeStatus === 'done' && 'Payment set up ✓'}
+                    {stripeStatus === 'error' && `Payment setup failed — ${stripeError}`}
+                  </div>
+                )}
               </div>
               <div style={{ paddingTop: '8px', borderTop: '1px solid #f0f0f0' }}>
                 <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#bbb', marginBottom: '7px', fontFamily: "'Source Serif 4', Georgia, serif" }}>
@@ -563,6 +610,8 @@ export const VideoBlock = Node.create({
       transcript: { default: '' },
       paywalled: { default: false },
       price: { default: '2.50' },
+      stripe_product_id: { default: '' },
+      stripe_price_id: { default: '' },
       plan_access: {
         default: ["Reader's Circle", 'Printing Press'],
         parseHTML: element => {
@@ -594,7 +643,7 @@ export const VideoBlock = Node.create({
       insertVideoBlock: () => ({ commands }) =>
         commands.insertContent({
           type: 'videoBlock',
-          attrs: { url: '', title: '', duration: '', transcript: '', paywalled: false, price: '2.50', plan_access: ["Reader's Circle", 'Printing Press'] },
+          attrs: { url: '', title: '', duration: '', transcript: '', paywalled: false, price: '2.50', stripe_product_id: '', stripe_price_id: '', plan_access: ["Reader's Circle", 'Printing Press'] },
         }),
     }
   },

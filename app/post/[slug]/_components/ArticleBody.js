@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import PublicAudioPlayer from './PublicAudioPlayer'
 import PublicVideoEmbed from './PublicVideoEmbed'
+import UnlockPending from './UnlockPending'
 
 const PROSE_STYLES = `
   .parlor-prose {
@@ -243,7 +244,7 @@ function truncateHtmlAtParagraphs(html, maxParagraphs) {
   return parts.slice(0, maxParagraphs).join('</p>') + '</p>'
 }
 
-function ArticlePaywallOverlay({ paywallType, price, stripePriceId, articleId, userId }) {
+function ArticlePaywallOverlay({ paywallType, price, stripePriceId, articleId, userId, pagePath }) {
   async function handleUnlock() {
     if (!stripePriceId || !articleId) {
       window.location.href = '/plans'
@@ -302,7 +303,7 @@ function ArticlePaywallOverlay({ paywallType, price, stripePriceId, articleId, u
         </p>
 
         <a
-          href="/plans"
+          href={`/plans${pagePath ? `?returnTo=${encodeURIComponent(pagePath)}` : ''}`}
           style={{
             display: 'inline-block', padding: '13px 28px', background: '#0a0a0a',
             borderRadius: '6px', color: '#fff', fontWeight: '600', fontSize: '15px',
@@ -341,8 +342,20 @@ export default function ArticleBody({
   stripePriceId,
   articleHasAccess,
   userId,
+  pagePath,
+  justUnlocked,
 }) {
   const isGated = (paywallType === 'paywall' || paywallType === 'members') && !articleHasAccess
+  const anyBlockGated = segments.some(seg =>
+    (seg.kind === 'audio-block' || seg.kind === 'video-block') &&
+    seg.attrs?.paywalled === 'true' && !seg.hasAccess
+  )
+
+  // Right after a Stripe redirect, give the access-granting webhook a moment
+  // to land instead of flashing the paywall while it's still catching up.
+  if (justUnlocked && (isGated || anyBlockGated)) {
+    return <UnlockPending />
+  }
 
   // Collect all HTML segments to find the truncation point
   const htmlSegments = segments.filter(s => s.kind === 'html')
@@ -364,6 +377,7 @@ export default function ArticleBody({
           stripePriceId={stripePriceId}
           articleId={articleId}
           userId={userId}
+          pagePath={pagePath}
         />
       </>
     )
@@ -384,7 +398,7 @@ export default function ArticleBody({
         }
 
         if (seg.kind === 'audio-block') {
-          const { url, title, duration, transcript, paywalled, price } = seg.attrs
+          const { url, title, duration, transcript, paywalled, price, stripe_price_id } = seg.attrs
           const hasAccess = paywalled === 'true' ? (seg.hasAccess ?? false) : true
           return (
             <PublicAudioPlayer
@@ -395,12 +409,16 @@ export default function ArticleBody({
               transcript={transcript}
               hasAccess={hasAccess}
               price={price}
+              stripePriceId={stripe_price_id}
+              articleId={articleId}
+              userId={userId}
+              pagePath={pagePath}
             />
           )
         }
 
         if (seg.kind === 'video-block') {
-          const { url, title, duration, paywalled, price } = seg.attrs
+          const { url, title, duration, paywalled, price, stripe_price_id } = seg.attrs
           const hasAccess = paywalled === 'true' ? (seg.hasAccess ?? false) : true
           return (
             <PublicVideoEmbed
@@ -410,6 +428,10 @@ export default function ArticleBody({
               duration={duration}
               hasAccess={hasAccess}
               price={price}
+              stripePriceId={stripe_price_id}
+              articleId={articleId}
+              userId={userId}
+              pagePath={pagePath}
             />
           )
         }

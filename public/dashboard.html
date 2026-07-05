@@ -2008,13 +2008,11 @@ window.addEventListener('message', function(event) {
 
   const PLAN_IDS = {
     READERS_CIRCLE: 'fccb348a-7433-4080-8699-9ef8c0e7a519',
-    PRINTING_PRESS: 'c666f321-47e5-40c1-bc2a-565a2f52f64d',
-    ARCHIVE_PASS:   'd557e8cd-bed2-4f09-a50e-6274d829bfef'
+    PRINTING_PRESS: 'c666f321-47e5-40c1-bc2a-565a2f52f64d'
   };
 
   const isReadersCircle = m.planId === PLAN_IDS.READERS_CIRCLE || m.plan === "The Reader's Circle";
   const isPrintingPress = m.planId === PLAN_IDS.PRINTING_PRESS || m.plan === 'The Printing Press';
-  const hasArchivePass  = m.planId === PLAN_IDS.ARCHIVE_PASS   || m.plan === 'Archive Pass';
   const hasDigitalAccess = isReadersCircle || isPrintingPress;
 
   // Name

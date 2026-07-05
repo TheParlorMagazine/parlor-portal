@@ -85,8 +85,10 @@ export async function generateMetadata({ params }) {
   }
 }
 
-export default async function ArticlePage({ params }) {
+export default async function ArticlePage({ params, searchParams }) {
   const { slug } = await params
+  const query = await searchParams
+  const justUnlocked = query?.unlocked === '1' && query?.retried !== '1'
 
   const { data: article } = await db
     .from('articles')
@@ -319,6 +321,8 @@ export default async function ArticlePage({ params }) {
             stripePriceId={article.stripe_price_id}
             articleHasAccess={articleHasAccess}
             userId={userId}
+            pagePath={`/post/${article.slug}`}
+            justUnlocked={justUnlocked}
           />
         </div>
 

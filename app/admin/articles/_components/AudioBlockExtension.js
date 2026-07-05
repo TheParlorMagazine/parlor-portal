@@ -108,7 +108,7 @@ function PaywallOverlay({ price, onReplay }) {
 }
 
 function AudioBlockView({ node, updateAttributes, selected }) {
-  const { url, title, duration: durationLabel, transcript, paywalled, price, plan_access } = node.attrs
+  const { url, title, duration: durationLabel, transcript, paywalled, price, stripe_price_id, plan_access } = node.attrs
   const currentPlanAccess = Array.isArray(plan_access) ? plan_access : ["Reader's Circle", "Printing Press"]
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -116,9 +116,45 @@ function AudioBlockView({ node, updateAttributes, selected }) {
   const [showPaywall, setShowPaywall] = useState(false)
   const [transcriptOpen, setTranscriptOpen] = useState(false)
   const [markerHovered, setMarkerHovered] = useState(false)
+  const [stripeStatus, setStripeStatus] = useState('')
+  const [stripeError, setStripeError] = useState('')
+  const creatingRef = useRef(false)
   const audioRef = useRef(null)
 
   const active = !!url.trim()
+
+  // Create a Stripe product/price for this block once it's restricted with a
+  // price set — covers both newly-restricted blocks and ones marked paywalled
+  // before this ever had checkout wiring.
+  useEffect(() => {
+    const amount = parseFloat(price)
+    if (!paywalled || !amount || amount <= 0 || stripe_price_id || creatingRef.current) return
+    creatingRef.current = true
+    setStripeStatus('creating')
+    setStripeError('')
+    fetch('/api/create-paywall-product', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title || 'Audio', itemType: 'audio', price: amount }),
+    })
+      .then(res => res.json().then(data => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        creatingRef.current = false
+        if (ok && data.stripe_price_id) {
+          updateAttributes({ stripe_product_id: data.stripe_product_id, stripe_price_id: data.stripe_price_id })
+          setStripeStatus('done')
+        } else {
+          setStripeStatus('error')
+          setStripeError(data.error || 'Unknown error')
+        }
+      })
+      .catch(err => {
+        creatingRef.current = false
+        setStripeStatus('error')
+        setStripeError(err.message || 'Network error')
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paywalled, price, stripe_price_id])
   const progress = audioDuration ? (currentTime / audioDuration) * 100 : 0
   const markerPct = paywalled && audioDuration > PREVIEW_LIMIT
     ? (PREVIEW_LIMIT / audioDuration) * 100
@@ -374,6 +410,17 @@ function AudioBlockView({ node, updateAttributes, selected }) {
                     }}
                   />
                 </div>
+                {stripeStatus && (
+                  <div style={{
+                    fontSize: '10px', marginTop: '5px',
+                    fontFamily: "'Source Serif 4', Georgia, serif",
+                    color: stripeStatus === 'done' ? '#4a7a4a' : stripeStatus === 'error' ? '#c05050' : '#999',
+                  }}>
+                    {stripeStatus === 'creating' && 'Setting up payment…'}
+                    {stripeStatus === 'done' && 'Payment set up ✓'}
+                    {stripeStatus === 'error' && `Payment setup failed — ${stripeError}`}
+                  </div>
+                )}
               </div>
               <div style={{ paddingTop: '8px', borderTop: '1px solid #f0f0f0' }}>
                 <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#bbb', marginBottom: '7px', fontFamily: "'Source Serif 4', Georgia, serif" }}>
@@ -467,6 +514,8 @@ export const AudioBlock = Node.create({
       transcript: { default: '' },
       paywalled: { default: false },
       price: { default: '2.50' },
+      stripe_product_id: { default: '' },
+      stripe_price_id: { default: '' },
       plan_access: {
         default: ["Reader's Circle", 'Printing Press'],
         parseHTML: element => {
@@ -498,7 +547,7 @@ export const AudioBlock = Node.create({
       insertAudioBlock: () => ({ commands }) =>
         commands.insertContent({
           type: 'audioBlock',
-          attrs: { url: '', title: '', duration: '', transcript: '', paywalled: false, price: '2.50', plan_access: ["Reader's Circle", 'Printing Press'] },
+          attrs: { url: '', title: '', duration: '', transcript: '', paywalled: false, price: '2.50', stripe_product_id: '', stripe_price_id: '', plan_access: ["Reader's Circle", 'Printing Press'] },
         }),
     }
   },

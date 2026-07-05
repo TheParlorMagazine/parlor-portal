@@ -1485,6 +1485,7 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
   const [stripeStatus, setStripeStatus] = useState(
     () => initialData?.stripe_product_id ? 'done' : ''
   )
+  const [stripeError, setStripeError] = useState('')
   const saveDraftRef = useRef(null)
 
   const formRef = useRef(form)
@@ -1661,12 +1662,13 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
     }
 
     setStripeStatus('creating')
+    setStripeError('')
 
     // Ensure the article is saved so we have an ID
     let id = savedIdRef.current
     if (!id) {
       const result = await performSave({ published: false })
-      if (!result) { setStripeStatus('error'); return }
+      if (!result) { setStripeStatus('error'); setStripeError('Could not save the article'); return }
       id = result
     }
 
@@ -1682,7 +1684,7 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
         }),
       })
       const data = await res.json()
-      if (data.stripe_product_id) {
+      if (res.ok && data.stripe_product_id) {
         setForm(prev => ({
           ...prev,
           stripe_product_id: data.stripe_product_id,
@@ -1696,9 +1698,11 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
         setStripeStatus('done')
       } else {
         setStripeStatus('error')
+        setStripeError(data.error || 'Unknown error')
       }
-    } catch {
+    } catch (err) {
       setStripeStatus('error')
+      setStripeError(err.message || 'Network error')
     }
   }
 
@@ -2070,7 +2074,7 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
                     }}>
                       {stripeStatus === 'creating' && 'Creating payment…'}
                       {stripeStatus === 'done' && 'Payment set up ✓'}
-                      {stripeStatus === 'error' && 'Payment setup failed — save a title first'}
+                      {stripeStatus === 'error' && `Payment setup failed — ${stripeError}`}
                     </div>
                   )}
                   {/* Plan inclusion */}
