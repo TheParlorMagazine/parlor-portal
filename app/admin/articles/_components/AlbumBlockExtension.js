@@ -7,11 +7,67 @@ import { createClient } from '../../../../lib/supabase'
 import ImageEditor from '../../_components/ImageEditor'
 
 // ── Editor NodeView ───────────────────────────────────────────
-function AlbumBlockView({ node, selected, updateAttributes }) {
+// Renders the album images in their actual layout, scaled for the editor.
+function AlbumLayoutPreview({ layout, images }) {
+  const capStyle = { fontSize: '10px', color: '#999', fontStyle: 'italic', lineHeight: 1.35, margin: '4px 2px 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }
+  const imgBase = { width: '100%', display: 'block', borderRadius: '4px', background: '#e0e0e0' }
+
+  if (layout === 'carousel') {
+    const first = images[0]
+    return (
+      <div style={{ position: 'relative' }}>
+        {first && <img src={first.src} alt={first.alt || ''} style={{ ...imgBase, maxHeight: '260px', objectFit: 'cover' }} />}
+        {images.length > 1 && (
+          <div style={{ position: 'absolute', bottom: 8, right: 10, background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: '11px', padding: '2px 8px', borderRadius: '20px' }}>
+            1 / {images.length}
+          </div>
+        )}
+        {first?.caption && <p style={{ ...capStyle, textAlign: 'center' }}>{first.caption}</p>}
+      </div>
+    )
+  }
+
+  if (layout === 'masonry') {
+    return (
+      <div style={{ columnCount: 2, columnGap: '8px' }}>
+        {images.map((img, i) => (
+          <figure key={i} style={{ margin: '0 0 8px', breakInside: 'avoid' }}>
+            <img src={img.src} alt={img.alt || ''} style={imgBase} />
+            {img.caption && <figcaption style={capStyle}>{img.caption}</figcaption>}
+          </figure>
+        ))}
+      </div>
+    )
+  }
+
+  const cols = layout === 'grid-3' ? 3 : 2
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '8px' }}>
+      {images.map((img, i) => (
+        <figure key={i} style={{ margin: 0 }}>
+          <img src={img.src} alt={img.alt || ''} style={{ ...imgBase, aspectRatio: '4/3', objectFit: 'cover' }} />
+          {img.caption && <figcaption style={capStyle}>{img.caption}</figcaption>}
+        </figure>
+      ))}
+    </div>
+  )
+}
+
+function AlbumBlockView({ node, selected, updateAttributes, deleteNode }) {
   let images = []
   try { images = JSON.parse(node.attrs.images || '[]') } catch {}
   const { layout } = node.attrs
   const layoutLabels = { carousel: 'Carousel', 'grid-2': 'Grid 2-col', 'grid-3': 'Grid 3-col', masonry: 'Masonry' }
+  const [editing, setEditing] = useState(false)
+
+  const pillBtn = (active) => ({
+    padding: '3px 10px', border: 'none', borderRadius: '20px', cursor: 'pointer',
+    fontSize: '10px', fontFamily: "'Source Serif 4', Georgia, serif",
+    background: active ? '#f2b8c6' : '#ebebeb',
+    color: active ? '#0a0a0a' : '#999',
+    fontWeight: active ? '600' : '400',
+    transition: 'background 0.15s, color 0.15s',
+  })
 
   return (
     <NodeViewWrapper>
@@ -28,46 +84,57 @@ function AlbumBlockView({ node, selected, updateAttributes }) {
           <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#bbb' }}>
             Album — {layoutLabels[layout] || layout}
           </span>
-          <span style={{ fontSize: '11px', color: '#bbb' }}>
-            {images.length} image{images.length !== 1 ? 's' : ''}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '11px', color: '#bbb' }}>
+              {images.length} image{images.length !== 1 ? 's' : ''}
+            </span>
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              style={{ padding: '4px 12px', border: '1px solid #f2b8c6', borderRadius: '20px', cursor: 'pointer', fontSize: '10px', fontFamily: "'Source Serif 4', Georgia, serif", background: '#fff', color: '#c76b84', fontWeight: '600' }}
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => { if (confirm('Remove this entire album?')) deleteNode() }}
+              title="Delete album"
+              style={{ padding: '4px 8px', border: '1px solid #e0e0e0', borderRadius: '20px', cursor: 'pointer', fontSize: '11px', background: '#fff', color: '#bbb', lineHeight: 1 }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
+
         {images.length > 0 && (
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
-            {images.slice(0, 6).map((img, i) => (
-              <div key={i} style={{ width: '60px', height: '60px', borderRadius: '4px', overflow: 'hidden', background: '#e0e0e0', flexShrink: 0 }}>
-                <img src={img.src} alt={img.alt || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-            ))}
-            {images.length > 6 && (
-              <div style={{ width: '60px', height: '60px', borderRadius: '4px', background: '#e8e8e8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#888', flexShrink: 0 }}>
-                +{images.length - 6}
-              </div>
-            )}
+          <div style={{ marginBottom: '10px' }}>
+            <AlbumLayoutPreview layout={layout} images={images} />
           </div>
         )}
+
         {/* Layout switcher */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingTop: images.length ? '8px' : 0, borderTop: images.length ? '1px solid #ebebeb' : 'none' }}>
           <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#ccc', marginRight: '2px' }}>Layout:</span>
           {Object.entries(layoutLabels).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => updateAttributes({ layout: key })}
-              style={{
-                padding: '3px 10px', border: 'none', borderRadius: '20px', cursor: 'pointer',
-                fontSize: '10px', fontFamily: "'Source Serif 4', Georgia, serif",
-                background: layout === key ? '#f2b8c6' : '#ebebeb',
-                color: layout === key ? '#0a0a0a' : '#999',
-                fontWeight: layout === key ? '600' : '400',
-                transition: 'background 0.15s, color 0.15s',
-              }}
-            >
+            <button key={key} type="button" onClick={() => updateAttributes({ layout: key })} style={pillBtn(layout === key)}>
               {label}
             </button>
           ))}
         </div>
       </div>
+
+      {editing && (
+        <AlbumInsertModal
+          mode="edit"
+          initialLayout={layout}
+          initialImages={images}
+          onInsert={({ layout: newLayout, images: newImages }) => {
+            updateAttributes({ layout: newLayout, images: JSON.stringify(newImages) })
+            setEditing(false)
+          }}
+          onClose={() => setEditing(false)}
+        />
+      )}
     </NodeViewWrapper>
   )
 }
@@ -89,13 +156,16 @@ const selInputStyle = {
   outline: 'none', boxSizing: 'border-box',
 }
 
-export function AlbumInsertModal({ onInsert, onClose }) {
+export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImages, mode = 'insert' }) {
   const supabase = createClient()
+  const isEditing = mode === 'edit'
   const [folder, setFolder] = useState('body')
   const [files, setFiles] = useState([])
   const [loading, setLoading] = useState(true)
-  const [layout, setLayout] = useState('grid-2')
-  const [selected, setSelected] = useState([]) // [{ src, alt, caption }]
+  const [layout, setLayout] = useState(initialLayout || 'grid-2')
+  const [selected, setSelected] = useState(
+    Array.isArray(initialImages) ? initialImages.map(img => ({ alt: '', caption: '', ...img })) : []
+  ) // [{ src, alt, caption }]
   const [isDragOver, setIsDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [contextMenu, setContextMenu] = useState(null) // { x, y, file }
@@ -182,7 +252,7 @@ export function AlbumInsertModal({ onInsert, onClose }) {
       >
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-          <span style={{ fontSize: '14px', fontWeight: '600', color: '#e0e0e0', fontFamily: "'Playfair Display', Georgia, serif" }}>Insert Album</span>
+          <span style={{ fontSize: '14px', fontWeight: '600', color: '#e0e0e0', fontFamily: "'Playfair Display', Georgia, serif" }}>{isEditing ? 'Edit Album' : 'Insert Album'}</span>
           <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '20px', lineHeight: 1, padding: '0 4px' }}>×</button>
         </div>
 
@@ -308,7 +378,7 @@ export function AlbumInsertModal({ onInsert, onClose }) {
             disabled={!selected.length}
             style={{ padding: '8px 20px', background: '#f2b8c6', border: 'none', borderRadius: '6px', color: '#0a0a0a', fontSize: '12px', fontWeight: '600', cursor: selected.length ? 'pointer' : 'not-allowed', fontFamily: "'Source Serif 4', Georgia, serif", opacity: selected.length ? 1 : 0.5 }}
           >
-            Insert Album ({selected.length})
+            {isEditing ? 'Save Changes' : 'Insert Album'} ({selected.length})
           </button>
         </div>
       </div>

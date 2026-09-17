@@ -220,7 +220,7 @@ function SideInput({ label, value, onChange, placeholder, type = 'text' }) {
   return (
     <div style={{ marginBottom: '12px' }}>
       {label && <SideLabel>{label}</SideLabel>}
-      <input type={type} value={value} onChange={e => onChange(e.target.value)}
+      <input type={type} value={value ?? ''} onChange={e => onChange(e.target.value)}
         placeholder={placeholder} style={sideInput} />
     </div>
   )
@@ -230,7 +230,7 @@ function SideTextarea({ label, value, onChange, placeholder, rows = 3 }) {
   return (
     <div style={{ marginBottom: '12px' }}>
       {label && <SideLabel>{label}</SideLabel>}
-      <textarea value={value} onChange={e => onChange(e.target.value)}
+      <textarea value={value ?? ''} onChange={e => onChange(e.target.value)}
         placeholder={placeholder} rows={rows}
         style={{ ...sideInput, resize: 'vertical' }} />
     </div>

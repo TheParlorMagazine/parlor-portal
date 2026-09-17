@@ -926,7 +926,7 @@ export default function HomePage() {
           <h1 className={`digital-hero-title fi fi-d2${visible ? ' in' : ''}`}>Borderlands<br/>of Identity</h1>
 
           <div className={`read-issue-wrap fi fi-d4${visible ? ' in' : ''}`}>
-            <a href="https://www.theparlormagazine.com/issue-1" className="read-issue-btn">
+            <a href="/borderlands-of-identity" className="read-issue-btn">
               Read the Full Issue
             </a>
           </div>
@@ -935,14 +935,14 @@ export default function HomePage() {
             <div className="or-label">or browse by section</div>
             <div>
               <div className="chips-row top">
-                <a className="chip" href="#">
+                <a className="chip" href="/borderlands-of-identity/homecoming">
                   <div className="chip-top">
                     <span className="chip-title">Homecoming</span>
                     <span className="chip-subtitle">On language, culture, diaspora, and colonial memory</span>
                   </div>
                   <div className="chip-bottom"><span className="chip-arrow">→</span></div>
                 </a>
-                <a className="chip" href="#">
+                <a className="chip" href="/borderlands-of-identity/the-borders-of-the-body">
                   <div className="chip-top">
                     <span className="chip-title">The Borders of the Body</span>
                     <span className="chip-subtitle">Autonomy, intimacy, and the politics of embodiment</span>
@@ -951,14 +951,14 @@ export default function HomePage() {
                 </a>
               </div>
               <div className="chips-row bottom">
-                <a className="chip" href="#">
+                <a className="chip" href="/borderlands-of-identity/beyond-binaries">
                   <div className="chip-top">
                     <span className="chip-title">Beyond Binaries</span>
                     <span className="chip-subtitle">Gender, care, and control in the politics of visibility</span>
                   </div>
                   <div className="chip-bottom"><span className="chip-arrow">→</span></div>
                 </a>
-                <a className="chip" href="#">
+                <a className="chip" href="/borderlands-of-identity/the-places-power-keeps">
                   <div className="chip-top">
                     <span className="chip-title">The Places Power Keeps</span>
                     <span className="chip-subtitle">On displacement and the memory of war</span>
@@ -967,7 +967,7 @@ export default function HomePage() {
                 </a>
               </div>
               <div className="chips-row center bottom">
-                <a className="chip" href="#">
+                <a className="chip" href="/borderlands-of-identity/on-holding-and-letting-go">
                   <div className="chip-top">
                     <span className="chip-title">On Holding and Letting Go</span>
                     <span className="chip-subtitle">On grief, rupture, and repair</span>

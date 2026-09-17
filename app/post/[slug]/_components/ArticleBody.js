@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import PublicAudioPlayer from './PublicAudioPlayer'
 import PublicVideoEmbed from './PublicVideoEmbed'
 import UnlockPending from './UnlockPending'
@@ -142,6 +142,114 @@ const PROSE_STYLES = `
     border-radius: 3px;
     font-size: 15px;
   }
+
+  /* Album (masonry / grid) — hover captions + click to enlarge */
+  .parlor-album-item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 6px;
+    cursor: zoom-in;
+  }
+  .parlor-album-item img {
+    width: 100%;
+    display: block;
+  }
+  .parlor-album-cap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding: 28px 12px 10px;
+    background: linear-gradient(to top, rgba(0,0,0,0.78), rgba(0,0,0,0));
+    color: #fff;
+    font-size: 12px;
+    font-style: italic;
+    line-height: 1.4;
+    font-family: 'Source Serif 4', Georgia, serif;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
+  }
+  .parlor-album-item:hover .parlor-album-cap,
+  .parlor-album-item:focus-visible .parlor-album-cap {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Lightbox modal */
+  .parlor-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0,0,0,0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    animation: parlorLbFade 0.18s ease;
+  }
+  @keyframes parlorLbFade { from { opacity: 0 } to { opacity: 1 } }
+  .parlor-lightbox-img {
+    max-width: min(1100px, 92vw);
+    max-height: 78vh;
+    object-fit: contain;
+    border-radius: 4px;
+    display: block;
+  }
+  .parlor-lightbox-cap {
+    margin: 16px auto 0;
+    max-width: min(1100px, 92vw);
+    color: rgba(255,255,255,0.82);
+    font-size: 13px;
+    font-style: italic;
+    line-height: 1.5;
+    text-align: center;
+    font-family: 'Source Serif 4', Georgia, serif;
+  }
+  .parlor-lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255,255,255,0.12);
+    border: none;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    cursor: pointer;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    line-height: 1;
+    transition: background 0.2s ease;
+  }
+  .parlor-lightbox-nav:hover { background: rgba(255,255,255,0.24); }
+  .parlor-lightbox-close {
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.75);
+    font-size: 30px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+  .parlor-lightbox-close:hover { color: #fff; }
+  .parlor-lightbox-counter {
+    position: absolute;
+    top: 22px;
+    left: 24px;
+    color: rgba(255,255,255,0.6);
+    font-size: 13px;
+    font-family: 'Source Serif 4', Georgia, serif;
+    letter-spacing: 0.04em;
+  }
 `
 
 function Carousel({ images }) {
@@ -188,36 +296,134 @@ function Carousel({ images }) {
   )
 }
 
+function Lightbox({ images, index, onClose, onNavigate }) {
+  const img = images[index]
+  const atStart = index === 0
+  const atEnd = index === images.length - 1
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose()
+      else if (e.key === 'ArrowLeft' && !atStart) onNavigate(-1)
+      else if (e.key === 'ArrowRight' && !atEnd) onNavigate(1)
+    }
+    document.addEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [atStart, atEnd, onClose, onNavigate])
+
+  return (
+    <div className="parlor-lightbox" onClick={onClose} role="dialog" aria-modal="true">
+      {images.length > 1 && (
+        <div className="parlor-lightbox-counter">{index + 1} / {images.length}</div>
+      )}
+      <button className="parlor-lightbox-close" onClick={onClose} aria-label="Close">×</button>
+
+      {!atStart && (
+        <button
+          className="parlor-lightbox-nav"
+          style={{ left: '18px' }}
+          onClick={(e) => { e.stopPropagation(); onNavigate(-1) }}
+          aria-label="Previous"
+        >‹</button>
+      )}
+      {!atEnd && (
+        <button
+          className="parlor-lightbox-nav"
+          style={{ right: '18px' }}
+          onClick={(e) => { e.stopPropagation(); onNavigate(1) }}
+          aria-label="Next"
+        >›</button>
+      )}
+
+      <img
+        className="parlor-lightbox-img"
+        src={img.src}
+        alt={img.alt || ''}
+        onClick={(e) => e.stopPropagation()}
+      />
+      {img.caption && (
+        <p className="parlor-lightbox-cap" onClick={(e) => e.stopPropagation()}>{img.caption}</p>
+      )}
+    </div>
+  )
+}
+
 function AlbumRenderer({ layout, images }) {
-  const captionStyle = { fontSize: '12px', color: '#888', marginTop: '5px', fontStyle: 'italic', lineHeight: '1.4', fontFamily: "'Source Serif 4', Georgia, serif" }
+  const [lightboxIndex, setLightboxIndex] = useState(null)
+
+  const openAt = useCallback((i) => setLightboxIndex(i), [])
+  const closeLightbox = useCallback(() => setLightboxIndex(null), [])
+  const navigate = useCallback((dir) => {
+    setLightboxIndex(i => {
+      if (i === null) return i
+      const next = i + dir
+      return next >= 0 && next < images.length ? next : i
+    })
+  }, [images.length])
 
   if (layout === 'carousel') {
     return <Carousel images={images} />
   }
 
+  const lightbox = lightboxIndex !== null && (
+    <Lightbox
+      images={images}
+      index={lightboxIndex}
+      onClose={closeLightbox}
+      onNavigate={navigate}
+    />
+  )
+
+  const albumItem = (img, i) => (
+    <figure
+      key={i}
+      className="parlor-album-item"
+      style={{ margin: 0 }}
+      onClick={() => openAt(i)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAt(i) } }}
+      tabIndex={0}
+      role="button"
+      aria-label={img.caption || img.alt || `Open image ${i + 1}`}
+    >
+      <img
+        src={img.src}
+        alt={img.alt || ''}
+        style={layout === 'masonry'
+          ? undefined
+          : { aspectRatio: '4/3', objectFit: 'cover' }}
+      />
+      {img.caption && <figcaption className="parlor-album-cap">{img.caption}</figcaption>}
+    </figure>
+  )
+
   if (layout === 'masonry') {
     return (
-      <div style={{ margin: '2em 0', columnCount: 2, columnGap: '12px' }}>
-        {images.map((img, i) => (
-          <figure key={i} style={{ margin: '0 0 12px', breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-            <img src={img.src} alt={img.alt || ''} style={{ width: '100%', borderRadius: '6px', display: 'block' }} />
-            {img.caption && <figcaption style={captionStyle}>{img.caption}</figcaption>}
-          </figure>
-        ))}
-      </div>
+      <>
+        <div style={{ margin: '2em 0', columnCount: 2, columnGap: '12px' }}>
+          {images.map((img, i) => (
+            <div key={i} style={{ breakInside: 'avoid', pageBreakInside: 'avoid', marginBottom: '12px' }}>
+              {albumItem(img, i)}
+            </div>
+          ))}
+        </div>
+        {lightbox}
+      </>
     )
   }
 
   const cols = layout === 'grid-3' ? 3 : 2
   return (
-    <div style={{ margin: '2em 0', display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '12px' }}>
-      {images.map((img, i) => (
-        <figure key={i} style={{ margin: 0 }}>
-          <img src={img.src} alt={img.alt || ''} style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: '6px', display: 'block' }} />
-          {img.caption && <figcaption style={captionStyle}>{img.caption}</figcaption>}
-        </figure>
-      ))}
-    </div>
+    <>
+      <div style={{ margin: '2em 0', display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '12px' }}>
+        {images.map((img, i) => albumItem(img, i))}
+      </div>
+      {lightbox}
+    </>
   )
 }
 
