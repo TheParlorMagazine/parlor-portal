@@ -17,6 +17,6 @@ jobs:
         run: |
           curl --fail-with-body -sS -X GET \
             -H "Authorization: Bearer ${CRON_SECRET}" \
-            "https://parlor-portal.vercel.app/api/publish-scheduled"
+            "https://theparlormagazine.netlify.app/api/publish-scheduled"
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
