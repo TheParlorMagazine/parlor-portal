@@ -45,6 +45,15 @@ function ThumbnailScrubber({ url, type, onPicked, uploadPoster }) {
     if (!v || !v.videoWidth) { setErr('Frame not ready — try again in a moment.'); return }
     try {
       setBusy(true)
+      // Make sure the exact frame at the slider position is decoded before grabbing.
+      if (Math.abs(v.currentTime - t) > 0.04) {
+        await new Promise(res => {
+          const done = () => { v.removeEventListener('seeked', done); res() }
+          v.addEventListener('seeked', done)
+          v.currentTime = t
+          setTimeout(res, 1500)
+        })
+      }
       const canvas = document.createElement('canvas')
       canvas.width = v.videoWidth
       canvas.height = v.videoHeight
@@ -70,7 +79,7 @@ function ThumbnailScrubber({ url, type, onPicked, uploadPoster }) {
         preload="auto"
         onLoadedMetadata={e => { const d = e.target.duration; if (d && !isNaN(d)) setDur(d) }}
         onError={() => setErr("Can't load this video for scrubbing — upload an image instead.")}
-        style={{ width: '100%', maxHeight: '200px', background: '#111', display: 'block', borderRadius: '6px', objectFit: 'contain' }}
+        style={{ width: '100%', aspectRatio: '16/9', maxHeight: '320px', background: '#111', display: 'block', borderRadius: '6px', objectFit: 'contain' }}
       />
       <input
         type="range" min="0" max={dur || 0} step="0.05" value={t}

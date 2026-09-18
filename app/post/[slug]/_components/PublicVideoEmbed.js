@@ -106,7 +106,7 @@ function EmbedTeaser({ type, url, poster, replayNonce, onLimit }) {
           width: '100%',
           height: '100%',
           videoId: ytId(url),
-          playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0, playsinline: 1, disablekb: 1, fs: 0 },
+          playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0, playsinline: 1, disablekb: 1, fs: 0, iv_load_policy: 3, cc_load_policy: 0 },
           events: {
             onReady: e => { setLoading(false); try { e.target.playVideo() } catch {} },
             onStateChange: e => {
@@ -151,6 +151,15 @@ function EmbedTeaser({ type, url, poster, replayNonce, onLimit }) {
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#0a0a0a' }}>
       <div ref={hostRef} style={{ width: '100%', height: '100%' }} />
+      {/* Transparent shield: blocks clicks/right-click from reaching the YouTube
+          player so viewers can't jump to the free video or its "Watch on YouTube"
+          link. Playback is driven by the API, so no interaction is needed. */}
+      {started && (
+        <div
+          onContextMenu={e => e.preventDefault()}
+          style={{ position: 'absolute', inset: 0, zIndex: 1, cursor: 'default' }}
+        />
+      )}
       {!started && (
         <button
           onClick={startPlayback}
