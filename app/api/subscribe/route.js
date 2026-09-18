@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
-export const runtime = 'edge'
-
 export async function POST(req) {
   const { email } = await req.json()
   if (!email || !email.includes('@')) {

@@ -1,7 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 
-export const runtime = 'edge'
-
 // Called by Vercel Cron (see vercel.json). Publishes articles whose
 // scheduled_at has passed. Requires CRON_SECRET env var (set in Vercel
 // dashboard) and SUPABASE_SERVICE_ROLE_KEY to bypass RLS.

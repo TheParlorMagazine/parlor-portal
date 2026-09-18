@@ -1,7 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 
-export const runtime = 'edge'
-
 // Returns emails for given user IDs by querying auth.users via the
 // service role key — only callable server-side from admin UI.
 export async function POST(request) {
