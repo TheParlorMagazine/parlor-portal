@@ -328,7 +328,9 @@ export default function PublicVideoEmbed({ url, title, duration, hasAccess, pric
 
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
-  const [videoDuration, setVideoDuration] = useState(parseFloat(duration) || 0)
+  // Start at 0 and read the true length from metadata. (The `duration` prop is a
+  // "M:SS" label — parseFloat("8:21") is 8, which would wrongly cap the video.)
+  const [videoDuration, setVideoDuration] = useState(0)
   const [showPaywall, setShowPaywall] = useState(false)
   const [markerHovered, setMarkerHovered] = useState(false)
   const [replayNonce, setReplayNonce] = useState(0)
