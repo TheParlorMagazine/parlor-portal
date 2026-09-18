@@ -421,7 +421,7 @@ function VideoBlockView({ node, updateAttributes, selected }) {
               background: '#0a0a0a', color: '#f2b8c6', padding: '2px 7px', borderRadius: '3px', flexShrink: 0,
               whiteSpace: 'nowrap',
             }}>
-              {isControllable ? 'Paywalled — 10s preview' : 'Paywalled'}
+              Paywalled — 10s preview
             </span>
           )}
         </div>

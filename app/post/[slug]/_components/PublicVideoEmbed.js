@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 
 const PREVIEW_LIMIT = 10
 
@@ -31,7 +31,153 @@ function embedUrl(url, type) {
   return url
 }
 
-function VideoPaywallOverlay({ price, onReplay, isControllable, stripePriceId, articleId, userId, pagePath }) {
+function ytId(url) {
+  const m = url.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)
+  return m ? m[1] : null
+}
+function vimeoId(url) {
+  const m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/)
+  return m ? m[1] : null
+}
+
+// Load an external script once; cached promise per src.
+const _scriptPromises = {}
+function loadScript(src) {
+  if (typeof window === 'undefined') return Promise.reject()
+  if (_scriptPromises[src]) return _scriptPromises[src]
+  _scriptPromises[src] = new Promise((resolve, reject) => {
+    const s = document.createElement('script')
+    s.src = src
+    s.async = true
+    s.onload = () => resolve()
+    s.onerror = reject
+    document.head.appendChild(s)
+  })
+  return _scriptPromises[src]
+}
+
+// Resolve once the YouTube IFrame API is ready to use.
+function ytReady() {
+  return new Promise(resolve => {
+    if (window.YT && window.YT.Player) return resolve()
+    const prev = window.onYouTubeIframeAPIReady
+    window.onYouTubeIframeAPIReady = () => { if (prev) prev(); resolve() }
+    const iv = setInterval(() => {
+      if (window.YT && window.YT.Player) { clearInterval(iv); resolve() }
+    }, 100)
+  })
+}
+
+// Controlled 10-second teaser for YouTube / Vimeo embeds (paywalled only).
+// Plays on user click, then auto-pauses at PREVIEW_LIMIT and calls onLimit().
+function EmbedTeaser({ type, url, replayNonce, onLimit }) {
+  const hostRef = useRef(null)
+  const playerRef = useRef(null)
+  const pollRef = useRef(null)
+  const [started, setStarted] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const cleanup = useCallback(() => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+    try { playerRef.current?.destroy?.() } catch {}
+    try { playerRef.current?.unload?.() } catch {}
+    playerRef.current = null
+  }, [])
+
+  useEffect(() => () => cleanup(), [cleanup])
+
+  const startPlayback = useCallback(async () => {
+    cleanup()
+    setStarted(true)
+    setLoading(true)
+    const host = hostRef.current
+    if (!host) return
+    host.innerHTML = ''
+    const inner = document.createElement('div')
+    inner.style.width = '100%'
+    inner.style.height = '100%'
+    host.appendChild(inner)
+
+    try {
+      if (type === 'youtube') {
+        await loadScript('https://www.youtube.com/iframe_api')
+        await ytReady()
+        playerRef.current = new window.YT.Player(inner, {
+          width: '100%',
+          height: '100%',
+          videoId: ytId(url),
+          playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0, playsinline: 1, disablekb: 1, fs: 0 },
+          events: {
+            onReady: e => { setLoading(false); try { e.target.playVideo() } catch {} },
+            onStateChange: e => {
+              if (e.data === window.YT.PlayerState.PLAYING && !pollRef.current) {
+                pollRef.current = setInterval(() => {
+                  const t = playerRef.current?.getCurrentTime?.() || 0
+                  if (t >= PREVIEW_LIMIT) {
+                    clearInterval(pollRef.current); pollRef.current = null
+                    try { playerRef.current.pauseVideo() } catch {}
+                    onLimit()
+                  }
+                }, 200)
+              }
+            },
+          },
+        })
+      } else if (type === 'vimeo') {
+        await loadScript('https://player.vimeo.com/api/player.js')
+        setLoading(false)
+        playerRef.current = new window.Vimeo.Player(inner, {
+          id: vimeoId(url), width: 640, controls: false, autoplay: true, playsinline: true,
+        })
+        playerRef.current.on('timeupdate', ({ seconds }) => {
+          if (seconds >= PREVIEW_LIMIT) {
+            try { playerRef.current.pause() } catch {}
+            onLimit()
+          }
+        })
+      }
+    } catch {
+      setLoading(false)
+    }
+  }, [type, url, cleanup, onLimit])
+
+  // Replay: restart playback when the nonce changes (ignore initial 0).
+  useEffect(() => {
+    if (replayNonce === 0) return
+    startPlayback()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replayNonce])
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, background: '#0a0a0a' }}>
+      <div ref={hostRef} style={{ width: '100%', height: '100%' }} />
+      {!started && (
+        <button
+          onClick={startPlayback}
+          style={{
+            position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)',
+            border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: '10px',
+          }}
+        >
+          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="18" height="20" viewBox="0 0 18 20" fill="#0a0a0a"><path d="M0 0l18 10L0 20V0z" /></svg>
+          </div>
+          <span style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '12px', color: '#fff', opacity: 0.9 }}>
+            Watch 10-second preview
+          </span>
+        </button>
+      )}
+      {loading && started && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.7)', fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '12px' }}>
+          Loading preview…
+        </div>
+      )}
+    </div>
+  )
+}
+
+function VideoPaywallOverlay({ price, onReplay, previewShown, stripePriceId, articleId, userId, pagePath }) {
   async function handleUnlock() {
     if (!stripePriceId) {
       window.location.href = '/plans'
@@ -73,10 +219,10 @@ function VideoPaywallOverlay({ price, onReplay, isControllable, stripePriceId, a
         fontFamily: "'Playfair Display', Georgia, serif", fontSize: '16px', fontWeight: '700',
         color: '#fff', margin: 0, textAlign: 'center',
       }}>
-        {isControllable ? 'Members-only video' : 'This video is for members'}
+        {previewShown ? 'Members-only video' : 'This video is for members'}
       </p>
       <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.65)', margin: 0, textAlign: 'center', maxWidth: '280px', lineHeight: '1.5' }}>
-        {isControllable
+        {previewShown
           ? "You've seen the preview. Unlock the full video with a membership."
           : 'Become a member to watch this video.'}
       </p>
@@ -91,7 +237,7 @@ function VideoPaywallOverlay({ price, onReplay, isControllable, stripePriceId, a
           marginTop: '4px',
         }}
       >
-        Become a member — from $10/mo
+        Become a member — from $7/mo
       </a>
 
       {price && (
@@ -112,7 +258,7 @@ function VideoPaywallOverlay({ price, onReplay, isControllable, stripePriceId, a
         </>
       )}
 
-      {isControllable && onReplay && (
+      {onReplay && (
         <button
           onClick={onReplay}
           style={{
@@ -132,12 +278,14 @@ export default function PublicVideoEmbed({ url, title, duration, hasAccess, pric
   const paywalled = !hasAccess
   const type = detectType(url)
   const isControllable = type === 'cloudinary' || type === 'direct'
+  const isEmbed = type === 'youtube' || type === 'vimeo'
 
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [videoDuration, setVideoDuration] = useState(parseFloat(duration) || 0)
-  const [showPaywall, setShowPaywall] = useState(paywalled && !isControllable)
+  const [showPaywall, setShowPaywall] = useState(false)
   const [markerHovered, setMarkerHovered] = useState(false)
+  const [replayNonce, setReplayNonce] = useState(0)
   const videoRef = useRef(null)
 
   useEffect(() => {
@@ -150,10 +298,9 @@ export default function PublicVideoEmbed({ url, title, duration, hasAccess, pric
   }, [url, isControllable])
 
   useEffect(() => {
-    if (!paywalled) return
     setPlaying(false)
     setCurrentTime(0)
-    setShowPaywall(paywalled && !isControllable)
+    setShowPaywall(false)
     if (videoRef.current) {
       videoRef.current.pause()
       videoRef.current.currentTime = 0
@@ -221,8 +368,14 @@ export default function PublicVideoEmbed({ url, title, duration, hasAccess, pric
         {showPaywall && (
           <VideoPaywallOverlay
             price={price}
-            onReplay={isControllable ? handleReplay : null}
-            isControllable={isControllable}
+            onReplay={
+              isControllable
+                ? handleReplay
+                : isEmbed
+                  ? () => { setShowPaywall(false); setReplayNonce(n => n + 1) }
+                  : null
+            }
+            previewShown
             stripePriceId={stripePriceId}
             articleId={articleId}
             userId={userId}
@@ -288,6 +441,13 @@ export default function PublicVideoEmbed({ url, title, duration, hasAccess, pric
               </div>
             )}
           </>
+        ) : isEmbed && paywalled ? (
+          <EmbedTeaser
+            type={type}
+            url={url}
+            replayNonce={replayNonce}
+            onLimit={() => { setPlaying(false); setShowPaywall(true) }}
+          />
         ) : (
           <iframe
             src={embedUrl(url, type)}
