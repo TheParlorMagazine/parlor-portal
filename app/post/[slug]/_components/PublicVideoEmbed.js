@@ -106,9 +106,14 @@ function EmbedTeaser({ type, url, poster, replayNonce, onLimit }) {
           width: '100%',
           height: '100%',
           videoId: ytId(url),
-          playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0, playsinline: 1, disablekb: 1, fs: 0, iv_load_policy: 3, cc_load_policy: 0 },
+          playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0, playsinline: 1, disablekb: 1, fs: 0, iv_load_policy: 3, cc_load_policy: 0, enablejsapi: 1, origin: window.location.origin },
           events: {
             onReady: e => { setLoading(false); try { e.target.playVideo() } catch {} },
+            onError: () => {
+              setLoading(false)
+              if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+              onLimit() // video can't embed — show the paywall rather than a broken player
+            },
             onStateChange: e => {
               if (e.data === window.YT.PlayerState.PLAYING && !pollRef.current) {
                 pollRef.current = setInterval(() => {

@@ -89,7 +89,13 @@ export default async function PreviewPage({ params }) {
     article.author_profile_url = article.writers.profile_url || article.author_profile_url
   }
 
-  const segments = parseBodySegments(article.body || '').map(seg => ({ ...seg, hasAccess: true }))
+  // In preview, keep drafts readable but show paywalled audio/video with their
+  // real gate (10s teaser -> paywall), so authors can test the locked experience.
+  const segments = parseBodySegments(article.body || '').map(seg => {
+    const isMedia = seg.kind === 'video-block' || seg.kind === 'audio-block'
+    const paywalled = seg.attrs?.paywalled === 'true'
+    return { ...seg, hasAccess: isMedia && paywalled ? false : true }
+  })
 
   const publishedDate = article.date_published
     ? new Date(article.date_published).toLocaleDateString('en-US', {
