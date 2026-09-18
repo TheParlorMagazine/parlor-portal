@@ -12,20 +12,26 @@ const PLANS = [
   {
     id: 'fccb348a-7433-4080-8699-9ef8c0e7a519',
     label: "Reader's Circle",
-    price: '$10 / month',
-    color: '#4a6fd4',
+    // Engraving of a woman reading in a chair — file lives in public/plans/
+    image: '/plans/readers-circle.png',
+    price: '$7 / month',
+    color: '#7a2531',
     desc: 'Full digital access — all articles, audio, and exclusive member content.',
     perks: ['Unlimited article access', 'Audio & video content', 'Early access to new issues', 'Member-only newsletter'],
   },
   {
     id: 'c666f321-47e5-40c1-bc2a-565a2f52f64d',
     label: 'Printing Press',
-    price: '$25 / month',
-    color: '#c4364a',
-    desc: "Everything in Reader's Circle, plus the quarterly print magazine mailed to your door.",
-    perks: ["Everything in Reader's Circle", 'Quarterly print magazine', 'Free shipping', 'Inaugural subscriber gift'],
+    // Engraving of a woman at the printing press — file lives in public/plans/
+    image: '/plans/printing-press.png',
+    price: '$30 / every 4 months',
+    color: '#7a2531',
+    desc: "Everything in Reader's Circle, plus the triannual print magazine mailed to your door.",
+    perks: ["Everything in Reader's Circle", 'Triannual print magazine', 'Free shipping', 'Inaugural subscriber gift'],
   },
 ]
+
+const PLAN_IMG_BG = '#f2b8c6'
 
 function PlansPageInner() {
   const searchParams = useSearchParams()
@@ -37,7 +43,7 @@ function PlansPageInner() {
 
       <div style={{ maxWidth: '840px', margin: '0 auto', padding: '80px 24px 100px' }}>
         <div style={{ textAlign: 'center', marginBottom: '56px' }}>
-          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#c4364a', marginBottom: '14px', fontFamily: ff }}>
+          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#7a2531', marginBottom: '14px', fontFamily: ff }}>
             Become a member
           </div>
           <h1 style={{ fontFamily: ffH, fontSize: '40px', color: '#0a0a0a', marginBottom: '14px' }}>
@@ -51,9 +57,22 @@ function PlansPageInner() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
           {PLANS.map(plan => (
             <div key={plan.id} style={{
-              border: '1px solid #e8e8e8', borderRadius: '14px', padding: '32px',
+              border: '1px solid #e8e8e8', borderRadius: '14px', overflow: 'hidden',
               display: 'flex', flexDirection: 'column',
             }}>
+              <div style={{
+                background: PLAN_IMG_BG, height: '210px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+              }}>
+                {plan.image && (
+                  <img
+                    src={plan.image}
+                    alt={plan.label}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }}
+                  />
+                )}
+              </div>
+              <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', flex: 1 }}>
               <div style={{ fontFamily: ffH, fontSize: '22px', color: '#0a0a0a', marginBottom: '6px' }}>
                 {plan.label}
               </div>
@@ -81,6 +100,7 @@ function PlansPageInner() {
               >
                 Subscribe to {plan.label}
               </a>
+              </div>
             </div>
           ))}
         </div>
