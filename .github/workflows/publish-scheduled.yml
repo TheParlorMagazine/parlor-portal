@@ -1,0 +1,22 @@
+name: Publish scheduled articles
+
+# Replaces the Vercel cron (Hobby plans cap crons at once/day). GitHub Actions
+# runs this every ~5 min and calls the publish-scheduled endpoint, which
+# publishes any article whose scheduled_at has passed.
+# Requires a repo secret CRON_SECRET matching the CRON_SECRET set in Vercel.
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger publish-scheduled
+        run: |
+          curl --fail-with-body -sS -X GET \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "https://parlor-portal.vercel.app/api/publish-scheduled"
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
