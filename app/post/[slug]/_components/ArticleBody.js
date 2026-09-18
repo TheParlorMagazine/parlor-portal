@@ -624,7 +624,7 @@ export default function ArticleBody({
         }
 
         if (seg.kind === 'video-block') {
-          const { url, title, duration, paywalled, price, stripe_price_id } = seg.attrs
+          const { url, title, duration, paywalled, price, stripe_price_id, poster } = seg.attrs
           const hasAccess = paywalled === 'true' ? (seg.hasAccess ?? false) : true
           return (
             <PublicVideoEmbed
@@ -634,6 +634,7 @@ export default function ArticleBody({
               duration={duration}
               hasAccess={hasAccess}
               price={price}
+              poster={poster}
               stripePriceId={stripe_price_id}
               articleId={articleId}
               userId={userId}

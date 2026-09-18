@@ -3,8 +3,20 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import { useState, useRef, useEffect } from 'react'
+import { createClient } from '../../../../lib/supabase'
 
 const PREVIEW_LIMIT = 10
+
+function ytId(url) {
+  const m = url.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)
+  return m ? m[1] : null
+}
+function cloudinaryThumb(url, sec) {
+  if (!/\/upload\//.test(url)) return null
+  return url
+    .replace('/upload/', `/upload/so_${Math.max(0, Math.floor(sec))},w_640,h_360,c_fill/`)
+    .replace(/\.(mp4|webm|mov|m4v)(\?.*)?$/i, '.jpg')
+}
 
 function fmt(sec) {
   if (!sec || isNaN(sec)) return '0:00'
@@ -128,11 +140,76 @@ function PaywallOverlay({ price, onReplay }) {
 }
 
 function VideoBlockView({ node, updateAttributes, selected }) {
-  const { url, title, duration: durationLabel, transcript, paywalled, price, stripe_price_id, plan_access } = node.attrs
+  const { url, title, duration: durationLabel, transcript, paywalled, price, stripe_price_id, plan_access, poster } = node.attrs
   const currentPlanAccess = Array.isArray(plan_access) ? plan_access : ["Reader's Circle", "Printing Press"]
   const type = detectType(url)
   const active = !!url.trim()
   const isControllable = type === 'cloudinary' || type === 'direct'
+  const yt = type === 'youtube' ? ytId(url) : null
+
+  const supabase = createClient()
+  const [posterBusy, setPosterBusy] = useState(false)
+  const [posterErr, setPosterErr] = useState('')
+
+  async function uploadPoster(fileOrBlob, ext) {
+    const path = `posters/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext || 'jpg'}`
+    const { error } = await supabase.storage.from('Media').upload(path, fileOrBlob, {
+      cacheControl: '3600', contentType: fileOrBlob.type || 'image/jpeg', upsert: false,
+    })
+    if (error) throw error
+    const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)
+    return publicUrl
+  }
+
+  async function captureCurrentFrame() {
+    setPosterErr('')
+    if (type === 'cloudinary') {
+      const thumb = cloudinaryThumb(url, videoRef.current?.currentTime || 0)
+      if (thumb) updateAttributes({ poster: thumb })
+      else setPosterErr('Could not build a Cloudinary thumbnail from this URL.')
+      return
+    }
+    const v = videoRef.current
+    if (!v || !v.videoWidth) { setPosterErr('Play or scrub the video first, then capture.'); return }
+    try {
+      setPosterBusy(true)
+      const canvas = document.createElement('canvas')
+      canvas.width = v.videoWidth
+      canvas.height = v.videoHeight
+      canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height)
+      const blob = await new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('blocked')), 'image/jpeg', 0.85))
+      updateAttributes({ poster: await uploadPoster(blob, 'jpg') })
+    } catch {
+      setPosterErr("This video's host blocks frame capture — upload an image instead.")
+    } finally { setPosterBusy(false) }
+  }
+
+  async function onUploadPosterFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPosterErr(''); setPosterBusy(true)
+    try {
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+      updateAttributes({ poster: await uploadPoster(file, ext) })
+    } catch (err) { setPosterErr(err.message || 'Upload failed') }
+    finally { setPosterBusy(false); e.target.value = '' }
+  }
+
+  async function useVimeoThumb() {
+    setPosterErr(''); setPosterBusy(true)
+    try {
+      const r = await fetch(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}`)
+      const d = await r.json()
+      if (d.thumbnail_url) updateAttributes({ poster: d.thumbnail_url.replace(/-d_\d+x\d+$/, '').replace(/_\d+x\d+/, '_640x360') })
+      else setPosterErr('No Vimeo thumbnail found.')
+    } catch { setPosterErr('Could not fetch Vimeo thumbnail.') }
+    finally { setPosterBusy(false) }
+  }
+
+  const thumbBtn = {
+    padding: '5px 10px', border: '1px solid #e0e0e0', borderRadius: '6px', background: '#fff',
+    fontSize: '11px', color: '#555', cursor: 'pointer', fontFamily: "'Source Serif 4', Georgia, serif",
+  }
 
   const [transcriptOpen, setTranscriptOpen] = useState(false)
   const [playing, setPlaying] = useState(false)
@@ -474,7 +551,7 @@ function VideoBlockView({ node, updateAttributes, selected }) {
         ) : paywalled ? (
           LockPlaceholder
         ) : isControllable ? (
-          <video src={url} controls style={{ width: '100%', display: 'block', maxHeight: '360px' }} />
+          <video ref={videoRef} src={url} controls style={{ width: '100%', display: 'block', maxHeight: '360px' }} />
         ) : (
           <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
             <iframe
@@ -560,6 +637,60 @@ function VideoBlockView({ node, updateAttributes, selected }) {
             </div>
           )}
 
+          {active && (
+            <div style={{ paddingTop: '8px', borderTop: '1px solid #f0f0f0' }}>
+              <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#bbb', marginBottom: '7px', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+                Thumbnail
+              </div>
+              {poster && (
+                <div style={{ position: 'relative', display: 'inline-block', marginBottom: '8px' }}>
+                  <img src={poster} alt="" style={{ width: '120px', height: '68px', objectFit: 'cover', borderRadius: '6px', display: 'block', border: '1px solid #e0e0e0' }} />
+                  <button
+                    type="button"
+                    onClick={() => updateAttributes({ poster: '' })}
+                    title="Remove thumbnail"
+                    style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', background: '#0a0a0a', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '11px', lineHeight: 1 }}
+                  >×</button>
+                </div>
+              )}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                {yt && ['1', '2', '3', 'hqdefault'].map(f => {
+                  const src = `https://img.youtube.com/vi/${yt}/${f}.jpg`
+                  return (
+                    <img
+                      key={f}
+                      src={src}
+                      alt=""
+                      onClick={() => updateAttributes({ poster: src })}
+                      style={{ width: '72px', height: '40px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer', border: poster === src ? '2px solid #f2b8c6' : '1px solid #e0e0e0' }}
+                    />
+                  )
+                })}
+                {(type === 'cloudinary' || type === 'direct') && (
+                  <button type="button" onClick={captureCurrentFrame} disabled={posterBusy} style={thumbBtn}>
+                    Capture current frame
+                  </button>
+                )}
+                {type === 'vimeo' && (
+                  <button type="button" onClick={useVimeoThumb} disabled={posterBusy} style={thumbBtn}>
+                    Use Vimeo thumbnail
+                  </button>
+                )}
+                <label style={{ ...thumbBtn, cursor: 'pointer' }}>
+                  Upload image
+                  <input type="file" accept="image/*" onChange={onUploadPosterFile} style={{ display: 'none' }} />
+                </label>
+              </div>
+              {posterBusy && <div style={{ fontSize: '10px', color: '#999', marginTop: '5px' }}>Working…</div>}
+              {posterErr && <div style={{ fontSize: '10px', color: '#c05050', marginTop: '5px' }}>{posterErr}</div>}
+              {(type === 'cloudinary' || type === 'direct') && (
+                <div style={{ fontSize: '10px', color: '#bbb', marginTop: '5px', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+                  Scrub or pause the video above at the frame you want, then capture.
+                </div>
+              )}
+            </div>
+          )}
+
           <div>
             <button
               type="button"
@@ -608,6 +739,7 @@ export const VideoBlock = Node.create({
       title: { default: '' },
       duration: { default: '' },
       transcript: { default: '' },
+      poster: { default: '' },
       paywalled: { default: false },
       price: { default: '2.50' },
       stripe_product_id: { default: '' },
@@ -643,7 +775,7 @@ export const VideoBlock = Node.create({
       insertVideoBlock: () => ({ commands }) =>
         commands.insertContent({
           type: 'videoBlock',
-          attrs: { url: '', title: '', duration: '', transcript: '', paywalled: false, price: '2.50', stripe_product_id: '', stripe_price_id: '', plan_access: ["Reader's Circle", 'Printing Press'] },
+          attrs: { url: '', title: '', duration: '', transcript: '', poster: '', paywalled: false, price: '2.50', stripe_product_id: '', stripe_price_id: '', plan_access: ["Reader's Circle", 'Printing Press'] },
         }),
     }
   },

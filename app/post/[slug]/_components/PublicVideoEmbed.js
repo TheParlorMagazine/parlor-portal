@@ -70,7 +70,7 @@ function ytReady() {
 
 // Controlled 10-second teaser for YouTube / Vimeo embeds (paywalled only).
 // Plays on user click, then auto-pauses at PREVIEW_LIMIT and calls onLimit().
-function EmbedTeaser({ type, url, replayNonce, onLimit }) {
+function EmbedTeaser({ type, url, poster, replayNonce, onLimit }) {
   const hostRef = useRef(null)
   const playerRef = useRef(null)
   const pollRef = useRef(null)
@@ -155,9 +155,10 @@ function EmbedTeaser({ type, url, replayNonce, onLimit }) {
         <button
           onClick={startPlayback}
           style={{
-            position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)',
-            border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', gap: '10px',
+            position: 'absolute', inset: 0, border: 'none', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px',
+            background: poster ? `rgba(0,0,0,0.35) url(${poster}) center/cover` : 'rgba(0,0,0,0.35)',
+            backgroundBlendMode: poster ? 'darken' : 'normal',
           }}
         >
           <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -174,6 +175,37 @@ function EmbedTeaser({ type, url, replayNonce, onLimit }) {
         </div>
       )}
     </div>
+  )
+}
+
+// Free (non-paywalled) embed: show the chosen poster with a play button,
+// and only load the iframe once the viewer clicks (keeps the thumbnail visible
+// and avoids loading a heavy player up front). No poster -> plain iframe.
+function FreeEmbed({ type, url, poster }) {
+  const [started, setStarted] = useState(false)
+  if (started || !poster) {
+    return (
+      <iframe
+        src={embedUrl(url, type) + (started ? (embedUrl(url, type).includes('?') ? '&' : '?') + 'autoplay=1' : '')}
+        style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    )
+  }
+  return (
+    <button
+      onClick={() => setStarted(true)}
+      style={{
+        position: 'absolute', inset: 0, border: 'none', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: `rgba(0,0,0,0.25) url(${poster}) center/cover`, backgroundBlendMode: 'darken',
+      }}
+    >
+      <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="18" height="20" viewBox="0 0 18 20" fill="#0a0a0a"><path d="M0 0l18 10L0 20V0z" /></svg>
+      </div>
+    </button>
   )
 }
 
@@ -274,7 +306,7 @@ function VideoPaywallOverlay({ price, onReplay, previewShown, stripePriceId, art
   )
 }
 
-export default function PublicVideoEmbed({ url, title, duration, hasAccess, price, stripePriceId, articleId, userId, pagePath }) {
+export default function PublicVideoEmbed({ url, title, duration, hasAccess, price, poster, stripePriceId, articleId, userId, pagePath }) {
   const paywalled = !hasAccess
   const type = detectType(url)
   const isControllable = type === 'cloudinary' || type === 'direct'
@@ -388,6 +420,7 @@ export default function PublicVideoEmbed({ url, title, duration, hasAccess, pric
             <video
               ref={videoRef}
               src={url}
+              poster={poster || undefined}
               onTimeUpdate={handleTimeUpdate}
               onEnded={() => setPlaying(false)}
               onLoadedMetadata={e => { if (!videoDuration) setVideoDuration(e.target.duration) }}
@@ -445,16 +478,12 @@ export default function PublicVideoEmbed({ url, title, duration, hasAccess, pric
           <EmbedTeaser
             type={type}
             url={url}
+            poster={poster}
             replayNonce={replayNonce}
             onLimit={() => { setPlaying(false); setShowPaywall(true) }}
           />
         ) : (
-          <iframe
-            src={embedUrl(url, type)}
-            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
+          <FreeEmbed type={type} url={url} poster={poster} />
         )}
       </div>
     </div>
