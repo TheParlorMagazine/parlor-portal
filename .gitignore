@@ -6,3 +6,7 @@ node_modules/
 node_modules/
 .next/
 .env.local
+
+# Exported secrets — never commit
+vercel-prod.env
+netlify-import.env
