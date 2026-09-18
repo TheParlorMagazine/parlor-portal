@@ -1242,6 +1242,7 @@ function SectionPicker({ supabase, issueId, sectionId, onSelect }) {
   const [newIllustration, setNewIllustration] = useState('')
   const [addSaving, setAddSaving] = useState(false)
   const [addError, setAddError] = useState('')
+  const [editingId, setEditingId] = useState(null)
   const dropdownRef = useRef(null)
 
   useEffect(() => {
@@ -1271,30 +1272,64 @@ function SectionPicker({ supabase, issueId, sectionId, onSelect }) {
 
   const selected = sections.find(s => s.id === sectionId)
 
-  async function handleSaveNewSection() {
-    if (!newTitle.trim()) { setAddError('Title is required'); return }
-    setAddSaving(true)
-    setAddError('')
-    const { data, error } = await supabase
-      .from('sections')
-      .insert([{
-        issue_id: issueId,
-        title: newTitle.trim(),
-        slug: slugify(newTitle.trim()),
-        subtitle: newSubtitle.trim() || null,
-        illustration_url: newIllustration || null,
-      }])
-      .select()
-      .single()
-    if (error) { setAddError(error.message); setAddSaving(false); return }
-    setSections(prev => [...prev, data])
-    onSelect(data.id)
-    setOpen(false)
+  function resetSectionForm() {
     setShowAdd(false)
+    setEditingId(null)
     setNewTitle('')
     setNewSubtitle('')
     setNewIllustration('')
+    setAddError('')
     setAddSaving(false)
+  }
+
+  function startEditSection(section) {
+    setEditingId(section.id)
+    setNewTitle(section.title || '')
+    setNewSubtitle(section.subtitle || '')
+    setNewIllustration(section.illustration_url || '')
+    setAddError('')
+    setShowAdd(true)
+  }
+
+  async function handleSaveSection() {
+    if (!newTitle.trim()) { setAddError('Title is required'); return }
+    setAddSaving(true)
+    setAddError('')
+    // Keep the slug stable when editing so existing section URLs don't break.
+    const fields = {
+      title: newTitle.trim(),
+      subtitle: newSubtitle.trim() || null,
+      illustration_url: newIllustration || null,
+    }
+    if (editingId) {
+      const { data, error } = await supabase
+        .from('sections').update(fields).eq('id', editingId).select().single()
+      if (error) { setAddError(error.message); setAddSaving(false); return }
+      setSections(prev => prev.map(s => (s.id === editingId ? data : s)))
+    } else {
+      const { data, error } = await supabase
+        .from('sections')
+        .insert([{ issue_id: issueId, slug: slugify(newTitle.trim()), ...fields }])
+        .select().single()
+      if (error) { setAddError(error.message); setAddSaving(false); return }
+      setSections(prev => [...prev, data])
+      onSelect(data.id)
+    }
+    setOpen(false)
+    resetSectionForm()
+  }
+
+  async function handleDeleteSection() {
+    if (!editingId) return
+    if (!window.confirm('Delete this section? Articles assigned to it will need a new section.')) return
+    setAddSaving(true)
+    setAddError('')
+    const { error } = await supabase.from('sections').delete().eq('id', editingId)
+    if (error) { setAddError(error.message); setAddSaving(false); return }
+    setSections(prev => prev.filter(s => s.id !== editingId))
+    if (sectionId === editingId) onSelect(null)
+    setOpen(false)
+    resetSectionForm()
   }
 
   return (
@@ -1338,33 +1373,53 @@ function SectionPicker({ supabase, issueId, sectionId, onSelect }) {
                 </div>
               ) : (
                 sections.map(section => (
-                  <button
+                  <div
                     key={section.id}
-                    type="button"
-                    onClick={() => { onSelect(section.id); setOpen(false) }}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: '10px',
-                      width: '100%', padding: '10px 14px', border: 'none',
+                      display: 'flex', alignItems: 'center',
                       background: section.id === sectionId ? 'rgba(242,184,198,0.1)' : 'transparent',
                       borderBottom: '1px solid rgba(255,255,255,0.04)',
-                      cursor: 'pointer', fontFamily: "'Source Serif 4', Georgia, serif",
-                      textAlign: 'left',
                     }}
                   >
-                    {section.illustration_url
-                      ? <img src={section.illustration_url} alt="" style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }} />
-                      : <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: '#2e2e2e', flexShrink: 0 }} />
-                    }
-                    <span style={{ fontSize: '13px', color: '#e0e0e0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                      {section.title}
-                    </span>
-                    {section.id === sectionId && <span style={{ color: '#f2b8c6', fontSize: '11px', flexShrink: 0 }}>✓</span>}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => { onSelect(section.id); setOpen(false) }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        flex: 1, minWidth: 0, padding: '10px 4px 10px 14px', border: 'none',
+                        background: 'transparent', cursor: 'pointer',
+                        fontFamily: "'Source Serif 4', Georgia, serif", textAlign: 'left',
+                      }}
+                    >
+                      {section.illustration_url
+                        ? <img src={section.illustration_url} alt="" style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }} />
+                        : <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: '#2e2e2e', flexShrink: 0 }} />
+                      }
+                      <span style={{ fontSize: '13px', color: '#e0e0e0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                        {section.title}
+                      </span>
+                      {section.id === sectionId && <span style={{ color: '#f2b8c6', fontSize: '11px', flexShrink: 0 }}>✓</span>}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => startEditSection(section)}
+                      title="Edit section"
+                      style={{
+                        flexShrink: 0, padding: '10px 14px', border: 'none', background: 'transparent',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center',
+                      }}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                      </svg>
+                    </button>
+                  </div>
                 ))
               )}
               <button
                 type="button"
-                onClick={() => setShowAdd(true)}
+                onClick={() => { setEditingId(null); setNewTitle(''); setNewSubtitle(''); setNewIllustration(''); setAddError(''); setShowAdd(true) }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '6px',
                   width: '100%', padding: '10px 14px', border: 'none',
@@ -1380,7 +1435,7 @@ function SectionPicker({ supabase, issueId, sectionId, onSelect }) {
           ) : (
             <div style={{ padding: '14px' }}>
               <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#555', marginBottom: '12px', fontFamily: "'Source Serif 4', Georgia, serif" }}>
-                New section
+                {editingId ? 'Edit section' : 'New section'}
               </div>
               <div style={{ marginBottom: '8px' }}>
                 <SideLabel>Title</SideLabel>
@@ -1389,7 +1444,7 @@ function SectionPicker({ supabase, issueId, sectionId, onSelect }) {
                   type="text"
                   value={newTitle}
                   onChange={e => setNewTitle(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSaveNewSection()}
+                  onKeyDown={e => e.key === 'Enter' && handleSaveSection()}
                   placeholder="Section title"
                   style={sideInput}
                 />
@@ -1421,7 +1476,7 @@ function SectionPicker({ supabase, issueId, sectionId, onSelect }) {
               <div style={{ display: 'flex', gap: '6px' }}>
                 <button
                   type="button"
-                  onClick={handleSaveNewSection}
+                  onClick={handleSaveSection}
                   disabled={addSaving || !newTitle.trim()}
                   style={{
                     flex: 1, padding: '8px', background: '#f2b8c6', border: 'none',
@@ -1431,11 +1486,11 @@ function SectionPicker({ supabase, issueId, sectionId, onSelect }) {
                     opacity: (addSaving || !newTitle.trim()) ? 0.5 : 1,
                   }}
                 >
-                  {addSaving ? 'Creating…' : 'Create section'}
+                  {addSaving ? 'Saving…' : (editingId ? 'Save changes' : 'Create section')}
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setShowAdd(false); setAddError('') }}
+                  onClick={resetSectionForm}
                   style={{
                     padding: '8px 10px', background: 'none',
                     border: '1px solid rgba(255,255,255,0.1)', borderRadius: '5px',
@@ -1446,6 +1501,21 @@ function SectionPicker({ supabase, issueId, sectionId, onSelect }) {
                   ←
                 </button>
               </div>
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={handleDeleteSection}
+                  disabled={addSaving}
+                  style={{
+                    width: '100%', marginTop: '8px', padding: '7px', background: 'none',
+                    border: '1px solid rgba(224,112,112,0.35)', borderRadius: '5px',
+                    color: '#e07070', fontSize: '11px', cursor: addSaving ? 'not-allowed' : 'pointer',
+                    fontFamily: "'Source Serif 4', Georgia, serif",
+                  }}
+                >
+                  Delete section
+                </button>
+              )}
             </div>
           )}
         </div>
