@@ -18,6 +18,77 @@ function cloudinaryThumb(url, sec) {
     .replace(/\.(mp4|webm|mov|m4v)(\?.*)?$/i, '.jpg')
 }
 
+// Reels-style frame picker for self-hosted / Cloudinary video: slide along the
+// timeline to preview a frame, then grab it as the thumbnail.
+function ThumbnailScrubber({ url, type, onPicked, uploadPoster }) {
+  const vref = useRef(null)
+  const [dur, setDur] = useState(0)
+  const [t, setT] = useState(0)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  function onSlide(nt) {
+    setT(nt)
+    const v = vref.current
+    if (v) { try { v.currentTime = nt } catch {} }
+  }
+
+  async function useFrame() {
+    setErr('')
+    if (type === 'cloudinary') {
+      const thumb = cloudinaryThumb(url, t)
+      if (thumb) onPicked(thumb)
+      else setErr('Could not build a Cloudinary thumbnail from this URL.')
+      return
+    }
+    const v = vref.current
+    if (!v || !v.videoWidth) { setErr('Frame not ready — try again in a moment.'); return }
+    try {
+      setBusy(true)
+      const canvas = document.createElement('canvas')
+      canvas.width = v.videoWidth
+      canvas.height = v.videoHeight
+      canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height)
+      const blob = await new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('x')), 'image/jpeg', 0.85))
+      onPicked(await uploadPoster(blob, 'jpg'))
+    } catch {
+      setErr("Couldn't capture this frame — upload an image instead.")
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <div style={{ marginTop: '6px', background: '#f7f7f7', border: '1px solid #eee', borderRadius: '8px', padding: '10px' }}>
+      <div style={{ fontSize: '10px', color: '#999', marginBottom: '6px', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+        Slide to the frame you want, then grab it.
+      </div>
+      <video
+        ref={vref}
+        src={url}
+        crossOrigin="anonymous"
+        muted
+        playsInline
+        preload="auto"
+        onLoadedMetadata={e => { const d = e.target.duration; if (d && !isNaN(d)) setDur(d) }}
+        onError={() => setErr("Can't load this video for scrubbing — upload an image instead.")}
+        style={{ width: '100%', maxHeight: '200px', background: '#111', display: 'block', borderRadius: '6px', objectFit: 'contain' }}
+      />
+      <input
+        type="range" min="0" max={dur || 0} step="0.05" value={t}
+        onChange={e => onSlide(parseFloat(e.target.value))}
+        disabled={!dur}
+        style={{ width: '100%', accentColor: '#f2b8c6', marginTop: '10px' }}
+      />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+        <span style={{ fontSize: '10px', color: '#999', fontFamily: "'Source Serif 4', Georgia, serif" }}>{fmt(t)} / {fmt(dur)}</span>
+        <button type="button" onClick={useFrame} disabled={busy || !dur} style={{ padding: '6px 14px', border: 'none', borderRadius: '6px', background: '#0a0a0a', color: '#fff', fontSize: '11px', cursor: 'pointer', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+          {busy ? 'Saving…' : 'Use this frame'}
+        </button>
+      </div>
+      {err && <div style={{ fontSize: '10px', color: '#c05050', marginTop: '5px' }}>{err}</div>}
+    </div>
+  )
+}
+
 function fmt(sec) {
   if (!sec || isNaN(sec)) return '0:00'
   const m = Math.floor(sec / 60)
@@ -160,29 +231,6 @@ function VideoBlockView({ node, updateAttributes, selected }) {
     if (error) throw error
     const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)
     return publicUrl
-  }
-
-  async function captureCurrentFrame() {
-    setPosterErr('')
-    if (type === 'cloudinary') {
-      const thumb = cloudinaryThumb(url, videoRef.current?.currentTime || 0)
-      if (thumb) updateAttributes({ poster: thumb })
-      else setPosterErr('Could not build a Cloudinary thumbnail from this URL.')
-      return
-    }
-    const v = videoRef.current
-    if (!v || !v.videoWidth) { setPosterErr('Play or scrub the video first, then capture.'); return }
-    try {
-      setPosterBusy(true)
-      const canvas = document.createElement('canvas')
-      canvas.width = v.videoWidth
-      canvas.height = v.videoHeight
-      canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height)
-      const blob = await new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('blocked')), 'image/jpeg', 0.85))
-      updateAttributes({ poster: await uploadPoster(blob, 'jpg') })
-    } catch {
-      setPosterErr("This video's host blocks frame capture — upload an image instead.")
-    } finally { setPosterBusy(false) }
   }
 
   async function onUploadPosterFile(e) {
@@ -452,26 +500,35 @@ function VideoBlockView({ node, updateAttributes, selected }) {
     </div>
   )
 
-  // Lock placeholder (YouTube/Vimeo paywalled, or inactive)
+  // Paywalled YouTube/Vimeo preview: show the chosen thumbnail (or a neutral
+  // placeholder) with a play affordance and the paywall note.
   const LockPlaceholder = (
     <div style={{
-      height: '180px', background: '#f5f5f5',
+      position: 'relative', height: '180px',
+      background: poster ? `#111 url(${poster}) center/cover` : '#f5f5f5',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
     }}>
+      {poster && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} />}
       <div style={{
+        position: 'relative',
         width: '44px', height: '44px', borderRadius: '50%',
-        background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: poster ? 'rgba(255,255,255,0.92)' : '#0a0a0a',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <rect x="2" y="8" width="12" height="8" rx="1.5" fill="#f2b8c6" />
-          <path d="M5 8V6a3 3 0 016 0v2" stroke="#f2b8c6" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        </svg>
+        {poster ? (
+          <svg width="16" height="18" viewBox="0 0 16 18" fill="#0a0a0a"><path d="M0 0l16 9L0 18V0z" /></svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="8" width="12" height="8" rx="1.5" fill="#f2b8c6" />
+            <path d="M5 8V6a3 3 0 016 0v2" stroke="#f2b8c6" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+          </svg>
+        )}
       </div>
-      <span style={{ fontSize: '13px', color: '#555', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+      <span style={{ position: 'relative', fontSize: '13px', color: poster ? '#fff' : '#555', fontFamily: "'Source Serif 4', Georgia, serif" }}>
         {title || 'Paywalled video'}
       </span>
-      <span style={{ fontSize: '11px', color: '#aaa', fontFamily: "'Source Serif 4', Georgia, serif" }}>
-        Unlock for ${price || '2.50'}
+      <span style={{ position: 'relative', fontSize: '11px', color: poster ? 'rgba(255,255,255,0.85)' : '#aaa', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+        10s preview · Unlock for ${price || '2.50'}
       </span>
     </div>
   )
@@ -577,6 +634,85 @@ function VideoBlockView({ node, updateAttributes, selected }) {
 
         {/* Bottom controls */}
         <div style={{ borderTop: '1px solid #f0f0f0', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {/* Thumbnail — directly under the video, above Restrict access */}
+          {active && (
+            <div>
+              <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#bbb', marginBottom: '7px', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+                Thumbnail
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ position: 'relative', width: '120px', height: '68px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden', border: '1px solid #e0e0e0', background: '#111' }}>
+                  {poster ? (
+                    <img src={poster} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', fontSize: '10px', textAlign: 'center', padding: '0 6px', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+                      {isControllable ? 'Auto (first frame)' : 'No thumbnail'}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setPosterEditing(v => !v)}
+                    title="Edit thumbnail"
+                    style={{ position: 'absolute', bottom: '4px', right: '4px', width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(10,10,10,0.78)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                    </svg>
+                  </button>
+                </div>
+                <div style={{ fontSize: '11px', color: '#999', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+                  {poster ? 'Thumbnail set' : (isControllable ? "Using the video's first frame" : 'Auto-selected')}
+                  <div style={{ marginTop: '2px', color: '#ccc', fontSize: '10px' }}>Click the pencil to change</div>
+                </div>
+              </div>
+
+              {posterEditing && (
+                <div style={{ marginTop: '10px' }}>
+                  {yt && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                      {['1', '2', '3', 'hqdefault'].map(f => {
+                        const src = `https://img.youtube.com/vi/${yt}/${f}.jpg`
+                        return (
+                          <img
+                            key={f}
+                            src={src}
+                            alt=""
+                            onClick={() => updateAttributes({ poster: src })}
+                            style={{ width: '72px', height: '40px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer', border: poster === src ? '2px solid #f2b8c6' : '1px solid #e0e0e0' }}
+                          />
+                        )
+                      })}
+                    </div>
+                  )}
+                  {(type === 'cloudinary' || type === 'direct') && (
+                    <ThumbnailScrubber url={url} type={type} uploadPoster={uploadPoster} onPicked={u => updateAttributes({ poster: u })} />
+                  )}
+                  {type === 'vimeo' && (
+                    <button type="button" onClick={useVimeoThumb} disabled={posterBusy} style={thumbBtn}>
+                      Use Vimeo thumbnail
+                    </button>
+                  )}
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+                    <label style={{ ...thumbBtn, cursor: 'pointer' }}>
+                      Upload image
+                      <input type="file" accept="image/*" onChange={onUploadPosterFile} style={{ display: 'none' }} />
+                    </label>
+                    {poster && (
+                      <button type="button" onClick={() => updateAttributes({ poster: '' })} style={{ ...thumbBtn, color: '#c05050' }}>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  {posterBusy && <div style={{ fontSize: '10px', color: '#999', marginTop: '5px' }}>Working…</div>}
+                  {posterErr && <div style={{ fontSize: '10px', color: '#c05050', marginTop: '5px' }}>{posterErr}</div>}
+                </div>
+              )}
+
+              <div style={{ height: '1px', background: '#f0f0f0', margin: '12px 0 2px' }} />
+            </div>
+          )}
+
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '12px', color: paywalled ? '#1a1a1a' : '#888', fontFamily: "'Source Serif 4', Georgia, serif" }}>
               Restrict access
@@ -645,88 +781,6 @@ function VideoBlockView({ node, updateAttributes, selected }) {
                   Members with these plans get free access to this content
                 </div>
               </div>
-            </div>
-          )}
-
-          {active && (
-            <div style={{ paddingTop: '8px', borderTop: '1px solid #f0f0f0' }}>
-              <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#bbb', marginBottom: '7px', fontFamily: "'Source Serif 4', Georgia, serif" }}>
-                Thumbnail
-              </div>
-
-              {/* Preview + pencil to edit */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ position: 'relative', width: '120px', height: '68px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden', border: '1px solid #e0e0e0', background: '#111' }}>
-                  {poster ? (
-                    <img src={poster} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', fontSize: '10px', textAlign: 'center', padding: '0 6px', fontFamily: "'Source Serif 4', Georgia, serif" }}>
-                      {isControllable ? 'Auto (first frame)' : 'No thumbnail'}
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setPosterEditing(v => !v)}
-                    title="Edit thumbnail"
-                    style={{ position: 'absolute', bottom: '4px', right: '4px', width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(10,10,10,0.78)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 20h9" />
-                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                    </svg>
-                  </button>
-                </div>
-                <div style={{ fontSize: '11px', color: '#999', fontFamily: "'Source Serif 4', Georgia, serif" }}>
-                  {poster ? 'Thumbnail set' : (isControllable ? "Using the video's first frame" : 'Auto-selected')}
-                  <div style={{ marginTop: '2px', color: '#ccc', fontSize: '10px' }}>Click the pencil to change</div>
-                </div>
-              </div>
-
-              {/* Edit panel (revealed by the pencil) */}
-              {posterEditing && (
-                <div style={{ marginTop: '10px' }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
-                    {yt && ['1', '2', '3', 'hqdefault'].map(f => {
-                      const src = `https://img.youtube.com/vi/${yt}/${f}.jpg`
-                      return (
-                        <img
-                          key={f}
-                          src={src}
-                          alt=""
-                          onClick={() => updateAttributes({ poster: src })}
-                          style={{ width: '72px', height: '40px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer', border: poster === src ? '2px solid #f2b8c6' : '1px solid #e0e0e0' }}
-                        />
-                      )
-                    })}
-                    {(type === 'cloudinary' || type === 'direct') && (
-                      <button type="button" onClick={captureCurrentFrame} disabled={posterBusy} style={thumbBtn}>
-                        Capture current frame
-                      </button>
-                    )}
-                    {type === 'vimeo' && (
-                      <button type="button" onClick={useVimeoThumb} disabled={posterBusy} style={thumbBtn}>
-                        Use Vimeo thumbnail
-                      </button>
-                    )}
-                    <label style={{ ...thumbBtn, cursor: 'pointer' }}>
-                      Upload image
-                      <input type="file" accept="image/*" onChange={onUploadPosterFile} style={{ display: 'none' }} />
-                    </label>
-                    {poster && (
-                      <button type="button" onClick={() => updateAttributes({ poster: '' })} style={{ ...thumbBtn, color: '#c05050' }}>
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                  {posterBusy && <div style={{ fontSize: '10px', color: '#999', marginTop: '5px' }}>Working…</div>}
-                  {posterErr && <div style={{ fontSize: '10px', color: '#c05050', marginTop: '5px' }}>{posterErr}</div>}
-                  {(type === 'cloudinary' || type === 'direct') && (
-                    <div style={{ fontSize: '10px', color: '#bbb', marginTop: '5px', fontFamily: "'Source Serif 4', Georgia, serif" }}>
-                      Scrub or pause the video above at the frame you want, then capture.
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
