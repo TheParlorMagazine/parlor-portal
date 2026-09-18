@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 
+export const runtime = 'edge'
+
 const AUDIENCE_ID = 'a90d5605-469b-41b4-b16f-86e26690ea96'
 
 export async function GET(request) {

@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 
+export const runtime = 'edge'
+
 export async function POST(request) {
   const { campaignId } = await request.json()
   if (!campaignId) return Response.json({ error: 'Missing campaignId' }, { status: 400 })
