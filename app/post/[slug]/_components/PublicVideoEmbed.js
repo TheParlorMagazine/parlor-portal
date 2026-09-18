@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 
-const PREVIEW_LIMIT = 10
+const PREVIEW_LIMIT = 20
 
 function fmt(sec) {
   if (!sec || isNaN(sec)) return '0:00'
@@ -68,7 +68,7 @@ function ytReady() {
   })
 }
 
-// Controlled 10-second teaser for YouTube / Vimeo embeds (paywalled only).
+// Controlled 20-second teaser for YouTube / Vimeo embeds (paywalled only).
 // Plays on user click, then auto-pauses at PREVIEW_LIMIT and calls onLimit().
 function EmbedTeaser({ type, url, poster, replayNonce, onLimit }) {
   const hostRef = useRef(null)
@@ -179,7 +179,7 @@ function EmbedTeaser({ type, url, poster, replayNonce, onLimit }) {
             <svg width="18" height="20" viewBox="0 0 18 20" fill="#0a0a0a"><path d="M0 0l18 10L0 20V0z" /></svg>
           </div>
           <span style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '12px', color: '#fff', opacity: 0.9 }}>
-            Watch 10-second preview
+            Watch 20-second preview
           </span>
         </button>
       )}

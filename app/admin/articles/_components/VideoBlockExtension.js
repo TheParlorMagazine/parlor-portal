@@ -5,7 +5,7 @@ import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '../../../../lib/supabase'
 
-const PREVIEW_LIMIT = 10
+const PREVIEW_LIMIT = 20
 
 function ytId(url) {
   const m = url.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)
@@ -537,7 +537,7 @@ function VideoBlockView({ node, updateAttributes, selected }) {
         {title || 'Paywalled video'}
       </span>
       <span style={{ position: 'relative', fontSize: '11px', color: poster ? 'rgba(255,255,255,0.85)' : '#aaa', fontFamily: "'Source Serif 4', Georgia, serif" }}>
-        10s preview · Unlock for ${price || '2.50'}
+        20s preview · Unlock for ${price || '2.50'}
       </span>
     </div>
   )
@@ -575,7 +575,7 @@ function VideoBlockView({ node, updateAttributes, selected }) {
               background: '#0a0a0a', color: '#f2b8c6', padding: '2px 7px', borderRadius: '3px', flexShrink: 0,
               whiteSpace: 'nowrap',
             }}>
-              Paywalled — 10s preview
+              Paywalled — 20s preview
             </span>
           )}
         </div>
