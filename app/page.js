@@ -61,12 +61,20 @@ function wixAvatar(url, size = 96, q = 80) {
     return `${u.origin}${u.pathname}/v1/fill/w_${size},h_${size},q_${q},al_c,usm_0.66_1.00_0.01/${encodeURIComponent('avatar.' + ext)}`
   } catch (e) { return url }
 }
+// Per-article cover crop focus. Cards default to object-position: top (see .cover CSS);
+// list a slug here to override when the subject's face sits lower in the image.
+const COVER_FOCUS = {
+  'not-a-patient-woman': 'center',
+  'grief-glitter-and-the-business-of-staying-alive': 'center',
+}
 function slideHTML(it, idx) {
   const authorNode = it.authorProfile
     ? `<a class="authorLink" href="${esc(it.authorProfile)}" target="_top">${esc(it.authorName || '')}</a>`
     : `<span class="authorLink">${esc(it.authorName || '')}</span>`
+  const focus = COVER_FOCUS[it.slug]
+  const coverStyle = focus ? ` style="object-position: ${focus}"` : ''
   const cover = it.cover
-    ? `<img class="cover" src="${esc(it.cover)}" alt="" loading="${idx < FIRST_EAGER ? 'eager' : 'lazy'}" decoding="async">`
+    ? `<img class="cover"${coverStyle} src="${esc(it.cover)}" alt="" loading="${idx < FIRST_EAGER ? 'eager' : 'lazy'}" decoding="async">`
     : ''
   const avatarOriginal = it.authorPhoto || ''
   const avatarOptimized = avatarOriginal ? wixAvatar(avatarOriginal, 96, 80) : ''
@@ -96,6 +104,9 @@ export default function HomePage() {
   const [ribbonScrolling, setRibbonScrolling] = useState(false)
   const [member, setMember] = useState(null)
   const [articles, setArticles] = useState(ARTICLES)
+  const [heroSlides, setHeroSlides] = useState([])
+  const [heroIndex, setHeroIndex] = useState(0)
+  const [flipbookOpen, setFlipbookOpen] = useState(false)
   const aboutRef = useRef(null)
   const memberRef = useRef(null)
   const supabase = createClient()
@@ -122,6 +133,7 @@ export default function HomePage() {
       if (error || !data?.length) return
       setArticles(data.map(a => ({
         url: a.slug ? `/post/${a.slug}` : '#',
+        slug: a.slug || '',
         cover: a.cover_image_url || '',
         title: a.title || '',
         excerpt: a.subtitle || '',
@@ -134,6 +146,50 @@ export default function HomePage() {
     }
     loadArticles()
   }, [])
+
+  // Hero carousel: up to 3 articles from the "The World We're Building" issue (Issue 02).
+  // Falls back to the Borderlands digital hero until that issue has published articles.
+  useEffect(() => {
+    async function loadHero() {
+      const { data: issues } = await supabase.from('issues').select('id, number, title')
+      if (!issues?.length) return
+      const issue =
+        issues.find(i => /world\s*we.?re\s*building/i.test(i.title || '')) ||
+        issues.find(i => i.number === 2)
+      if (!issue) return
+      const { data: arts } = await supabase
+        .from('articles')
+        .select('slug, title, subtitle, cover_image_url, category, date_published')
+        .eq('published', true)
+        .eq('issue_id', issue.id)
+        .order('date_published', { ascending: false })
+        .limit(3)
+      if (!arts?.length) return
+      setHeroSlides(arts.map(a => ({
+        url: a.slug ? `/post/${a.slug}` : '#',
+        title: a.title || '',
+        subtitle: a.subtitle || '',
+        cover: a.cover_image_url || '',
+        category: a.category || '',
+      })))
+    }
+    loadHero()
+  }, [])
+
+  // Auto-advance the hero carousel
+  useEffect(() => {
+    if (heroSlides.length < 2) return
+    const t = setInterval(() => setHeroIndex(i => (i + 1) % heroSlides.length), 6000)
+    return () => clearInterval(t)
+  }, [heroSlides.length])
+
+  // Esc closes the flipbook modal
+  useEffect(() => {
+    if (!flipbookOpen) return
+    const onKey = e => { if (e.key === 'Escape') setFlipbookOpen(false) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [flipbookOpen])
 
   const items = articles.filter(a => !a.featured).sort((a, b) => parseDateSafe(b.date) - parseDateSafe(a.date))
   const slidesHTML = items.map(slideHTML).join('')
@@ -645,6 +701,41 @@ export default function HomePage() {
         .cta-secondary { background: transparent; color: var(--pink); border: 1px solid var(--pink); padding: 13px 22px; font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: space-between; letter-spacing: 0.02em; transition: all 0.15s; text-decoration: none; }
         .cta-secondary:hover { background: var(--pink); color: var(--black); }
         .cta-note { font-size: 12px; color: var(--muted); font-style: italic; padding-left: 2px; }
+        .cta-price-light { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; font-weight: 400; opacity: 0.8; }
+        .print-hero-contain img { object-fit: contain; padding: 40px; }
+
+        /* ── ISSUE HERO CAROUSEL ── */
+        .issue-hero { position: relative; background: var(--black); min-height: 440px; overflow: hidden; }
+        .issue-hero-slide {
+          position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+          display: grid; grid-template-columns: 1fr 1fr; align-items: center;
+          opacity: 0; pointer-events: none; transition: opacity 0.6s ease;
+        }
+        .issue-hero-slide.active { opacity: 1; pointer-events: auto; position: relative; }
+        .issue-hero-left { display: flex; align-items: center; justify-content: center; padding: 28px 40px; height: 100%; }
+        .issue-hero-left img { max-width: 100%; max-height: 340px; object-fit: contain; display: block; }
+        .issue-hero-right { padding: 32px 60px 72px; }
+        .issue-hero-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--pink); margin-bottom: 16px; }
+        .issue-hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(38px,4.6vw,72px); font-weight: 700; color: var(--white); line-height: 1.03; margin-bottom: 16px; }
+        .issue-hero-sub { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(18px,2vw,24px); font-style: italic; color: var(--pink); line-height: 1.3; margin-bottom: 30px; max-width: 460px; }
+        .issue-hero-btn { display: inline-block; border: 1px solid var(--pink); color: var(--pink); padding: 14px 40px; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; transition: all 0.15s; }
+        .issue-hero-btn:hover { background: var(--pink); color: var(--black); }
+        .issue-hero-nav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 5; background: none; border: none; color: var(--white); font-size: 46px; line-height: 1; padding: 0 10px; cursor: pointer; opacity: 0.55; transition: opacity 0.15s; }
+        .issue-hero-nav:hover { opacity: 1; }
+        .issue-hero-nav.prev { left: 20px; }
+        .issue-hero-nav.next { right: 20px; }
+        .issue-hero-dots { position: absolute; bottom: 66px; right: 28px; display: flex; gap: 9px; z-index: 6; }
+        .issue-hero-dot { width: 8px; height: 8px; border-radius: 50%; border: none; padding: 0; background: rgba(255,255,255,0.3); cursor: pointer; transition: background 0.15s; }
+        .issue-hero-dot.active { background: var(--pink); }
+        .issue-hero-tagline { position: absolute; left: 0; right: 0; bottom: 22px; text-align: center; z-index: 4; padding: 0 24px; pointer-events: none; font-family: 'Playfair Display', Georgia, serif; font-weight: 700; color: var(--white); font-size: clamp(26px,3.4vw,44px); line-height: 1.1; }
+
+        /* ── LOOK INSIDE FLIPBOOK MODAL ── */
+        .flipbook-overlay { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; padding: 32px; }
+        .flipbook-modal { position: relative; width: min(1100px, 96vw); height: min(80vh, 760px); background: #111; border: 1px solid var(--card-border); border-radius: 6px; overflow: hidden; display: flex; }
+        .flipbook-close { position: absolute; top: 10px; right: 16px; z-index: 2; background: none; border: none; color: #fff; font-size: 30px; line-height: 1; cursor: pointer; opacity: 0.8; transition: opacity 0.15s; }
+        .flipbook-close:hover { opacity: 1; }
+        .flipbook-body { flex: 1; display: flex; align-items: center; justify-content: center; }
+        .flipbook-placeholder { color: var(--muted); font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 16px; }
 
         /* ── SWIPER CAROUSEL ── */
         .carousel-section { background: #ffffff; padding: 48px 0 0; margin-bottom: 0; }
@@ -746,6 +837,7 @@ export default function HomePage() {
         .comp-subtitle { font-family: 'Playfair Display', Georgia, serif; font-size: 16px; font-style: italic; color: var(--muted); margin-bottom: 20px; }
         .comp-body { font-size: 15px; line-height: 1.78; color: var(--grey); max-width: 420px; }
         .comp-right { border-left: 1px solid var(--border); padding-left: 52px; }
+        .comp-right .comp-body { margin-bottom: 30px; }
         .deadline-label { font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
         .deadline-date { font-family: 'Playfair Display', Georgia, serif; font-size: 40px; font-weight: 700; color: var(--pink); margin-bottom: 26px; line-height: 1; }
         .cat-row { display: grid; grid-template-columns: 1fr 1fr 80px; align-items: center; padding: 12px 0; border-bottom: 1px solid #1e1e1e; }
@@ -786,6 +878,15 @@ export default function HomePage() {
         /* ── RESPONSIVE ── */
         @media (max-width: 900px) {
           .digital-hero, .print-hero, .competition { grid-template-columns: 1fr; }
+          .issue-hero { min-height: 0; }
+          .issue-hero-slide { position: relative; grid-template-columns: 1fr; }
+          .issue-hero-slide:not(.active) { display: none; }
+          .issue-hero-left { height: 260px; padding: 24px; }
+          .issue-hero-left img { max-height: 220px; }
+          .issue-hero-right { padding: 32px 24px 56px; }
+          .issue-hero-nav { font-size: 34px; }
+          .issue-hero-tagline { position: static; padding: 0 24px 28px; font-size: 26px; }
+          .issue-hero-dots { bottom: auto; top: 12px; right: 12px; }
           .digital-hero-left { height: 320px; padding: 24px; }
           .digital-hero-right { padding: 36px 24px 40px; }
           .print-hero-left { height: 280px; }
@@ -804,7 +905,7 @@ export default function HomePage() {
       {/* Open call strip */}
       {announceVisible && (
         <div className="sticky-bar">
-          <span className="sticky-text"><em>The Parlor</em> Issue 2 Open Call — Essays, Photo Essays &amp; Cover Illustrations &nbsp;·&nbsp; Deadline <strong>June 30</strong></span>
+          <span className="sticky-text"><em>The Parlor</em> Issue 3 Open Call — Personal Essays and Reporting &nbsp;·&nbsp; Deadline <strong>November 30</strong></span>
           <a href="https://www.theparlormagazine.com/open-call" className="sticky-btn">Submit your work →</a>
           <button className="sticky-close" onClick={() => setAnnounceVisible(false)} title="Dismiss">✕</button>
         </div>
@@ -913,7 +1014,42 @@ export default function HomePage() {
         </nav>
       </header>
 
-      {/* ── DIGITAL ISSUE HERO ── */}
+      {/* ── ISSUE HERO CAROUSEL — The World We're Building (Issue 02) ── */}
+      {heroSlides.length > 0 && (
+        <section className="issue-hero" aria-label="Featured issue">
+          {heroSlides.map((s, i) => (
+            <div key={i} className={`issue-hero-slide${i === heroIndex ? ' active' : ''}`}>
+              <div className="issue-hero-left">
+                {s.cover && <img src={s.cover} alt={s.title} />}
+              </div>
+              <div className="issue-hero-right">
+                <div className="issue-hero-eyebrow">The World We&rsquo;re Building &mdash; Issue 02</div>
+                <h1 className="issue-hero-title">{s.title}</h1>
+                {s.subtitle && <p className="issue-hero-sub">{s.subtitle}</p>}
+                <a href={s.url} className="issue-hero-btn">Read more</a>
+              </div>
+            </div>
+          ))}
+          {heroSlides.length > 1 && (
+            <>
+              <button className="issue-hero-nav prev" aria-label="Previous"
+                onClick={() => setHeroIndex(i => (i - 1 + heroSlides.length) % heroSlides.length)}>&#8249;</button>
+              <button className="issue-hero-nav next" aria-label="Next"
+                onClick={() => setHeroIndex(i => (i + 1) % heroSlides.length)}>&#8250;</button>
+              <div className="issue-hero-dots">
+                {heroSlides.map((_, i) => (
+                  <button key={i} className={`issue-hero-dot${i === heroIndex ? ' active' : ''}`}
+                    aria-label={`Go to slide ${i + 1}`} onClick={() => setHeroIndex(i)} />
+                ))}
+              </div>
+            </>
+          )}
+          <div className="issue-hero-tagline">A better world is possible&hellip;</div>
+        </section>
+      )}
+
+      {/* ── DIGITAL ISSUE HERO — fallback until Issue 02 has published articles ── */}
+      {heroSlides.length === 0 && (
       <section className="digital-hero">
         <div className="digital-hero-left">
           <img
@@ -979,30 +1115,27 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ── PRINT HERO ── */}
       <section className="print-hero">
-        <div className="print-hero-left">
-          <img src="https://static.wixstatic.com/media/d449e2_a3ac09162eb348b1aa8ee177efe4594e~mv2.png" alt="The Parlor — Issue 1 print edition" />
-          <button className="look-inside-btn"><span>◎</span> Look inside</button>
+        <div className="print-hero-left print-hero-contain">
+          <img src="https://static.wixstatic.com/media/d449e2_fd8c48fe8b274b67be10d4773240837b~mv2.png" alt="The World We're Building — Issue 02 print edition" />
+          <button className="look-inside-btn" onClick={() => setFlipbookOpen(true)}><span>◎</span> Look inside</button>
         </div>
         <div className="print-hero-right">
           <div className="print-eyebrow">Now in print</div>
           <h2 className="print-headline">Hold the conversation<br/>in <em>your hands.</em></h2>
-          <div className="print-subhead">Borderlands of Identity — Issue 01</div>
-          <p className="print-body">Our inaugural print issue is a beautifully produced magazine on displacement, diaspora, the body, gender non-conformity, family, and resistance. Original essays, illustrations, and photography — made to be read slowly and kept.</p>
-          <div className="gift-box">
-            <div className="gift-label">Inaugural subscriber gift</div>
-            <div className="gift-text">Every new print subscriber receives a tote bag and bookmark featuring our cover art — exclusively for founding members.</div>
-          </div>
+          <div className="print-subhead">The World we&rsquo;re Building — Issue 02</div>
+          <p className="print-body">From Kantamanto&rsquo;s secondhand clothing markets in Accra to Casa Pueblo&rsquo;s grassroots energy sovereignty in Puerto Rico, from the ethics of community tourism, to the pull toward intentional communities and communal land — Vol. 2 traces the infrastructure of collective imagination across continents: not just the world we dream of, but the deliberate, often invisible work of building it.<br/><br/>Featuring original essays, reporting, and art — 112 pages, bound in print.</p>
           <div className="cta-stack">
             <a href="/plans" className="cta-primary">
               Subscribe to the print edition
-              <span className="cta-price">$25 / month · quarterly issues</span>
+              <span className="cta-price">$30 / every four months · triannual issues</span>
             </a>
-            <a href="https://www.peecho.com/print/en/2212054" target="_blank" rel="noopener noreferrer" className="cta-secondary">
+            <a href="https://www.theparlormagazine.com/product-page/vol-2-the-world-we-re-building" target="_blank" rel="noopener noreferrer" className="cta-secondary">
               Buy a single copy
-              <span style={{fontFamily:"'Source Serif 4',Georgia,serif",fontSize:'12px',fontWeight:400,opacity:0.8}}>$35 + shipping</span>
+              <span className="cta-price-light">$35 + shipping</span>
             </a>
             <p className="cta-note">Print subscribers receive every issue automatically.</p>
           </div>
@@ -1026,25 +1159,29 @@ export default function HomePage() {
       {/* ── COMPETITION ── */}
       <section className="competition">
         <div>
-          <div className="comp-eyebrow">Inaugural Print Competition — Issue 2</div>
+          <div className="comp-eyebrow">Essay competition — Issue 3</div>
           <h2 className="comp-title">Submit to<br/><em>The Parlor.</em><br/>Get published<br/>in print.</h2>
-<p className="comp-body">We are accepting essays, photo essays, and cover illustrations for our second print issue. Selected work appears in a beautifully produced independent magazine read by a global community of thinkers, writers, and makers.</p>
         </div>
         <div className="comp-right">
+          <p className="comp-body">We are accepting essays and original reporting for our third issue. Selected work appears in a beautifully produced independent magazine read by a global community of thinkers, writers, and makers.</p>
           <div className="deadline-label">Submissions close</div>
-          <div className="deadline-date">June 30</div>
-          <div>
-            {[{n:'Essay',p:'$250 prize',f:'$10 entry'},{n:'Photo Essay',p:'$500 prize',f:'$20 entry'},{n:'Cover Illustration',p:'$250 prize',f:'$10 entry'}].map(c=>(
-              <div key={c.n} className="cat-row">
-                <span className="cat-name">{c.n}</span>
-                <span className="cat-prize">{c.p}</span>
-                <span className="cat-fee">{c.f}</span>
-              </div>
-            ))}
-          </div>
-          <a href="https://www.theparlormagazine.com/open-call" className="comp-cta">Submit your work →</a>
+          <div className="deadline-date">November 30</div>
+          <a href="https://www.theparlormagazine.com/open-call" className="comp-cta" target="_top">Submit your work →</a>
         </div>
       </section>
+
+      {/* ── LOOK INSIDE FLIPBOOK MODAL ── */}
+      {flipbookOpen && (
+        <div className="flipbook-overlay" onClick={() => setFlipbookOpen(false)}>
+          <div className="flipbook-modal" onClick={e => e.stopPropagation()}>
+            <button className="flipbook-close" aria-label="Close" onClick={() => setFlipbookOpen(false)}>&times;</button>
+            <div className="flipbook-body">
+              {/* Flipbook embed goes here — paste the flipbook code/iframe inside this container. */}
+              <div className="flipbook-placeholder">Flipbook coming soon</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── FOOTER ── */}
       <footer className="site-footer">
@@ -1082,7 +1219,7 @@ export default function HomePage() {
       <div className={`ribbon${ribbonScrolling ? ' scrolling' : ''}`}>
         <div className="ribbon-inner">
           <div>
-            <div className="ribbon-kicker">Our inaugural issue is live</div>
+            <div className="ribbon-kicker">Our second issue is here</div>
             <div className="ribbon-subhead">Join us as it unfolds</div>
           </div>
           <div className="ribbon-message">
