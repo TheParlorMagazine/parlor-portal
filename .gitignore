@@ -10,3 +10,4 @@ node_modules/
 # Exported secrets — never commit
 vercel-prod.env
 netlify-import.env
+netlify-import.txt
