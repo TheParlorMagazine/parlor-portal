@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { notFound } from 'next/navigation'
 import { checkItemAccess } from '../../../lib/checkAccess'
 import ArticleBody from './_components/ArticleBody'
+import ParallaxHero from './_components/ParallaxHero'
 import { createClient } from '../../../lib/supabase'
 import { existsSync } from 'fs'
 import path from 'path'
@@ -105,6 +106,15 @@ export default async function ArticlePage({ params, searchParams }) {
     article.author_bio      = article.writers.bio         || article.author_bio
     article.author_photo_url   = article.writers.photo_url    || article.author_photo_url
     article.author_profile_url = article.writers.profile_url  || article.author_profile_url
+  }
+
+  // "The World We're Building" (Vol 2) articles get a special template:
+  // title over a parallax hero image + a maroon drop cap.
+  let isVol2 = false
+  if (article.issue_id) {
+    const { data: issue } = await db
+      .from('issues').select('title, number').eq('id', article.issue_id).single()
+    if (issue) isVol2 = /world\s*we.?re\s*building/i.test(issue.title || '') || issue.number === 2
   }
 
   // Authenticated user
@@ -218,16 +228,27 @@ export default async function ArticlePage({ params, searchParams }) {
 
       <main style={{ background: '#fff', minHeight: '100vh' }}>
 
+        {/* Vol 2 parallax hero — title overlaid on the cover image */}
+        {isVol2 && article.cover_image_url && (
+          <ParallaxHero
+            src={article.cover_image_url}
+            alt={article.cover_image_alt || article.title}
+            title={article.title}
+          />
+        )}
+
         {/* Article header */}
-        <div style={{ maxWidth: '720px', margin: '0 auto', padding: '56px 24px 0' }}>
-          <h1 style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 'clamp(30px, 5vw, 52px)', lineHeight: '1.15',
-            fontWeight: '700', color: '#0a0a0a',
-            margin: '0 0 18px', letterSpacing: '-0.02em',
-          }}>
-            {article.title}
-          </h1>
+        <div style={{ maxWidth: '720px', margin: '0 auto', padding: isVol2 ? '8px 24px 0' : '56px 24px 0' }}>
+          {!isVol2 && (
+            <h1 style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: 'clamp(30px, 5vw, 52px)', lineHeight: '1.15',
+              fontWeight: '700', color: '#0a0a0a',
+              margin: '0 0 18px', letterSpacing: '-0.02em',
+            }}>
+              {article.title}
+            </h1>
+          )}
 
           {article.subtitle && (
             <p style={{
@@ -285,8 +306,8 @@ export default async function ArticlePage({ params, searchParams }) {
           </div>
         </div>
 
-        {/* Cover image */}
-        {article.cover_image_url && (
+        {/* Cover image (standard template only — Vol 2 shows it in the hero) */}
+        {!isVol2 && article.cover_image_url && (
           <div style={{ maxWidth: '900px', margin: '0 auto 48px', padding: '0 24px' }}>
             <img
               src={article.cover_image_url}
@@ -323,6 +344,7 @@ export default async function ArticlePage({ params, searchParams }) {
             userId={userId}
             pagePath={`/post/${article.slug}`}
             justUnlocked={justUnlocked}
+            dropCap={isVol2}
           />
         </div>
 

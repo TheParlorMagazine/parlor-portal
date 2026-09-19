@@ -15,6 +15,15 @@ const PROSE_STYLES = `
   .parlor-prose p {
     margin: 0 0 1.4em;
   }
+  .parlor-prose.parlor-dropcap > p:first-of-type::first-letter {
+    float: left;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 700;
+    color: #7a2531;
+    font-size: 4.4em;
+    line-height: 0.78;
+    padding: 6px 10px 0 0;
+  }
   .parlor-prose h2 {
     font-family: 'Playfair Display', Georgia, serif;
     font-size: 26px;
@@ -550,8 +559,10 @@ export default function ArticleBody({
   userId,
   pagePath,
   justUnlocked,
+  dropCap,
 }) {
   const isGated = (paywallType === 'paywall' || paywallType === 'members') && !articleHasAccess
+  const firstHtmlIndex = segments.findIndex(s => s.kind === 'html')
   const anyBlockGated = segments.some(seg =>
     (seg.kind === 'audio-block' || seg.kind === 'video-block') &&
     seg.attrs?.paywalled === 'true' && !seg.hasAccess
@@ -574,7 +585,7 @@ export default function ArticleBody({
       <>
         <style>{PROSE_STYLES}</style>
         <div
-          className="parlor-prose"
+          className={`parlor-prose${dropCap ? ' parlor-dropcap' : ''}`}
           dangerouslySetInnerHTML={{ __html: processImageCaptions(truncatedHtml) }}
         />
         <ArticlePaywallOverlay
@@ -597,7 +608,7 @@ export default function ArticleBody({
           return (
             <div
               key={i}
-              className="parlor-prose"
+              className={`parlor-prose${dropCap && i === firstHtmlIndex ? ' parlor-dropcap' : ''}`}
               dangerouslySetInnerHTML={{ __html: processImageCaptions(seg.content) }}
             />
           )
