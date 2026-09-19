@@ -261,19 +261,19 @@ export default async function ArticlePage({ params, searchParams }) {
           )}
 
           {/* Byline */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isVol2 ? '14px' : '12px', marginBottom: '40px' }}>
             {article.author_photo_url ? (
               <img
                 src={article.author_photo_url}
                 alt={article.author_name || ''}
-                style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                style={{ width: isVol2 ? '52px' : '36px', height: isVol2 ? '52px' : '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
               />
             ) : article.author_name ? (
               <div style={{
-                width: '36px', height: '36px', borderRadius: '50%',
+                width: isVol2 ? '52px' : '36px', height: isVol2 ? '52px' : '36px', borderRadius: '50%',
                 background: '#f2b8c6', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: "'Playfair Display', serif", fontSize: '14px',
+                fontFamily: "'Playfair Display', serif", fontSize: isVol2 ? '20px' : '14px',
                 fontWeight: '600', color: '#c4364a',
               }}>
                 {article.author_name[0]}
@@ -284,7 +284,7 @@ export default async function ArticlePage({ params, searchParams }) {
               {article.author_name && (
                 <div style={{
                   fontFamily: "'Source Serif 4', Georgia, serif",
-                  fontSize: '14px', color: '#0a0a0a',
+                  fontSize: isVol2 ? '18px' : '14px', color: '#0a0a0a',
                 }}>
                   {article.author_profile_url ? (
                     <a href={article.author_profile_url} style={{ color: '#0a0a0a', textDecoration: 'none' }}>
