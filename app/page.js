@@ -717,17 +717,14 @@ export default function HomePage() {
 
         /* ── ISSUE HERO CAROUSEL (large image; title/tagline layered over it) ── */
         .issue-hero { position: relative; background: var(--black); overflow: hidden; }
-        .issue-hero-slide {
-          display: none; position: relative; align-items: center; justify-content: center;
-          min-height: clamp(600px, 94vh, 940px); padding: 0 clamp(24px,6vw,90px);
-        }
-        .issue-hero-slide.active { display: flex; }
-        .issue-hero-figure { display: flex; align-items: center; justify-content: center; width: 100%; }
-        .issue-hero-imgwrap { position: relative; display: inline-block; max-width: 100%; }
-        .issue-hero-imgwrap img { max-width: 100%; max-height: 64vh; object-fit: contain; display: block; }
-        .issue-hero-head { position: absolute; top: clamp(24px,6vh,60px); left: clamp(24px,6vw,90px); right: clamp(24px,6vw,90px); z-index: 3; pointer-events: none; }
-        .issue-hero-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--pink); margin-bottom: 12px; }
-        .issue-hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(26px,3.4vw,46px); font-weight: 700; color: var(--white); line-height: 1.08; margin: 0; letter-spacing: -0.01em; text-shadow: 0 2px 18px rgba(0,0,0,0.55); max-width: 15ch; }
+        .issue-hero-slide { display: none; position: relative; }
+        .issue-hero-slide.active { display: block; }
+        .issue-hero-figure { display: block; width: 100%; }
+        .issue-hero-imgwrap { position: relative; display: block; width: 100%; }
+        .issue-hero-imgwrap img { width: 100%; height: clamp(600px, 84vh, 900px); object-fit: cover; object-position: center top; display: block; }
+        .issue-hero-head { position: absolute; top: clamp(20px,5vh,52px); left: clamp(24px,6vw,90px); right: clamp(24px,6vw,90px); z-index: 3; pointer-events: none; }
+        .issue-hero-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--pink); margin-bottom: 14px; text-shadow: 0 2px 14px rgba(0,0,0,0.6); }
+        .issue-hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(36px,4.8vw,66px); font-weight: 700; color: var(--white); line-height: 1.05; margin: 0; letter-spacing: -0.01em; text-shadow: 0 2px 20px rgba(0,0,0,0.6); max-width: 22ch; }
         .issue-hero-accent { font-style: italic; color: var(--pink); }
         .issue-hero-btn { position: absolute; right: 16px; bottom: 16px; z-index: 4; display: inline-block; border: 1px solid var(--pink); background: rgba(10,10,10,0.85); color: var(--pink); padding: 12px 30px; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; transition: all 0.15s; }
         .issue-hero-btn:hover { background: var(--pink); color: var(--black); }
@@ -889,13 +886,12 @@ export default function HomePage() {
         /* ── RESPONSIVE ── */
         @media (max-width: 900px) {
           .digital-hero, .print-hero, .competition { grid-template-columns: 1fr; }
-          .issue-hero-slide { flex-direction: column; min-height: 0; padding: 26px 20px 26px; }
-          .issue-hero-head { position: static; margin-bottom: 14px; }
-          .issue-hero-title { font-size: 26px; text-shadow: none; max-width: none; }
-          .issue-hero-imgwrap img { max-height: 52vh; }
+          .issue-hero-head { top: 16px; left: 20px; right: 20px; }
+          .issue-hero-title { font-size: clamp(28px,7vw,40px); max-width: none; }
+          .issue-hero-imgwrap img { height: 74vh; }
           .issue-hero-btn { right: 10px; bottom: 10px; padding: 9px 20px; font-size: 13px; }
           .issue-hero-nav { font-size: 30px; padding: 0 4px; }
-          .issue-hero-tagline { position: static; margin-top: 14px; font-size: 26px; text-shadow: none; }
+          .issue-hero-tagline { left: 20px; bottom: 18px; font-size: clamp(24px,6vw,34px); }
           .issue-hero-dots { bottom: auto; top: 12px; right: 12px; }
           .digital-hero-left { height: 320px; padding: 24px; }
           .digital-hero-right { padding: 36px 24px 40px; }
