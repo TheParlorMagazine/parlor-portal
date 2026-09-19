@@ -42,6 +42,17 @@ const ABOUT_LINKS = [
 ]
 
 function esc(s) { return (s ?? "").toString() }
+
+// Split a hero title so the last ~40% of words render as the pink italic accent.
+function splitHeadTail(title) {
+  const words = (title || '').trim().split(/\s+/).filter(Boolean)
+  if (words.length <= 1) return { head: '', tail: title || '' }
+  const tailCount = Math.max(1, Math.min(words.length - 1, Math.round(words.length * 0.4)))
+  return {
+    head: words.slice(0, words.length - tailCount).join(' '),
+    tail: words.slice(words.length - tailCount).join(' '),
+  }
+}
 function parseDateSafe(s) { return s ? (new Date(String(s).replace(/Sept\b/i, 'Sep')).getTime() || 0) : 0 }
 function wixCover(url, w = 720, q = 85) {
   try {
@@ -704,30 +715,30 @@ export default function HomePage() {
         .cta-price-light { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; font-weight: 400; opacity: 0.8; }
         .print-hero-contain img { object-fit: contain; padding: 40px; }
 
-        /* ── ISSUE HERO CAROUSEL ── */
-        .issue-hero { position: relative; background: var(--black); min-height: 440px; overflow: hidden; }
+        /* ── ISSUE HERO CAROUSEL (stacked: title over a large illustration) ── */
+        .issue-hero { position: relative; background: var(--black); overflow: hidden; padding-bottom: 70px; }
         .issue-hero-slide {
-          position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-          display: grid; grid-template-columns: 1fr 1fr; align-items: center;
-          opacity: 0; pointer-events: none; transition: opacity 0.6s ease;
+          display: none; flex-direction: column;
+          padding: 44px clamp(24px,6vw,96px) 8px;
         }
-        .issue-hero-slide.active { opacity: 1; pointer-events: auto; position: relative; }
-        .issue-hero-left { display: flex; align-items: center; justify-content: center; padding: 28px 40px; height: 100%; }
-        .issue-hero-left img { max-width: 100%; max-height: 340px; object-fit: contain; display: block; }
-        .issue-hero-right { padding: 32px 60px 72px; }
-        .issue-hero-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--pink); margin-bottom: 16px; }
-        .issue-hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(38px,4.6vw,72px); font-weight: 700; color: var(--white); line-height: 1.03; margin-bottom: 16px; }
-        .issue-hero-sub { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(18px,2vw,24px); font-style: italic; color: var(--pink); line-height: 1.3; margin-bottom: 30px; max-width: 460px; }
-        .issue-hero-btn { display: inline-block; border: 1px solid var(--pink); color: var(--pink); padding: 14px 40px; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; transition: all 0.15s; }
+        .issue-hero-slide.active { display: flex; }
+        .issue-hero-head { max-width: 1000px; }
+        .issue-hero-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--pink); margin-bottom: 14px; }
+        .issue-hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(34px,5.2vw,68px); font-weight: 700; color: var(--white); line-height: 1.04; margin: 0; letter-spacing: -0.01em; }
+        .issue-hero-accent { font-style: italic; color: var(--pink); }
+        .issue-hero-figure { display: flex; align-items: center; justify-content: center; margin-top: 20px; }
+        .issue-hero-imgwrap { position: relative; display: inline-block; max-width: 100%; }
+        .issue-hero-imgwrap img { max-width: 100%; max-height: 56vh; object-fit: contain; display: block; }
+        .issue-hero-btn { position: absolute; right: 16px; bottom: 16px; z-index: 3; display: inline-block; border: 1px solid var(--pink); background: var(--black); color: var(--pink); padding: 13px 34px; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; transition: all 0.15s; }
         .issue-hero-btn:hover { background: var(--pink); color: var(--black); }
         .issue-hero-nav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 5; background: none; border: none; color: var(--white); font-size: 46px; line-height: 1; padding: 0 10px; cursor: pointer; opacity: 0.55; transition: opacity 0.15s; }
         .issue-hero-nav:hover { opacity: 1; }
-        .issue-hero-nav.prev { left: 20px; }
-        .issue-hero-nav.next { right: 20px; }
-        .issue-hero-dots { position: absolute; bottom: 66px; right: 28px; display: flex; gap: 9px; z-index: 6; }
+        .issue-hero-nav.prev { left: 18px; }
+        .issue-hero-nav.next { right: 18px; }
+        .issue-hero-dots { position: absolute; bottom: 30px; right: 28px; display: flex; gap: 9px; z-index: 6; }
         .issue-hero-dot { width: 8px; height: 8px; border-radius: 50%; border: none; padding: 0; background: rgba(255,255,255,0.3); cursor: pointer; transition: background 0.15s; }
         .issue-hero-dot.active { background: var(--pink); }
-        .issue-hero-tagline { position: absolute; left: 0; right: 0; bottom: 22px; text-align: center; z-index: 4; padding: 0 24px; pointer-events: none; font-family: 'Playfair Display', Georgia, serif; font-weight: 700; color: var(--white); font-size: clamp(26px,3.4vw,44px); line-height: 1.1; }
+        .issue-hero-tagline { position: absolute; left: clamp(24px,6vw,96px); bottom: 22px; z-index: 4; pointer-events: none; font-family: 'Playfair Display', Georgia, serif; font-weight: 700; color: var(--white); font-size: clamp(28px,4vw,54px); line-height: 1.05; }
 
         /* ── LOOK INSIDE FLIPBOOK MODAL ── */
         .flipbook-overlay { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; padding: 32px; }
@@ -878,14 +889,12 @@ export default function HomePage() {
         /* ── RESPONSIVE ── */
         @media (max-width: 900px) {
           .digital-hero, .print-hero, .competition { grid-template-columns: 1fr; }
-          .issue-hero { min-height: 0; }
-          .issue-hero-slide { position: relative; grid-template-columns: 1fr; }
-          .issue-hero-slide:not(.active) { display: none; }
-          .issue-hero-left { height: 260px; padding: 24px; }
-          .issue-hero-left img { max-height: 220px; }
-          .issue-hero-right { padding: 32px 24px 56px; }
-          .issue-hero-nav { font-size: 34px; }
-          .issue-hero-tagline { position: static; padding: 0 24px 28px; font-size: 26px; }
+          .issue-hero { padding-bottom: 56px; }
+          .issue-hero-slide { padding: 28px 20px 8px; }
+          .issue-hero-imgwrap img { max-height: 44vh; }
+          .issue-hero-btn { right: 10px; bottom: 10px; padding: 9px 20px; font-size: 13px; }
+          .issue-hero-nav { font-size: 30px; padding: 0 4px; }
+          .issue-hero-tagline { left: 20px; bottom: 16px; font-size: 26px; }
           .issue-hero-dots { bottom: auto; top: 12px; right: 12px; }
           .digital-hero-left { height: 320px; padding: 24px; }
           .digital-hero-right { padding: 36px 24px 40px; }
@@ -1019,14 +1028,20 @@ export default function HomePage() {
         <section className="issue-hero" aria-label="Featured issue">
           {heroSlides.map((s, i) => (
             <div key={i} className={`issue-hero-slide${i === heroIndex ? ' active' : ''}`}>
-              <div className="issue-hero-left">
-                {s.cover && <img src={s.cover} alt={s.title} />}
-              </div>
-              <div className="issue-hero-right">
+              <div className="issue-hero-head">
                 <div className="issue-hero-eyebrow">The World We&rsquo;re Building &mdash; Issue 02</div>
-                <h1 className="issue-hero-title">{s.title}</h1>
-                {s.subtitle && <p className="issue-hero-sub">{s.subtitle}</p>}
-                <a href={s.url} className="issue-hero-btn">Read more</a>
+                <h1 className="issue-hero-title">
+                  {(() => {
+                    const { head, tail } = splitHeadTail(s.title)
+                    return <>{head}{head ? ' ' : null}<em className="issue-hero-accent">{tail}</em></>
+                  })()}
+                </h1>
+              </div>
+              <div className="issue-hero-figure">
+                <div className="issue-hero-imgwrap">
+                  {s.cover && <img src={s.cover} alt={s.title} />}
+                  <a href={s.url} className="issue-hero-btn">Read more</a>
+                </div>
               </div>
             </div>
           ))}
