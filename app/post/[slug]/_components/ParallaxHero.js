@@ -17,8 +17,8 @@ export default function ParallaxHero({ src, alt, title }) {
       const el = titleRef.current
       if (!wrap || !el) return
       const top = wrap.getBoundingClientRect().top
-      // Subtle: title drifts up to ~24px relative to the image as you scroll.
-      const shift = Math.max(-24, Math.min(24, top * 0.05))
+      // Title drifts relative to the image as you scroll (keeps the image uncropped).
+      const shift = Math.max(-110, Math.min(110, top * 0.22))
       el.style.transform = `translate(-50%, calc(-50% + ${shift}px))`
     }
     const onScroll = () => { if (raf == null) raf = requestAnimationFrame(update) }
