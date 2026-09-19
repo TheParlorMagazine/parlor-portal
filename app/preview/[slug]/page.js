@@ -2,6 +2,7 @@ import { existsSync } from 'fs'
 import path from 'path'
 import { createClient } from '@supabase/supabase-js'
 import ArticleBody from '../../post/[slug]/_components/ArticleBody'
+import ParallaxHero from '../../post/[slug]/_components/ParallaxHero'
 import PreviewBanner from './PreviewBanner'
 import ScrollToTop from '../../_components/ScrollToTop'
 
@@ -89,6 +90,14 @@ export default async function PreviewPage({ params }) {
     article.author_profile_url = article.writers.profile_url || article.author_profile_url
   }
 
+  // "The World We're Building" (Vol 2) articles use the special template.
+  let isVol2 = false
+  if (article.issue_id) {
+    const { data: issue } = await db
+      .from('issues').select('title, number').eq('id', article.issue_id).single()
+    if (issue) isVol2 = /world\s*we.?re\s*building/i.test(issue.title || '') || issue.number === 2
+  }
+
   // In preview, keep drafts readable but show paywalled audio/video with their
   // real gate (10s teaser -> paywall), so authors can test the locked experience.
   const segments = parseBodySegments(article.body || '').map(seg => {
@@ -110,16 +119,27 @@ export default async function PreviewPage({ params }) {
 
       <main style={{ background: '#fff', minHeight: '100vh' }}>
 
+        {/* Vol 2 parallax hero — title overlaid on the full cover image */}
+        {isVol2 && article.cover_image_url && (
+          <ParallaxHero
+            src={article.cover_image_url}
+            alt={article.cover_image_alt || article.title}
+            title={article.title}
+          />
+        )}
+
         {/* Article header */}
-        <div style={{ maxWidth: '720px', margin: '0 auto', padding: '56px 24px 0' }}>
-          <h1 style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 'clamp(30px, 5vw, 52px)', lineHeight: '1.15',
-            fontWeight: '700', color: '#0a0a0a',
-            margin: '0 0 18px', letterSpacing: '-0.02em',
-          }}>
-            {article.title}
-          </h1>
+        <div style={{ maxWidth: '720px', margin: '0 auto', padding: isVol2 ? '8px 24px 0' : '56px 24px 0' }}>
+          {!isVol2 && (
+            <h1 style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: 'clamp(30px, 5vw, 52px)', lineHeight: '1.15',
+              fontWeight: '700', color: '#0a0a0a',
+              margin: '0 0 18px', letterSpacing: '-0.02em',
+            }}>
+              {article.title}
+            </h1>
+          )}
 
           {article.subtitle && (
             <p style={{
@@ -177,8 +197,8 @@ export default async function PreviewPage({ params }) {
           </div>
         </div>
 
-        {/* Cover image */}
-        {article.cover_image_url && (
+        {/* Cover image (standard template only — Vol 2 shows it in the hero) */}
+        {!isVol2 && article.cover_image_url && (
           <div style={{ maxWidth: '900px', margin: '0 auto 48px', padding: '0 24px' }}>
             <img
               src={article.cover_image_url}
@@ -210,6 +230,7 @@ export default async function PreviewPage({ params }) {
             stripePriceId={article.stripe_price_id}
             articleHasAccess={true}
             userId={null}
+            dropCap={isVol2}
           />
         </div>
 
