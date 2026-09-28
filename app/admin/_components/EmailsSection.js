@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useRef } from 'react'
 import CampaignsTab from './CampaignsTab'
+import NewsletterTab from './NewsletterTab'
 import SegmentsTab  from './SegmentsTab'
 import ImportTab    from './ImportTab'
+import { EMAIL_TYPES } from '../../../lib/emailTypes'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
@@ -159,17 +161,48 @@ function EmailBodyEditor({ content, onChange }) {
 }
 
 // ── Template Editor Modal (full-screen overlay) ───────────────
-function TemplateEditorModal({ template, footer, onSave, onClose }) {
+function TemplateEditorModal({ template, footer, onSave, onClose, supabase }) {
+  const hasOverride = !!template?.hasOverride
   const [subject, setSubject]     = useState(template?.subject || '')
   const [bodyHtml, setBodyHtml]   = useState(template?.body_html || template?.body || '')
+  const [overriding, setOverriding] = useState(hasOverride)
+  const [defaultHtml, setDefaultHtml] = useState('')
+  const [loadingDefault, setLoadingDefault] = useState(!hasOverride)
   const [previewMode, setPreview] = useState('desktop')
   const [saving, setSaving]       = useState(false)
 
-  const previewHtml = wrapEmail(bodyHtml, footer)
+  // Fetch the built-in design (rendered with sample data) to show it as it
+  // actually sends — until the admin chooses to override it.
+  useEffect(() => {
+    if (hasOverride) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const res = await fetch(`/api/admin/email-default?type=${template.template_type}`, { headers: { Authorization: `Bearer ${session?.access_token}` } })
+        const d = await res.json()
+        if (!cancelled) setDefaultHtml(d.html || '')
+      } catch {} finally { if (!cancelled) setLoadingDefault(false) }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  // deliver() sends the HTML raw (no extra chrome), so preview it raw too.
+  const previewHtml = overriding ? (bodyHtml || defaultHtml || '') : defaultHtml
+
+  function startOverride() {
+    if (!bodyHtml && defaultHtml) setBodyHtml(defaultHtml)   // start from the built-in design
+    setOverriding(true)
+  }
+  function revertToBuiltIn() {
+    if (!window.confirm('Discard this custom design and use the built-in design again?')) return
+    setBodyHtml(''); setOverriding(false)
+  }
 
   async function handleSave() {
     setSaving(true)
-    await onSave({ ...template, subject, body_html: bodyHtml })
+    // Not overriding → clear the override so the built-in design is used.
+    await onSave({ ...template, subject: overriding ? subject : '', body_html: overriding ? bodyHtml : '' })
     setSaving(false)
   }
 
@@ -189,9 +222,9 @@ function TemplateEditorModal({ template, footer, onSave, onClose }) {
               </button>
             ))}
           </div>
-          <button onClick={handleSave} disabled={saving} style={{ padding: '7px 20px', background: PINK, border: 'none', borderRadius: '6px', color: '#0a0a0a', fontSize: '13px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: ff, opacity: saving ? 0.7 : 1 }}>
-            {saving ? 'Saving…' : 'Save'}
-          </button>
+          {overriding && !template?._previewOnly
+            ? <button onClick={handleSave} disabled={saving} style={{ padding: '7px 20px', background: PINK, border: 'none', borderRadius: '6px', color: '#0a0a0a', fontSize: '13px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: ff, opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving…' : 'Save override'}</button>
+            : !template?._previewOnly && <button onClick={startOverride} disabled={loadingDefault} style={{ padding: '7px 20px', background: '#0a0a0a', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: ff }}>Override this design</button>}
         </div>
       </div>
 
@@ -203,16 +236,39 @@ function TemplateEditorModal({ template, footer, onSave, onClose }) {
             <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#aaa', fontFamily: ff, marginBottom: '6px' }}>Subject Line</div>
             <input
               type="text"
-              value={subject}
+              value={overriding ? subject : (template?.subject || '')}
               onChange={e => setSubject(e.target.value)}
-              placeholder="Enter email subject…"
-              style={{ width: '100%', padding: '9px 12px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '14px', fontFamily: ff, color: '#0a0a0a', outline: 'none', boxSizing: 'border-box' }}
+              disabled={!overriding}
+              placeholder={overriding ? 'Enter email subject…' : 'Built-in subject'}
+              style={{ width: '100%', padding: '9px 12px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '14px', fontFamily: ff, color: overriding ? '#0a0a0a' : '#aaa', outline: 'none', boxSizing: 'border-box', background: overriding ? '#fff' : '#f7f7f7' }}
             />
           </div>
-          <div>
-            <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#aaa', fontFamily: ff, marginBottom: '6px' }}>Email Body</div>
-            <EmailBodyEditor content={bodyHtml} onChange={setBodyHtml} />
-          </div>
+
+          {!overriding ? (
+            <div>
+              <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#aaa', fontFamily: ff, marginBottom: '6px' }}>Email Body</div>
+              <div style={{ border: '1px dashed #e0d3d7', borderRadius: '8px', padding: '18px 16px', background: '#faf7f8', textAlign: 'center' }}>
+                <div style={{ fontSize: '13px', color: '#666', fontFamily: ff, lineHeight: 1.6, marginBottom: '12px' }}>
+                  This email uses its <strong>built-in design</strong> (shown in the preview →). {loadingDefault ? 'Loading…' : 'Editing is locked until you override it.'}
+                </div>
+                <button onClick={startOverride} disabled={loadingDefault} style={{ padding: '8px 18px', background: '#0a0a0a', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: loadingDefault ? 'default' : 'pointer', fontFamily: ff, opacity: loadingDefault ? 0.6 : 1 }}>Override this design</button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#aaa', fontFamily: ff }}>Email Body</div>
+                <button onClick={revertToBuiltIn} style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '11px', cursor: 'pointer', fontFamily: ff, textDecoration: 'underline' }}>Revert to built-in</button>
+              </div>
+              <EmailBodyEditor content={bodyHtml} onChange={setBodyHtml} />
+              {Array.isArray(template?.vars) && template.vars.length > 0 && (
+                <div style={{ marginTop: '10px', fontSize: '11px', color: '#999', fontFamily: ff, lineHeight: 1.7 }}>
+                  Variables you can use:{' '}
+                  {template.vars.map(v => <code key={v} onClick={() => setBodyHtml(b => (b || '') + `{{${v}}}`)} title="Click to insert" style={{ cursor: 'pointer', background: '#f5f5f5', padding: '1px 6px', borderRadius: '4px', marginRight: '5px', color: DP }}>{`{{${v}}}`}</code>)}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right: preview */}
@@ -229,7 +285,7 @@ function TemplateEditorModal({ template, footer, onSave, onClose }) {
 
 // ── Default data ──────────────────────────────────────────────
 // Welcome email body sourced from lib/emails.js (${name} → {{name}})
-const WELCOME_BODY_HTML = '<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;padding:40px 20px;color:#0a0a0a;"><div style="margin-bottom:32px;"><img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png" width="48" height="48" style="border-radius:50%;" /></div><h1 style="font-size:28px;font-weight:700;margin-bottom:8px;line-height:1.2;">Welcome to The Parlor, {{name}}.</h1><p style="font-size:16px;line-height:1.7;color:#444;margin-bottom:24px;">We\'re glad you\'re here. The Parlor is a space for slow reading, critical thinking, and community — and you\'re now part of it.</p><p style="font-size:15px;line-height:1.7;color:#444;margin-bottom:32px;">Your account is ready. Head to your dashboard to explore the library, join the reading room, and see what\'s coming up.</p><a href="https://parlor-portal.vercel.app/dashboard" style="display:inline-block;background:#0a0a0a;color:#ffffff;padding:13px 28px;font-family:Georgia,serif;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:0.02em;">Go to your dashboard →</a><div style="margin-top:48px;padding-top:24px;border-top:1px solid #e8d4d8;"><p style="font-size:12px;color:#888;line-height:1.6;">The Parlor Magazine · <a href="https://www.theparlormagazine.com" style="color:#888;">theparlormagazine.com</a></p></div></div>'
+const WELCOME_BODY_HTML = '<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;padding:40px 20px;color:#0a0a0a;"><div style="margin-bottom:32px;"><img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png" width="48" height="48" style="border-radius:50%;" /></div><h1 style="font-size:28px;font-weight:700;margin-bottom:8px;line-height:1.2;">Welcome to The Parlor, {{name}}.</h1><p style="font-size:16px;line-height:1.7;color:#444;margin-bottom:24px;">We\'re glad you\'re here. The Parlor is a space for slow reading, critical thinking, and community — and you\'re now part of it.</p><p style="font-size:15px;line-height:1.7;color:#444;margin-bottom:32px;">Your account is ready. Head to your dashboard to explore the library, join the reading room, and see what\'s coming up.</p><a href="https://theparlormagazine.com/portal" style="display:inline-block;background:#0a0a0a;color:#ffffff;padding:13px 28px;font-family:Georgia,serif;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:0.02em;">Go to your dashboard →</a><div style="margin-top:48px;padding-top:24px;border-top:1px solid #e8d4d8;"><p style="font-size:12px;color:#888;line-height:1.6;">The Parlor Magazine · <a href="https://www.theparlormagazine.com" style="color:#888;">theparlormagazine.com</a></p></div></div>'
 
 const DEFAULT_TEMPLATES = [
   { id: 'welcome',     name: 'Welcome Email',             template_type: 'welcome',      subject: 'Welcome to The Parlor',           body_html: WELCOME_BODY_HTML },
@@ -277,27 +333,43 @@ export default function EmailsSection({ supabase }) {
       supabase.from('email_logs').select('*').order('sent_at', { ascending: false }).limit(100),
       supabase.from('email_settings').select('*').eq('id', 1).single(),
     ]).then(async ([tRes, aRes, lRes, sRes]) => {
-      // Templates: normalise body_html (fall back to body), sort welcome first
-      if (tRes.status === 'fulfilled' && !tRes.value.error) {
-        const rows = (tRes.value.data || []).map(r => ({
-          ...r,
-          body_html: r.body_html || r.body || '',
-        }))
-        if (rows.length === 0) {
-          // Table exists but empty — show defaults (SQL seed not yet run)
-          setTemplates(DEFAULT_TEMPLATES)
-        } else {
-          const sorted = [...rows].sort((a, b) => {
-            if (a.template_type === 'welcome') return -1
-            if (b.template_type === 'welcome') return 1
-            return new Date(b.last_edited_at) - new Date(a.last_edited_at)
-          })
-          setTemplates(sorted)
+      // Templates + automations are driven by the shared EMAIL_TYPES registry,
+      // overlaid with any DB overrides (email_templates) / toggle state
+      // (email_automations). Every system email shows here.
+      const tplRows = (tRes.status === 'fulfilled' && !tRes.value.error) ? (tRes.value.data || []) : []
+      const tplMap = {}
+      for (const r of tplRows) tplMap[r.template_type] = r
+      setTemplates(EMAIL_TYPES.map(t => {
+        const r = tplMap[t.type]
+        return {
+          id: r?.id || t.type,
+          template_type: t.type,
+          name: t.name,
+          vars: t.vars,
+          critical: t.critical,
+          subject: r?.subject || '',
+          body_html: r?.body_html || r?.body || '',
+          last_edited_at: r?.last_edited_at || null,
+          created_at: r?.created_at || null,
+          hasOverride: !!(r?.body_html || r?.body),
         }
-      } else {
-        setTemplates(DEFAULT_TEMPLATES)
-      }
-      setAutomations(aRes.status === 'fulfilled' && aRes.value.data?.length ? aRes.value.data : DEFAULT_AUTOMATIONS)
+      }))
+
+      const autoRows = (aRes.status === 'fulfilled' && aRes.value.data) ? aRes.value.data : []
+      const autoMap = {}
+      for (const r of autoRows) autoMap[r.id] = r
+      setAutomations(EMAIL_TYPES.map(t => {
+        const r = autoMap[t.type]
+        return {
+          id: t.type,
+          name: t.name,
+          trigger: t.trigger,
+          critical: t.critical,
+          enabled: t.critical ? true : (r ? r.enabled !== false : t.defaultEnabled),
+          sent_count: r?.sent_count || 0,
+          last_sent_at: r?.last_sent_at || null,
+        }
+      }))
       setSentLog(lRes.status === 'fulfilled' ? (lRes.value.data || []) : [])
       if (sRes.status === 'fulfilled' && sRes.value.data) setSettings(sRes.value.data)
       setLoading(false)
@@ -306,26 +378,32 @@ export default function EmailsSection({ supabase }) {
 
   async function saveTemplate(updated) {
     const now = new Date().toISOString()
+    // Overrides are keyed by template_type (matches lib/emailTypes.js).
     const payload = {
-      ...updated,
+      template_type: updated.template_type,
+      name: updated.name,
+      subject: updated.subject || '',
       body_html: updated.body_html || '',
       body: updated.body_html || updated.body || '',
       last_edited_at: now,
       created_at: updated.created_at || now,
     }
-    const { error } = await supabase.from('email_templates').upsert(payload)
+    const { data, error } = await supabase
+      .from('email_templates')
+      .upsert(payload, { onConflict: 'template_type' })
+      .select().single()
     if (!error) {
-      setTemplates(prev => {
-        const exists = prev.find(t => t.id === updated.id)
-        return exists ? prev.map(t => t.id === updated.id ? { ...t, ...payload } : t) : [payload, ...prev]
-      })
+      const saved = data || payload
+      setTemplates(prev => prev.map(t => t.template_type === updated.template_type
+        ? { ...t, ...saved, hasOverride: !!(saved.body_html || saved.body) } : t))
     }
     setEditing(null)
   }
 
-  async function toggleAutomation(id, enabled) {
+  async function toggleAutomation(id, enabled, critical) {
+    if (critical) return   // password reset / payment receipts always send
     setAutomations(prev => prev.map(a => a.id === id ? { ...a, enabled } : a))
-    await supabase.from('email_automations').upsert({ id, enabled })
+    await supabase.from('email_automations').upsert({ id, enabled, updated_at: new Date().toISOString() })
   }
 
   async function saveSettings() {
@@ -349,6 +427,7 @@ export default function EmailsSection({ supabase }) {
           footer={settings.footer_text}
           onSave={saveTemplate}
           onClose={() => setEditing(null)}
+          supabase={supabase}
         />
       )}
 
@@ -361,7 +440,7 @@ export default function EmailsSection({ supabase }) {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid #e8e8e8', marginBottom: '24px', overflowX: 'auto' }}>
-          {[['campaigns','Campaigns'],['templates','Templates'],['segments','Segments'],['import','Import'],['automations','Automations'],['sent','Sent'],['settings','Settings']].map(([key, label]) => (
+          {[['campaigns','Campaigns'],['newsletter','Newsletter'],['templates','Templates'],['segments','Segments'],['import','Import'],['automations','Automations'],['sent','Sent'],['settings','Settings']].map(([key, label]) => (
             <button key={key} onClick={() => setTab(key)} style={{ padding: '10px 18px', border: 'none', background: 'none', cursor: 'pointer', fontFamily: ff, fontSize: '13px', color: tab === key ? DP : '#888', borderBottom: tab === key ? `2px solid ${DP}` : '2px solid transparent', marginBottom: '-1px', transition: 'color 0.12s', whiteSpace: 'nowrap' }}>
               {label}
             </button>
@@ -369,6 +448,7 @@ export default function EmailsSection({ supabase }) {
         </div>
 
         {tab === 'campaigns'   && <CampaignsTab supabase={supabase} />}
+        {tab === 'newsletter'  && <NewsletterTab supabase={supabase} />}
         {tab === 'segments'    && <SegmentsTab  supabase={supabase} />}
         {tab === 'import'      && <ImportTab    supabase={supabase} />}
 
@@ -406,10 +486,12 @@ export default function EmailsSection({ supabase }) {
                           </div>
                         </td>
                         <td style={{ ...tdStyle, fontSize: '12px', color: '#888', maxWidth: '260px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {t.subject || <span style={{ fontStyle: 'italic', color: '#ccc' }}>No subject</span>}
+                          {t.subject || <span style={{ fontStyle: 'italic', color: '#ccc' }}>Built-in subject</span>}
                         </td>
                         <td style={{ ...tdStyle, fontSize: '12px', color: '#aaa' }}>
-                          {t.last_edited_at ? new Date(t.last_edited_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                          {t.hasOverride
+                            ? (t.last_edited_at ? new Date(t.last_edited_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Customized')
+                            : <span style={{ color: '#bbb' }}>Built-in design</span>}
                         </td>
                         <td style={{ ...tdStyle, textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
@@ -433,18 +515,21 @@ export default function EmailsSection({ supabase }) {
               <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#ccc', fontFamily: ff, fontStyle: 'italic' }}>Loading…</div>
             ) : automations.map((a, i) => (
               <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px', borderBottom: i === automations.length - 1 ? 'none' : '1px solid #f5f5f5' }}>
-                {/* Toggle */}
-                <button type="button" onClick={() => toggleAutomation(a.id, !a.enabled)} style={{ width: '36px', height: '20px', borderRadius: '10px', border: 'none', cursor: 'pointer', padding: 0, background: a.enabled ? PINK : '#e0e0e0', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                {/* Toggle (critical emails are locked on) */}
+                <button type="button" onClick={() => toggleAutomation(a.id, !a.enabled, a.critical)} title={a.critical ? 'Required — always sends' : (a.enabled ? 'On' : 'Off')} style={{ width: '36px', height: '20px', borderRadius: '10px', border: 'none', cursor: a.critical ? 'default' : 'pointer', padding: 0, background: a.enabled ? PINK : '#e0e0e0', position: 'relative', transition: 'background 0.2s', flexShrink: 0, opacity: a.critical ? 0.75 : 1 }}>
                   <span style={{ position: 'absolute', top: '2px', left: a.enabled ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: a.enabled ? DP : '#aaa', transition: 'left 0.18s' }} />
                 </button>
                 {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '13px', fontWeight: '500', color: '#0a0a0a', fontFamily: ff }}>{a.name}</div>
+                  <div style={{ fontSize: '13px', fontWeight: '500', color: '#0a0a0a', fontFamily: ff, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {a.name}
+                    {a.critical && <span style={{ padding: '1px 7px', background: 'rgba(196,54,74,0.1)', color: DP, borderRadius: '3px', fontSize: '9.5px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Required</span>}
+                  </div>
                   <div style={{ fontSize: '12px', color: '#aaa', marginTop: '2px', fontFamily: ff }}>Trigger: {a.trigger}</div>
                 </div>
-                {/* Template */}
+                {/* Template link */}
                 <div style={{ fontSize: '12px', color: '#888', fontFamily: ff, flexShrink: 0 }}>
-                  {a.template ? <span style={{ padding: '2px 8px', background: '#f5f5f5', borderRadius: '4px' }}>Template: {a.template}</span> : <span style={{ color: '#ccc', fontStyle: 'italic' }}>System default</span>}
+                  <button onClick={() => { setTab('templates') }} style={{ padding: '2px 8px', background: '#f5f5f5', borderRadius: '4px', border: 'none', color: '#888', fontSize: '12px', fontFamily: ff, cursor: 'pointer' }}>Edit template</button>
                 </div>
                 {/* Stats */}
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>

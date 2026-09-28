@@ -11,11 +11,11 @@ const ABOUT_LINKS = [
 ]
 
 export default function SiteHeader({ hideOnScroll = false, activeCategory = null }) {
-  const [aboutOpen, setAboutOpen] = useState(false)
   const [memberOpen, setMemberOpen] = useState(false)
   const [member, setMember] = useState(null)
   const [hidden, setHidden] = useState(false)
-  const aboutRef = useRef(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [issuesList, setIssuesList] = useState([])
   const memberRef = useRef(null)
   const lastScrollY = useRef(0)
   const supabase = createClient()
@@ -30,9 +30,35 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
     loadMember()
   }, [])
 
+  // Issues for the hamburger drawer (newest first).
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('issues')
+        .select('id, title, number, publication_date')
+        .order('number', { ascending: false, nullsFirst: false })
+        .order('publication_date', { ascending: false })
+      if (data) setIssuesList(data.map(iss => ({
+        id: iss.id,
+        title: iss.title || 'Untitled issue',
+        number: iss.number,
+        href: /borderlands/i.test(iss.title || '') ? '/borderlands-of-identity' : `/issue/${iss.id}`,
+      })))
+    })()
+  }, [])
+
+  // Esc closes the drawer; lock scroll while open.
+  useEffect(() => {
+    if (!drawerOpen) return
+    const onKey = e => { if (e.key === 'Escape') setDrawerOpen(false) }
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
+  }, [drawerOpen])
+
   useEffect(() => {
     function handleClick(e) {
-      if (aboutRef.current && !aboutRef.current.contains(e.target)) setAboutOpen(false)
       if (memberRef.current && !memberRef.current.contains(e.target)) setMemberOpen(false)
     }
     document.addEventListener('mousedown', handleClick)
@@ -204,26 +230,39 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
           .header-bottom { gap: 20px; padding: 10px 20px; overflow-x: auto; }
           .header-section-link { font-size: 12px; white-space: nowrap; }
         }
+        /* Hamburger + slide-out drawer (matches the homepage) */
+        .hamburger-btn { display: inline-flex; flex-direction: column; justify-content: center; gap: 5px; width: 30px; height: 26px; padding: 0; background: none; border: none; cursor: pointer; }
+        .hamburger-btn span { display: block; height: 2px; width: 100%; background: #1a1a1a; border-radius: 2px; transition: background 0.15s; }
+        .hamburger-btn:hover span { background: #7a2531; }
+        .nav-drawer-backdrop { position: fixed; inset: 0; z-index: 10000; background: rgba(10,10,10,0.5); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+        .nav-drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+        .nav-drawer { position: fixed; top: 0; left: 0; bottom: 0; z-index: 10001; width: min(360px, 84vw); background: #faf5ef; box-shadow: 4px 0 40px rgba(0,0,0,0.22); transform: translateX(-100%); transition: transform 0.3s cubic-bezier(.4,0,.2,1); display: flex; flex-direction: column; overflow-y: auto; }
+        .nav-drawer.open { transform: translateX(0); }
+        .nav-drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 22px 26px 18px; border-bottom: 1px solid #ece2d6; }
+        .nav-drawer-brand { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 22px; color: #7a2531; }
+        .nav-drawer-close { background: none; border: none; font-size: 30px; line-height: 1; color: #8a7a70; cursor: pointer; padding: 0 4px; }
+        .nav-drawer-close:hover { color: #1a1a1a; }
+        .nav-drawer-section { padding: 22px 26px; border-bottom: 1px solid #ece2d6; }
+        .nav-drawer-label { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: #a8968a; margin-bottom: 14px; }
+        .nav-drawer-item { display: block; padding: 9px 0; text-decoration: none; }
+        .nav-drawer-num { display: block; font-family: 'Source Serif 4', Georgia, serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #c47080; margin-bottom: 2px; }
+        .nav-drawer-title { display: block; font-family: 'Playfair Display', Georgia, serif; font-size: 20px; color: #1a1a1a; line-height: 1.2; transition: color 0.15s; }
+        .nav-drawer-item:hover .nav-drawer-title { color: #7a2531; }
+        .nav-drawer-empty { font-family: 'Source Serif 4', Georgia, serif; font-size: 14px; font-style: italic; color: #b0a196; }
       `}</style>
 
       <header className={`site-header${hidden ? ' site-header-hidden' : ''}`}>
         <div className="header-top">
 
           <div className="header-side">
-            <div className="about-wrap" ref={aboutRef}>
-              <button
-                className={`about-trigger${aboutOpen ? ' open' : ''}`}
-                onClick={() => setAboutOpen(o => !o)}
-              >
-                About
-              </button>
-              <div className={`about-dropdown${aboutOpen ? ' open' : ''}`}>
-                {ABOUT_LINKS.map(l => (
-                  <a key={l.label} href={l.href}>{l.label}</a>
-                ))}
-              </div>
-            </div>
-            <a href="/shop" className="header-text-link">Shop</a>
+            <button
+              className="hamburger-btn"
+              aria-label="Open menu"
+              aria-expanded={drawerOpen}
+              onClick={() => setDrawerOpen(true)}
+            >
+              <span></span><span></span><span></span>
+            </button>
           </div>
 
           <a href="/" className="logo-wrap">
@@ -245,7 +284,7 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
               <div className={`member-dropdown${memberOpen ? ' open' : ''}`}>
                 {member ? (
                   <>
-                    <a href="/dashboard" className="member-dropdown-item">
+                    <a href="/portal" className="member-dropdown-item">
                       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="5" height="5" rx="0.5"/><rect x="9" y="2" width="5" height="5" rx="0.5"/><rect x="2" y="9" width="5" height="5" rx="0.5"/><rect x="9" y="9" width="5" height="5" rx="0.5"/></svg>
                       Member Portal
                     </a>
@@ -314,6 +353,46 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
           })}
         </nav>
       </header>
+
+      {/* Slide-out drawer */}
+      <div className={`nav-drawer-backdrop${drawerOpen ? ' open' : ''}`} onClick={() => setDrawerOpen(false)} />
+      <aside className={`nav-drawer${drawerOpen ? ' open' : ''}`} aria-hidden={!drawerOpen}>
+        <div className="nav-drawer-head">
+          <span className="nav-drawer-brand">The Parlor</span>
+          <button className="nav-drawer-close" aria-label="Close menu" onClick={() => setDrawerOpen(false)}>&times;</button>
+        </div>
+
+        <div className="nav-drawer-section">
+          <a href="/shop" className="nav-drawer-item"><span className="nav-drawer-title">Shop</span></a>
+          {ABOUT_LINKS.map(l => (
+            <a key={l.label} href={l.href} className="nav-drawer-item"><span className="nav-drawer-title">{l.label}</span></a>
+          ))}
+        </div>
+
+        <div className="nav-drawer-section">
+          <div className="nav-drawer-label">Issues</div>
+          {issuesList.length === 0 ? (
+            <div className="nav-drawer-empty">No issues yet.</div>
+          ) : (
+            issuesList.map(iss => (
+              <a key={iss.id} href={iss.href} className="nav-drawer-item">
+                <span className="nav-drawer-num">{iss.number ? `Issue ${String(iss.number).padStart(2, '0')}` : 'Inaugural Issue'}</span>
+                <span className="nav-drawer-title">{iss.title}</span>
+              </a>
+            ))
+          )}
+        </div>
+
+        <div className="nav-drawer-section">
+          <div className="nav-drawer-label">Books</div>
+          <div className="nav-drawer-empty">Coming soon.</div>
+        </div>
+
+        <div className="nav-drawer-section">
+          <div className="nav-drawer-label">Games</div>
+          <div className="nav-drawer-empty">Coming soon.</div>
+        </div>
+      </aside>
     </>
   )
 }

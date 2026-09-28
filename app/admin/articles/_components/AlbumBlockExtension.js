@@ -4,6 +4,7 @@ import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../../../lib/supabase'
+import { prepareImageUpload } from '../../../../lib/uploadImage'
 import ImageEditor from '../../_components/ImageEditor'
 
 // ── Editor NodeView ───────────────────────────────────────────
@@ -204,9 +205,9 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
     if (!imageFiles.length) return
     setUploading(true)
     await Promise.all(imageFiles.map(async file => {
-      const ext = file.name.split('.').pop()
+      const { file: up, ext, contentType } = await prepareImageUpload(file)
       const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      await supabase.storage.from('Media').upload(path, file, { cacheControl: '3600', contentType: file.type })
+      await supabase.storage.from('Media').upload(path, up, { cacheControl: '31536000', contentType })
     }))
     setUploading(false)
     loadFiles()

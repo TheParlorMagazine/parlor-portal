@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import PublicAudioPlayer from './PublicAudioPlayer'
 import PublicVideoEmbed from './PublicVideoEmbed'
 import UnlockPending from './UnlockPending'
+import { DISCLAIMER_TEXT, HOW_MEMBER_POSTS_WORK_HREF } from '../../../../lib/memberPosts'
 
 const PROSE_STYLES = `
   .parlor-prose {
@@ -459,96 +460,6 @@ function truncateHtmlAtParagraphs(html, maxParagraphs) {
   return parts.slice(0, maxParagraphs).join('</p>') + '</p>'
 }
 
-function ArticlePaywallOverlay({ paywallType, price, stripePriceId, articleId, userId, pagePath }) {
-  async function handleUnlock() {
-    if (!stripePriceId || !articleId) {
-      window.location.href = '/plans'
-      return
-    }
-    try {
-      const res = await fetch('/api/create-paywall-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stripePriceId,
-          articleId,
-          itemType: 'article',
-          userId: userId || undefined,
-          successUrl: window.location.href + '?unlocked=1',
-          cancelUrl: window.location.href,
-        }),
-      })
-      const data = await res.json()
-      if (data.url) window.location.href = data.url
-    } catch {
-      window.location.href = '/plans'
-    }
-  }
-
-  return (
-    <div style={{ position: 'relative', marginTop: '-80px', zIndex: 2 }}>
-      {/* Fade gradient */}
-      <div style={{
-        height: '120px', marginBottom: '-1px',
-        background: 'linear-gradient(to bottom, transparent, #fff)',
-        pointerEvents: 'none',
-      }} />
-      {/* Paywall card */}
-      <div style={{
-        background: '#fff', padding: '36px 32px', textAlign: 'center',
-        borderTop: '1px solid #f0e8e0',
-        fontFamily: "'Source Serif 4', Georgia, serif",
-      }}>
-        <div style={{
-          width: '40px', height: '40px', borderRadius: '50%', background: '#fdf0f3',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
-        }}>
-          <svg width="18" height="18" viewBox="0 0 14 14" fill="none">
-            <rect x="2" y="7" width="10" height="7" rx="1.5" fill="#c4364a" />
-            <path d="M4 7V5a3 3 0 016 0v2" stroke="#c4364a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          </svg>
-        </div>
-        <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: '700', color: '#0a0a0a', margin: '0 0 10px', letterSpacing: '-0.01em' }}>
-          {paywallType === 'members' ? 'This article is for members' : 'Continue reading'}
-        </h3>
-        <p style={{ fontSize: '16px', color: '#777', margin: '0 0 24px', lineHeight: '1.55', maxWidth: '380px', marginLeft: 'auto', marginRight: 'auto' }}>
-          {paywallType === 'members'
-            ? 'Become a member to read this article and everything else in The Parlor.'
-            : 'Get a membership for unlimited access, or unlock just this piece.'}
-        </p>
-
-        <a
-          href={`/plans${pagePath ? `?returnTo=${encodeURIComponent(pagePath)}` : ''}`}
-          style={{
-            display: 'inline-block', padding: '13px 28px', background: '#0a0a0a',
-            borderRadius: '6px', color: '#fff', fontWeight: '600', fontSize: '15px',
-            textDecoration: 'none', marginBottom: paywallType === 'paywall' ? '12px' : 0,
-          }}
-        >
-          Become a member — from $10/mo
-        </a>
-
-        {paywallType === 'paywall' && price && (
-          <>
-            <div style={{ fontSize: '13px', color: '#ccc', margin: '12px 0' }}>or</div>
-            <button
-              onClick={handleUnlock}
-              style={{
-                display: 'inline-block', padding: '12px 28px', background: 'transparent',
-                border: '1px solid #0a0a0a', borderRadius: '6px', color: '#0a0a0a',
-                fontWeight: '600', fontSize: '15px', cursor: 'pointer',
-                fontFamily: "'Source Serif 4', Georgia, serif",
-              }}
-            >
-              Unlock this article — ${parseFloat(price).toFixed(2)}
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
-
 export default function ArticleBody({
   segments,
   articleId,
@@ -574,32 +485,9 @@ export default function ArticleBody({
     return <UnlockPending />
   }
 
-  // Collect all HTML segments to find the truncation point
-  const htmlSegments = segments.filter(s => s.kind === 'html')
-  const fullHtml = htmlSegments.map(s => s.content).join('\n')
-  const truncatedHtml = isGated ? truncateHtmlAtParagraphs(fullHtml, 3) : null
-
-  // In gated mode, show only truncated html (no audio/video blocks)
-  if (isGated) {
-    return (
-      <>
-        <style>{PROSE_STYLES}</style>
-        <div
-          className={`parlor-prose${dropCap ? ' parlor-dropcap' : ''}`}
-          dangerouslySetInnerHTML={{ __html: processImageCaptions(truncatedHtml) }}
-        />
-        <ArticlePaywallOverlay
-          paywallType={paywallType}
-          price={paywallPrice}
-          stripePriceId={stripePriceId}
-          articleId={articleId}
-          userId={userId}
-          pagePath={pagePath}
-        />
-      </>
-    )
-  }
-
+  // The full article renders even when gated — the membership paywall is a
+  // timed pop-up (ArticlePaywallPopup) that covers the page and locks scroll,
+  // so the body is never visibly cut off.
   return (
     <>
       <style>{PROSE_STYLES}</style>
@@ -671,6 +559,19 @@ export default function ArticleBody({
           try { images = JSON.parse(seg.attrs['data-images'] || '[]') } catch {}
           if (!images.length) return null
           return <AlbumRenderer key={i} layout={seg.attrs['data-layout'] || 'grid-2'} images={images} />
+        }
+
+        if (seg.kind === 'disclaimer-block') {
+          const text = seg.attrs['data-text'] || DISCLAIMER_TEXT
+          return (
+            <div key={i} style={{ margin: '28px 0', border: '1px solid #e8d4d8', borderLeft: '3px solid #c4364a', background: '#fbeef1', borderRadius: 8, padding: '16px 20px' }}>
+              <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c4364a', fontWeight: 700, marginBottom: 6 }}>Member post</div>
+              <div style={{ fontSize: 15, lineHeight: 1.6, color: '#5a3a40' }}>
+                {text}{' '}
+                <a href={HOW_MEMBER_POSTS_WORK_HREF} style={{ color: '#c4364a', textDecoration: 'underline' }}>How member posts work →</a>
+              </div>
+            </div>
+          )
         }
 
         return null

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../../../lib/supabase'
+import { prepareImageUpload, isDuplicateUpload } from '../../../../lib/uploadImage'
 import ImageEditor from '../../_components/ImageEditor'
 
 const FOLDERS = ['body', 'covers', 'authors']
@@ -15,6 +16,7 @@ const menuBtnStyle = {
 
 export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = 'body' }) {
   const supabase = createClient()
+  const dedupeRef = useRef(null)
   const [folder, setFolder]       = useState(defaultFolder)
   const [files, setFiles]         = useState([])
   const [loading, setLoading]     = useState(true)
@@ -45,10 +47,11 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
 
   async function handleUpload(e) {
     const file = e.target.files?.[0]; if (!file) return
+    if (isDuplicateUpload(dedupeRef, file)) { e.target.value = ''; return }
     setUploading(true)
-    const ext = file.name.split('.').pop()
+    const { file: up, ext, contentType } = await prepareImageUpload(file)
     const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    await supabase.storage.from('Media').upload(path, file, { cacheControl: '3600', contentType: file.type })
+    await supabase.storage.from('Media').upload(path, up, { cacheControl: '31536000', contentType })
     await loadFiles(); setUploading(false); e.target.value = ''
   }
 
@@ -56,10 +59,11 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
     e.preventDefault(); setDragOver(false)
     const file = Array.from(e.dataTransfer.files || []).find(f => f.type.startsWith('image/'))
     if (!file) return
+    if (isDuplicateUpload(dedupeRef, file)) return
     setUploading(true)
-    const ext = file.name.split('.').pop()
+    const { file: up, ext, contentType } = await prepareImageUpload(file)
     const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    await supabase.storage.from('Media').upload(path, file, { cacheControl: '3600', contentType: file.type })
+    await supabase.storage.from('Media').upload(path, up, { cacheControl: '31536000', contentType })
     await loadFiles(); setUploading(false)
   }
 

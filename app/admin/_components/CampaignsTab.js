@@ -48,7 +48,7 @@ function BodyEditor({ content, onChange }) {
   if (!editor) return null
 
   const btn = (label, active, fn, children) => (
-    <button type="button" title={label} onMouseDown={e => { e.preventDefault(); fn() }}
+    <button key={label} type="button" title={label} onMouseDown={e => { e.preventDefault(); fn() }}
       style={{ padding: '4px 6px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: active ? 'rgba(196,54,74,0.1)' : 'transparent', color: active ? DP : '#666', display: 'inline-flex', alignItems: 'center' }}>
       {children}
     </button>
@@ -195,7 +195,7 @@ export default function CampaignsTab({ supabase }) {
 
   useEffect(() => {
     Promise.allSettled([
-      supabase.from('email_campaigns').select('*').order('created_at', { ascending: false }),
+      supabase.from('email_campaigns').select('*').or('kind.is.null,kind.neq.newsletter').order('created_at', { ascending: false }),
       supabase.from('email_segments').select('id,name,member_count').order('name'),
     ]).then(([cRes, sRes]) => {
       setCampaigns(cRes.status === 'fulfilled' ? (cRes.value.data || []) : [])
@@ -262,7 +262,7 @@ export default function CampaignsTab({ supabase }) {
       )}
 
       <div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '14px' }}>
           <button onClick={() => setBuilding({})} style={{ padding: '8px 18px', background: PINK, border: 'none', borderRadius: '7px', color: '#0a0a0a', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: ff }}>
             + New Campaign
           </button>

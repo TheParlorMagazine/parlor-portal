@@ -11,6 +11,8 @@ import SiteHeader from '../../_components/SiteHeader'
 import SiteFooter from '../../_components/SiteFooter'
 import ScrollToTop from '../../_components/ScrollToTop'
 import SubscribeWall from './_components/SubscribeWall'
+import ArticlePaywallPopup from './_components/ArticlePaywallPopup'
+import CommentsSection from './_components/CommentsSection'
 
 const db = createClient()
 
@@ -32,7 +34,7 @@ function parseHtmlAttrs(str) {
 function parseBodySegments(html) {
   if (!html) return []
   const segments = []
-  const pat = /<div\s+data-type="(audio-block|video-block|embed-block|album-block)"([^>]*)>\s*<\/div>/gi
+  const pat = /<div\s+data-type="(audio-block|video-block|embed-block|album-block|disclaimer-block)"([^>]*)>\s*<\/div>/gi
   let last = 0
   let m
   while ((m = pat.exec(html)) !== null) {
@@ -239,6 +241,15 @@ export default async function ArticlePage({ params, searchParams }) {
 
         {/* Article header */}
         <div style={{ maxWidth: '720px', margin: '0 auto', padding: isVol2 ? '8px 24px 0' : '56px 24px 0' }}>
+          {(article.is_community || article.media_type === 'member_post') && (
+            <div style={{
+              display: 'inline-block', fontFamily: "'Source Serif 4', Georgia, serif",
+              fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600,
+              color: '#c4364a', background: '#fbeaee', borderRadius: '20px', padding: '4px 12px', marginBottom: '16px',
+            }}>
+              {article.media_type === 'member_post' ? 'Member post' : 'From the community'}
+            </div>
+          )}
           {!isVol2 && (
             <h1 style={{
               fontFamily: "'Playfair Display', Georgia, serif",
@@ -291,6 +302,7 @@ export default async function ArticlePage({ params, searchParams }) {
                       {article.author_name}
                     </a>
                   ) : article.author_name}
+                  {article.media_type === 'member_post' && <span style={{ color: '#8a6b72' }}> · Parlor member</span>}
                 </div>
               )}
               {publishedDate && (
@@ -329,8 +341,21 @@ export default async function ArticlePage({ params, searchParams }) {
           </div>
         )}
 
-        {/* Subscribe wall — only for guests */}
-        {!userId && <SubscribeWall />}
+        {/* Gated articles (paywall/members) show the membership paywall pop-up to
+            anyone without access — guests AND logged-in non-members. Free articles
+            show the newsletter capture to guests only. */}
+        {(article.paywall_type === 'paywall' || article.paywall_type === 'members')
+          ? (!articleHasAccess && (
+              <ArticlePaywallPopup
+                paywallType={article.paywall_type}
+                price={article.paywall_price}
+                stripePriceId={article.stripe_price_id}
+                articleId={article.id}
+                userId={userId}
+                pagePath={`/post/${article.slug}`}
+              />
+            ))
+          : (!userId && <SubscribeWall />)}
 
         {/* Article body */}
         <div style={{ maxWidth: '720px', margin: '0 auto', padding: '0 24px 80px' }}>
@@ -404,6 +429,12 @@ export default async function ArticlePage({ params, searchParams }) {
             </div>
           </div>
         )}
+
+        {/* Comments — public to read, subscriber-only to post. Sits directly below
+            the author bio, above "More from The Parlor". */}
+        <div style={{ borderBottom: '1px solid #f0e8e0', marginBottom: '64px', paddingBottom: '8px' }}>
+          <CommentsSection articleId={article.id} articleSlug={article.slug} userId={userId} />
+        </div>
 
         {/* Related articles */}
         {related.length > 0 && (

@@ -3,10 +3,12 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, forwardRef } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '../../../../lib/supabase'
+import { prepareImageUpload, isDuplicateUpload } from '../../../../lib/uploadImage'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import MediaLibraryModal from './MediaLibraryModal'
+import { hasDisclaimerBlock, withDisclaimer } from '../../../../lib/memberPosts'
 
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), {
   ssr: false,
@@ -37,6 +39,7 @@ const ARTICLE_CATEGORIES = [
   'Investigation',
   'Review',
   'Profile',
+  'Community',
 ]
 
 function slugify(str) {
@@ -70,7 +73,8 @@ function initForm(data) {
     cover_image_url: '',
     author_id: null,
     author_name: '', author_photo_url: '', author_profile_url: '', author_bio: '',
-    vertical: '', article_category: '', tags: '',
+    vertical: '', article_category: '', theme: '', tags: '',
+    in_library: true, editor_note: '', discussion_prompt: '',
     issue_id: null,
     section_id: null,
     body: '',
@@ -94,6 +98,10 @@ function initForm(data) {
     tags: Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || ''),
     vertical: data.category || '',
     article_category: data.article_category || '',
+    theme: data.theme || '',
+    in_library: !!data.in_library,
+    editor_note: data.editor_note || '',
+    discussion_prompt: data.discussion_prompt || '',
     issue_id: data.issue_id || null,
     section_id: data.section_id || null,
     template: data.template || 'standard',
@@ -103,6 +111,9 @@ function initForm(data) {
     cover_image_alt: data.cover_image_alt || '',
     cover_image_caption: data.cover_image_caption || '',
     scheduled_at: data.scheduled_at || null,
+    media_type: data.media_type || 'editorial',
+    source_member_post_id: data.source_member_post_id || null,
+    author_approved_at: data.author_approved_at || null,
     date_published: data.date_published
       ? new Date(data.date_published).toISOString().slice(0, 10)
       : null,
@@ -123,6 +134,10 @@ function buildPayload(form, overrides = {}) {
     author_bio: form.author_bio || null,
     category: form.vertical || null,
     article_category: form.article_category || null,
+    theme: form.theme || null,
+    in_library: !!form.in_library,
+    editor_note: form.editor_note || null,
+    discussion_prompt: form.discussion_prompt || null,
     tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
     issue_id: form.issue_id || null,
     section_id: form.section_id || null,
@@ -146,6 +161,9 @@ function buildPayload(form, overrides = {}) {
     cover_image_alt: form.cover_image_alt || null,
     cover_image_caption: form.cover_image_caption || null,
     scheduled_at: form.scheduled_at || null,
+    media_type: form.media_type || 'editorial',
+    source_member_post_id: form.source_member_post_id || null,
+    author_approved_at: form.author_approved_at || null,
     date_published: form.date_published ? new Date(form.date_published).toISOString() : null,
     ...overrides,
   }
@@ -214,6 +232,68 @@ const sideInput = {
   fontFamily: "'Source Serif 4', Georgia, serif",
   outline: 'none',
   boxSizing: 'border-box',
+}
+
+// Select styled to match the dark side panel, with a custom chevron so it reads
+// as a dropdown (the native arrow is hidden via appearance:none).
+const sideSelect = {
+  ...sideInput,
+  appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', cursor: 'pointer',
+  paddingRight: '30px',
+  backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'right 11px center',
+  backgroundSize: '10px 6px',
+}
+
+// Custom dark dropdown — replaces native <select> so the OPEN menu matches the
+// admin theme. `options` is a list of strings; `action` adds a footer item
+// (e.g. "+ Add a theme…").
+function DarkSelect({ value, onChange, options, noneLabel = 'Select…', action }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    function onDoc(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    function onEsc(e) { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onEsc)
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onEsc) }
+  }, [open])
+
+  const item = (selected) => ({
+    width: '100%', textAlign: 'left', background: selected ? 'rgba(242,184,198,0.14)' : 'none',
+    border: 'none', color: '#ddd', padding: '8px 10px', borderRadius: 6, fontSize: 13, cursor: 'pointer',
+    fontFamily: "'Source Serif 4', Georgia, serif", display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+  })
+  const all = value && !options.includes(value) ? [value, ...options] : options
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button type="button" onClick={() => setOpen(o => !o)}
+        style={{ ...sideSelect, backgroundImage: 'none', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: value ? '#e0e0e0' : '#777' }}>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value || noneLabel}</span>
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ flexShrink: 0, marginLeft: 8, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.12s' }}><path d="M1 1l4 4 4-4" stroke="#999" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 200, background: '#1c1c1c', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, boxShadow: '0 14px 36px rgba(0,0,0,0.55)', maxHeight: 264, overflowY: 'auto', padding: 4 }}>
+          <button type="button" onClick={() => { onChange(''); setOpen(false) }} style={{ ...item(!value), color: '#999' }}>{noneLabel}</button>
+          {all.map(opt => (
+            <button key={opt} type="button" onClick={() => { onChange(opt); setOpen(false) }} style={item(opt === value)}>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opt}</span>
+              {opt === value && <span style={{ color: '#f2b8c6' }}>✓</span>}
+            </button>
+          ))}
+          {action && (
+            <>
+              <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '4px 6px' }} />
+              <button type="button" onClick={() => { setOpen(false); action.onClick() }} style={{ ...item(false), color: '#f2b8c6' }}>{action.label}</button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function SideInput({ label, value, onChange, placeholder, type = 'text' }) {
@@ -491,6 +571,7 @@ function CoverImagePicker({ value, onChange, folder = 'covers', addLabel = '+ Ad
   const [dragOver, setDragOver] = useState(false)
   const fileRef = useRef(null)
   const menuRef = useRef(null)
+  const dedupeRef = useRef(null)
 
   useEffect(() => {
     function handler(e) {
@@ -508,12 +589,13 @@ function CoverImagePicker({ value, onChange, folder = 'covers', addLabel = '+ Ad
 
   async function uploadFile(file) {
     if (!file || !file.type.startsWith('image/')) return
+    if (isDuplicateUpload(dedupeRef, file)) return
     setUploading(true)
     setOpen(false)
-    const ext = file.name.split('.').pop()
+    const { file: up, ext, contentType } = await prepareImageUpload(file)
     const storagePath = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error } = await supabase.storage.from('Media').upload(storagePath, file, {
-      cacheControl: '3600', contentType: file.type,
+    const { error } = await supabase.storage.from('Media').upload(storagePath, up, {
+      cacheControl: '31536000', contentType,
     })
     if (!error) {
       const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(storagePath)
@@ -698,14 +780,16 @@ function AddWriterModal({ supabase, onSave, onClose }) {
   const [dragging, setDragging] = useState(false)
   const [error, setError] = useState('')
   const photoFileRef = useRef(null)
+  const dedupeRef = useRef(null)
 
   async function uploadFile(file) {
     if (!file || !file.type.startsWith('image/')) return
+    if (isDuplicateUpload(dedupeRef, file)) return
     setUploading(true)
-    const ext = file.name.split('.').pop()
+    const { file: up, ext, contentType } = await prepareImageUpload(file)
     const filePath = `authors/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error: uploadError } = await supabase.storage.from('Media').upload(filePath, file, {
-      cacheControl: '3600', contentType: file.type,
+    const { error: uploadError } = await supabase.storage.from('Media').upload(filePath, up, {
+      cacheControl: '31536000', contentType,
     })
     if (!uploadError) {
       const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(filePath)
@@ -1556,7 +1640,50 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
     () => initialData?.stripe_product_id ? 'done' : ''
   )
   const [stripeError, setStripeError] = useState('')
+  const [libraryThemes, setLibraryThemes] = useState([])
   const saveDraftRef = useRef(null)
+
+  // Load the curated Library themes for the Theme dropdown.
+  useEffect(() => {
+    let cancelled = false
+    supabase
+      .from('library_themes')
+      .select('name')
+      .order('sort_order', { ascending: true })
+      .then(({ data }) => { if (!cancelled && data) setLibraryThemes(data.map(t => t.name)) })
+    return () => { cancelled = true }
+  }, [])
+
+  // Create a new Library theme inline from the Theme dropdown (styled modal).
+  const [showThemeModal, setShowThemeModal] = useState(false)
+  const [themeInput, setThemeInput] = useState('')
+  const [themeDesc, setThemeDesc] = useState('')
+  const [themeBusy, setThemeBusy] = useState(false)
+  const [themeError, setThemeError] = useState('')
+
+  function addTheme() { setThemeInput(''); setThemeDesc(''); setThemeError(''); setShowThemeModal(true) }
+
+  async function submitTheme() {
+    const name = themeInput.trim()
+    if (!name || themeBusy) return
+    setThemeBusy(true); setThemeError('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/admin/themes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ name, description: themeDesc.trim() }),
+      })
+      const d = await res.json()
+      if (res.ok && d.theme) {
+        setLibraryThemes(prev => prev.includes(d.theme.name) ? prev : [...prev, d.theme.name])
+        update('theme', d.theme.name)
+        setShowThemeModal(false)
+      } else {
+        setThemeError(d.error || 'Could not add theme')
+      }
+    } catch { setThemeError('Could not add theme') } finally { setThemeBusy(false) }
+  }
 
   const formRef = useRef(form)
   const savedIdRef = useRef(articleId)
@@ -1656,12 +1783,56 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
     await performSave({ published: false })
   }
 
+  const [approvalBusy, setApprovalBusy] = useState(false)
+  async function requestAuthorApproval() {
+    const id = savedIdRef.current
+    if (!id) { setSaveError('Save the article first.'); return }
+    setApprovalBusy(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/admin/request-author-approval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ article_id: id }),
+      })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); setSaveError(d.error || 'Could not notify author.') }
+      else setSaveError('')
+    } finally { setApprovalBusy(false) }
+  }
+
   async function handlePublish() {
+    const f = formRef.current
+    // Member posts have two hard gates before they can go live.
+    if (f.media_type === 'member_post') {
+      if (!hasDisclaimerBlock(f.body)) {
+        const fix = window.confirm('This member post is missing the required disclaimer block. Re-insert it now? (You’ll then need to click Publish again.)')
+        if (fix) { update('body', withDisclaimer(f.body)); await performSave({}) }
+        setSaveError('Member posts must include the disclaimer block before publishing.')
+        return
+      }
+      if (!f.author_approved_at) {
+        setSaveError('This member post can’t be published until the author approves the final version. Use “Request author approval” below.')
+        return
+      }
+    }
     // Set date_published to today if not already set
     const publishDate = form.date_published || new Date().toISOString().slice(0, 10)
     if (!form.date_published) update('date_published', publishDate)
     const ok = await performSave({ published: true, date_published: new Date(publishDate).toISOString() })
-    if (ok) setForm(prev => ({ ...prev, published: true, date_published: publishDate }))
+    if (ok) {
+      setForm(prev => ({ ...prev, published: true, date_published: publishDate }))
+      // Member post just went live → reveal the linked community post too.
+      if (f.media_type === 'member_post' && savedIdRef.current) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          await fetch('/api/admin/member-post-published', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+            body: JSON.stringify({ article_id: savedIdRef.current }),
+          })
+        } catch {}
+      }
+    }
   }
 
   saveDraftRef.current = handleSaveDraft
@@ -1974,6 +2145,28 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
         {/* ─── Sidebar (right) ───────────────────────────────── */}
         <aside style={{ width: '292px', flexShrink: 0, overflowY: 'auto', background: '#111', borderLeft: '1px solid #1c1c1c' }}>
 
+          {/* Member post — gating checklist */}
+          {form.media_type === 'member_post' && (
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid #1c1c1c', background: 'rgba(196,54,74,0.10)' }}>
+              <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#f2b8c6', fontWeight: 700, marginBottom: '8px' }}>Member post</div>
+              <div style={{ fontSize: '11.5px', color: '#999', lineHeight: 1.5, marginBottom: '10px' }}>Needs the disclaimer block and the author’s approval before it can publish. It won’t appear in the hero, featured slots, or print.</div>
+
+              <div style={{ fontSize: '12px', color: hasDisclaimerBlock(form.body) ? '#6ec99a' : '#e07070', marginBottom: '4px' }}>
+                {hasDisclaimerBlock(form.body) ? '✓ Disclaimer block present' : '✗ Disclaimer block missing'}
+              </div>
+              {!hasDisclaimerBlock(form.body) && (
+                <button onClick={async () => { update('body', withDisclaimer(formRef.current.body)); await performSave({}) }} style={{ background: 'none', border: '1px solid rgba(242,184,198,0.4)', color: '#f2b8c6', padding: '5px 12px', borderRadius: '6px', fontSize: '11.5px', cursor: 'pointer', fontFamily: "'Source Serif 4', Georgia, serif", marginBottom: '4px' }}>Re-insert disclaimer</button>
+              )}
+
+              <div style={{ fontSize: '12px', color: form.author_approved_at ? '#6ec99a' : '#e0b070', margin: '10px 0 4px' }}>
+                {form.author_approved_at ? `✓ Author approved` : '⧗ Awaiting author approval'}
+              </div>
+              {!form.author_approved_at && (
+                <button onClick={requestAuthorApproval} disabled={approvalBusy} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.15)', color: '#bbb', padding: '5px 12px', borderRadius: '6px', fontSize: '11.5px', cursor: 'pointer', fontFamily: "'Source Serif 4', Georgia, serif" }}>{approvalBusy ? 'Sending…' : 'Request author approval'}</button>
+              )}
+            </div>
+          )}
+
           {/* Status */}
           <SideSection title="Status">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -2203,19 +2396,62 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
           <SideSection title="Classification">
             <div style={{ marginBottom: '12px' }}>
               <SideLabel>Vertical</SideLabel>
-              <select value={form.vertical} onChange={e => update('vertical', e.target.value)} style={{ ...sideInput, appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer' }}>
-                <option value="">Select vertical</option>
-                {VERTICALS.map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
+              <DarkSelect value={form.vertical} onChange={v => update('vertical', v)} options={VERTICALS} noneLabel="Select vertical" />
             </div>
             <div style={{ marginBottom: '12px' }}>
               <SideLabel>Category</SideLabel>
-              <select value={form.article_category} onChange={e => update('article_category', e.target.value)} style={{ ...sideInput, appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer' }}>
-                <option value="">Select category</option>
-                {ARTICLE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <DarkSelect value={form.article_category} onChange={v => update('article_category', v)} options={ARTICLE_CATEGORIES} noneLabel="Select category" />
+            </div>
+            <div style={{ marginBottom: '12px' }}>
+              <SideLabel>Theme</SideLabel>
+              <DarkSelect value={form.theme} onChange={v => update('theme', v)} options={libraryThemes} noneLabel="No theme" action={{ label: '+ Add a theme…', onClick: addTheme }} />
+              {showThemeModal && (
+                <div onClick={() => setShowThemeModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                  <div onClick={e => e.stopPropagation()} style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 24, width: 380, maxWidth: '92vw', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+                    <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 19, fontWeight: 700, color: '#fff', marginBottom: 5 }}>New theme</div>
+                    <div style={{ fontSize: 12.5, color: '#888', marginBottom: 16, fontFamily: "'Source Serif 4', Georgia, serif" }}>Adds a Library theme, available on every article.</div>
+                    <input autoFocus value={themeInput}
+                      onChange={e => { setThemeInput(e.target.value); setThemeError('') }}
+                      onKeyDown={e => { if (e.key === 'Enter') submitTheme(); if (e.key === 'Escape') setShowThemeModal(false) }}
+                      placeholder="Theme name" style={{ ...sideInput, padding: '10px 12px', fontSize: 14 }} />
+                    <textarea value={themeDesc}
+                      onChange={e => setThemeDesc(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Escape') setShowThemeModal(false) }}
+                      placeholder="Description — shown on the Library theme page (optional)" rows={3}
+                      style={{ ...sideInput, padding: '10px 12px', fontSize: 14, marginTop: 10, resize: 'vertical' }} />
+                    {themeError && <div style={{ color: '#e88', fontSize: 12.5, marginTop: 9, fontFamily: "'Source Serif 4', Georgia, serif" }}>{themeError}</div>}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
+                      <button onClick={() => setShowThemeModal(false)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.14)', color: '#bbb', borderRadius: 7, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: "'Source Serif 4', Georgia, serif" }}>Cancel</button>
+                      <button onClick={submitTheme} disabled={themeBusy || !themeInput.trim()} style={{ background: '#f2b8c6', border: 'none', color: '#0a0a0a', borderRadius: 7, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: themeInput.trim() ? 'pointer' : 'default', opacity: themeInput.trim() ? 1 : 0.6, fontFamily: "'Source Serif 4', Georgia, serif" }}>{themeBusy ? 'Adding…' : 'Add theme'}</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <SideInput label="Tags" value={form.tags} onChange={v => update('tags', v)} placeholder="comma, separated" />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', marginTop: '14px', cursor: 'pointer', userSelect: 'none' }}>
+              <input
+                type="checkbox"
+                checked={!!form.in_library}
+                onChange={e => update('in_library', e.target.checked)}
+                style={{ width: '15px', height: '15px', accentColor: '#f2b8c6', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '12.5px', color: '#bbb', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+                Include in member Library
+              </span>
+            </label>
+            <div style={{ marginTop: '16px' }}>
+              <SideLabel>Editor’s note <span style={{ color: '#555', textTransform: 'none', letterSpacing: 0 }}>· optional</span></SideLabel>
+              <textarea value={form.editor_note} onChange={e => update('editor_note', e.target.value)} rows={3}
+                placeholder="A note from the editors, shown on the Library page."
+                style={{ ...sideInput, resize: 'vertical', lineHeight: 1.5, minHeight: '64px' }} />
+            </div>
+            <div style={{ marginTop: '12px' }}>
+              <SideLabel>Discussion prompt <span style={{ color: '#555', textTransform: 'none', letterSpacing: 0 }}>· optional</span></SideLabel>
+              <textarea value={form.discussion_prompt} onChange={e => update('discussion_prompt', e.target.value)} rows={3}
+                placeholder="A question to spark discussion in the Reading Room."
+                style={{ ...sideInput, resize: 'vertical', lineHeight: 1.5, minHeight: '64px' }} />
+            </div>
           </SideSection>
 
           {/* Issue */}

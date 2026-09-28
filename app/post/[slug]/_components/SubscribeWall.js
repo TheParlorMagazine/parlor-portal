@@ -24,23 +24,14 @@ export default function SubscribeWall() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Lock body scroll when wall is visible
+  // Lock body scroll when wall is visible — overflow only (NOT position:fixed),
+  // so a lock that outlives this page (Back/bfcache) can't shift or collapse the
+  // destination page's layout.
   useEffect(() => {
     if (!visible) return
-    const scrollY = window.scrollY
-    document.body.style.position = 'fixed'
-    document.body.style.top = `-${scrollY}px`
-    document.body.style.left = '0'
-    document.body.style.right = '0'
+    const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.position = ''
-      document.body.style.top = ''
-      document.body.style.left = ''
-      document.body.style.right = ''
-      document.body.style.overflow = ''
-      window.scrollTo(0, scrollY)
-    }
+    return () => { document.body.style.overflow = prev }
   }, [visible])
 
   function handleSubmit(e) {

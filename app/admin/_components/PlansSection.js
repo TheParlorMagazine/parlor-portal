@@ -42,7 +42,46 @@ export default function PlansSection({ supabase, plan: planKey }) {
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
+  // editable plan display data (falls back to static defaults until loaded)
+  const [data, setData] = useState({ label: plan.label, price: plan.price, description: plan.desc, perks: plan.perks })
   const [draft, setDraft] = useState({ label: plan.label, price: plan.price, desc: plan.desc })
+  const [newPerk, setNewPerk] = useState('')
+  const [savingDetails, setSavingDetails] = useState(false)
+
+  async function token() { const { data: { session } } = await supabase.auth.getSession(); return session?.access_token }
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/admin/plans', { headers: { Authorization: `Bearer ${await token()}` } })
+        const d = await res.json()
+        const row = (d.plans || []).find(p => p.key === plan.key)
+        if (row && !cancelled) { setData({ label: row.label, price: row.price, description: row.description, perks: row.perks || [] }); setDraft({ label: row.label, price: row.price, desc: row.description }) }
+      } catch {}
+    })()
+    return () => { cancelled = true }
+  }, [planKey])
+
+  async function savePlan(patch) {
+    const res = await fetch('/api/admin/plans', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ key: plan.key, ...patch }) })
+    const d = await res.json()
+    if (res.ok && d.plan) setData({ label: d.plan.label, price: d.plan.price, description: d.plan.description, perks: d.plan.perks || [] })
+    return res.ok
+  }
+  async function saveDetails() {
+    setSavingDetails(true)
+    await savePlan({ label: draft.label, price: draft.price, description: draft.desc })
+    setSavingDetails(false); setEditing(false)
+  }
+  async function addPerk() {
+    const v = newPerk.trim(); if (!v) return
+    setNewPerk('')
+    await savePlan({ perks: [...data.perks, v] })
+  }
+  async function removePerk(i) {
+    await savePlan({ perks: data.perks.filter((_, idx) => idx !== i) })
+  }
 
   useEffect(() => {
     setLoading(true)
@@ -67,12 +106,12 @@ export default function PlansSection({ supabase, plan: planKey }) {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-            <h1 style={{ fontFamily: ffH, fontSize: '26px', fontWeight: '700', color: '#0a0a0a', margin: 0, letterSpacing: '-0.01em' }}>{plan.label}</h1>
-            <span style={{ padding: '3px 10px', background: plan.bg, color: plan.color, borderRadius: '20px', fontSize: '12px', fontWeight: '600', fontFamily: ff }}>{plan.price}</span>
+            <h1 style={{ fontFamily: ffH, fontSize: '26px', fontWeight: '700', color: '#0a0a0a', margin: 0, letterSpacing: '-0.01em' }}>{data.label}</h1>
+            <span style={{ padding: '3px 10px', background: plan.bg, color: plan.color, borderRadius: '20px', fontSize: '12px', fontWeight: '600', fontFamily: ff }}>{data.price}</span>
           </div>
-          <div style={{ fontSize: '13px', color: '#888', fontFamily: ff }}>{plan.desc}</div>
+          <div style={{ fontSize: '13px', color: '#888', fontFamily: ff }}>{data.description}</div>
         </div>
-        <button onClick={() => setEditing(v => !v)} style={{ padding: '8px 16px', background: 'none', border: '1px solid #e0e0e0', borderRadius: '7px', color: '#555', fontSize: '13px', cursor: 'pointer', fontFamily: ff }}>
+        <button onClick={() => { if (!editing) setDraft({ label: data.label, price: data.price, desc: data.description }); setEditing(v => !v) }} style={{ padding: '8px 16px', background: 'none', border: '1px solid #e0e0e0', borderRadius: '7px', color: '#555', fontSize: '13px', cursor: 'pointer', fontFamily: ff }}>
           {editing ? 'Cancel' : 'Edit plan'}
         </button>
       </div>
@@ -95,8 +134,8 @@ export default function PlansSection({ supabase, plan: planKey }) {
             <div style={{ fontSize: '11px', color: '#aaa', fontFamily: ff, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Description</div>
             <textarea rows={3} style={textareaStyle} value={draft.desc} onChange={e => setDraft(d => ({ ...d, desc: e.target.value }))} />
           </div>
-          <button style={{ padding: '8px 20px', background: PINK, border: 'none', borderRadius: '6px', color: '#0a0a0a', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: ff }}>
-            Save changes
+          <button onClick={saveDetails} disabled={savingDetails} style={{ padding: '8px 20px', background: PINK, border: 'none', borderRadius: '6px', color: '#0a0a0a', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: ff }}>
+            {savingDetails ? 'Saving…' : 'Save changes'}
           </button>
           <div style={{ fontSize: '11px', color: '#bbb', fontFamily: ff, marginTop: '10px', fontStyle: 'italic' }}>Note: plan name and price changes apply to display only — update your payment processor separately.</div>
         </div>
@@ -108,7 +147,7 @@ export default function PlansSection({ supabase, plan: planKey }) {
           { label: 'Total Subscribers', value: members.length },
           { label: 'Active',            value: active, color: '#2d8f5a' },
           { label: 'Churned',           value: churned, color: '#c04040' },
-          { label: 'MRR (est.)',        value: `$${(active * parseInt(plan.price.replace(/\D/g, ''), 10)).toLocaleString()}`, color: plan.color },
+          { label: 'MRR (est.)',        value: `$${(active * (parseInt((data.price || '0').replace(/\D/g, ''), 10) || 0)).toLocaleString()}`, color: plan.color },
         ].map(s => (
           <div key={s.label} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', padding: '16px 18px' }}>
             <div style={{ fontSize: '22px', fontWeight: '700', color: s.color || '#0a0a0a', fontFamily: ffH, lineHeight: 1 }}>{s.value}</div>
@@ -120,12 +159,18 @@ export default function PlansSection({ supabase, plan: planKey }) {
       {/* Perks */}
       <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', padding: '16px 18px', marginBottom: '24px' }}>
         <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#aaa', fontFamily: ff, marginBottom: '12px' }}>Plan Includes</div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {plan.perks.map(p => (
-            <span key={p} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', background: plan.bg, color: plan.color, borderRadius: '20px', fontSize: '12px', fontFamily: ff }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+          {data.perks.length === 0 && <span style={{ fontSize: '13px', color: '#bbb', fontStyle: 'italic' }}>No benefits yet — add one below.</span>}
+          {data.perks.map((p, i) => (
+            <span key={`${p}-${i}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 8px 5px 12px', background: plan.bg, color: plan.color, borderRadius: '20px', fontSize: '12px', fontFamily: ff }}>
               <span style={{ fontSize: '10px' }}>✓</span> {p}
+              <button onClick={() => removePerk(i)} title="Remove" style={{ background: 'none', border: 'none', color: plan.color, cursor: 'pointer', fontSize: '15px', lineHeight: 1, padding: '0 2px', opacity: 0.6 }}>×</button>
             </span>
           ))}
+        </div>
+        <div style={{ display: 'flex', gap: '8px', maxWidth: '440px' }}>
+          <input value={newPerk} onChange={e => setNewPerk(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addPerk() }} placeholder="Add a benefit…" style={{ ...inputStyle, flex: 1 }} />
+          <button onClick={addPerk} disabled={!newPerk.trim()} style={{ padding: '8px 16px', background: '#0a0a0a', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: ff, whiteSpace: 'nowrap' }}>Add</button>
         </div>
       </div>
 

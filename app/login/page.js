@@ -45,8 +45,9 @@ function LoginForm() {
     }
     setResetLoading(true)
     setError('')
-    await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`
+    await fetch('/api/auth/send-reset', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
     })
     setResetLoading(false)
     setResetSent(true)

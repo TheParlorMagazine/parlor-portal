@@ -47,7 +47,11 @@ function esc(s) { return (s ?? "").toString() }
 function splitHeadTail(title) {
   const words = (title || '').trim().split(/\s+/).filter(Boolean)
   if (words.length <= 1) return { head: '', tail: title || '' }
-  const tailCount = Math.max(1, Math.min(words.length - 1, Math.round(words.length * 0.4)))
+  // Short titles (e.g. "It Takes a Village") accent only the last word; longer
+  // ones accent ~40% so the pink tail reads as a phrase.
+  const tailCount = words.length <= 4
+    ? 1
+    : Math.max(1, Math.min(words.length - 1, Math.round(words.length * 0.4)))
   return {
     head: words.slice(0, words.length - tailCount).join(' '),
     tail: words.slice(words.length - tailCount).join(' '),
@@ -111,12 +115,19 @@ export default function HomePage() {
   const [visible, setVisible] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
   const [memberOpen, setMemberOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [issuesList, setIssuesList] = useState([])
   const [ribbonCollapsed, setRibbonCollapsed] = useState(false)
   const [ribbonScrolling, setRibbonScrolling] = useState(false)
   const [member, setMember] = useState(null)
   const [articles, setArticles] = useState(ARTICLES)
   const [heroSlides, setHeroSlides] = useState([])
-  const [heroIndex, setHeroIndex] = useState(0)
+  const [heroLoaded, setHeroLoaded] = useState(false)
+  const [heroIndex, setHeroIndex] = useState(1) // 1-based into the cloned track
+  const [heroNoTrans, setHeroNoTrans] = useState(false)
+  // Slides whose cover is portrait get the two-column "split" layout (image left,
+  // title right); wide/near-square covers keep the full-bleed layout.
+  const [portraitSlides, setPortraitSlides] = useState({})
   const [flipbookOpen, setFlipbookOpen] = useState(false)
   const aboutRef = useRef(null)
   const memberRef = useRef(null)
@@ -139,6 +150,7 @@ export default function HomePage() {
         .select('slug, title, subtitle, cover_image_url, author_name, author_photo_url, author_profile_url, category, date_published')
         .eq('published', true)
         .is('issue_id', null)
+        .or('media_type.is.null,media_type.neq.member_post')  // member posts never in the homepage river
         .order('date_published', { ascending: false })
         .limit(12)
       if (error || !data?.length) return
@@ -162,37 +174,110 @@ export default function HomePage() {
   // Falls back to the Borderlands digital hero until that issue has published articles.
   useEffect(() => {
     async function loadHero() {
-      const { data: issues } = await supabase.from('issues').select('id, number, title')
-      if (!issues?.length) return
-      const issue =
-        issues.find(i => /world\s*we.?re\s*building/i.test(i.title || '')) ||
-        issues.find(i => i.number === 2)
-      if (!issue) return
-      const { data: arts } = await supabase
-        .from('articles')
-        .select('slug, title, subtitle, cover_image_url, category, date_published')
-        .eq('published', true)
-        .eq('issue_id', issue.id)
-        .order('date_published', { ascending: false })
-        .limit(3)
-      if (!arts?.length) return
-      setHeroSlides(arts.map(a => ({
-        url: a.slug ? `/post/${a.slug}` : '#',
-        title: a.title || '',
-        subtitle: a.subtitle || '',
-        cover: a.cover_image_url || '',
-        category: a.category || '',
-      })))
+      try {
+        const { data: issues } = await supabase.from('issues').select('id, number, title')
+        if (!issues?.length) return
+        const issue =
+          issues.find(i => /world\s*we.?re\s*building/i.test(i.title || '')) ||
+          issues.find(i => i.number === 2)
+        if (!issue) return
+        const { data: arts } = await supabase
+          .from('articles')
+          .select('slug, title, subtitle, cover_image_url, category, date_published')
+          .eq('published', true)
+          .eq('featured', true)
+          .eq('issue_id', issue.id)
+          .or('media_type.is.null,media_type.neq.member_post')  // member posts never in the hero
+          .order('date_published', { ascending: false })
+          .limit(3)
+        if (!arts?.length) return
+        setHeroSlides(arts.map(a => ({
+          url: a.slug ? `/post/${a.slug}` : '#',
+          title: a.title || '',
+          subtitle: a.subtitle || '',
+          cover: a.cover_image_url || '',
+          category: a.category || '',
+        })))
+      } finally {
+        setHeroLoaded(true)
+      }
     }
     loadHero()
   }, [])
 
-  // Auto-advance the hero carousel
+  // Defensive: clear any body scroll-lock a wall/paywall on a previous page may
+  // have left behind (e.g. after Back / bfcache restore), so the homepage never
+  // inherits it and renders collapsed.
+  useEffect(() => {
+    const reset = () => {
+      const b = document.body.style
+      b.position = ''; b.top = ''; b.left = ''; b.right = ''; b.overflow = ''
+    }
+    reset()
+    const onShow = e => { if (e.persisted) reset() }
+    window.addEventListener('pageshow', onShow)
+    return () => window.removeEventListener('pageshow', onShow)
+  }, [])
+
+  // Load the issue list for the hamburger drawer (newest first).
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('issues')
+        .select('id, title, number, publication_date')
+        .order('number', { ascending: false, nullsFirst: false })
+        .order('publication_date', { ascending: false })
+      if (data) {
+        setIssuesList(data.map(iss => ({
+          id: iss.id,
+          title: iss.title || 'Untitled issue',
+          number: iss.number,
+          // Borderlands has a bespoke landing page; others use the generic route.
+          href: /borderlands/i.test(iss.title || '') ? '/borderlands-of-identity' : `/issue/${iss.id}`,
+        })))
+      }
+    })()
+  }, [])
+
+  // Esc closes the drawer; lock scroll while it's open.
+  useEffect(() => {
+    if (!drawerOpen) return
+    const onKey = e => { if (e.key === 'Escape') setDrawerOpen(false) }
+    document.addEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [drawerOpen])
+
+  // Auto-advance the hero carousel. The track is [cloneLast, ...slides, cloneFirst]
+  // so heroIndex runs 1..n as the real slides; stepping onto a clone at either end
+  // lets the slide animate, then snaps (no transition) to the matching real slide.
+  // This loops seamlessly in BOTH directions.
   useEffect(() => {
     if (heroSlides.length < 2) return
-    const t = setInterval(() => setHeroIndex(i => (i + 1) % heroSlides.length), 6000)
+    const t = setInterval(() => setHeroIndex(i => Math.min(i + 1, heroSlides.length + 1)), 6500)
     return () => clearInterval(t)
   }, [heroSlides.length])
+
+  // Re-enable the transition after the instant snap has painted. (setTimeout,
+  // not rAF, so it still fires when the tab/pane is backgrounded.)
+  useEffect(() => {
+    if (!heroNoTrans) return
+    const t = setTimeout(() => setHeroNoTrans(false), 60)
+    return () => clearTimeout(t)
+  }, [heroNoTrans])
+
+  // When a slide finishes animating onto an end clone, jump to its real twin.
+  function handleHeroTransitionEnd(e) {
+    if (e.propertyName !== 'transform') return
+    const n = heroSlides.length
+    if (n < 2) return
+    if (heroIndex === n + 1) { setHeroNoTrans(true); setHeroIndex(1) }
+    else if (heroIndex === 0) { setHeroNoTrans(true); setHeroIndex(n) }
+  }
 
   // Esc closes the flipbook modal
   useEffect(() => {
@@ -557,7 +642,27 @@ export default function HomePage() {
         }
 
         /* Nav bottom */
-        .header-bottom { background: var(--black); display: flex; align-items: center; justify-content: center; gap: 48px; padding: 11px 40px; border-bottom: 1px solid rgba(255,255,255,0.18); }
+        .header-bottom { position: relative; background: var(--black); display: flex; align-items: center; justify-content: center; gap: 48px; padding: 11px 40px; border-bottom: 1px solid rgba(255,255,255,0.18); }
+        /* Hamburger — pinned to the far left of the section nav */
+        .hamburger-btn { display: inline-flex; flex-direction: column; justify-content: center; gap: 5px; width: 30px; height: 26px; padding: 0; background: none; border: none; cursor: pointer; }
+        .hamburger-btn span { display: block; height: 2px; width: 100%; background: #1a1a1a; border-radius: 2px; transition: background 0.15s; }
+        .hamburger-btn:hover span { background: var(--maroon, #7a2531); }
+        /* Drawer */
+        .nav-drawer-backdrop { position: fixed; inset: 0; z-index: 10000; background: rgba(10,10,10,0.5); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+        .nav-drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+        .nav-drawer { position: fixed; top: 0; left: 0; bottom: 0; z-index: 10001; width: min(360px, 84vw); background: #faf5ef; box-shadow: 4px 0 40px rgba(0,0,0,0.22); transform: translateX(-100%); transition: transform 0.3s cubic-bezier(.4,0,.2,1); display: flex; flex-direction: column; overflow-y: auto; }
+        .nav-drawer.open { transform: translateX(0); }
+        .nav-drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 22px 26px 18px; border-bottom: 1px solid #ece2d6; }
+        .nav-drawer-brand { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 22px; color: var(--maroon, #7a2531); }
+        .nav-drawer-close { background: none; border: none; font-size: 30px; line-height: 1; color: #8a7a70; cursor: pointer; padding: 0 4px; }
+        .nav-drawer-close:hover { color: #1a1a1a; }
+        .nav-drawer-section { padding: 22px 26px; border-bottom: 1px solid #ece2d6; }
+        .nav-drawer-label { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: #a8968a; margin-bottom: 14px; }
+        .nav-drawer-item { display: block; padding: 9px 0; text-decoration: none; }
+        .nav-drawer-num { display: block; font-family: 'Source Serif 4', Georgia, serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pink); margin-bottom: 2px; }
+        .nav-drawer-title { display: block; font-family: 'Playfair Display', Georgia, serif; font-size: 20px; color: #1a1a1a; line-height: 1.2; transition: color 0.15s; }
+        .nav-drawer-item:hover .nav-drawer-title { color: var(--maroon, #7a2531); }
+        .nav-drawer-empty { font-family: 'Source Serif 4', Georgia, serif; font-size: 14px; font-style: italic; color: #b0a196; }
         .header-section-link {
           font-family: 'Playfair Display', Georgia, serif;
           font-size: 20px; color: rgba(255,255,255,0.65);
@@ -717,25 +822,48 @@ export default function HomePage() {
 
         /* ── ISSUE HERO CAROUSEL (large image; title/tagline layered over it) ── */
         .issue-hero { position: relative; background: var(--black); overflow: hidden; }
-        .issue-hero-slide { display: none; position: relative; }
-        .issue-hero-slide.active { display: block; }
-        .issue-hero-figure { display: block; width: 100%; }
+        .issue-hero-track { display: flex; transition: transform 0.6s cubic-bezier(.4,0,.2,1); will-change: transform; }
+        .issue-hero-slide { flex: 0 0 100%; min-width: 0; position: relative; align-self: stretch; }
+        .issue-hero-figure { display: block; width: 100%; padding: 0 clamp(32px,7vw,128px) clamp(24px,4vh,44px); }
         .issue-hero-imgwrap { position: relative; display: block; width: 100%; }
-        .issue-hero-imgwrap img { width: 100%; height: clamp(600px, 84vh, 900px); object-fit: cover; object-position: center top; display: block; }
-        .issue-hero-head { position: absolute; top: clamp(20px,5vh,52px); left: clamp(24px,6vw,90px); right: clamp(24px,6vw,90px); z-index: 3; pointer-events: none; }
+        .issue-hero-imgwrap img { width: 100%; height: clamp(520px, 74vh, 780px); object-fit: cover; object-position: center top; display: block; }
+        .issue-hero-head { position: absolute; top: clamp(8px,2vh,24px); left: clamp(24px,6vw,90px); right: clamp(24px,6vw,90px); z-index: 3; pointer-events: none; }
         .issue-hero-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--pink); margin-bottom: 14px; text-shadow: 0 2px 14px rgba(0,0,0,0.6); }
-        .issue-hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(36px,4.8vw,66px); font-weight: 700; color: var(--white); line-height: 1.05; margin: 0; letter-spacing: -0.01em; text-shadow: 0 2px 20px rgba(0,0,0,0.6); max-width: 22ch; }
+        .issue-hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(30px,3.9vw,54px); font-weight: 700; color: var(--white); line-height: 1.06; margin: 0; letter-spacing: -0.01em; text-shadow: 0 2px 20px rgba(0,0,0,0.6); max-width: 22ch; }
         .issue-hero-accent { font-style: italic; color: var(--pink); }
-        .issue-hero-btn { position: absolute; right: 16px; bottom: 16px; z-index: 4; display: inline-block; border: 1px solid var(--pink); background: rgba(10,10,10,0.85); color: var(--pink); padding: 12px 30px; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; transition: all 0.15s; }
+        .issue-hero-btn { position: absolute; right: 20px; bottom: 20px; z-index: 4; display: inline-block; border: 1px solid var(--pink); background: rgba(10,10,10,0.9); color: var(--pink); padding: 16px 64px; font-family: 'Playfair Display', Georgia, serif; font-size: 19px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; box-shadow: 0 6px 22px rgba(0,0,0,0.35); transition: all 0.15s; }
         .issue-hero-btn:hover { background: var(--pink); color: var(--black); }
         .issue-hero-nav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 5; background: none; border: none; color: var(--white); font-size: 46px; line-height: 1; padding: 0 10px; cursor: pointer; opacity: 0.55; transition: opacity 0.15s; }
         .issue-hero-nav:hover { opacity: 1; }
         .issue-hero-nav.prev { left: 14px; }
         .issue-hero-nav.next { right: 14px; }
-        .issue-hero-dots { position: absolute; bottom: 22px; right: 28px; display: flex; gap: 9px; z-index: 6; }
+        .issue-hero-dots { display: flex; justify-content: center; gap: 9px; padding: clamp(18px,3vh,28px) 0 0; }
         .issue-hero-dot { width: 8px; height: 8px; border-radius: 50%; border: none; padding: 0; background: rgba(255,255,255,0.3); cursor: pointer; transition: background 0.15s; }
         .issue-hero-dot.active { background: var(--pink); }
-        .issue-hero-tagline { position: absolute; left: clamp(24px,6vw,90px); bottom: clamp(20px,6vh,52px); z-index: 4; pointer-events: none; font-family: 'Playfair Display', Georgia, serif; font-weight: 700; color: var(--white); font-size: clamp(26px,3.6vw,50px); line-height: 1.05; text-shadow: 0 2px 18px rgba(0,0,0,0.55); }
+        .issue-hero-tagline { position: static; z-index: 4; text-align: center; font-family: 'Playfair Display', Georgia, serif; font-weight: 700; color: var(--white); font-size: clamp(26px,3.6vw,50px); line-height: 1.05; padding: clamp(12px,1.8vh,20px) 24px clamp(34px,5.5vh,60px); }
+        /* Head "Read more" is only used by the split layout */
+        .issue-hero-btn-head { display: none; }
+        /* Split layout — portrait cover on the left, title + button on the right */
+        .issue-hero-slide--split { display: flex; flex-direction: row-reverse; align-items: center; justify-content: center; gap: clamp(24px,4vw,64px); min-height: clamp(560px,80vh,860px); padding: clamp(30px,5vh,64px) clamp(28px,6vw,96px); }
+        .issue-hero-slide--split .issue-hero-head { position: static; flex: 0 1 auto; pointer-events: auto; }
+        .issue-hero-slide--split .issue-hero-title { line-height: 1.0; text-shadow: none; width: fit-content; }
+        .issue-hero-slide--split .issue-hero-figure { flex: 0 0 auto; padding: 0; }
+        .issue-hero-slide--split .issue-hero-imgwrap img { width: 100%; height: auto; object-fit: contain; object-position: center; }
+        /* Portrait covers: larger image, group shifted toward the right. */
+        .issue-hero-slide--tall { justify-content: flex-start; padding-right: clamp(6px,1vw,18px); }
+        .issue-hero-slide--tall .issue-hero-figure { width: clamp(340px,40vw,600px); max-width: 50%; }
+        .issue-hero-slide--tall .issue-hero-imgwrap img { max-height: 82vh; }
+        .issue-hero-slide--tall .issue-hero-title { max-width: 11ch; font-size: clamp(48px,6.5vw,104px); }
+        /* Wide/landscape covers: the imgwrap is a ~6:5 frame (the artwork's own
+           content aspect) with object-fit cover, so the empty side margins baked
+           into the illustration are cropped away and the building fills the frame. */
+        .issue-hero-slide--wide { gap: clamp(8px,1.5vw,28px); }
+        .issue-hero-slide--wide .issue-hero-figure { width: auto; max-width: 66%; flex: 0 1 auto; }
+        .issue-hero-slide--wide .issue-hero-imgwrap { height: clamp(440px,72vh,760px); aspect-ratio: 6 / 5; max-width: 100%; overflow: hidden; }
+        .issue-hero-slide--wide .issue-hero-imgwrap img { width: 100%; height: 100%; max-height: none; object-fit: cover; object-position: center; }
+        .issue-hero-slide--wide .issue-hero-title { max-width: 9ch; font-size: clamp(36px,4vw,68px); }
+        .issue-hero-slide--split .issue-hero-imgwrap .issue-hero-btn { display: none; }
+        .issue-hero-slide--split .issue-hero-btn-head { display: inline-block; position: static; margin-top: clamp(24px,3vw,44px); }
 
         /* ── LOOK INSIDE FLIPBOOK MODAL ── */
         .flipbook-overlay { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; padding: 32px; }
@@ -891,8 +1019,14 @@ export default function HomePage() {
           .issue-hero-imgwrap img { height: 74vh; }
           .issue-hero-btn { right: 10px; bottom: 10px; padding: 9px 20px; font-size: 13px; }
           .issue-hero-nav { font-size: 30px; padding: 0 4px; }
-          .issue-hero-tagline { left: 20px; bottom: 18px; font-size: clamp(24px,6vw,34px); }
-          .issue-hero-dots { bottom: auto; top: 12px; right: 12px; }
+          .issue-hero-tagline { font-size: clamp(24px,6vw,34px); padding: 20px 20px 28px; }
+          .issue-hero-dots { padding: 16px 0 0; }
+          .issue-hero-slide--split { flex-direction: column; gap: 20px; min-height: 0; padding: 26px 20px 30px; }
+          .issue-hero-slide--split .issue-hero-figure { flex: none; max-width: 100%; }
+          .issue-hero-slide--split .issue-hero-imgwrap img { max-height: 52vh; }
+          .issue-hero-slide--split .issue-hero-title { font-size: clamp(40px,12vw,60px); max-width: none; text-align: center; }
+          .issue-hero-slide--split .issue-hero-head { text-align: center; }
+          .issue-hero-slide--split .issue-hero-btn-head { margin-top: 18px; }
           .digital-hero-left { height: 320px; padding: 24px; }
           .digital-hero-right { padding: 36px 24px 40px; }
           .print-hero-left { height: 280px; }
@@ -921,22 +1055,16 @@ export default function HomePage() {
       <header className="site-header">
         <div className="header-top">
 
-          {/* Left: About dropdown + Shop */}
+          {/* Left: hamburger menu (opens the drawer with About, Shop, Issues…) */}
           <div className="header-side">
-            <div className="about-wrap" ref={aboutRef}>
-              <button
-                className={`about-trigger${aboutOpen ? ' open' : ''}`}
-                onClick={() => setAboutOpen(o => !o)}
-              >
-                About
-              </button>
-              <div className={`about-dropdown${aboutOpen ? ' open' : ''}`}>
-                {ABOUT_LINKS.map(l => (
-                  <a key={l.label} href={l.href}>{l.label}</a>
-                ))}
-              </div>
-            </div>
-            <a href="/shop" className="header-text-link">Shop</a>
+            <button
+              className="hamburger-btn"
+              aria-label="Open menu"
+              aria-expanded={drawerOpen}
+              onClick={() => setDrawerOpen(true)}
+            >
+              <span></span><span></span><span></span>
+            </button>
           </div>
 
           {/* Center: Logo */}
@@ -960,7 +1088,7 @@ export default function HomePage() {
               <div className={`member-dropdown${memberOpen ? ' open' : ''}`}>
                 {member ? (
                   <>
-                    <a href="/dashboard" className="member-dropdown-item">
+                    <a href="/portal" className="member-dropdown-item">
                       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="5" height="5" rx="0.5"/><rect x="9" y="2" width="5" height="5" rx="0.5"/><rect x="2" y="9" width="5" height="5" rx="0.5"/><rect x="9" y="9" width="5" height="5" rx="0.5"/></svg>
                       Member Portal
                     </a>
@@ -1020,48 +1148,114 @@ export default function HomePage() {
         </nav>
       </header>
 
+      {/* ── Issues / Collections side drawer ── */}
+      <div className={`nav-drawer-backdrop${drawerOpen ? ' open' : ''}`} onClick={() => setDrawerOpen(false)} />
+      <aside className={`nav-drawer${drawerOpen ? ' open' : ''}`} aria-hidden={!drawerOpen}>
+        <div className="nav-drawer-head">
+          <span className="nav-drawer-brand">The Parlor</span>
+          <button className="nav-drawer-close" aria-label="Close menu" onClick={() => setDrawerOpen(false)}>&times;</button>
+        </div>
+
+        <div className="nav-drawer-section">
+          <a href="/shop" className="nav-drawer-item"><span className="nav-drawer-title">Shop</span></a>
+          {ABOUT_LINKS.map(l => (
+            <a key={l.label} href={l.href} className="nav-drawer-item"><span className="nav-drawer-title">{l.label}</span></a>
+          ))}
+        </div>
+
+        <div className="nav-drawer-section">
+          <div className="nav-drawer-label">Issues</div>
+          {issuesList.length === 0 ? (
+            <div className="nav-drawer-empty">No issues yet.</div>
+          ) : (
+            issuesList.map(iss => (
+              <a key={iss.id} href={iss.href} className="nav-drawer-item">
+                <span className="nav-drawer-num">{iss.number ? `Issue ${String(iss.number).padStart(2, '0')}` : 'Inaugural Issue'}</span>
+                <span className="nav-drawer-title">{iss.title}</span>
+              </a>
+            ))
+          )}
+        </div>
+
+        <div className="nav-drawer-section">
+          <div className="nav-drawer-label">Books</div>
+          <div className="nav-drawer-empty">Coming soon.</div>
+        </div>
+
+        <div className="nav-drawer-section">
+          <div className="nav-drawer-label">Games</div>
+          <div className="nav-drawer-empty">Coming soon.</div>
+        </div>
+      </aside>
+
       {/* ── ISSUE HERO CAROUSEL — The World We're Building (Issue 02) ── */}
-      {heroSlides.length > 0 && (
+      {heroSlides.length > 0 && (() => {
+        const n = heroSlides.length
+        const cloneMode = n > 1
+        const pos = cloneMode ? heroIndex : 0
+        const realActive = cloneMode ? ((heroIndex - 1) % n + n) % n : 0
+        const ext = cloneMode ? [heroSlides[n - 1], ...heroSlides, heroSlides[0]] : heroSlides
+        return (
         <section className="issue-hero" aria-label="Featured issue">
-          {heroSlides.map((s, i) => (
-            <div key={i} className={`issue-hero-slide${i === heroIndex ? ' active' : ''}`}>
+          <div className="issue-hero-track" onTransitionEnd={handleHeroTransitionEnd} style={{ transform: `translateX(-${pos * 100}%)`, transition: heroNoTrans ? 'none' : undefined }}>
+          {ext.map((s, i) => {
+            const orig = cloneMode ? ((i - 1) % n + n) % n : i
+            return (
+            <div key={i} className={`issue-hero-slide${i === pos ? ' active' : ''}${portraitSlides[orig] ? ' issue-hero-slide--split' : ''}${portraitSlides[orig] === 'wide' ? ' issue-hero-slide--wide' : ''}${portraitSlides[orig] === 'tall' ? ' issue-hero-slide--tall' : ''}`}>
               <div className="issue-hero-head">
-                <div className="issue-hero-eyebrow">The World We&rsquo;re Building &mdash; Issue 02</div>
                 <h1 className="issue-hero-title">
                   {(() => {
                     const { head, tail } = splitHeadTail(s.title)
                     return <>{head}{head ? ' ' : null}<em className="issue-hero-accent">{tail}</em></>
                   })()}
                 </h1>
+                <a href={s.url} className="issue-hero-btn issue-hero-btn-head">Read more</a>
               </div>
               <div className="issue-hero-figure">
                 <div className="issue-hero-imgwrap">
-                  {s.cover && <img src={s.cover} alt={s.title} />}
+                  {s.cover && (
+                    <img
+                      src={s.cover}
+                      alt={s.title}
+                      onLoad={e => {
+                        const im = e.currentTarget
+                        if (!im.naturalWidth) return
+                        // Portrait or wide-landscape covers use the two-column split
+                        // layout; only near-square covers keep the full-bleed look.
+                        // 'wide' images get a bigger image column than 'tall' ones.
+                        const ratio = im.naturalHeight / im.naturalWidth
+                        const kind = ratio > 1.15 ? 'tall' : ratio < 0.8 ? 'wide' : null
+                        if (kind) setPortraitSlides(p => (p[orig] ? p : { ...p, [orig]: kind }))
+                      }}
+                    />
+                  )}
                   <a href={s.url} className="issue-hero-btn">Read more</a>
                 </div>
               </div>
             </div>
-          ))}
-          {heroSlides.length > 1 && (
+          )})}
+          </div>
+          {cloneMode && (
             <>
               <button className="issue-hero-nav prev" aria-label="Previous"
-                onClick={() => setHeroIndex(i => (i - 1 + heroSlides.length) % heroSlides.length)}>&#8249;</button>
+                onClick={() => setHeroIndex(i => Math.max(i - 1, 0))}>&#8249;</button>
               <button className="issue-hero-nav next" aria-label="Next"
-                onClick={() => setHeroIndex(i => (i + 1) % heroSlides.length)}>&#8250;</button>
+                onClick={() => setHeroIndex(i => Math.min(i + 1, n + 1))}>&#8250;</button>
               <div className="issue-hero-dots">
                 {heroSlides.map((_, i) => (
-                  <button key={i} className={`issue-hero-dot${i === heroIndex ? ' active' : ''}`}
-                    aria-label={`Go to slide ${i + 1}`} onClick={() => setHeroIndex(i)} />
+                  <button key={i} className={`issue-hero-dot${i === realActive ? ' active' : ''}`}
+                    aria-label={`Go to slide ${i + 1}`} onClick={() => setHeroIndex(i + 1)} />
                 ))}
               </div>
             </>
           )}
           <div className="issue-hero-tagline">A better world is possible&hellip;</div>
         </section>
-      )}
+        )
+      })()}
 
-      {/* ── DIGITAL ISSUE HERO — fallback until Issue 02 has published articles ── */}
-      {heroSlides.length === 0 && (
+      {/* ── DIGITAL ISSUE HERO — fallback only when Issue 02 has no published articles ── */}
+      {heroLoaded && heroSlides.length === 0 && (
       <section className="digital-hero">
         <div className="digital-hero-left">
           <img

@@ -1,4 +1,5 @@
 import PageViewTracker from './_components/PageViewTracker'
+import RecoveryRedirect from './_components/RecoveryRedirect'
 
 export const metadata = {
   title: 'The Parlor',
@@ -14,6 +15,7 @@ export default function RootLayout({ children }) {
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet" />
       </head>
       <body>
+        <RecoveryRedirect />
         <PageViewTracker />
         {children}
       </body>

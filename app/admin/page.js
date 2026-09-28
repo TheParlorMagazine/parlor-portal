@@ -8,6 +8,12 @@ import SubscribersSection from './_components/SubscribersSection'
 import PlansSection from './_components/PlansSection'
 import AnalyticsSection from './_components/AnalyticsSection'
 import EmailsSection from './_components/EmailsSection'
+import PortalManagementSection from './_components/PortalManagementSection'
+import ReadingRoomSection from './_components/ReadingRoomSection'
+import EventsSection from './_components/EventsSection'
+import CommunityPostsSection from './_components/CommunityPostsSection'
+import OrdersSection from './_components/OrdersSection'
+import PrintMailingsSection from './_components/PrintMailingsSection'
 import LiveVisitors from './_components/LiveVisitors'
 
 // ── Role definitions ──────────────────────────────────────────
@@ -21,6 +27,23 @@ const ROLE_OPTIONS = [
 ]
 
 const TEAM_ROLES = ['admin', 'editor', 'writer', 'finance_admin', 'social_admin']
+
+// Which roles can see each admin section. Master Admin ('admin') always sees all.
+const ITEM_ROLES = {
+  dashboard: TEAM_ROLES,
+  articles: ['admin', 'editor', 'writer'], writers: ['admin', 'editor'], media: ['admin', 'editor'],
+  'reading-room': ['admin', 'editor'], 'community-posts': ['admin', 'editor'],
+  subscribers: ['admin'], emails: ['admin', 'social_admin'], pitches: ['admin', 'editor'],
+  events: ['admin', 'editor', 'social_admin'],
+  portal: ['admin', 'social_admin'],
+  'plan-circle': ['admin'], 'plan-press': ['admin'],
+  'print-mailings': ['admin', 'editor', 'finance_admin'],
+  orders: ['admin', 'finance_admin'],
+  invoices: ['admin', 'finance_admin'],
+  social: ['admin', 'social_admin'],
+  roles: ['admin'], analytics: ['admin'], publication: ['admin'],
+}
+function canSee(role, key) { return role === 'admin' || (ITEM_ROLES[key] || ['admin']).includes(role) }
 
 // ── Helpers ───────────────────────────────────────────────────
 function fmtDate(iso) {
@@ -60,17 +83,23 @@ const NAV = [
     { key: 'articles',  label: 'Articles',    href: '/admin/articles' },
     { key: 'writers',   label: 'Writers',     href: '/admin/writers' },
     { key: 'media',     label: 'Media',       href: '/admin/media' },
+    { key: 'pitches',   label: 'Submissions' },
+    { key: 'community-posts', label: 'Community Posts' },
   ]},
   { section: 'Community', items: [
     { key: 'subscribers',  label: 'Subscribers' },
     { key: 'emails',       label: 'Emails' },
-    { key: 'pitches',      label: 'Pitches' },
+    { key: 'events',       label: 'Events' },
+    { key: 'reading-room', label: 'Reading Room' },
+    { key: 'portal',       label: 'Portal Management' },
   ]},
   { section: 'Plans', items: [
     { key: 'plan-circle', label: "Reader's Circle" },
     { key: 'plan-press',  label: 'Printing Press' },
+    { key: 'print-mailings', label: 'Print Mailings' },
   ]},
   { section: 'Finance', items: [
+    { key: 'orders',    label: 'Orders' },
     { key: 'invoices',  label: 'Invoices' },
   ]},
   { section: 'Social', items: [
@@ -83,7 +112,7 @@ const NAV = [
   ]},
 ]
 
-function Sidebar({ active, setActive, onSignOut }) {
+function Sidebar({ active, setActive, onSignOut, role }) {
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, bottom: 0, width: '220px',
@@ -92,25 +121,42 @@ function Sidebar({ active, setActive, onSignOut }) {
       fontFamily: ff,
     }}>
       {/* Logo */}
-      <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
-        <div style={{ fontFamily: ffH, fontSize: '18px', fontWeight: '700', color: '#fff', letterSpacing: '-0.01em' }}>
-          The Parlor
+      <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+        <div>
+          <div style={{ fontFamily: ffH, fontSize: '18px', fontWeight: '700', color: '#fff', letterSpacing: '-0.01em' }}>
+            The Parlor
+          </div>
+          <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.2em', color: PINK, marginTop: '4px' }}>
+            Admin
+          </div>
         </div>
-        <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.2em', color: PINK, marginTop: '4px' }}>
-          Admin
-        </div>
+        <a href="/" title="Parlor home" style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px',
+          borderRadius: '7px', background: 'rgba(255,255,255,0.08)', flexShrink: 0, marginTop: '1px',
+          transition: 'background 0.15s',
+        }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+        >
+          <svg viewBox="0 0 16 16" fill="none" style={{ width: '14px', height: '14px', color: '#fff' }}>
+            <path d="M8 2L2 7v7h4v-4h4v4h4V7L8 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </a>
       </div>
 
       {/* Nav */}
       <nav style={{ flex: 1, padding: '10px 0' }}>
-        {NAV.map(({ section, items }) => (
+        {NAV.map(({ section, items }) => {
+          const visible = items.filter(it => canSee(role, it.key))
+          if (visible.length === 0) return null
+          return (
           <div key={section || '_root'} style={{ marginBottom: '2px' }}>
             {section && (
               <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.16em', color: 'rgba(255,255,255,0.35)', padding: '12px 20px 5px', fontFamily: ff }}>
                 {section}
               </div>
             )}
-            {items.map(item => {
+            {visible.map(item => {
               const isActive = active === item.key
               const inner = (
                 <div
@@ -135,7 +181,7 @@ function Sidebar({ active, setActive, onSignOut }) {
               return <div key={item.key}>{inner}</div>
             })}
           </div>
-        ))}
+        )})}
       </nav>
 
       {/* Sign out */}
@@ -788,16 +834,23 @@ function ComingSoon({ title }) {
 }
 
 // ── Content router ────────────────────────────────────────────
-function MainContent({ section, supabase, setActiveSection }) {
+function MainContent({ section, supabase, setActiveSection, role }) {
+  if (!canSee(role, section)) return <ComingSoon title="No access" />
   switch (section) {
     case 'dashboard':    return <DashboardHome supabase={supabase} setActiveSection={setActiveSection} />
     case 'subscribers':  return <SubscribersSection supabase={supabase} />
     case 'emails':       return <EmailsSection supabase={supabase} />
+    case 'portal':       return <PortalManagementSection supabase={supabase} />
+    case 'reading-room': return <ReadingRoomSection supabase={supabase} />
+    case 'community-posts': return <CommunityPostsSection supabase={supabase} />
+    case 'events':       return <EventsSection supabase={supabase} />
     case 'roles':        return <RolesSection supabase={supabase} />
     case 'analytics':    return <AnalyticsSection supabase={supabase} />
     case 'plan-circle':  return <PlansSection supabase={supabase} plan="circle" />
     case 'plan-press':   return <PlansSection supabase={supabase} plan="press" />
-    case 'pitches':      return <ComingSoon title="Pitches" />
+    case 'orders':       return <OrdersSection supabase={supabase} />
+    case 'print-mailings': return <PrintMailingsSection supabase={supabase} />
+    case 'pitches':      return <ComingSoon title="Submissions" />
     case 'invoices':     return <ComingSoon title="Invoices" />
     case 'social':       return <ComingSoon title="Scheduled Posts" />
     case 'publication':  return <ComingSoon title="Publication Settings" />
@@ -809,6 +862,7 @@ function MainContent({ section, supabase, setActiveSection }) {
 export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [activeSection, setActiveSection] = useState('dashboard')
+  const [role, setRole] = useState(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -820,7 +874,8 @@ export default function AdminPage() {
       if (userError || !user) { router.push('/login'); return }
       const { data: member, error } = await supabase.from('members').select('role').eq('id', user.id).single()
       if (cancelled) return
-      if (error || member?.role !== 'admin') { router.push('/dashboard'); return }
+      if (error || !TEAM_ROLES.includes(member?.role)) { router.push('/dashboard'); return }
+      setRole(member.role)
       setLoading(false)
     }
     checkAdmin()
@@ -840,9 +895,9 @@ export default function AdminPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f5f5', fontFamily: ff }}>
-      <Sidebar active={activeSection} setActive={setActiveSection} onSignOut={handleSignOut} />
+      <Sidebar active={activeSection} setActive={setActiveSection} onSignOut={handleSignOut} role={role} />
       <main style={{ marginLeft: '220px', minHeight: '100vh', padding: '40px 48px', color: '#0a0a0a' }}>
-        <MainContent section={activeSection} supabase={supabase} setActiveSection={setActiveSection} />
+        <MainContent section={activeSection} supabase={supabase} setActiveSection={setActiveSection} role={role} />
       </main>
     </div>
   )

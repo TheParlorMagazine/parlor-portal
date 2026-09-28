@@ -235,7 +235,7 @@ function VideoBlockView({ node, updateAttributes, selected }) {
   async function uploadPoster(fileOrBlob, ext) {
     const path = `posters/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext || 'jpg'}`
     const { error } = await supabase.storage.from('Media').upload(path, fileOrBlob, {
-      cacheControl: '3600', contentType: fileOrBlob.type || 'image/jpeg', upsert: false,
+      cacheControl: '31536000', contentType: fileOrBlob.type || 'image/jpeg', upsert: false,
     })
     if (error) throw error
     const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)

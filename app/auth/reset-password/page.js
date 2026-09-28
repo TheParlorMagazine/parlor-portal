@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -11,6 +11,24 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('')
   const router = useRouter()
   const supabase = createClient()
+
+  // If we arrived via a reset email with a token hash, verify it to establish
+  // the recovery session. (Hash-based links are handled by Supabase's SDK.)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const token_hash = params.get('token_hash')
+    const type = params.get('type')
+    if (token_hash && type) {
+      supabase.auth.verifyOtp({ type, token_hash }).then(({ error }) => {
+        if (error) setError('This reset link is invalid or has expired. Please request a new one.')
+        else {
+          // Clean the token out of the URL bar.
+          window.history.replaceState({}, '', '/auth/reset-password')
+        }
+      })
+    }
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()

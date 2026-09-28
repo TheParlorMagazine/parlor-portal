@@ -55,7 +55,7 @@ export default function VerticalPage({ params }) {
       setLoading(true)
       const { data, error } = await supabase
         .from('articles')
-        .select('slug, title, excerpt, cover_image_url, author_name, author_photo_url, author_profile_url, category, article_category, date_published')
+        .select('slug, title, excerpt, cover_image_url, author_name, author_photo_url, author_profile_url, category, article_category, theme, date_published, media_type')
         .eq('published', true)
         .eq('category', category)
         .order('date_published', { ascending: false })
@@ -66,6 +66,9 @@ export default function VerticalPage({ params }) {
   }, [category])
 
   if (!category) notFound()
+
+  const editorial = articles.filter(a => a.media_type !== 'member_post')
+  const memberPosts = articles.filter(a => a.media_type === 'member_post')
 
   return (
     <>
@@ -108,15 +111,18 @@ export default function VerticalPage({ params }) {
           border-bottom: 1px solid #e5e7eb;
         }
         .strip:first-child { padding-top: 0; }
-        .strip-media { position: relative; display: flex; align-items: center; height: 100%; max-height: 220px; align-self: center; }
-        .strip-cover { width: 100%; height: 100%; max-height: 220px; object-fit: cover; object-position: top; display: block; }
-        .strip-pill {
-          position: absolute; top: 10px; left: 10px;
-          background: rgba(10,10,10,0.82); color: #ffffff;
+        .strip-media { position: relative; display: block; height: 100%; align-self: stretch; }
+        .strip-cover { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
+        .strip-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+        .strip-chip {
+          display: inline-block;
           font-family: 'Source Serif 4', Georgia, serif;
           font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-          padding: 4px 10px;
+          padding: 4px 12px; border-radius: 999px; line-height: 1.4;
         }
+        .strip-chip-type { background: #1a1a1a; color: #ffffff; }
+        .strip-chip-theme { background: transparent; color: #7a2531; border: 1px solid #7a2531; transition: background 0.15s, color 0.15s; }
+        a.strip-chip-theme:hover { background: #7a2531; color: #ffffff; }
         .strip-meta { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
         .byline { display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.2; color: #6b7280; }
         .avatarWrap { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex: 0 0 32px; }
@@ -150,7 +156,7 @@ export default function VerticalPage({ params }) {
           <div className="vertical-empty">No articles published in this section yet.</div>
         )}
         <div className="vertical-list">
-          {articles.map(a => {
+          {editorial.map(a => {
             const avatarOriginal = a.author_photo_url || ''
             const href = a.slug ? `/post/${a.slug}` : '#'
             return (
@@ -159,9 +165,14 @@ export default function VerticalPage({ params }) {
                   {a.cover_image_url && (
                     <img className="strip-cover" src={wixCover(a.cover_image_url)} alt="" loading="lazy" decoding="async" />
                   )}
-                  {a.article_category && <span className="strip-pill">{esc(a.article_category)}</span>}
                 </a>
                 <div className="strip-meta">
+                  {(a.article_category || a.theme) && (
+                    <div className="strip-chips">
+                      {a.article_category && <span className="strip-chip strip-chip-type">{esc(a.article_category)}</span>}
+                      {a.theme && <a className="strip-chip strip-chip-theme" href={`/portal/library?theme=${encodeURIComponent(a.theme)}`} style={{ textDecoration: 'none', cursor: 'pointer' }}>{esc(a.theme)}</a>}
+                    </div>
+                  )}
                   <div className="byline">
                     {avatarOriginal && (
                       <span className="avatarWrap">
@@ -184,6 +195,36 @@ export default function VerticalPage({ params }) {
             )
           })}
         </div>
+
+        {memberPosts.length > 0 && (
+          <div style={{ marginTop: 56, paddingTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>From our members</h2>
+              <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#7a2531', border: '1px solid #7a2531', borderRadius: 999, padding: '3px 10px' }}>Member posts</span>
+            </div>
+            <div className="vertical-list">
+              {memberPosts.map(a => {
+                const href = a.slug ? `/post/${a.slug}` : '#'
+                return (
+                  <div className="strip" key={a.slug} style={{ background: '#fdf5f6', borderRadius: 12, padding: '20px 20px', border: '1px solid #f0e0e4' }}>
+                    <a className="strip-media" href={href}>
+                      {a.cover_image_url && <img className="strip-cover" src={wixCover(a.cover_image_url)} alt="" loading="lazy" decoding="async" />}
+                    </a>
+                    <div className="strip-meta">
+                      <div className="strip-chips"><span className="strip-chip" style={{ background: '#7a2531', color: '#fff' }}>Member post</span></div>
+                      <div className="byline">
+                        <span className="authorLink">{esc(a.author_name)}<span style={{ color: '#9a7680' }}> · Parlor member</span></span>
+                        {a.date_published && <span className="articleDate">· {formatDate(a.date_published)}</span>}
+                      </div>
+                      <a className="titleLink" href={href}><h3 className="title">{esc(a.title)}</h3></a>
+                      {a.excerpt && <p className="excerpt">{esc(a.excerpt)}</p>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </section>
 
       <SiteFooter />

@@ -16,8 +16,10 @@ import { AudioBlock } from './AudioBlockExtension'
 import { VideoBlock } from './VideoBlockExtension'
 import { EmbedBlock } from './EmbedBlockExtension'
 import { AlbumBlock, AlbumInsertModal } from './AlbumBlockExtension'
+import { DisclaimerBlock } from './DisclaimerBlockExtension'
 import MediaLibraryModal from './MediaLibraryModal'
 import { createClient } from '../../../../lib/supabase'
+import { prepareImageUpload, isDuplicateUpload } from '../../../../lib/uploadImage'
 import ImageEditor from '../../_components/ImageEditor'
 
 // Module-level ref so ImageNodeView (outside React tree) can fire editor-level callbacks
@@ -332,10 +334,18 @@ function ImageNodeView({ node, updateAttributes, selected, deleteNode }) {
   const { src, alt, caption, align } = node.attrs
   const showControls = selected || hovered
 
+  // Keep every property present with individual margins (no `margin` shorthand):
+  // switching alignment then only changes values, so React never has to remove a
+  // longhand while the shorthand stays (which triggers a styling-bug warning).
+  const isFloat = align === 'float-left' || align === 'float-right'
   const wrapperStyle = {
-    display: 'block', margin: '1.2em 0',
-    ...(align === 'float-left'  && { float: 'left',  marginRight: '1.2em', marginBottom: '0.5em', marginLeft: 0,  maxWidth: '50%' }),
-    ...(align === 'float-right' && { float: 'right', marginLeft:  '1.2em', marginBottom: '0.5em', marginRight: 0, maxWidth: '50%' }),
+    display: 'block',
+    float: align === 'float-left' ? 'left' : align === 'float-right' ? 'right' : 'none',
+    maxWidth: isFloat ? '50%' : 'none',
+    marginTop: '1.2em',
+    marginBottom: isFloat ? '0.5em' : '1.2em',
+    marginLeft: align === 'float-right' ? '1.2em' : 0,
+    marginRight: align === 'float-left' ? '1.2em' : 0,
   }
 
   const imgStyle = {
@@ -394,8 +404,19 @@ function ImageNodeView({ node, updateAttributes, selected, deleteNode }) {
           </div>
         )}
 
+        {/* Edit controls are absolutely positioned so showing/hiding them never
+            changes the figure's height — otherwise a floated image would reflow
+            (and visibly "jump") the text wrapping around it on every hover. */}
         {showControls && (
-          <div contentEditable={false} style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          <div
+            contentEditable={false}
+            style={{
+              position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 11,
+              display: 'flex', flexDirection: 'column', gap: '5px',
+              background: 'rgba(10,10,10,0.92)', padding: '8px', borderRadius: '8px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
+            }}
+          >
             <input
               type="text"
               value={alt || ''}
@@ -417,7 +438,7 @@ function ImageNodeView({ node, updateAttributes, selected, deleteNode }) {
           </div>
         )}
 
-        {!showControls && caption && (
+        {caption && (
           <figcaption style={{
             marginTop: '6px', fontSize: '13px', color: '#888',
             fontStyle: 'italic', lineHeight: '1.4',
@@ -469,10 +490,14 @@ const CustomImage = Image.extend({
 })
 
 // ── Main editor ──────────────────────────────────────────────
-export default function RichTextEditor({ content, onChange, placeholder }) {
+// `slim` = member/community mode: no admin-only blocks (album/audio/video/embed)
+// and the image button uploads directly instead of opening the admin Media
+// Library, so members never see org-wide media.
+export default function RichTextEditor({ content, onChange, placeholder, slim = false }) {
   const [openMenu, setOpenMenu] = useState(null)
   const [showMediaLibrary, setShowMediaLibrary] = useState(false)
   const [showAlbumModal, setShowAlbumModal] = useState(false)
+  const slimFileRef = useRef(null)
 
   // Image right-click context menu
   const [imgCtxMenu, setImgCtxMenu]     = useState(null) // { x, y, src, updateAttributes, deleteNode }
@@ -482,6 +507,7 @@ export default function RichTextEditor({ content, onChange, placeholder }) {
   const supabase = createClient()
   const editorRef = useRef(null)
   const uploadFnRef = useRef(null)
+  const dedupeRef = useRef(null)
 
   // Register context menu callback for ImageNodeView
   useEffect(() => {
@@ -492,10 +518,11 @@ export default function RichTextEditor({ content, onChange, placeholder }) {
   }, [])
 
   async function uploadBodyImage(file) {
-    const ext = file.name.split('.').pop()
+    if (isDuplicateUpload(dedupeRef, file)) return null
+    const { file: up, ext, contentType } = await prepareImageUpload(file)
     const path = `body/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error } = await supabase.storage.from('Media').upload(path, file, {
-      cacheControl: '3600', contentType: file.type,
+    const { error } = await supabase.storage.from('Media').upload(path, up, {
+      cacheControl: '31536000', contentType,
     })
     if (error) return null
     const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)
@@ -515,10 +542,8 @@ export default function RichTextEditor({ content, onChange, placeholder }) {
       Color,
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      AudioBlock,
-      VideoBlock,
-      EmbedBlock,
-      AlbumBlock,
+      ...(slim ? [] : [AudioBlock, VideoBlock, EmbedBlock, AlbumBlock]),
+      DisclaimerBlock, // present in both modes; inserted programmatically, not via toolbar
     ],
     content: content || '',
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
@@ -694,25 +719,31 @@ export default function RichTextEditor({ content, onChange, placeholder }) {
           <TBtn onClick={setLink} active={editor.isActive('link')} title="Add link">
             <IconLink />
           </TBtn>
-          <TBtn onClick={() => setShowMediaLibrary(true)} active={false} title="Insert image">
+          <TBtn onClick={() => slim ? slimFileRef.current?.click() : setShowMediaLibrary(true)} active={false} title="Insert image">
             <IconImage />
           </TBtn>
-          <TBtn onClick={() => setShowAlbumModal(true)} active={false} title="Insert album">
-            <IconAlbum />
-          </TBtn>
+          {!slim && (
+            <TBtn onClick={() => setShowAlbumModal(true)} active={false} title="Insert album">
+              <IconAlbum />
+            </TBtn>
+          )}
           <Sep />
 
-          {/* Audio / Video / Embed */}
-          <TBtn onClick={() => editor.chain().focus().insertAudioBlock().run()} active={editor.isActive('audioBlock')} title="Insert audio player">
-            <IconAudio />
-          </TBtn>
-          <TBtn onClick={() => editor.chain().focus().insertVideoBlock().run()} active={editor.isActive('videoBlock')} title="Insert video embed">
-            <IconVideo />
-          </TBtn>
-          <TBtn onClick={() => editor.chain().focus().insertEmbedBlock().run()} active={editor.isActive('embedBlock')} title="Insert embed">
-            <IconEmbed />
-          </TBtn>
-          <Sep />
+          {/* Audio / Video / Embed — editorial only */}
+          {!slim && (
+            <>
+              <TBtn onClick={() => editor.chain().focus().insertAudioBlock().run()} active={editor.isActive('audioBlock')} title="Insert audio player">
+                <IconAudio />
+              </TBtn>
+              <TBtn onClick={() => editor.chain().focus().insertVideoBlock().run()} active={editor.isActive('videoBlock')} title="Insert video embed">
+                <IconVideo />
+              </TBtn>
+              <TBtn onClick={() => editor.chain().focus().insertEmbedBlock().run()} active={editor.isActive('embedBlock')} title="Insert embed">
+                <IconEmbed />
+              </TBtn>
+              <Sep />
+            </>
+          )}
 
           {/* Text color */}
           <div data-menu style={{ position: 'relative' }}>
@@ -807,6 +838,15 @@ export default function RichTextEditor({ content, onChange, placeholder }) {
           <EditorContent editor={editor} />
         </div>
       </div>
+
+      {slim && (
+        <input ref={slimFileRef} type="file" accept="image/*" hidden onChange={async e => {
+          const file = e.target.files?.[0]; e.target.value = ''
+          if (!file || !file.type.startsWith('image/')) return
+          const url = await uploadBodyImage(file)
+          if (url) editor.chain().focus().setImage({ src: url }).run()
+        }} />
+      )}
 
       {showMediaLibrary && (
         <MediaLibraryModal
