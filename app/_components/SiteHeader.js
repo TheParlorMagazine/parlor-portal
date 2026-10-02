@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../lib/supabase'
+import { useCart } from '../../lib/useCart'
+import { openCart } from '../../lib/cartUI'
 
 const NAV_LINKS = ["Work & Wealth", "Society & Culture", "World & Politics", "Perspectives & Identity"]
 const ABOUT_LINKS = [
@@ -11,6 +13,7 @@ const ABOUT_LINKS = [
 ]
 
 export default function SiteHeader({ hideOnScroll = false, activeCategory = null }) {
+  const { cart } = useCart()
   const [memberOpen, setMemberOpen] = useState(false)
   const [member, setMember] = useState(null)
   const [hidden, setHidden] = useState(false)
@@ -324,13 +327,13 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
               </div>
             </div>
 
-            <a href="/cart" className="cart-btn">
+            <a href="/shop?cart=1" className="cart-btn" onClick={e => { e.preventDefault(); openCart() }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <path d="M16 10a4 4 0 01-8 0"/>
               </svg>
-              <span className="cart-count">0</span>
+              {cart.length > 0 && <span className="cart-count">{cart.length}</span>}
             </a>
           </div>
         </div>
@@ -384,12 +387,12 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
         </div>
 
         <div className="nav-drawer-section">
-          <div className="nav-drawer-label">Books</div>
+          <div className="nav-drawer-label">Circulating Library</div>
           <div className="nav-drawer-empty">Coming soon.</div>
         </div>
 
         <div className="nav-drawer-section">
-          <div className="nav-drawer-label">Games</div>
+          <div className="nav-drawer-label">Games, Puzzles and Quizzes</div>
           <div className="nav-drawer-empty">Coming soon.</div>
         </div>
       </aside>

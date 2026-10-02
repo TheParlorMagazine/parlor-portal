@@ -7,9 +7,21 @@ export async function GET(request) {
   if (!user) return Response.json({ error: 'Not signed in' }, { status: 401 })
   const db = serviceClient()
 
-  const { data: forums, error } = await db.from('forums')
-    .select('id, name, description, join_policy, member_count, thread_count, tied_to_type, created_at')
+  let { data: forums, error } = await db.from('forums')
+    .select('id, name, description, cover_image_url, avatar_url, join_policy, member_count, thread_count, tied_to_type, created_at')
     .eq('status', 'active').order('member_count', { ascending: false })
+  if (error) { // avatar_url column not added yet — keep the banner, drop only avatar_url
+    const r = await db.from('forums')
+      .select('id, name, description, cover_image_url, join_policy, member_count, thread_count, tied_to_type, created_at')
+      .eq('status', 'active').order('member_count', { ascending: false })
+    forums = r.data; error = r.error
+  }
+  if (error) { // cover_image_url also missing — drop both image columns
+    const r = await db.from('forums')
+      .select('id, name, description, join_policy, member_count, thread_count, tied_to_type, created_at')
+      .eq('status', 'active').order('member_count', { ascending: false })
+    forums = r.data; error = r.error
+  }
   if (error) return Response.json({ error: error.message }, { status: 500 })
 
   const [{ data: mine }, { data: reqs }] = await Promise.all([

@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { prepareImageUpload, isDuplicateUpload } from '../../../lib/uploadImage'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -14,7 +15,7 @@ const label = { fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em'
 function toLocalInput(iso) { if (!iso) return ''; const d = new Date(iso); if (isNaN(d)) return ''; const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}` }
 
 // ── Book form modal (create / edit) ──
-function BookModal({ token, book, onClose, onSaved }) {
+function BookModal({ token, book, supabase, onClose, onSaved }) {
   const [f, setF] = useState({
     title: book?.title || '', author: book?.author || '', cover_image_url: book?.cover_image_url || '',
     book_url: book?.book_url || '', blurb: book?.blurb || '', status: book?.status || 'upcoming',
@@ -22,7 +23,25 @@ function BookModal({ token, book, onClose, onSaved }) {
   })
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null)
+  const [drag, setDrag] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const dedupeRef = useRef(null)
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
+
+  async function uploadCover(file) {
+    if (!file || !file.type.startsWith('image/')) return
+    if (!supabase) { setMsg('Upload unavailable — paste a URL instead.'); return }
+    if (isDuplicateUpload(dedupeRef, file)) return
+    setUploading(true); setMsg(null)
+    try {
+      const { file: up, ext, contentType } = await prepareImageUpload(file, { maxDim: 1200 })
+      const path = `book-club/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error } = await supabase.storage.from('Media').upload(path, up, { cacheControl: '31536000', contentType })
+      if (error) { setMsg('Upload failed — paste a URL instead.'); return }
+      const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)
+      set('cover_image_url', publicUrl)
+    } finally { setUploading(false) }
+  }
 
   async function save() {
     if (!f.title.trim()) { setMsg('Title is required.'); return }
@@ -45,7 +64,17 @@ function BookModal({ token, book, onClose, onSaved }) {
           <div><div style={label}>Title</div><input value={f.title} onChange={e => set('title', e.target.value)} style={input} /></div>
           <div><div style={label}>Author</div><input value={f.author} onChange={e => set('author', e.target.value)} style={input} /></div>
         </div>
-        <div style={label}>Cover image URL</div><input value={f.cover_image_url} onChange={e => set('cover_image_url', e.target.value)} placeholder="https://…" style={input} />
+        <div style={label}>Cover image</div>
+        <div
+          onDragOver={e => { e.preventDefault(); setDrag(true) }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={e => { e.preventDefault(); setDrag(false); const fl = e.dataTransfer.files?.[0]; if (fl) uploadCover(fl) }}
+          style={{ border: `1.5px dashed ${drag ? DP : BORDER}`, borderRadius: 8, background: drag ? '#fdf1f3' : '#faf8f6', padding: f.cover_image_url ? 8 : 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+          {f.cover_image_url
+            ? <><img src={f.cover_image_url} alt="" style={{ width: 40, height: 58, borderRadius: 5, objectFit: 'cover', flexShrink: 0, background: '#eee' }} /><div style={{ fontSize: 12, color: '#888', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.cover_image_url}</div><button onClick={() => set('cover_image_url', '')} style={{ background: 'none', border: 'none', color: DP, fontSize: 12.5, cursor: 'pointer', fontFamily: ff }}>Remove</button></>
+            : <div style={{ fontSize: 12.5, color: '#888' }}>{uploading ? 'Uploading…' : <><strong style={{ color: '#555' }}>Drag &amp; drop</strong> a cover, or <label style={{ color: DP, cursor: 'pointer' }}>upload<input type="file" accept="image/*" hidden onChange={e => { const fl = e.target.files?.[0]; if (fl) uploadCover(fl); e.target.value = '' }} /></label></>}</div>}
+        </div>
+        <input value={f.cover_image_url} onChange={e => set('cover_image_url', e.target.value)} placeholder="…or paste a cover image URL" style={{ ...input, marginTop: 8, fontSize: 13 }} />
         <div style={label}>Book link (buy / read)</div><input value={f.book_url} onChange={e => set('book_url', e.target.value)} placeholder="https://…" style={input} />
         <div style={label}>Blurb / why we chose it</div><textarea value={f.blurb} onChange={e => set('blurb', e.target.value)} rows={3} style={{ ...input, resize: 'vertical' }} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 90px', gap: 12 }}>
@@ -192,7 +221,7 @@ export default function ReadingRoomSection({ supabase }) {
           )}
       </div>
 
-      {editing !== undefined && <BookModal token={token} book={editing} onClose={() => setEditing(undefined)} onSaved={load} />}
+      {editing !== undefined && <BookModal token={token} book={editing} supabase={supabase} onClose={() => setEditing(undefined)} onSaved={load} />}
       {prompting && <PromptsModal token={token} book={prompting} onClose={() => setPrompting(null)} onChanged={load} />}
     </div>
   )

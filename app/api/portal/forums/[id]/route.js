@@ -12,7 +12,15 @@ export async function GET(request, { params }) {
   const role = await effectiveForumRole(db, id, user.id)
   if (!role) return Response.json({ error: 'Not a member of this forum' }, { status: 403 })
 
-  const { data: forum } = await db.from('forums').select('id, name, description, guidelines, status').eq('id', id).single()
+  let { data: forum, error: fErr } = await db.from('forums').select('id, name, description, guidelines, status, cover_image_url, avatar_url').eq('id', id).single()
+  if (fErr) { // avatar_url column not added yet — keep the banner, drop only avatar_url
+    const r = await db.from('forums').select('id, name, description, guidelines, status, cover_image_url').eq('id', id).single()
+    forum = r.data; fErr = r.error
+  }
+  if (fErr) { // cover_image_url also missing — drop both image columns
+    const r = await db.from('forums').select('id, name, description, guidelines, status').eq('id', id).single()
+    forum = r.data
+  }
   if (!forum || forum.status !== 'active') return Response.json({ error: 'Forum not found' }, { status: 404 })
 
   const { data: threads } = await db
@@ -37,7 +45,27 @@ export async function GET(request, { params }) {
     author_name: t.members?.full_name || 'Member', author_avatar: t.members?.avatar_url || null,
     upvoted: voted.has(t.id),
   }))
-  return Response.json({ forum: { ...forum, my_role: role }, threads: shaped })
+  // Members (for the sidebar) — hosts first, then members.
+  const { data: fm } = await db.from('forum_members')
+    .select('member_id, role, members!forum_members_member_id_fkey(full_name, avatar_url)')
+    .eq('forum_id', id)
+  const members = (fm || [])
+    .map(m => ({ id: m.member_id, role: m.role, name: m.members?.full_name || 'Member', avatar: m.members?.avatar_url || null }))
+    .sort((a, b) => (a.role === 'host' ? 0 : 1) - (b.role === 'host' ? 0 : 1) || a.name.localeCompare(b.name))
+
+  // Events attached to this forum (a forum can hold a whole series), split
+  // into upcoming / past.
+  const { data: evs } = await db.from('events')
+    .select('id, title, starts_at, status, cover_image_url')
+    .eq('forum_id', id).eq('status', 'published')
+    .order('starts_at', { ascending: true })
+  const nowT = Date.now()
+  const events = {
+    upcoming: (evs || []).filter(e => e.starts_at && new Date(e.starts_at).getTime() >= nowT),
+    past: (evs || []).filter(e => !e.starts_at || new Date(e.starts_at).getTime() < nowT).reverse(),
+  }
+
+  return Response.json({ forum: { ...forum, my_role: role }, threads: shaped, members, events })
 }
 
 // POST { title, body } → start a thread (any forum member)

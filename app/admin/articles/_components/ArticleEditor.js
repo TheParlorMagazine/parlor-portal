@@ -2176,8 +2176,12 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
               <Toggle checked={form.published} onChange={v => update('published', v)} />
             </div>
             <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '13px', color: form.featured ? '#f2b8c6' : '#666', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: form.featured ? '#f2b8c6' : '#666', fontFamily: "'Source Serif 4', Georgia, serif" }}>
                 Featured
+                <span
+                  title="Featured makes this article the full-width hero at the top of its Vertical page. Only one article per vertical can be featured — turning this on demotes the vertical's previously featured article. (Set the Vertical below for this to take effect. The homepage hero carousel is separate: it always shows the newest issue's latest articles.)"
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '15px', height: '15px', borderRadius: '50%', border: '1px solid #6a6a6a', color: '#9a9a9a', fontSize: '10px', fontStyle: 'italic', fontFamily: 'Georgia, serif', cursor: 'help', flexShrink: 0 }}
+                >i</span>
               </span>
               <Toggle checked={form.featured} onChange={v => update('featured', v)} />
             </div>

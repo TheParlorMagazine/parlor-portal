@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
+    "@stripe/stripe-js": "^9.17.0",
     "@supabase/ssr": "^0.3.0",
     "@supabase/supabase-js": "^2",
     "@tiptap/extension-color": "^3.23.6",

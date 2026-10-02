@@ -55,7 +55,7 @@ export default function VerticalPage({ params }) {
       setLoading(true)
       const { data, error } = await supabase
         .from('articles')
-        .select('slug, title, excerpt, cover_image_url, author_name, author_photo_url, author_profile_url, category, article_category, theme, date_published, media_type')
+        .select('slug, title, excerpt, cover_image_url, author_name, author_photo_url, author_profile_url, category, article_category, theme, date_published, media_type, featured')
         .eq('published', true)
         .eq('category', category)
         .order('date_published', { ascending: false })
@@ -67,7 +67,10 @@ export default function VerticalPage({ params }) {
 
   if (!category) notFound()
 
-  const editorial = articles.filter(a => a.media_type !== 'member_post')
+  // The featured article for this vertical anchors a full-width hero. Only one can
+  // be featured per vertical (enforced at save time), so pick the first if present.
+  const featured = articles.find(a => a.featured && a.media_type !== 'member_post')
+  const editorial = articles.filter(a => a.media_type !== 'member_post' && a.slug !== featured?.slug)
   const memberPosts = articles.filter(a => a.media_type === 'member_post')
 
   return (
@@ -92,6 +95,57 @@ export default function VerticalPage({ params }) {
           font-size: clamp(36px, 5vw, 56px); font-weight: 700;
           color: #ffffff; line-height: 1.08;
         }
+
+        /* Full-width featured hero — the vertical's featured article. */
+        .feat-hero {
+          position: relative;
+          min-height: 520px;
+          display: flex;
+          align-items: flex-end;
+          background: #0a0a0a center/cover no-repeat;
+          overflow: hidden;
+        }
+        .feat-hero-scrim {
+          position: absolute; inset: 0;
+          background: linear-gradient(180deg, rgba(10,10,10,0.15) 0%, rgba(10,10,10,0.35) 45%, rgba(10,10,10,0.9) 100%);
+        }
+        .feat-hero-inner {
+          position: relative; z-index: 1;
+          max-width: 900px; margin: 0 auto; width: 100%;
+          padding: 0 40px 56px;
+        }
+        .feat-hero-eyebrow {
+          display: inline-flex; align-items: center; gap: 10px;
+          font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
+          color: #f2b8c6; margin-bottom: 18px;
+        }
+        .feat-hero-badge {
+          font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+          color: #0a0a0a; background: #f2b8c6; border-radius: 999px; padding: 3px 10px;
+        }
+        .feat-hero-title {
+          font-family: 'Playfair Display', Georgia, serif;
+          font-size: clamp(34px, 5vw, 60px); font-weight: 700;
+          color: #ffffff; line-height: 1.06; margin: 0 0 16px; max-width: 20ch;
+        }
+        .feat-hero-title a:hover { text-decoration: underline; text-underline-offset: 3px; }
+        .feat-hero-excerpt {
+          font-size: 18px; line-height: 1.6; color: rgba(255,255,255,0.82);
+          max-width: 62ch; margin: 0 0 20px;
+        }
+        .feat-hero-byline {
+          display: flex; align-items: center; gap: 10px;
+          font-size: 14px; color: rgba(255,255,255,0.7);
+        }
+        .feat-hero-byline .avatarWrap { width: 34px; height: 34px; }
+        .feat-hero-author { color: #ffffff; font-weight: 600; }
+        .feat-hero-cta {
+          display: inline-block; margin-top: 22px;
+          font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;
+          color: #0a0a0a; background: #f2b8c6; padding: 12px 26px; border-radius: 999px;
+          transition: background 0.15s;
+        }
+        .feat-hero-cta:hover { background: #ffffff; }
 
         .vertical-grid-section { padding: 48px 40px 72px; max-width: 980px; margin: 0 auto; }
         .vertical-list {
@@ -141,15 +195,51 @@ export default function VerticalPage({ params }) {
           .title { font-size: 21px; }
           .vertical-hero { padding: 48px 24px 36px; }
           .vertical-grid-section { padding: 36px 20px 56px; }
+          .feat-hero { min-height: 420px; }
+          .feat-hero-inner { padding: 0 24px 40px; }
+          .feat-hero-excerpt { font-size: 16px; }
         }
       `}</style>
 
       <SiteHeader activeCategory={category} />
 
-      <section className="vertical-hero">
-        <div className="vertical-eyebrow">Section</div>
-        <h1 className="vertical-title">{category}</h1>
-      </section>
+      {featured ? (
+        <section
+          className="feat-hero"
+          style={featured.cover_image_url ? { backgroundImage: `url(${wixCover(featured.cover_image_url, 1600, 82)})` } : undefined}
+        >
+          <div className="feat-hero-scrim" />
+          <div className="feat-hero-inner">
+            <div className="feat-hero-eyebrow">
+              <span>{category}</span>
+              <span className="feat-hero-badge">Featured</span>
+            </div>
+            <h1 className="feat-hero-title">
+              <a href={featured.slug ? `/post/${featured.slug}` : '#'}>{esc(featured.title)}</a>
+            </h1>
+            {featured.excerpt && <p className="feat-hero-excerpt">{esc(featured.excerpt)}</p>}
+            <div className="feat-hero-byline">
+              {featured.author_photo_url && (
+                <span className="avatarWrap">
+                  <img className="avatar" src={wixAvatar(featured.author_photo_url)} alt="" loading="lazy" decoding="async" />
+                </span>
+              )}
+              {featured.author_profile_url ? (
+                <a className="feat-hero-author" href={featured.author_profile_url} target="_top">{esc(featured.author_name)}</a>
+              ) : (
+                <span className="feat-hero-author">{esc(featured.author_name)}</span>
+              )}
+              {featured.date_published && <span>· {formatDate(featured.date_published)}</span>}
+            </div>
+            <a className="feat-hero-cta" href={featured.slug ? `/post/${featured.slug}` : '#'}>Read the story</a>
+          </div>
+        </section>
+      ) : (
+        <section className="vertical-hero">
+          <div className="vertical-eyebrow">Section</div>
+          <h1 className="vertical-title">{category}</h1>
+        </section>
+      )}
 
       <section className="vertical-grid-section">
         {!loading && articles.length === 0 && (

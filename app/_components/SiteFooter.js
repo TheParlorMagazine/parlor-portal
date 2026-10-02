@@ -34,7 +34,7 @@ export default function SiteFooter() {
           </div>
           <div>
             <div className="footer-col-title">Magazine</div>
-            {['About','Shop','Open Call','Writer Profiles','Archive'].map(l => <a key={l} href="#" className="footer-link">{l}</a>)}
+            {['About','Shop','Open Call','People of The Parlor','Archive'].map(l => <a key={l} href="#" className="footer-link">{l}</a>)}
           </div>
           <div>
             <div className="footer-col-title">Members</div>

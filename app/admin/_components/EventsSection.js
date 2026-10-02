@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { prepareImageUpload, isDuplicateUpload } from '../../../lib/uploadImage'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -50,7 +51,53 @@ function ForumModeSelect({ value, onChange }) {
   )
 }
 
-function EventModal({ token, event, onClose, onSaved, forums = [] }) {
+// Forum thumbnail: paste a URL, click to upload, or drag & drop an image.
+function ForumImageField({ value, onChange, supabase }) {
+  const [drag, setDrag] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef(null)
+  const dedupeRef = useRef(null)
+
+  async function uploadFile(file) {
+    if (!file || !file.type.startsWith('image/')) return
+    if (isDuplicateUpload(dedupeRef, file)) return
+    setUploading(true)
+    try {
+      const { file: up, ext, contentType } = await prepareImageUpload(file, { maxDim: 1200 })
+      const path = `forums/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error } = await supabase.storage.from('Media').upload(path, up, { cacheControl: '31536000', contentType })
+      if (!error) { const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path); onChange(publicUrl) }
+    } finally { setUploading(false) }
+  }
+
+  return (
+    <div>
+      <div
+        onDragOver={e => { e.preventDefault(); setDrag(true) }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={e => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files?.[0]; if (f) uploadFile(f) }}
+        onClick={() => !value && fileRef.current?.click()}
+        style={{ position: 'relative', border: `1.5px dashed ${drag ? DP : BORDER}`, borderRadius: 8, background: drag ? '#faf3f5' : '#fafafa', padding: value ? 8 : 18, display: 'flex', alignItems: 'center', gap: 12, cursor: value ? 'default' : 'pointer', transition: 'border-color 0.15s, background 0.15s' }}>
+        {value ? (
+          <>
+            <img src={value} alt="" style={{ width: 60, height: 60, borderRadius: 8, objectFit: 'cover', flexShrink: 0, background: '#eee' }} />
+            <div style={{ fontSize: 12.5, color: '#666', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
+            <button type="button" onClick={e => { e.stopPropagation(); onChange('') }} style={{ background: 'none', border: 'none', color: DP, fontSize: 13, cursor: 'pointer', fontFamily: ff, flexShrink: 0 }}>Remove</button>
+          </>
+        ) : (
+          <div style={{ fontSize: 13, color: '#999', fontFamily: ff }}>
+            {uploading ? 'Uploading…' : <><strong style={{ color: '#555' }}>Drag &amp; drop</strong> an image here, or <span style={{ color: DP }}>click to upload</span></>}
+          </div>
+        )}
+        {uploading && value && <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#666', borderRadius: 8 }}>Uploading…</div>}
+        <input ref={fileRef} type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = '' }} />
+      </div>
+      <input value={value || ''} onChange={e => onChange(e.target.value)} placeholder="…or paste an image URL (defaults to the event cover)" style={{ ...input, marginTop: 8, fontSize: 13 }} />
+    </div>
+  )
+}
+
+function EventModal({ token, event, onClose, onSaved, forums = [], supabase }) {
   const [f, setF] = useState({
     title: event?.title || '', blurb: event?.blurb || '', description: event?.description || '', cover_image_url: event?.cover_image_url || '',
     location_type: event?.location_type || 'virtual', location: event?.location || '', join_url: event?.join_url || '',
@@ -59,7 +106,9 @@ function EventModal({ token, event, onClose, onSaved, forums = [] }) {
     forum_mode: event?.forum_id ? 'connect' : 'none',   // none | create | connect
     forum_id: event?.forum_id || '',
     forum_name: '',   // custom name when creating a new forum (blank = use the event name)
+    forum_cover: '',  // custom forum thumbnail (blank = inherit the event cover)
     featured_in_newsletter: !!event?.featured_in_newsletter,
+    featured_home: !!event?.featured_home,
   })
   const [busy, setBusy] = useState(false); const [msg, setMsg] = useState(null)
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
@@ -76,6 +125,7 @@ function EventModal({ token, event, onClose, onSaved, forums = [] }) {
       forum_mode: f.forum_mode,
       forum_id: f.forum_mode === 'connect' ? (f.forum_id || null) : null,
       forum_name: f.forum_mode === 'create' ? (f.forum_name || null) : null,
+      forum_cover: f.forum_mode === 'create' ? (f.forum_cover || null) : null,
     }
     if (f.forum_mode === 'connect' && !f.forum_id) { setBusy(false); setMsg('Choose a forum to connect, or pick another option.'); return }
     if (event?.id) payload.id = event.id
@@ -125,6 +175,10 @@ function EventModal({ token, event, onClose, onSaved, forums = [] }) {
               <input value={f.forum_name} onChange={e => set('forum_name', e.target.value)} placeholder={`Forum name — defaults to “${f.title || 'the event name'}”`} style={{ ...input }} />
               <button type="button" onClick={() => set('forum_name', f.title)} disabled={!f.title.trim()} style={{ whiteSpace: 'nowrap', background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '10px 12px', fontFamily: ff, fontSize: 12.5, cursor: f.title.trim() ? 'pointer' : 'default', color: '#555' }}>Use event name</button>
             </div>
+            <div style={{ marginTop: 8 }}>
+              <div style={{ ...label, margin: '0 0 6px' }}>Forum thumbnail</div>
+              <ForumImageField value={f.forum_cover} onChange={v => set('forum_cover', v)} supabase={supabase} />
+            </div>
           </div>
         )}
         {f.forum_mode === 'connect' && (
@@ -139,6 +193,11 @@ function EventModal({ token, event, onClose, onSaved, forums = [] }) {
           Feature in the newsletter banner
         </label>
         <p style={{ fontSize: 12, color: '#aaa', margin: '4px 0 0' }}>Shows as the featured event at the top of the next newsletter (the soonest upcoming featured event is used).</p>
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, fontSize: 13.5, color: '#333', cursor: 'pointer' }}>
+          <input type="checkbox" checked={f.featured_home} onChange={e => set('featured_home', e.target.checked)} />
+          Feature on the homepage
+        </label>
+        <p style={{ fontSize: 12, color: '#aaa', margin: '4px 0 0' }}>Shows in the “Featured events” section on the public homepage (up to 3, soonest first).</p>
         {msg && <p style={{ color: DP, fontSize: 13, marginTop: 12 }}>{msg}</p>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
           <button onClick={onClose} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '9px 18px', fontFamily: ff, fontSize: 13, cursor: 'pointer', color: '#555' }}>Cancel</button>
@@ -233,7 +292,7 @@ export default function EventsSection({ supabase }) {
           )}
       </div>
 
-      {editing !== undefined && <EventModal token={token} event={editing} forums={forums} onClose={() => setEditing(undefined)} onSaved={load} />}
+      {editing !== undefined && <EventModal token={token} event={editing} forums={forums} supabase={supabase} onClose={() => setEditing(undefined)} onSaved={load} />}
       {attending && <AttendeesModal token={token} event={attending} onClose={() => setAttending(null)} />}
     </div>
   )

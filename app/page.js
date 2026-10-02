@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { createClient } from '../lib/supabase'
+import { useCart } from '../lib/useCart'
+import { openCart } from '../lib/cartUI'
 
 const FIRST_EAGER = 5
 const LOOKAHEAD = 3
@@ -111,6 +113,7 @@ function slideHTML(it, idx) {
 }
 
 export default function HomePage() {
+  const { cart } = useCart()
   const [announceVisible, setAnnounceVisible] = useState(true)
   const [visible, setVisible] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
@@ -119,16 +122,21 @@ export default function HomePage() {
   const [issuesList, setIssuesList] = useState([])
   const [ribbonCollapsed, setRibbonCollapsed] = useState(false)
   const [ribbonScrolling, setRibbonScrolling] = useState(false)
+  const [announcements, setAnnouncements] = useState([])
+  const [ribbonIndex, setRibbonIndex] = useState(0)
+  const [featuredEvents, setFeaturedEvents] = useState([])
+  const [homeBanner, setHomeBanner] = useState(null)
   const [member, setMember] = useState(null)
   const [articles, setArticles] = useState(ARTICLES)
   const [heroSlides, setHeroSlides] = useState([])
+  const [heroIssue, setHeroIssue] = useState(null) // the issue the hero slides belong to (for the eyebrow)
   const [heroLoaded, setHeroLoaded] = useState(false)
   const [heroIndex, setHeroIndex] = useState(1) // 1-based into the cloned track
   const [heroNoTrans, setHeroNoTrans] = useState(false)
   // Slides whose cover is portrait get the two-column "split" layout (image left,
   // title right); wide/near-square covers keep the full-bleed layout.
   const [portraitSlides, setPortraitSlides] = useState({})
-  const [flipbookOpen, setFlipbookOpen] = useState(false)
+  const [printPopupOpen, setPrintPopupOpen] = useState(false)
   const aboutRef = useRef(null)
   const memberRef = useRef(null)
   const supabase = createClient()
@@ -152,7 +160,7 @@ export default function HomePage() {
         .is('issue_id', null)
         .or('media_type.is.null,media_type.neq.member_post')  // member posts never in the homepage river
         .order('date_published', { ascending: false })
-        .limit(12)
+        .limit(6) // the 6 most recent non-issue articles
       if (error || !data?.length) return
       setArticles(data.map(a => ({
         url: a.slug ? `/post/${a.slug}` : '#',
@@ -170,31 +178,79 @@ export default function HomePage() {
     loadArticles()
   }, [])
 
-  // Hero carousel: up to 3 articles from the "The World We're Building" issue (Issue 02).
-  // Falls back to the Borderlands digital hero until that issue has published articles.
+  // Announcements: the homepage banner AND the footer ribbon, fetched together so
+  // they can coordinate. Each shows ONE per page load and advances to the next on
+  // the next load (round-robin per browser). The banner is picked first (it's the
+  // hero), then the ribbon EXCLUDES the banner's type — so the same type of
+  // announcement never leads both surfaces at once.
+  function rotorPick(list, key) {
+    if (!list.length) return null
+    let n = 0
+    try { n = parseInt(localStorage.getItem(key) || '0', 10) || 0 } catch {}
+    const chosen = list[n % list.length]
+    if (list.length > 1) { try { localStorage.setItem(key, String((n + 1) % list.length)) } catch {} }
+    return chosen
+  }
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/announcements/homepage').then(r => r.json()).catch(() => ({ banners: [] })),
+      fetch('/api/announcements').then(r => r.json()).catch(() => ({ announcements: [] })),
+    ]).then(([bd, rd]) => {
+      const banners = Array.isArray(bd.banners) ? bd.banners : []
+      const ribbon = Array.isArray(rd.announcements) ? rd.announcements : []
+      // Banner first.
+      const banner = rotorPick(banners, 'parlorBannerRotor')
+      if (banner) setHomeBanner(banner)
+      // Ribbon excludes the banner's type so they never duplicate a category.
+      const candidates = banner?.type ? ribbon.filter(a => a.type !== banner.type) : ribbon
+      setAnnouncements(candidates)
+      const chosen = rotorPick(candidates, 'parlorRibbonRotor')
+      setRibbonIndex(chosen ? candidates.indexOf(chosen) : 0)
+    })
+  }, [])
+  // Upcoming events for the homepage "Featured events" section.
+  useEffect(() => {
+    fetch('/api/events/upcoming')
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d.events)) setFeaturedEvents(d.events) })
+      .catch(() => {})
+  }, [])
+
+  // Hero carousel: the 3 most-recently-published articles from the NEWEST issue,
+  // in publishing order (newest first). "Newest issue" = the issue that owns the
+  // most recently published issue article, so the hero always tracks the latest
+  // issue release without any manual toggle.
   useEffect(() => {
     async function loadHero() {
       try {
-        const { data: issues } = await supabase.from('issues').select('id, number, title')
-        if (!issues?.length) return
-        const issue =
-          issues.find(i => /world\s*we.?re\s*building/i.test(i.title || '')) ||
-          issues.find(i => i.number === 2)
+        // Which issue is currently releasing? The one holding the latest issue article.
+        const { data: latest } = await supabase
+          .from('articles')
+          .select('issue_id, date_published')
+          .eq('published', true)
+          .not('issue_id', 'is', null)
+          .or('media_type.is.null,media_type.neq.member_post')
+          .order('date_published', { ascending: false })
+          .limit(1)
+        const issueId = latest?.[0]?.issue_id
+        if (!issueId) return
+        const { data: issues } = await supabase.from('issues').select('id, number, title').eq('id', issueId)
+        const issue = issues?.[0]
         if (!issue) return
         const { data: arts } = await supabase
           .from('articles')
-          .select('slug, title, subtitle, cover_image_url, category, date_published')
+          .select('slug, title, excerpt, subtitle, cover_image_url, category, date_published')
           .eq('published', true)
-          .eq('featured', true)
           .eq('issue_id', issue.id)
           .or('media_type.is.null,media_type.neq.member_post')  // member posts never in the hero
           .order('date_published', { ascending: false })
           .limit(3)
         if (!arts?.length) return
+        setHeroIssue(issue)
         setHeroSlides(arts.map(a => ({
           url: a.slug ? `/post/${a.slug}` : '#',
           title: a.title || '',
-          subtitle: a.subtitle || '',
+          subtitle: a.excerpt || a.subtitle || '',
           cover: a.cover_image_url || '',
           category: a.category || '',
         })))
@@ -204,6 +260,36 @@ export default function HomePage() {
     }
     loadHero()
   }, [])
+
+  // Which REAL hero slide is centered — stable across the seamless-loop clone
+  // snap (the clone and its real twin share this index).
+  const heroRealActive = heroSlides.length > 1
+    ? (((heroIndex - 1) % heroSlides.length) + heroSlides.length) % heroSlides.length
+    : 0
+
+  // Play the scroll-unfurl imperatively on whichever slide just became active.
+  // Keyed on the REAL index, so it fires once per genuine slide change and never
+  // re-fires on the clone snap (which keeps the same real index) — no flash.
+  useEffect(() => {
+    if (!heroSlides.length || typeof document === 'undefined') return
+    const reduce = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    // Animate BOTH the visible slide and its off-screen clone (same data-orig),
+    // so after the snap the real slide is already unfurled.
+    document.querySelectorAll(`.issue-hero-sub-wrap[data-orig="${heroRealActive}"]`).forEach(w => {
+      const fill = w.querySelector('.issue-hero-sub-fill')
+      const text = w.querySelector('.issue-hero-sub')
+      if (fill) {
+        fill.getAnimations().forEach(a => a.cancel())
+        if (reduce) fill.style.transform = 'scaleX(1)'
+        else fill.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(0)', offset: 0.22 }, { transform: 'scaleX(1)' }], { duration: 600, easing: 'cubic-bezier(.62,0,.2,1)', fill: 'forwards' })
+      }
+      if (text) {
+        text.getAnimations().forEach(a => a.cancel())
+        if (reduce) text.style.opacity = '1'
+        else text.animate([{ opacity: 0, transform: 'translateY(5px)' }, { opacity: 0, transform: 'translateY(5px)', offset: 0.58 }, { opacity: 1, transform: 'translateY(0)' }], { duration: 950, easing: 'ease', fill: 'forwards' })
+      }
+    })
+  }, [heroRealActive, heroSlides.length])
 
   // Defensive: clear any body scroll-lock a wall/paywall on a previous page may
   // have left behind (e.g. after Back / bfcache restore), so the homepage never
@@ -279,16 +365,46 @@ export default function HomePage() {
     else if (heroIndex === 0) { setHeroNoTrans(true); setHeroIndex(n) }
   }
 
-  // Esc closes the flipbook modal
+  // Show the "Now in print" popup on first load — once per browser session.
   useEffect(() => {
-    if (!flipbookOpen) return
-    const onKey = e => { if (e.key === 'Escape') setFlipbookOpen(false) }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [flipbookOpen])
+    let seen = false
+    try { seen = sessionStorage.getItem('printPopupSeen') === '1' } catch {}
+    if (seen) return
+    const t = setTimeout(() => setPrintPopupOpen(true), 900)
+    return () => clearTimeout(t)
+  }, [])
+  function closePrintPopup() {
+    setPrintPopupOpen(false)
+    try { sessionStorage.setItem('printPopupSeen', '1') } catch {}
+  }
 
   const items = articles.filter(a => !a.featured).sort((a, b) => parseDateSafe(b.date) - parseDateSafe(a.date))
   const slidesHTML = items.map(slideHTML).join('')
+  // Memoize the carousel markup on slidesHTML so the hero carousel's 6.5s
+  // re-render doesn't reconcile this subtree. React reusing the same element
+  // keeps Swiper from re-laying-out the slides on every hero tick (the flicker).
+  const carouselSection = useMemo(() => (
+    <section className="carousel-section">
+      <div className="carousel-header">
+        <div className="carousel-label">Recent Articles</div>
+      </div>
+      <div id="carousel" className="swiper" tabIndex="0" aria-label="Article carousel">
+        <div className="fade-edge fade-left fade-hidden" aria-hidden="true"></div>
+        <div className="fade-edge fade-right" aria-hidden="true"></div>
+        <div id="slides" className="swiper-wrapper" dangerouslySetInnerHTML={{ __html: slidesHTML }}></div>
+        <button className="swiper-button-prev" aria-label="Previous"></button>
+        <button className="swiper-button-next" aria-label="Next"></button>
+      </div>
+    </section>
+  ), [slidesHTML])
+
+  // Current ribbon content: the active announcement in rotation, else the
+  // default "second issue" copy so the ribbon is never empty.
+  // Evergreen, type-neutral fallback — shown when there is no ribbon announcement
+  // to display (none configured, or the only one was excluded for matching the
+  // banner's type). Deliberately generic so it never clashes with the banner.
+  const FALLBACK_RIBBON = { kicker: 'Support independent journalism', headline: 'Join The Parlor', message: 'Sustain the work and receive full access, early releases, and subscriber-only extras.', cta_label: 'Become a paid subscriber', cta_href: '/plans' }
+  const ribbonData = announcements.length ? (announcements[ribbonIndex % announcements.length] || announcements[0]) : FALLBACK_RIBBON
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80)
@@ -434,7 +550,12 @@ export default function HomePage() {
           reachBeginning(s) { toggleArrowsAndFades(s) },
           reachEnd(s) { toggleArrowsAndFades(s) },
           fromEdge(s) { toggleArrowsAndFades(s) },
-          resize(s) { equalizeCards(); toggleArrowsAndFades(s) }
+          // NOTE: do NOT call equalizeCards() here. Swiper's ResizeObserver fires
+          // this whenever the container size changes — and equalizeCards changes
+          // card heights, which changes the container size, which fires this
+          // again: an endless resize↔equalize loop that flickered the slides.
+          // Real viewport resizes are handled by the window 'resize' listener.
+          resize(s) { toggleArrowsAndFades(s) }
         }
       })
     }
@@ -787,38 +908,32 @@ export default function HomePage() {
         .chip:hover .chip-subtitle { max-height: 40px; opacity: 1; }
         .chip-arrow { font-size: 12px; color: #f2b8c6; }
 
-        /* ── PRINT HERO ── */
-        .print-hero { background: var(--black); display: grid; grid-template-columns: 1fr 1fr; min-height: 540px; border-top: 1px solid var(--border); }
-        .print-hero-left { position: relative; overflow: hidden; }
-        .print-hero-left img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 8s ease; }
-        .print-hero-left:hover img { transform: scale(1.03); }
-        .look-inside-btn {
-          position: absolute; bottom: 29%; left: 30%;
-          background: var(--white); color: var(--black);
-          font-family: 'Playfair Display', Georgia, serif;
-          font-size: 12px; font-weight: 700; padding: 10px 18px;
-          letter-spacing: 0.04em; display: flex; align-items: center; gap: 8px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.4); transition: all 0.15s; border: none; cursor: pointer;
+        /* (The old print-hero section was replaced by the "Now in print" first-load
+           popup and the /print landing page; its styles were removed.) */
+
+        /* Now-in-print first-load popup */
+        .printpop-overlay { position: fixed; inset: 0; background: rgba(10,10,10,0.66); z-index: 400; display: flex; align-items: center; justify-content: center; padding: 24px; animation: printpop-fade 0.25s ease; }
+        @keyframes printpop-fade { from { opacity: 0; } to { opacity: 1; } }
+        .printpop-modal { position: relative; display: grid; grid-template-columns: 0.85fr 1fr; width: min(760px, 96vw); max-height: 92vh; background: var(--black); border: 1px solid var(--pink); border-radius: 6px; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.5); }
+        .printpop-close { position: absolute; top: 8px; right: 12px; background: none; border: none; font-size: 26px; line-height: 1; color: #fff; cursor: pointer; z-index: 2; opacity: 0.8; }
+        .printpop-close:hover { opacity: 1; }
+        .printpop-img { background: linear-gradient(160deg,#f7d7e0,#f3c3d1); display: flex; align-items: center; justify-content: center; }
+        .printpop-img img { width: 100%; height: 100%; object-fit: contain; padding: 26px; display: block; }
+        .printpop-body { padding: 34px 32px; display: flex; flex-direction: column; justify-content: center; }
+        .printpop-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink); margin-bottom: 14px; }
+        .printpop-headline { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(24px,2.6vw,30px); font-weight: 700; color: #fff; line-height: 1.1; margin: 0 0 8px; }
+        .printpop-headline em { font-style: italic; color: var(--pink); }
+        .printpop-subhead { font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-style: italic; color: var(--muted); margin-bottom: 16px; }
+        .printpop-text { font-family: 'Source Serif 4', Georgia, serif; font-size: 15px; line-height: 1.7; color: var(--grey); margin: 0 0 22px; }
+        .printpop-cta { display: inline-block; text-align: center; background: var(--pink); color: var(--black); text-decoration: none; padding: 13px 22px; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; transition: background 0.15s; }
+        .printpop-cta:hover { background: #fff; }
+        .printpop-dismiss { margin-top: 12px; background: none; border: none; color: var(--muted); font-family: 'Source Serif 4', Georgia, serif; font-size: 13px; cursor: pointer; text-align: center; transition: color 0.15s; }
+        .printpop-dismiss:hover { color: var(--pink); }
+        @media (max-width: 640px) {
+          .printpop-modal { grid-template-columns: 1fr; max-height: 94vh; overflow-y: auto; }
+          .printpop-img { max-height: 200px; }
+          .printpop-body { padding: 26px 22px 30px; }
         }
-        .look-inside-btn:hover { background: var(--black); color: var(--white); transform: scale(1.04); }
-        .print-hero-right { padding: 56px 48px; display: flex; flex-direction: column; justify-content: center; }
-        .print-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink); margin-bottom: 18px; }
-        .print-headline { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(28px,3.2vw,38px); font-weight: 700; color: var(--white); line-height: 1.08; margin-bottom: 8px; }
-        .print-headline em { font-style: italic; color: var(--pink); }
-        .print-subhead { font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-style: italic; color: var(--muted); margin-bottom: 20px; }
-        .print-body { font-size: 15px; line-height: 1.78; color: var(--grey); margin-bottom: 24px; max-width: 420px; }
-        .gift-box { border: 1px solid var(--card-border); border-left: 3px solid var(--pink); padding: 14px 18px; margin-bottom: 24px; background: #111; }
-        .gift-label { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink); margin-bottom: 7px; }
-        .gift-text { font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-style: italic; color: var(--white); line-height: 1.6; }
-        .cta-stack { display: flex; flex-direction: column; gap: 10px; }
-        .cta-primary { background: var(--pink); color: var(--black); border: none; padding: 13px 22px; font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: space-between; letter-spacing: 0.02em; transition: background 0.15s; text-decoration: none; }
-        .cta-primary:hover { background: var(--white); }
-        .cta-price { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; font-weight: 400; opacity: 0.7; }
-        .cta-secondary { background: transparent; color: var(--pink); border: 1px solid var(--pink); padding: 13px 22px; font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: space-between; letter-spacing: 0.02em; transition: all 0.15s; text-decoration: none; }
-        .cta-secondary:hover { background: var(--pink); color: var(--black); }
-        .cta-note { font-size: 12px; color: var(--muted); font-style: italic; padding-left: 2px; }
-        .cta-price-light { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; font-weight: 400; opacity: 0.8; }
-        .print-hero-contain img { object-fit: contain; padding: 40px; }
 
         /* ── ISSUE HERO CAROUSEL (large image; title/tagline layered over it) ── */
         .issue-hero { position: relative; background: var(--black); overflow: hidden; }
@@ -827,8 +942,31 @@ export default function HomePage() {
         .issue-hero-figure { display: block; width: 100%; padding: 0 clamp(32px,7vw,128px) clamp(24px,4vh,44px); }
         .issue-hero-imgwrap { position: relative; display: block; width: 100%; }
         .issue-hero-imgwrap img { width: 100%; height: clamp(520px, 74vh, 780px); object-fit: cover; object-position: center top; display: block; }
+        /* Full-bleed photos have hard rectangular edges against the black stage.
+           A strong inset vignette (fading to the page black on all four sides)
+           dissolves those edges into the background. Disabled for the 'tall'
+           layout, whose covers are transparent PNGs shown with object-fit:
+           contain — a vignette there would darken the empty margins. */
+        .issue-hero-imgwrap::after {
+          content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+          box-shadow: inset 0 0 120px 48px var(--black), inset 0 0 46px 10px var(--black);
+        }
+        .issue-hero-slide--tall .issue-hero-imgwrap::after { display: none; }
         .issue-hero-head { position: absolute; top: clamp(8px,2vh,24px); left: clamp(24px,6vw,90px); right: clamp(24px,6vw,90px); z-index: 3; pointer-events: none; }
         .issue-hero-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--pink); margin-bottom: 14px; text-shadow: 0 2px 14px rgba(0,0,0,0.6); }
+        /* Description reveal: a blush-pink box swipes open (a flash), then the
+           dark-maroon text fades in a beat later — replays each time a slide
+           becomes active. */
+        .issue-hero-sub-wrap { position: relative; display: block; width: fit-content; max-width: 44ch; margin: clamp(16px,2.4vh,26px) 0 0; padding: 11px 16px; }
+        /* The scroll-unfurl (box wipe + text fade) is driven imperatively via the
+           Web Animations API, keyed on the REAL slide index, so it fires once per
+           genuine slide change and never re-fires on the seamless-loop clone snap
+           (which previously flashed the box open→empty→unfurl). Base = closed. */
+        .issue-hero-sub-fill { position: absolute; inset: 0; transform: scaleX(0); transform-origin: left center; z-index: 0; box-shadow: 0 6px 22px rgba(0,0,0,0.28);
+          /* Dusty-pink paper with a darker band at the leading (right) edge, so as
+             the box wipes open that shadow travels rightward like a scroll unfurling. */
+          background: linear-gradient(90deg, rgba(233,202,210,0.82) 0%, rgba(236,207,214,0.82) 55%, rgba(220,178,188,0.85) 88%, rgba(201,154,166,0.88) 100%); }
+        .issue-hero-sub { position: relative; z-index: 1; margin: 0; font-family: 'Source Serif 4', Georgia, serif; font-size: clamp(15px,1.15vw,17px); line-height: 1.6; color: #111111; opacity: 0; }
         .issue-hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(30px,3.9vw,54px); font-weight: 700; color: var(--white); line-height: 1.06; margin: 0; letter-spacing: -0.01em; text-shadow: 0 2px 20px rgba(0,0,0,0.6); max-width: 22ch; }
         .issue-hero-accent { font-style: italic; color: var(--pink); }
         .issue-hero-btn { position: absolute; right: 20px; bottom: 20px; z-index: 4; display: inline-block; border: 1px solid var(--pink); background: rgba(10,10,10,0.9); color: var(--pink); padding: 16px 64px; font-family: 'Playfair Display', Georgia, serif; font-size: 19px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; box-shadow: 0 6px 22px rgba(0,0,0,0.35); transition: all 0.15s; }
@@ -837,10 +975,9 @@ export default function HomePage() {
         .issue-hero-nav:hover { opacity: 1; }
         .issue-hero-nav.prev { left: 14px; }
         .issue-hero-nav.next { right: 14px; }
-        .issue-hero-dots { display: flex; justify-content: center; gap: 9px; padding: clamp(18px,3vh,28px) 0 0; }
+        .issue-hero-dots { display: flex; justify-content: center; gap: 9px; padding: 0; margin-top: clamp(-72px,-7vh,-44px); margin-bottom: clamp(28px,4vh,48px); position: relative; z-index: 5; }
         .issue-hero-dot { width: 8px; height: 8px; border-radius: 50%; border: none; padding: 0; background: rgba(255,255,255,0.3); cursor: pointer; transition: background 0.15s; }
         .issue-hero-dot.active { background: var(--pink); }
-        .issue-hero-tagline { position: static; z-index: 4; text-align: center; font-family: 'Playfair Display', Georgia, serif; font-weight: 700; color: var(--white); font-size: clamp(26px,3.6vw,50px); line-height: 1.05; padding: clamp(12px,1.8vh,20px) 24px clamp(34px,5.5vh,60px); }
         /* Head "Read more" is only used by the split layout */
         .issue-hero-btn-head { display: none; }
         /* Split layout — portrait cover on the left, title + button on the right */
@@ -859,21 +996,45 @@ export default function HomePage() {
            into the illustration are cropped away and the building fills the frame. */
         .issue-hero-slide--wide { gap: clamp(8px,1.5vw,28px); }
         .issue-hero-slide--wide .issue-hero-figure { width: auto; max-width: 66%; flex: 0 1 auto; }
-        .issue-hero-slide--wide .issue-hero-imgwrap { height: clamp(440px,72vh,760px); aspect-ratio: 6 / 5; max-width: 100%; overflow: hidden; }
+        .issue-hero-slide--wide .issue-hero-imgwrap { height: clamp(392px,62vh,660px); aspect-ratio: 6 / 5; max-width: 100%; overflow: hidden; }
         .issue-hero-slide--wide .issue-hero-imgwrap img { width: 100%; height: 100%; max-height: none; object-fit: cover; object-position: center; }
         .issue-hero-slide--wide .issue-hero-title { max-width: 9ch; font-size: clamp(36px,4vw,68px); }
         .issue-hero-slide--split .issue-hero-imgwrap .issue-hero-btn { display: none; }
         .issue-hero-slide--split .issue-hero-btn-head { display: inline-block; position: static; margin-top: clamp(24px,3vw,44px); }
 
-        /* ── LOOK INSIDE FLIPBOOK MODAL ── */
-        .flipbook-overlay { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; padding: 32px; }
-        .flipbook-modal { position: relative; width: min(1100px, 96vw); height: min(80vh, 760px); background: #111; border: 1px solid var(--card-border); border-radius: 6px; overflow: hidden; display: flex; }
-        .flipbook-close { position: absolute; top: 10px; right: 16px; z-index: 2; background: none; border: none; color: #fff; font-size: 30px; line-height: 1; cursor: pointer; opacity: 0.8; transition: opacity 0.15s; }
-        .flipbook-close:hover { opacity: 1; }
-        .flipbook-body { flex: 1; display: flex; align-items: center; justify-content: center; }
-        .flipbook-placeholder { color: var(--muted); font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 16px; }
 
         /* ── SWIPER CAROUSEL ── */
+        /* ── HOMEPAGE ANNOUNCEMENT BANNER ── */
+        .home-banner { background-size: cover; background-position: center; background-color: var(--black); min-height: clamp(340px, 46vh, 520px); display: flex; border-top: 1px solid var(--border); }
+        .home-banner-scrim { flex: 1; display: flex; align-items: center; background: linear-gradient(90deg, rgba(10,10,10,0.86) 0%, rgba(10,10,10,0.58) 46%, rgba(10,10,10,0.12) 100%); }
+        .home-banner-inner { max-width: 660px; padding: clamp(40px,6vw,80px); }
+        .home-banner-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--pink); margin-bottom: 16px; }
+        .home-banner-head { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(30px,4vw,52px); font-weight: 700; color: var(--white); line-height: 1.08; margin: 0 0 16px; }
+        .home-banner-desc { font-family: 'Source Serif 4', Georgia, serif; font-size: clamp(15px,1.3vw,18px); line-height: 1.7; color: var(--grey); margin: 0 0 24px; max-width: 540px; }
+        .home-banner-cta { display: inline-block; background: var(--pink); color: var(--black); padding: 13px 26px; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; transition: background 0.15s; }
+        .home-banner-cta:hover { background: var(--white); }
+        @media (max-width: 700px) { .home-banner-scrim { background: linear-gradient(rgba(10,10,10,0.5), rgba(10,10,10,0.8)); } }
+
+        /* ── FEATURED EVENTS ── */
+        .events-section { background: var(--black); padding: 58px 40px 62px; border-top: 1px solid var(--border); }
+        .events-head { display: flex; align-items: baseline; justify-content: space-between; max-width: 1280px; margin: 0 auto 26px; }
+        .events-label { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink); }
+        .events-all { font-family: 'Source Serif 4', Georgia, serif; font-size: 13px; color: var(--muted); text-decoration: none; letter-spacing: 0.04em; }
+        .events-all:hover { color: var(--pink); }
+        .events-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; max-width: 1280px; margin: 0 auto; }
+        .event-card { display: flex; flex-direction: column; text-decoration: none; background: #111; border: 1px solid var(--card-border); border-radius: 6px; overflow: hidden; transition: transform 0.15s ease, border-color 0.15s ease; }
+        .event-card:hover { transform: translateY(-3px); border-color: var(--pink); }
+        .event-cover { aspect-ratio: 16 / 9; background-size: cover; background-position: center; background-color: #1a1a1a; display: flex; align-items: center; justify-content: center; }
+        .event-cover-fallback { font-family: 'Alex Brush', cursive; font-size: 30px; color: rgba(242,184,198,0.5); }
+        .event-body { padding: 16px 18px 20px; display: flex; flex-direction: column; gap: 7px; }
+        .event-date { font-family: 'Source Serif 4', Georgia, serif; font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pink); }
+        .event-title { font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 700; color: var(--white); line-height: 1.22; margin: 0; }
+        .event-blurb { font-family: 'Source Serif 4', Georgia, serif; font-size: 14px; line-height: 1.55; color: var(--grey); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .event-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 5px; }
+        .event-loc { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; color: var(--muted); }
+        .event-details { font-family: 'Playfair Display', Georgia, serif; font-size: 13px; font-weight: 700; color: var(--pink); }
+        @media (max-width: 900px) { .events-section { padding: 42px 20px 46px; } .events-grid { grid-template-columns: 1fr; gap: 18px; } }
+
         .carousel-section { background: #ffffff; padding: 48px 0 0; margin-bottom: 0; }
         .carousel-header { display: flex; align-items: baseline; justify-content: space-between; padding: 0 40px; margin-bottom: 16px; }
         .carousel-label { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #374151; }
@@ -1013,14 +1174,13 @@ export default function HomePage() {
 
         /* ── RESPONSIVE ── */
         @media (max-width: 900px) {
-          .digital-hero, .print-hero, .competition { grid-template-columns: 1fr; }
+          .digital-hero, .competition { grid-template-columns: 1fr; }
           .issue-hero-head { top: 16px; left: 20px; right: 20px; }
           .issue-hero-title { font-size: clamp(28px,7vw,40px); max-width: none; }
           .issue-hero-imgwrap img { height: 74vh; }
           .issue-hero-btn { right: 10px; bottom: 10px; padding: 9px 20px; font-size: 13px; }
           .issue-hero-nav { font-size: 30px; padding: 0 4px; }
-          .issue-hero-tagline { font-size: clamp(24px,6vw,34px); padding: 20px 20px 28px; }
-          .issue-hero-dots { padding: 16px 0 0; }
+          .issue-hero-dots { padding: 0; margin-top: -30px; }
           .issue-hero-slide--split { flex-direction: column; gap: 20px; min-height: 0; padding: 26px 20px 30px; }
           .issue-hero-slide--split .issue-hero-figure { flex: none; max-width: 100%; }
           .issue-hero-slide--split .issue-hero-imgwrap img { max-height: 52vh; }
@@ -1029,8 +1189,6 @@ export default function HomePage() {
           .issue-hero-slide--split .issue-hero-btn-head { margin-top: 18px; }
           .digital-hero-left { height: 320px; padding: 24px; }
           .digital-hero-right { padding: 36px 24px 40px; }
-          .print-hero-left { height: 280px; }
-          .print-hero-right { padding: 32px 24px; }
           .competition { padding: 48px 24px; gap: 32px; }
           .comp-right { border-left: none; padding-left: 0; border-top: 1px solid var(--border); padding-top: 32px; }
           .header-top { padding: 12px 20px; }
@@ -1128,13 +1286,13 @@ export default function HomePage() {
               </div>
             </div>
 
-            <a href="/cart" className="cart-btn">
+            <a href="/shop?cart=1" className="cart-btn" onClick={e => { e.preventDefault(); openCart() }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <path d="M16 10a4 4 0 01-8 0"/>
               </svg>
-              <span className="cart-count">0</span>
+              {cart.length > 0 && <span className="cart-count">{cart.length}</span>}
             </a>
           </div>
         </div>
@@ -1178,12 +1336,12 @@ export default function HomePage() {
         </div>
 
         <div className="nav-drawer-section">
-          <div className="nav-drawer-label">Books</div>
+          <div className="nav-drawer-label">Circulating Library</div>
           <div className="nav-drawer-empty">Coming soon.</div>
         </div>
 
         <div className="nav-drawer-section">
-          <div className="nav-drawer-label">Games</div>
+          <div className="nav-drawer-label">Games, Puzzles and Quizzes</div>
           <div className="nav-drawer-empty">Coming soon.</div>
         </div>
       </aside>
@@ -1203,6 +1361,7 @@ export default function HomePage() {
             return (
             <div key={i} className={`issue-hero-slide${i === pos ? ' active' : ''}${portraitSlides[orig] ? ' issue-hero-slide--split' : ''}${portraitSlides[orig] === 'wide' ? ' issue-hero-slide--wide' : ''}${portraitSlides[orig] === 'tall' ? ' issue-hero-slide--tall' : ''}`}>
               <div className="issue-hero-head">
+                {heroIssue && <div className="issue-hero-eyebrow">Issue {heroIssue.number || 2} · {heroIssue.title || "The World We're Building"}</div>}
                 <h1 className="issue-hero-title">
                   {(() => {
                     const { head, tail } = splitHeadTail(s.title)
@@ -1210,6 +1369,12 @@ export default function HomePage() {
                   })()}
                 </h1>
                 <a href={s.url} className="issue-hero-btn issue-hero-btn-head">Read more</a>
+                {s.subtitle && (
+                  <div className="issue-hero-sub-wrap" data-orig={orig}>
+                    <span className="issue-hero-sub-fill" aria-hidden="true"></span>
+                    <p className="issue-hero-sub">{s.subtitle}</p>
+                  </div>
+                )}
               </div>
               <div className="issue-hero-figure">
                 <div className="issue-hero-imgwrap">
@@ -1249,7 +1414,6 @@ export default function HomePage() {
               </div>
             </>
           )}
-          <div className="issue-hero-tagline">A better world is possible&hellip;</div>
         </section>
         )
       })()}
@@ -1323,44 +1487,59 @@ export default function HomePage() {
       </section>
       )}
 
-      {/* ── PRINT HERO ── */}
-      <section className="print-hero">
-        <div className="print-hero-left print-hero-contain">
-          <img src="https://static.wixstatic.com/media/d449e2_fd8c48fe8b274b67be10d4773240837b~mv2.png" alt="The World We're Building — Issue 02 print edition" />
-          <button className="look-inside-btn" onClick={() => setFlipbookOpen(true)}><span>◎</span> Look inside</button>
-        </div>
-        <div className="print-hero-right">
-          <div className="print-eyebrow">Now in print</div>
-          <h2 className="print-headline">Hold the conversation<br/>in <em>your hands.</em></h2>
-          <div className="print-subhead">The World we&rsquo;re Building — Issue 02</div>
-          <p className="print-body">From Kantamanto&rsquo;s secondhand clothing markets in Accra to Casa Pueblo&rsquo;s grassroots energy sovereignty in Puerto Rico, from the ethics of community tourism, to the pull toward intentional communities and communal land — Vol. 2 traces the infrastructure of collective imagination across continents: not just the world we dream of, but the deliberate, often invisible work of building it.<br/><br/>Featuring original essays, reporting, and art — 112 pages, bound in print.</p>
-          <div className="cta-stack">
-            <a href="/plans" className="cta-primary">
-              Subscribe to the print edition
-              <span className="cta-price">$30 / every four months · triannual issues</span>
-            </a>
-            <a href="https://www.theparlormagazine.com/product-page/vol-2-the-world-we-re-building" target="_blank" rel="noopener noreferrer" className="cta-secondary">
-              Buy a single copy
-              <span className="cta-price-light">$35 + shipping</span>
-            </a>
-            <p className="cta-note">Print subscribers receive every issue automatically.</p>
-          </div>
-        </div>
-      </section>
+      {/* PRINT HERO now lives as a first-load popup (below) → /print landing page. */}
 
-      {/* ── ARTICLE CAROUSEL ── */}
-      <section className="carousel-section">
-        <div className="carousel-header">
-          <div className="carousel-label">Recent Articles</div>
-        </div>
-        <div id="carousel" className="swiper" tabIndex="0" aria-label="Article carousel">
-          <div className="fade-edge fade-left fade-hidden" aria-hidden="true"></div>
-          <div className="fade-edge fade-right" aria-hidden="true"></div>
-          <div id="slides" className="swiper-wrapper" dangerouslySetInnerHTML={{__html: slidesHTML}}></div>
-          <button className="swiper-button-prev" aria-label="Previous"></button>
-          <button className="swiper-button-next" aria-label="Next"></button>
-        </div>
-      </section>
+      {/* ── HOMEPAGE ANNOUNCEMENT BANNER ── (admin-managed; hidden until set) */}
+      {homeBanner && (
+        <section className="home-banner" style={homeBanner.image_url ? { backgroundImage: `url(${homeBanner.image_url})` } : undefined}>
+          <div className="home-banner-scrim">
+            <div className="home-banner-inner">
+              {homeBanner.kicker && <div className="home-banner-eyebrow">{homeBanner.kicker}</div>}
+              {homeBanner.headline && <h2 className="home-banner-head">{homeBanner.headline}</h2>}
+              {homeBanner.message && <p className="home-banner-desc">{homeBanner.message}</p>}
+              {homeBanner.cta_label && <a href={homeBanner.cta_href || '#'} className="home-banner-cta">{homeBanner.cta_label}</a>}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── FEATURED EVENTS ── (hidden until there are upcoming events) */}
+      {featuredEvents.length > 0 && (
+        <section className="events-section">
+          <div className="events-head">
+            <div className="events-label">Featured Events</div>
+            <a href="/portal/events" className="events-all">See all events →</a>
+          </div>
+          <div className="events-grid">
+            {featuredEvents.map(ev => {
+              const d = ev.starts_at ? new Date(ev.starts_at) : null
+              const valid = d && !isNaN(d)
+              const dateStr = valid ? d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''
+              const timeStr = valid ? d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''
+              const loc = ev.location_type === 'in_person' ? (ev.location || 'In person') : ev.location_type === 'hybrid' ? 'Hybrid' : 'Online'
+              return (
+                <a key={ev.id} href={`/portal/events/${ev.id}`} className="event-card">
+                  <div className="event-cover" style={{ backgroundImage: ev.cover_image_url ? `url(${ev.cover_image_url})` : 'none' }}>
+                    {!ev.cover_image_url && <span className="event-cover-fallback">The Parlor</span>}
+                  </div>
+                  <div className="event-body">
+                    {dateStr && <div className="event-date">{dateStr}{timeStr ? ` · ${timeStr}` : ''}</div>}
+                    <h3 className="event-title">{ev.title}</h3>
+                    {ev.blurb && <p className="event-blurb">{ev.blurb}</p>}
+                    <div className="event-meta">
+                      <span className="event-loc">{loc}</span>
+                      <span className="event-details">Details →</span>
+                    </div>
+                  </div>
+                </a>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ── ARTICLE CAROUSEL ── (memoized above so hero re-renders don't touch it) */}
+      {carouselSection}
 
       {/* ── COMPETITION ── */}
       <section className="competition">
@@ -1376,14 +1555,21 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── LOOK INSIDE FLIPBOOK MODAL ── */}
-      {flipbookOpen && (
-        <div className="flipbook-overlay" onClick={() => setFlipbookOpen(false)}>
-          <div className="flipbook-modal" onClick={e => e.stopPropagation()}>
-            <button className="flipbook-close" aria-label="Close" onClick={() => setFlipbookOpen(false)}>&times;</button>
-            <div className="flipbook-body">
-              {/* Flipbook embed goes here — paste the flipbook code/iframe inside this container. */}
-              <div className="flipbook-placeholder">Flipbook coming soon</div>
+      {/* ── NOW IN PRINT — FIRST-LOAD POPUP ── */}
+      {printPopupOpen && (
+        <div className="printpop-overlay" onClick={closePrintPopup}>
+          <div className="printpop-modal" onClick={e => e.stopPropagation()}>
+            <button className="printpop-close" aria-label="Close" onClick={closePrintPopup}>&times;</button>
+            <div className="printpop-img">
+              <img src="https://static.wixstatic.com/media/d449e2_fd8c48fe8b274b67be10d4773240837b~mv2.png" alt="The World We're Building — Issue 02 print edition" />
+            </div>
+            <div className="printpop-body">
+              <div className="printpop-eyebrow">Now in print</div>
+              <h2 className="printpop-headline">Hold the conversation<br/>in <em>your hands.</em></h2>
+              <div className="printpop-subhead">The World we&rsquo;re Building — Issue 02</div>
+              <p className="printpop-text">Our second issue is here — 112 pages of original essays, reporting, and art, bound in print.</p>
+              <a href="/print" className="printpop-cta" onClick={closePrintPopup}>See the print edition →</a>
+              <button className="printpop-dismiss" onClick={closePrintPopup}>Maybe later</button>
             </div>
           </div>
         </div>
@@ -1405,7 +1591,7 @@ export default function HomePage() {
           </div>
           <div>
             <div className="footer-col-title">Magazine</div>
-            {['About','Shop','Open Call','Writer Profiles','Archive'].map(l=><a key={l} href="#" className="footer-link">{l}</a>)}
+            {['About','Shop','Open Call','People of The Parlor','Archive'].map(l=><a key={l} href="#" className="footer-link">{l}</a>)}
           </div>
           <div>
             <div className="footer-col-title">Members</div>
@@ -1421,17 +1607,15 @@ export default function HomePage() {
         </div>
       </footer>
 
-      {/* ── RIBBON ── */}
+      {/* ── RIBBON ── (admin-managed announcements, rotating) */}
       <div className={`ribbon${ribbonScrolling ? ' scrolling' : ''}`}>
         <div className="ribbon-inner">
           <div>
-            <div className="ribbon-kicker">Our second issue is here</div>
-            <div className="ribbon-subhead">Join us as it unfolds</div>
+            {ribbonData.kicker && <div className="ribbon-kicker">{ribbonData.kicker}</div>}
+            {ribbonData.headline && <div className="ribbon-subhead">{ribbonData.headline}</div>}
           </div>
-          <div className="ribbon-message">
-            Sustain the work and receive full access, early releases, and subscriber-only extras.
-          </div>
-          <a href="/plans" className="ribbon-cta">Become a paid subscriber</a>
+          {ribbonData.message && <div className="ribbon-message">{ribbonData.message}</div>}
+          {ribbonData.cta_label && <a href={ribbonData.cta_href || '#'} className="ribbon-cta">{ribbonData.cta_label}</a>}
           <button
             className={`ribbon-toggle${ribbonCollapsed ? ' flipped' : ''}`}
             onClick={() => setRibbonCollapsed(c => !c)}

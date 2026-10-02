@@ -11,7 +11,7 @@ async function gate(request) {
   return { db, user }
 }
 
-const FIELDS = ['title', 'blurb', 'description', 'cover_image_url', 'location_type', 'location', 'join_url', 'starts_at', 'ends_at', 'capacity', 'status', 'host_name', 'featured_in_newsletter']
+const FIELDS = ['title', 'blurb', 'description', 'cover_image_url', 'location_type', 'location', 'join_url', 'starts_at', 'ends_at', 'capacity', 'status', 'host_name', 'featured_in_newsletter', 'featured_home']
 function pick(b) {
   const out = {}
   for (const f of FIELDS) if (f in b) out[f] = b[f] === '' ? null : b[f]
@@ -19,14 +19,16 @@ function pick(b) {
 }
 
 // Create (or ensure) the tied discussion forum for an event; returns forum_id.
-async function ensureForum(db, event, userId, name) {
+async function ensureForum(db, event, userId, name, cover) {
   if (event.forum_id) return event.forum_id
   const forumName = (name || '').trim() || `${event.title} — Discussion`
-  const { data: forum } = await db.from('forums').insert({
-    name: forumName,
-    description: 'Discussion room for event attendees.',
-    tied_to_type: 'event', tied_to_ref: event.id, created_by: userId, member_count: 1,
-  }).select('id').single()
+  const coverUrl = (cover || '').trim() || event.cover_image_url || null
+  const base = { name: forumName, description: 'Discussion room for event attendees.', tied_to_type: 'event', tied_to_ref: event.id, created_by: userId, member_count: 1 }
+  let { data: forum, error } = await db.from('forums').insert({ ...base, cover_image_url: coverUrl }).select('id').single()
+  if (error) { // cover_image_url column not added yet — create without it
+    const r = await db.from('forums').insert(base).select('id').single()
+    forum = r.data
+  }
   if (!forum) return null
   await db.from('forum_members').insert({ forum_id: forum.id, member_id: userId, role: 'host' })
   await db.from('events').update({ forum_id: forum.id }).eq('id', event.id)
@@ -40,7 +42,7 @@ async function applyForum(db, event, b, userId) {
   if (mode === 'connect' && b.forum_id) {
     await db.from('events').update({ forum_id: b.forum_id }).eq('id', event.id)
   } else if (mode === 'create' && !event.forum_id) {
-    await ensureForum(db, event, userId, b.forum_name)
+    await ensureForum(db, event, userId, b.forum_name, b.forum_cover)
   }
 }
 
@@ -65,7 +67,11 @@ export async function POST(request) {
   const { db, user } = g
   let b = {}; try { b = await request.json() } catch {}
   if (!(b.title || '').trim()) return Response.json({ error: 'Title required' }, { status: 400 })
-  const { data: event, error } = await db.from('events').insert({ ...pick(b), created_by: user.id }).select().single()
+  let { data: event, error } = await db.from('events').insert({ ...pick(b), created_by: user.id }).select().single()
+  if (error && /featured_home/.test(error.message || '')) { // column not migrated yet — save without it
+    const { featured_home, ...rest } = pick(b)
+    const r = await db.from('events').insert({ ...rest, created_by: user.id }).select().single(); event = r.data; error = r.error
+  }
   if (error) return Response.json({ error: error.message }, { status: 500 })
   await applyForum(db, event, b, user.id)
   const { data: fresh } = await db.from('events').select('*').eq('id', event.id).single()
@@ -81,7 +87,12 @@ export async function PATCH(request) {
   const patch = pick(b)
   let event
   if (Object.keys(patch).length) {
-    const { data, error } = await db.from('events').update(patch).eq('id', b.id).select().single()
+    let { data, error } = await db.from('events').update(patch).eq('id', b.id).select().single()
+    if (error && /featured_home/.test(error.message || '')) { // column not migrated yet — save without it
+      const { featured_home, ...rest } = patch
+      if (Object.keys(rest).length) { const r = await db.from('events').update(rest).eq('id', b.id).select().single(); data = r.data; error = r.error }
+      else { const r = await db.from('events').select('*').eq('id', b.id).single(); data = r.data; error = null }
+    }
     if (error) return Response.json({ error: error.message }, { status: 500 })
     event = data
   } else {

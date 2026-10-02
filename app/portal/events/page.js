@@ -16,7 +16,7 @@ function dateParts(iso) {
 }
 const LOC = { virtual: 'Online', in_person: 'In person', hybrid: 'Hybrid' }
 
-function EventCard({ e }) {
+function EventCard({ e, past }) {
   const dp = e.starts_at ? dateParts(e.starts_at) : null
   return (
     <a className="ev-card" href={`/portal/events/${e.id}`}>
@@ -25,7 +25,7 @@ function EventCard({ e }) {
         <span className="ev-loc">{LOC[e.location_type] || 'Event'}</span>
         <div className="ev-c-title">{e.title}</div>
         {e.blurb && <div className="ev-c-blurb">{e.blurb}</div>}
-        <div className="ev-c-meta">{e.going_count || 0} going{e.host_name ? ` · Hosted by ${e.host_name}` : ''}</div>
+        <div className="ev-c-meta">{e.going_count || 0} {past ? 'attended' : 'going'}{e.host_name ? ` · Hosted by ${e.host_name}` : ''}</div>
       </div>
       {e.my_status === 'going' ? <span className="ev-going-tag">✓ Going</span> : e.my_status === 'waitlist' ? <span className="ev-going-tag" style={{ color: '#b26a00' }}>Waitlisted</span> : <span style={{ fontSize: 12, color: 'var(--muted)' }}>Details →</span>}
     </a>
@@ -64,7 +64,7 @@ function List() {
               {d.past.length > 0 && (
                 <div className="ev-past">
                   <div className="ev-section">Past events</div>
-                  <div className="ev-list">{d.past.map(e => <EventCard key={e.id} e={e} />)}</div>
+                  <div className="ev-list">{d.past.map(e => <EventCard key={e.id} e={e} past />)}</div>
                 </div>
               )}
             </>

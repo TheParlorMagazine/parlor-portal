@@ -33,6 +33,111 @@ function Avatar({ name, src, size = 40 }) {
   return <div style={{ width: size, height: size, borderRadius: '50%', flexShrink: 0, background: 'var(--pink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontSize: size * 0.42, color: '#000' }}>{(name || 'M')[0].toUpperCase()}</div>
 }
 
+const linkBtn = { background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: SERIF, fontSize: 12.5, color: 'var(--muted)' }
+
+// A composer for a single comment.
+function CommentComposer({ me, onSubmit, busy }) {
+  const [text, setText] = useState('')
+  const send = () => { const t = text.trim(); if (!t || busy) return; onSubmit(t); setText('') }
+  return (
+    <div style={{ display: 'flex', gap: 9, marginTop: 12 }}>
+      <Avatar name={me.full_name} src={me.avatar_url} size={30} />
+      <div style={{ flex: 1, display: 'flex', gap: 8 }}>
+        <input value={text} onChange={e => setText(e.target.value)} placeholder="Add a comment…"
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+          style={{ flex: 1, padding: '8px 13px', border: '1px solid var(--border)', borderRadius: 18, fontFamily: SERIF, fontSize: 13.5, outline: 'none' }} />
+        <button disabled={!text.trim() || busy} onClick={send}
+          style={{ background: text.trim() ? '#0a0a0a' : '#ccc', color: '#fff', border: 'none', borderRadius: 18, padding: '0 15px', fontFamily: SERIF, fontSize: 13, cursor: text.trim() ? 'pointer' : 'default' }}>Post</button>
+      </div>
+    </div>
+  )
+}
+
+// The comment thread under a post; loads lazily when first opened.
+function PostComments({ postId, currentUserId, me, auth, onCountChange }) {
+  const [comments, setComments] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      setLoading(true)
+      try { const res = await fetch(`/api/portal/posts/${postId}/comments`, { headers: await auth() }); const d = await res.json(); if (live) setComments(d.comments || []) } catch {} finally { if (live) setLoading(false) }
+    })()
+    return () => { live = false }
+  }, [postId, auth])
+
+  async function add(body) {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/portal/posts/${postId}/comments`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ body }) })
+      if (res.ok) { const d = await res.json(); setComments(c => [...c, d.comment]); onCountChange?.(1) }
+    } finally { setBusy(false) }
+  }
+  async function del(cid) {
+    if (!confirm('Delete this comment?')) return
+    const res = await fetch(`/api/portal/posts/${postId}/comments`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ comment_id: cid }) })
+    if (res.ok) { setComments(c => c.filter(x => x.id !== cid)); onCountChange?.(-1) }
+  }
+  return (
+    <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+      {loading ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Loading…</div> : comments.map(c => (
+        <div key={c.id} style={{ display: 'flex', gap: 9, marginBottom: 10 }}>
+          <Avatar name={c.author_name} src={c.author_avatar} size={30} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ background: 'var(--cream)', border: '1px solid var(--border)', borderRadius: 12, padding: '8px 12px' }}>
+              <span style={{ fontFamily: SERIF, fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>{c.author_name}</span>
+              {c.author_headline && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}> · {c.author_headline}</span>}
+              <div style={{ fontFamily: SERIF, fontSize: 14, color: '#222', marginTop: 2, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{c.body}</div>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, marginLeft: 4, display: 'flex', gap: 10 }}>
+              <span>{timeAgo(c.created_at)}</span>
+              {c.member_id === currentUserId && <button onClick={() => del(c.id)} style={{ ...linkBtn, fontSize: 11 }}>Delete</button>}
+            </div>
+          </div>
+        </div>
+      ))}
+      <CommentComposer me={me} onSubmit={add} busy={busy} />
+    </div>
+  )
+}
+
+// A single post card: author, body, media, and a comment thread.
+function PostCard({ p, currentUserId, me, auth, onRemove, onReport }) {
+  const [showComments, setShowComments] = useState(false)
+  const [count, setCount] = useState(p.comment_count || 0)
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 12, background: '#fff', padding: 16 }}>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <Avatar name={p.author_name} src={p.author_avatar} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+            <div>
+              <span style={{ fontFamily: SERIF, fontSize: 14.5, fontWeight: 600, color: 'var(--ink)' }}>{p.author_name}</span>
+              {p.author_headline && <span style={{ fontSize: 12.5, color: 'var(--muted)' }}> · {p.author_headline}</span>}
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 1 }}>{timeAgo(p.created_at)}</div>
+            </div>
+            {p.member_id === currentUserId
+              ? <button style={linkBtn} onClick={() => onRemove(p.id)}>Delete</button>
+              : <button style={linkBtn} onClick={() => onReport(p.id)}>Report</button>}
+          </div>
+          {p.body && <div style={{ fontFamily: SERIF, fontSize: 15, lineHeight: 1.6, color: '#222', marginTop: 6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{p.body}</div>}
+          {p.image_url && <img src={p.image_url} alt="" style={{ marginTop: 10, maxWidth: '100%', borderRadius: 10, display: 'block' }} />}
+          {p.video_url && <VideoEmbed src={p.video_url} />}
+          <LinkCard link={p.link} />
+          <div style={{ marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+            <button onClick={() => setShowComments(s => !s)} style={{ ...linkBtn, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: showComments ? 'var(--ink)' : 'var(--muted)' }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3.5A1.5 1.5 0 013.5 2h9A1.5 1.5 0 0114 3.5v6A1.5 1.5 0 0112.5 11H6l-3 3v-3H3.5A1.5 1.5 0 012 9.5v-6z" stroke="currentColor" strokeWidth="1.3"/></svg>
+              {count > 0 ? `${count} comment${count === 1 ? '' : 's'}` : 'Comment'}
+            </button>
+          </div>
+          {showComments && <PostComments postId={p.id} currentUserId={currentUserId} me={me} auth={auth} onCountChange={d => setCount(c => Math.max(0, c + d))} />}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function LinkCard({ link }) {
   if (!link) return null
   return (
@@ -47,11 +152,13 @@ function LinkCard({ link }) {
   )
 }
 
-export default function PostsWall({ memberId, currentUserId }) {
+export default function PostsWall({ memberId, currentUserId, forumId }) {
   const supabase = useMemo(() => createClient(), [])
   const ctx = usePortal()
   const me = ctx?.member || {}
-  const canPost = memberId === currentUserId
+  // In a forum, anyone viewing (a member) can post. On a profile wall, only the
+  // owner can.
+  const canPost = forumId ? true : memberId === currentUserId
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [composing, setComposing] = useState(false)
@@ -73,10 +180,11 @@ export default function PostsWall({ memberId, currentUserId }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/portal/posts?member_id=${memberId}`, { headers: await auth() })
+      const qs = forumId ? `forum_id=${forumId}` : `member_id=${memberId}`
+      const res = await fetch(`/api/portal/posts?${qs}`, { headers: await auth() })
       const d = await res.json(); setPosts(d.posts || [])
     } catch {} finally { setLoading(false) }
-  }, [memberId, auth])
+  }, [memberId, forumId, auth])
   useEffect(() => { load() }, [load])
 
   async function uploadImage(file) {
@@ -99,7 +207,7 @@ export default function PostsWall({ memberId, currentUserId }) {
     // Don't double up a link card when a video is attached.
     const link = !videoInput && (text.match(URL_RE)?.[1] || null)
     try {
-      const res = await fetch('/api/portal/posts', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ body: text.trim(), image_url: image || null, video_url: videoInput || null, link_url: link }) })
+      const res = await fetch('/api/portal/posts', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ body: text.trim(), image_url: image || null, video_url: videoInput || null, link_url: link, forum_id: forumId || null }) })
       if (res.ok) { const d = await res.json(); setPosts(p => [d.post, ...p]); resetComposer() }
     } finally { setBusy(false) }
   }
@@ -114,8 +222,6 @@ export default function PostsWall({ memberId, currentUserId }) {
     await fetch('/api/portal/posts', { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ id, action: 'report' }) })
     alert('Thanks — a moderator will take a look.')
   }
-
-  const linkBtn = { background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: SERIF, fontSize: 12.5, color: 'var(--muted)' }
 
   return (
     <div style={{ marginTop: 22 }}>
@@ -136,10 +242,12 @@ export default function PostsWall({ memberId, currentUserId }) {
                   <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="9" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><path d="M11 7l3-1.5v5L11 9" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>
                   Video
                 </button>
-                <a href="/portal/write" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: 'none', borderRadius: 8, padding: '8px 10px', fontFamily: SERIF, fontSize: 13.5, color: '#c47000', textDecoration: 'none' }}>
-                  <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 2h7l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.4"/><path d="M5 8h6M5 11h6M5 5h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
-                  Write article
-                </a>
+                {!forumId && (
+                  <a href="/portal/write" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: 'none', borderRadius: 8, padding: '8px 10px', fontFamily: SERIF, fontSize: 13.5, color: '#c47000', textDecoration: 'none' }}>
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 2h7l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.4"/><path d="M5 8h6M5 11h6M5 5h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+                    Write article
+                  </a>
+                )}
               </div>
             </>
           ) : (
@@ -196,32 +304,12 @@ export default function PostsWall({ memberId, currentUserId }) {
         <p style={{ color: 'var(--muted)', fontSize: 14 }}>Loading…</p>
       ) : posts.length === 0 ? (
         <div style={{ border: '1px solid var(--border)', borderRadius: 12, background: 'var(--cream)', padding: 28, textAlign: 'center', color: 'var(--muted)', fontSize: 13.5 }}>
-          {canPost ? 'No posts yet — share something with the community.' : 'No posts yet.'}
+          {canPost ? `No posts yet — be the first to share something with ${forumId ? 'the room' : 'the community'}.` : 'No posts yet.'}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {posts.map(p => (
-            <div key={p.id} style={{ border: '1px solid var(--border)', borderRadius: 12, background: '#fff', padding: 16 }}>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <Avatar name={p.author_name} src={p.author_avatar} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                    <div>
-                      <span style={{ fontFamily: SERIF, fontSize: 14.5, fontWeight: 600, color: 'var(--ink)' }}>{p.author_name}</span>
-                      {p.author_headline && <span style={{ fontSize: 12.5, color: 'var(--muted)' }}> · {p.author_headline}</span>}
-                      <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 1 }}>{timeAgo(p.created_at)}</div>
-                    </div>
-                    {p.member_id === currentUserId
-                      ? <button style={linkBtn} onClick={() => remove(p.id)}>Delete</button>
-                      : <button style={linkBtn} onClick={() => report(p.id)}>Report</button>}
-                  </div>
-                  {p.body && <div style={{ fontFamily: SERIF, fontSize: 15, lineHeight: 1.6, color: '#222', marginTop: 6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{p.body}</div>}
-                  {p.image_url && <img src={p.image_url} alt="" style={{ marginTop: 10, maxWidth: '100%', borderRadius: 10, display: 'block' }} />}
-                  {p.video_url && <VideoEmbed src={p.video_url} />}
-                  <LinkCard link={p.link} />
-                </div>
-              </div>
-            </div>
+            <PostCard key={p.id} p={p} currentUserId={currentUserId} me={me} auth={auth} onRemove={remove} onReport={report} />
           ))}
         </div>
       )}

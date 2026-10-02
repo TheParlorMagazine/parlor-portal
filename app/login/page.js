@@ -258,6 +258,11 @@ function LoginForm() {
             </div>
           )}
         </form>
+
+        <div style={{ marginTop: '22px', textAlign: 'center', fontSize: '13px', color: '#888', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+          New to The Parlor?{' '}
+          <a href={`/signup?returnTo=${encodeURIComponent(returnTo)}`} style={{ color: '#7a2531', fontWeight: 600, textDecoration: 'none' }}>Create an account</a>
+        </div>
       </div>
     </div>
   )

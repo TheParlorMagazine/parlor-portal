@@ -176,7 +176,7 @@ function SignupForm() {
 
         <div style={styles.footer}>
           Already have an account?{' '}
-          <a href="/login" style={styles.link}>Sign in</a>
+          <a href={`/login?returnTo=${encodeURIComponent(returnTo)}`} style={styles.link}>Sign in</a>
         </div>
       </div>
     </div>

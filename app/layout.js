@@ -1,5 +1,7 @@
 import PageViewTracker from './_components/PageViewTracker'
 import RecoveryRedirect from './_components/RecoveryRedirect'
+import CartDrawer from './_components/CartDrawer'
+import ShopStateSync from './_components/ShopStateSync'
 
 export const metadata = {
   title: 'The Parlor',
@@ -18,6 +20,8 @@ export default function RootLayout({ children }) {
         <RecoveryRedirect />
         <PageViewTracker />
         {children}
+        <ShopStateSync />
+        <CartDrawer />
       </body>
     </html>
   )

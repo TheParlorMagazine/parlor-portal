@@ -4,17 +4,19 @@ import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import SiteHeader from '../_components/SiteHeader'
 import SiteFooter from '../_components/SiteFooter'
+import { useCurrency } from '../../lib/useCurrency'
 
 const ff = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
 
+// Same-numeral geo pricing: same number across currencies ($7/€7/£7), symbol by region.
 const PLANS = [
   {
     id: 'fccb348a-7433-4080-8699-9ef8c0e7a519',
     label: "Reader's Circle",
     // Engraving of a woman reading in a chair — file lives in public/plans/
     image: '/plans/readers-circle.png',
-    price: '$7 / month',
+    amount: 7, period: '/ month',
     color: '#7a2531',
     desc: 'Full digital access — all articles, audio, and exclusive member content.',
     perks: ['Unlimited article access', 'Audio & video content', 'Early access to new issues', 'Member-only newsletter'],
@@ -24,7 +26,7 @@ const PLANS = [
     label: 'Printing Press',
     // Engraving of a woman at the printing press — file lives in public/plans/
     image: '/plans/printing-press.png',
-    price: '$30 / every 4 months',
+    amount: 30, period: '/ every 4 months',
     color: '#7a2531',
     desc: "Everything in Reader's Circle, plus the triannual print magazine mailed to your door.",
     perks: ["Everything in Reader's Circle", 'Triannual print magazine', 'Free shipping', 'Inaugural subscriber gift'],
@@ -36,6 +38,7 @@ const PLAN_IMG_BG = '#f2b8c6'
 function PlansPageInner() {
   const searchParams = useSearchParams()
   const returnTo = searchParams.get('returnTo')
+  const { symbol } = useCurrency()
 
   return (
     <div style={{ background: '#fff', minHeight: '100vh' }}>
@@ -77,7 +80,7 @@ function PlansPageInner() {
                 {plan.label}
               </div>
               <div style={{ fontFamily: ff, fontSize: '20px', fontWeight: '600', color: plan.color, marginBottom: '16px' }}>
-                {plan.price}
+                {symbol}{plan.amount} {plan.period}
               </div>
               <p style={{ fontFamily: ff, fontSize: '14px', color: '#555', lineHeight: '1.6', marginBottom: '20px' }}>
                 {plan.desc}

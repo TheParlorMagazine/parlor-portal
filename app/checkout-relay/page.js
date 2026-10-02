@@ -25,10 +25,11 @@ function CheckoutRelayInner() {
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
-        // Must be logged in so the webhook can attribute the subscription
-        // to a real member — send them to log in, then back through here.
+        // Must be logged in so the webhook can attribute the subscription to a
+        // real member — send them to create an account (signup-first; the signup
+        // page links to sign-in for returning members), then back through here.
         const here = `/checkout-relay?planId=${planId}&returnTo=${encodeURIComponent(returnTo)}`
-        window.location.href = `/login?returnTo=${encodeURIComponent(here)}`
+        window.location.href = `/signup?returnTo=${encodeURIComponent(here)}`
         return
       }
 

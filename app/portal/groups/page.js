@@ -13,6 +13,62 @@ const POLICY = {
   paid: { label: 'Paid', color: '#c4364a', bg: '#fbeaee' },
 }
 
+// Pull an average color from a thumbnail so each forum card can wear its own tint.
+function useDominantColor(src) {
+  const [rgb, setRgb] = useState(null)
+  useEffect(() => {
+    if (!src) { setRgb(null); return }
+    let cancelled = false
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas'); c.width = 20; c.height = 20
+        const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, 20, 20)
+        const d = ctx.getImageData(0, 0, 20, 20).data
+        let r = 0, g = 0, b = 0, n = 0
+        for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 128) continue; r += d[i]; g += d[i + 1]; b += d[i + 2]; n++ }
+        if (n && !cancelled) setRgb([Math.round(r / n), Math.round(g / n), Math.round(b / n)])
+      } catch {}
+    }
+    img.src = src
+    return () => { cancelled = true }
+  }, [src])
+  return rgb
+}
+
+function GroupCard({ g, onJoin, busy }) {
+  const p = POLICY[g.join_policy] || POLICY.request
+  const thumb = g.avatar_url || g.cover_image_url
+  const rgb = useDominantColor(thumb)
+  const tint = rgb ? `linear-gradient(90deg, rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.16), rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.05))` : '#fff'
+  const accent = rgb ? `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.6)` : 'var(--border)'
+  return (
+    <div style={{ border: '1px solid var(--border)', borderLeft: `4px solid ${accent}`, borderRadius: 14, background: tint, padding: '15px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
+        {thumb
+          ? <img src={thumb} alt="" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, boxShadow: '0 0 0 3px rgba(255,255,255,0.75)' }} />
+          : <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(0,0,0,0.06)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontSize: 20, color: 'var(--muted)' }}>{(g.name || 'F')[0]}</div>}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontFamily: SERIF, fontSize: 16.5, fontWeight: 500, color: 'var(--ink)' }}>{g.name}</span>
+            <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: p.color, background: p.bg, borderRadius: 20, padding: '2px 8px', fontWeight: 600 }}>{p.label}</span>
+          </div>
+          {g.description && <div style={{ fontSize: 13, color: '#555', marginTop: 3, lineHeight: 1.4 }}>{g.description}</div>}
+          <div style={{ fontSize: 11.5, color: '#777', marginTop: 5 }}>{g.member_count || 0} member{g.member_count === 1 ? '' : 's'}</div>
+        </div>
+      </div>
+      <div style={{ flexShrink: 0 }}>
+        {g.my_role
+          ? <a href={`/portal/forums/${g.id}`} style={{ display: 'inline-block', background: '#fff', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', fontFamily: SERIF, fontSize: 13, color: 'var(--ink)', textDecoration: 'none' }}>Open ›</a>
+          : g.requested
+            ? <span style={{ fontSize: 13, color: 'var(--muted)' }}>Requested</span>
+            : <button onClick={() => onJoin(g)} disabled={busy} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontFamily: SERIF, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>{busy ? '…' : (g.join_policy === 'request' ? 'Request' : g.join_policy === 'paid' ? 'Upgrade to join' : 'Join')}</button>}
+      </div>
+    </div>
+  )
+}
+
 function ProposeModal({ token, onClose, onDone }) {
   const [name, setName] = useState('')
   const [desc, setDesc] = useState('')
@@ -39,7 +95,7 @@ function ProposeModal({ token, onClose, onDone }) {
         </div>
         <p style={{ fontSize: 13, color: 'var(--muted)', margin: '4px 0 14px' }}>A Master Admin reviews new forums. Once approved, you’re the moderator and can invite members.</p>
 
-        <PostGuidelines heading="Before you create a forum…" items={FORUM_GUIDELINES} note="You’re responsible for the space you create." agreeLabel="I’ll moderate this forum and follow The Parlor’s community guidelines." agreed={agreed} onAgree={setAgreed} />
+        <PostGuidelines heading="Before you create a forum…" items={FORUM_GUIDELINES} note="You’re responsible for the space you create. Forums that don’t follow these guidelines may be removed." agreeLabel="I’ll moderate this forum and follow The Parlor’s community guidelines." agreed={agreed} onAgree={setAgreed} />
 
         <div style={label}>Forum name</div>
         <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Climate Writers Circle" style={input} />
@@ -92,7 +148,7 @@ function Groups() {
   }
 
   return (
-    <div style={{ maxWidth: 760 }}>
+    <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 500, margin: '0 0 4px' }}>Forums</h1>
@@ -116,28 +172,7 @@ function Groups() {
         : groups.length === 0 ? <div style={{ border: '1px solid var(--border)', borderRadius: 12, background: 'var(--cream)', padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 14 }}>No forums yet — propose the first one.</div>
         : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {groups.map(g => {
-              const p = POLICY[g.join_policy] || POLICY.request
-              return (
-                <div key={g.id} style={{ border: '1px solid var(--border)', borderRadius: 12, background: '#fff', padding: '16px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontFamily: SERIF, fontSize: 16.5, fontWeight: 500, color: 'var(--ink)' }}>{g.name}</span>
-                      <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: p.color, background: p.bg, borderRadius: 20, padding: '2px 8px', fontWeight: 600 }}>{p.label}</span>
-                    </div>
-                    {g.description && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 3, lineHeight: 1.4 }}>{g.description}</div>}
-                    <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 5 }}>{g.member_count || 0} member{g.member_count === 1 ? '' : 's'}</div>
-                  </div>
-                  <div style={{ flexShrink: 0 }}>
-                    {g.my_role
-                      ? <a href={`/portal/forums/${g.id}`} style={{ display: 'inline-block', background: '#fff', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', fontFamily: SERIF, fontSize: 13, color: 'var(--ink)', textDecoration: 'none' }}>Open ›</a>
-                      : g.requested
-                        ? <span style={{ fontSize: 13, color: 'var(--muted)' }}>Requested</span>
-                        : <button onClick={() => join(g)} disabled={busyId === g.id} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontFamily: SERIF, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>{busyId === g.id ? '…' : (g.join_policy === 'request' ? 'Request' : g.join_policy === 'paid' ? 'Upgrade to join' : 'Join')}</button>}
-                  </div>
-                </div>
-              )
-            })}
+            {groups.map(g => <GroupCard key={g.id} g={g} onJoin={join} busy={busyId === g.id} />)}
           </div>
         )}
 

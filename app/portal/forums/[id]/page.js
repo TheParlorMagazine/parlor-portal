@@ -1,32 +1,96 @@
 'use client'
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
+import { prepareImageUpload, isDuplicateUpload } from '../../../../lib/uploadImage'
 import PortalShell from '../../_components/PortalShell'
-import PostGuidelines from '../../_components/PostGuidelines'
+import { THREAD_GUIDELINES } from '../../_components/PostGuidelines'
+import PostsWall from '../../_components/PostsWall'
 import { forumCss } from '../forumCss'
 
-function timeAgo(iso) {
-  const d = new Date(iso); const s = Math.floor((Date.now() - d.getTime()) / 1000)
-  if (s < 60) return 'just now'
-  const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`
-  const days = Math.floor(h / 24); if (days < 7) return `${days}d ago`
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-const UP = <svg viewBox="0 0 12 12" fill="none"><path d="M6 2l4 6H2z" fill="currentColor"/></svg>
 function Av({ name, src }) {
   return <div className="fr-av">{src ? <img src={src} alt="" /> : (name || 'M')[0].toUpperCase()}</div>
 }
 
-function ModPanel({ id, auth }) {
+// Sidebar list of attached events (upcoming / past).
+function EventGroup({ label, events, top }) {
+  if (!events.length) return null
+  const fmt = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
+  return (
+    <div style={{ marginTop: top ? 16 : 0, paddingTop: top ? 14 : 0, borderTop: top ? '1px solid var(--border)' : 'none' }}>
+      <div style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--muted)', marginBottom: 10 }}>{label} · {events.length}</div>
+      {events.map(e => (
+        <a key={e.id} href={`/portal/events/${e.id}`} style={{ display: 'block', marginBottom: 12, textDecoration: 'none', color: 'var(--ink)' }}>
+          <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.35 }}>{e.title}</div>
+          {e.starts_at && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 1 }}>{fmt(e.starts_at)}</div>}
+        </a>
+      ))}
+    </div>
+  )
+}
+
+// Sidebar list of people (moderators / members).
+function PeopleGroup({ label, people, empty, top }) {
+  return (
+    <div style={{ marginTop: top ? 16 : 0, paddingTop: top ? 14 : 0, borderTop: top ? '1px solid var(--border)' : 'none' }}>
+      <div style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--muted)', marginBottom: 10 }}>{label}{people.length ? ` · ${people.length}` : ''}</div>
+      {people.length === 0
+        ? <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12 }}>{empty}</div>
+        : people.map(p => (
+            <a key={p.id} href={`/portal/members/${p.id}`} style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10, textDecoration: 'none', color: 'var(--ink)' }}>
+              <Av name={p.name} src={p.avatar} />
+              <span style={{ fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+            </a>
+          ))}
+    </div>
+  )
+}
+
+const miniBtn = { background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 9px', fontSize: 11.5, cursor: 'pointer', fontFamily: "'thermal-variable', Georgia, serif", color: '#555' }
+
+function ModPanel({ id, auth, supabase, onChanged }) {
   const [open, setOpen] = useState(false)
   const [data, setData] = useState({ requests: [], members: [], policy: 'request' })
   const [inviteEmails, setInviteEmails] = useState('')
   const [inviteMsg, setInviteMsg] = useState('')
   const [inviteLinks, setInviteLinks] = useState([])
   const [inviting, setInviting] = useState(false)
+  // Edit forum (name + description + banner + square profile image)
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [cover, setCover] = useState('')
+  const [avatar, setAvatar] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editMsg, setEditMsg] = useState('')
+  const [drag, setDrag] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [avatarDrag, setAvatarDrag] = useState(false)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const dedupeRef = useMemo(() => ({ current: null }), [])
+  const avatarDedupeRef = useMemo(() => ({ current: null }), [])
+
+  async function uploadImage(file, { maxDim, folder, setBusy, setUrl, ref }) {
+    if (!file || !file.type.startsWith('image/')) return
+    if (isDuplicateUpload(ref, file)) return
+    setBusy(true)
+    try {
+      const { file: up, ext, contentType } = await prepareImageUpload(file, { maxDim })
+      const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error } = await supabase.storage.from('Media').upload(path, up, { cacheControl: '31536000', contentType })
+      if (!error) { const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path); setUrl(publicUrl) }
+    } finally { setBusy(false) }
+  }
+  const uploadCover = f => uploadImage(f, { maxDim: 1600, folder: 'forums', setBusy: setUploading, setUrl: setCover, ref: dedupeRef })
+  const uploadAvatar = f => uploadImage(f, { maxDim: 600, folder: 'forum-avatars', setBusy: setAvatarUploading, setUrl: setAvatar, ref: avatarDedupeRef })
+
+  async function saveEdit() {
+    if (!name.trim()) { setEditMsg('Name required'); return }
+    setSavingEdit(true); setEditMsg('')
+    const res = await fetch(`/api/portal/groups/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ name, description, cover_image_url: cover, avatar_url: avatar }) })
+    setSavingEdit(false)
+    if (res.ok) { setEditMsg('Saved ✓'); setTimeout(() => window.location.reload(), 500) } else setEditMsg('Could not save')
+  }
 
   async function sendInvites() {
     const emails = inviteEmails.split(/[\s,;]+/).filter(Boolean)
@@ -47,7 +111,7 @@ function ModPanel({ id, auth }) {
   }
   const load = useCallback(async () => {
     const res = await fetch(`/api/portal/groups/${id}`, { headers: await auth() })
-    if (res.ok) { const d = await res.json(); setData({ requests: d.requests || [], members: d.members || [], policy: d.group?.join_policy || 'request' }) }
+    if (res.ok) { const d = await res.json(); setData({ requests: d.requests || [], members: d.members || [], policy: d.group?.join_policy || 'request' }); setName(d.group?.name || ''); setDescription(d.group?.description || ''); setCover(d.group?.cover_image_url || ''); setAvatar(d.group?.avatar_url || '') }
   }, [id, auth])
   useEffect(() => { if (open) load() }, [open, load])
 
@@ -55,6 +119,16 @@ function ModPanel({ id, auth }) {
   async function respond(mid, action) {
     await fetch(`/api/portal/groups/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ request_member_id: mid, action }) })
     setData(s => ({ ...s, requests: s.requests.filter(r => r.member_id !== mid) }))
+    onChanged?.()
+  }
+  async function setRole(mid, role) {
+    const res = await fetch(`/api/portal/groups/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ set_role_member_id: mid, role }) })
+    if (res.ok) { load(); onChanged?.() } else { const d = await res.json().catch(() => ({})); alert(d.error || 'Could not update') }
+  }
+  async function removeMember(mid, name) {
+    if (!window.confirm(`Remove ${name} from this forum?`)) return
+    const res = await fetch(`/api/portal/groups/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ remove_member_id: mid }) })
+    if (res.ok) { load(); onChanged?.() } else { const d = await res.json().catch(() => ({})); alert(d.error || 'Could not remove') }
   }
 
   return (
@@ -65,6 +139,42 @@ function ModPanel({ id, auth }) {
       </button>
       {open && (
         <div style={{ padding: '0 16px 16px' }}>
+          {/* Edit forum name + banner */}
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', margin: '6px 0 10px' }}>Forum details</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 6px' }}>Name</div>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Forum name" style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
+          <div style={{ fontSize: 12, color: 'var(--muted)', margin: '12px 0 6px' }}>Description <span style={{ opacity: 0.7 }}>— a short line shown under the forum name</span></div>
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="What this forum is about…" style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13.5, outline: 'none', boxSizing: 'border-box', marginBottom: 8, resize: 'vertical' }} />
+          <div style={{ fontSize: 12, color: 'var(--muted)', margin: '12px 0 6px' }}>Banner image <span style={{ opacity: 0.7 }}>— wide image across the top of the forum</span></div>
+          <div
+            onDragOver={e => { e.preventDefault(); setDrag(true) }}
+            onDragLeave={() => setDrag(false)}
+            onDrop={e => { e.preventDefault(); setDrag(false); const fl = e.dataTransfer.files?.[0]; if (fl) uploadCover(fl) }}
+            style={{ position: 'relative', border: `1.5px dashed ${drag ? '#7a2531' : 'var(--border)'}`, borderRadius: 8, background: drag ? '#faf3f5' : 'var(--cream)', padding: cover ? 8 : 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+            {cover
+              ? <><img src={cover} alt="" style={{ width: 90, height: 50, borderRadius: 6, objectFit: 'cover', flexShrink: 0, background: '#eee' }} /><div style={{ fontSize: 12, color: 'var(--muted)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cover}</div><button onClick={() => setCover('')} style={{ background: 'none', border: 'none', color: '#7a2531', fontSize: 12.5, cursor: 'pointer', fontFamily: "'thermal-variable', Georgia, serif" }}>Remove</button></>
+              : <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{uploading ? 'Uploading…' : <><strong style={{ color: '#555' }}>Drag &amp; drop</strong> a banner image, or <label style={{ color: '#7a2531', cursor: 'pointer' }}>upload<input type="file" accept="image/*" hidden onChange={e => { const fl = e.target.files?.[0]; if (fl) uploadCover(fl); e.target.value = '' }} /></label></>}</div>}
+          </div>
+          <input value={cover} onChange={e => setCover(e.target.value)} placeholder="…or paste a banner image URL" style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13, outline: 'none', boxSizing: 'border-box', margin: '8px 0' }} />
+
+          {/* Square profile image — used as the thumbnail on the forums list */}
+          <div style={{ fontSize: 12, color: 'var(--muted)', margin: '12px 0 6px' }}>Profile image <span style={{ opacity: 0.7 }}>— square thumbnail shown on the forums list</span></div>
+          <div
+            onDragOver={e => { e.preventDefault(); setAvatarDrag(true) }}
+            onDragLeave={() => setAvatarDrag(false)}
+            onDrop={e => { e.preventDefault(); setAvatarDrag(false); const fl = e.dataTransfer.files?.[0]; if (fl) uploadAvatar(fl) }}
+            style={{ position: 'relative', border: `1.5px dashed ${avatarDrag ? '#7a2531' : 'var(--border)'}`, borderRadius: 8, background: avatarDrag ? '#faf3f5' : 'var(--cream)', padding: avatar ? 8 : 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+            {avatar
+              ? <><img src={avatar} alt="" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, background: '#eee' }} /><div style={{ fontSize: 12, color: 'var(--muted)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{avatar}</div><button onClick={() => setAvatar('')} style={{ background: 'none', border: 'none', color: '#7a2531', fontSize: 12.5, cursor: 'pointer', fontFamily: "'thermal-variable', Georgia, serif" }}>Remove</button></>
+              : <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{avatarUploading ? 'Uploading…' : <><strong style={{ color: '#555' }}>Drag &amp; drop</strong> a square image, or <label style={{ color: '#7a2531', cursor: 'pointer' }}>upload<input type="file" accept="image/*" hidden onChange={e => { const fl = e.target.files?.[0]; if (fl) uploadAvatar(fl); e.target.value = '' }} /></label></>}</div>}
+          </div>
+          <input value={avatar} onChange={e => setAvatar(e.target.value)} placeholder="…or paste a profile image URL" style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13, outline: 'none', boxSizing: 'border-box', margin: '8px 0' }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+            <button onClick={saveEdit} disabled={savingEdit} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>{savingEdit ? 'Saving…' : 'Save details'}</button>
+            {editMsg && <span style={{ fontSize: 12.5, color: editMsg.includes('✓') ? '#2d8f5a' : '#c04040' }}>{editMsg}</span>}
+          </div>
+
           <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', margin: '6px 0 8px' }}>Who can join</div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
             {[['open', 'Public'], ['request', 'Private']].map(([v, l]) => (
@@ -106,7 +216,22 @@ function ModPanel({ id, auth }) {
               ))}
             </>
           )}
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 12 }}>{data.members.length} member{data.members.length === 1 ? '' : 's'}</div>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', margin: '14px 0 8px', paddingTop: 12, borderTop: '1px solid var(--border)' }}>Members &amp; moderators · {data.members.length}</div>
+          {data.members.length === 0 && <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>No members yet.</div>}
+          {data.members.map(m => (
+            <div key={m.member_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', gap: 8 }}>
+              <span style={{ fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</span>
+                {m.role === 'host' && <span style={{ fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#7a2531', background: '#faf3f5', borderRadius: 20, padding: '2px 7px', flexShrink: 0 }}>Mod</span>}
+              </span>
+              <span style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                {m.role === 'host'
+                  ? <button onClick={() => setRole(m.member_id, 'member')} style={miniBtn}>Remove mod</button>
+                  : <button onClick={() => setRole(m.member_id, 'host')} style={miniBtn}>Make mod</button>}
+                <button onClick={() => removeMember(m.member_id, m.name)} style={{ ...miniBtn, color: '#c04040', borderColor: '#e2b4b4' }}>Remove</button>
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -115,14 +240,10 @@ function ModPanel({ id, auth }) {
 
 function Detail() {
   const { id } = useParams()
-  const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
-  const [data, setData] = useState({ loading: true, forum: null, threads: [] })
-  const [showNew, setShowNew] = useState(false)
-  const [title, setTitle] = useState('')
-  const [body, setBody] = useState('')
-  const [agreed, setAgreed] = useState(false)
-  const [busy, setBusy] = useState(false)
+  const [data, setData] = useState({ loading: true, forum: null, members: [], events: { upcoming: [], past: [] } })
+  const [uid, setUid] = useState(null)
+  const [showRules, setShowRules] = useState(false)
 
   const auth = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -132,31 +253,14 @@ function Detail() {
   const load = useCallback(async () => {
     try {
       const res = await fetch(`/api/portal/forums/${id}`, { headers: await auth() })
-      if (!res.ok) { setData({ loading: false, forum: null, threads: [] }); return }
+      if (!res.ok) { setData({ loading: false, forum: null, members: [], events: { upcoming: [], past: [] } }); return }
       const d = await res.json()
-      setData({ loading: false, forum: d.forum, threads: d.threads || [] })
-    } catch { setData({ loading: false, forum: null, threads: [] }) }
+      setData({ loading: false, forum: d.forum, members: d.members || [], events: d.events || { upcoming: [], past: [] } })
+    } catch { setData({ loading: false, forum: null, members: [], events: { upcoming: [], past: [] } }) }
   }, [id, auth])
 
   useEffect(() => { load() }, [load])
-
-  async function vote(t) {
-    // optimistic
-    setData(s => ({ ...s, threads: s.threads.map(x => x.id === t.id ? { ...x, upvoted: !x.upvoted, upvote_count: x.upvote_count + (x.upvoted ? -1 : 1) } : x) }))
-    const res = await fetch(`/api/portal/threads/${t.id}/vote`, { method: 'POST', headers: await auth() })
-    if (res.ok) { const d = await res.json(); setData(s => ({ ...s, threads: s.threads.map(x => x.id === t.id ? { ...x, upvoted: d.upvoted, upvote_count: d.upvote_count } : x) })) }
-  }
-
-  async function createThread() {
-    if (!title.trim() || busy) return
-    setBusy(true)
-    const res = await fetch(`/api/portal/forums/${id}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', ...(await auth()) },
-      body: JSON.stringify({ title: title.trim(), body: body.trim() }),
-    })
-    setBusy(false)
-    if (res.ok) { const d = await res.json(); router.push(`/portal/forums/${id}/${d.thread_id}`) }
-  }
+  useEffect(() => { (async () => { const { data: { user } } = await supabase.auth.getUser(); setUid(user?.id || null) })() }, [supabase])
 
   if (data.loading) return <div className="fr-wrap"><style>{forumCss}</style><p style={{ color: 'var(--muted)' }}>Loading…</p></div>
   if (!data.forum) return (
@@ -168,18 +272,27 @@ function Detail() {
 
   const f = data.forum
   return (
-    <div className="fr-wrap">
+    <div className="fr-wrap" style={{ maxWidth: 'none' }}>
       <style>{forumCss}</style>
       <a className="fr-back" href="/portal/forums">← Forums</a>
+      {f.cover_image_url && (
+        <img src={f.cover_image_url} alt="" style={{ width: '100%', height: 'auto', borderRadius: 12, display: 'block', margin: '10px 0 20px', background: '#f2ece4' }} />
+      )}
+      <div style={{ display: 'flex', gap: 26, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 460px', minWidth: 0 }}>
       <div className="fr-topbar">
-        <div>
-          <h1 className="fr-h1">{f.name}</h1>
-          {f.description && <p className="fr-sub" style={{ margin: 0 }}>{f.description}</p>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
+          {(f.avatar_url || f.cover_image_url)
+            ? <img src={f.avatar_url || f.cover_image_url} alt="" style={{ width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, background: '#f2ece4', boxShadow: '0 0 0 3px #fff, 0 1px 4px rgba(0,0,0,0.12)' }} />
+            : <div style={{ width: 54, height: 54, borderRadius: '50%', flexShrink: 0, background: '#e9e2d8', color: '#7a2531', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 600, fontFamily: "'thermal-variable', Georgia, serif" }}>{(f.name || 'F')[0].toUpperCase()}</div>}
+          <div style={{ minWidth: 0 }}>
+            <h1 className="fr-h1">{f.name}</h1>
+            {f.description && <p className="fr-sub" style={{ margin: 0 }}>{f.description}</p>}
+          </div>
         </div>
-        <button className="fr-newbtn" onClick={() => { setShowNew(true); setAgreed(false) }}>+ New thread</button>
       </div>
 
-      {f.my_role === 'host' && <ModPanel id={id} auth={auth} />}
+      {f.my_role === 'host' && <ModPanel id={id} auth={auth} supabase={supabase} onChanged={load} />}
 
       {f.guidelines && (
         <div className="fr-guide">
@@ -188,41 +301,58 @@ function Detail() {
         </div>
       )}
 
-      {data.threads.length === 0 ? (
-        <div className="fr-empty"><strong style={{ color: 'var(--ink)' }}>No threads yet.</strong><br />Start the first conversation.</div>
-      ) : (
-        <div className="fr-threads">
-          {data.threads.map(t => {
-            const href = `/portal/forums/${id}/${t.id}`
-            return (
-              <div className="fr-thread" key={t.id}>
-                <Av name={t.author_name} src={t.author_avatar} />
-                <div className="fr-thread-body">
-                  {t.pinned && <div className="fr-pin">Pinned</div>}
-                  <a href={href}><div className="fr-thread-title">{t.title}</div></a>
-                  {t.excerpt && <div className="fr-thread-excerpt">{t.excerpt}</div>}
-                  <div className="fr-thread-meta"><b>{t.author_name}</b> · {timeAgo(t.last_activity_at || t.created_at)}</div>
-                </div>
-                <div className="fr-stats">
-                  <button className={`fr-votes${t.upvoted ? ' on' : ''}`} onClick={() => vote(t)}>{UP} {t.upvote_count}</button>
-                  <a className="fr-replies" href={href}>{t.reply_count} repl{t.reply_count === 1 ? 'y' : 'ies'}</a>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
+      {/* Pinned rules of engagement — opens the full rules in a modal. */}
+      <button
+        onClick={() => setShowRules(true)}
+        style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 11, background: 'linear-gradient(135deg,#fbeff2,#fdf5f6)', border: '1px solid #ecd7dc', borderLeft: '3px solid #7a2531', borderRadius: 10, padding: '11px 15px', marginBottom: 14, cursor: 'pointer', fontFamily: "'thermal-variable', Georgia, serif" }}>
+        <span style={{ fontSize: 15, flexShrink: 0 }}>📌</span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7a2531', display: 'block' }}>Pinned · Rules of engagement</span>
+          <span style={{ fontSize: 13, color: '#6a5a5d', display: 'block', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Be thoughtful, engage ideas not people, and keep it in good faith.</span>
+        </span>
+        <span style={{ fontSize: 12.5, color: '#7a2531', fontWeight: 500, flexShrink: 0 }}>Read the rules →</span>
+      </button>
 
-      {showNew && (
-        <div className="fr-modal-bg" onClick={() => setShowNew(false)}>
+      {/* Rich post feed — profile-style composer, media cards, and comments,
+          scoped to this forum. */}
+      <PostsWall forumId={id} currentUserId={uid} />
+        </div>
+
+        {/* Right sidebar — moderators + members */}
+        <aside style={{ flex: '0 0 220px', width: 220 }}>
+          <div style={{ border: '1px solid var(--border)', borderRadius: 12, background: '#fff', padding: '16px 16px 8px' }}>
+            <PeopleGroup label="Moderators" people={(data.members || []).filter(m => m.role === 'host')} empty="No moderators" />
+            <PeopleGroup label="Members" people={(data.members || []).filter(m => m.role !== 'host')} empty="No members yet" top />
+          </div>
+          {((data.events?.upcoming?.length || 0) + (data.events?.past?.length || 0)) > 0 && (
+            <div style={{ border: '1px solid var(--border)', borderRadius: 12, background: '#fff', padding: '16px 16px 8px', marginTop: 16 }}>
+              <EventGroup label="Upcoming events" events={data.events?.upcoming || []} />
+              <EventGroup label="Past events" events={data.events?.past || []} top />
+            </div>
+          )}
+        </aside>
+      </div>
+
+      {showRules && (
+        <div className="fr-modal-bg" onClick={() => setShowRules(false)}>
           <div className="fr-modal" onClick={e => e.stopPropagation()}>
-            <div className="fr-modal-title">Start a new thread</div>
-            <PostGuidelines agreed={agreed} onAgree={setAgreed} />
-            <input className="fr-input" value={title} onChange={e => setTitle(e.target.value)} placeholder="What’s on your mind?" autoFocus />
-            <textarea className="fr-input" value={body} onChange={e => setBody(e.target.value)} rows={5} placeholder="Share what you’re thinking, a question, a passage that struck you… (optional)" style={{ resize: 'vertical' }} />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
-              <button className="fr-linkbtn" onClick={() => { setShowNew(false); setAgreed(false) }}>Cancel</button>
-              <button className="fr-postbtn" onClick={createThread} disabled={!title.trim() || busy || !agreed}>{busy ? 'Posting…' : 'Post thread'}</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 4 }}>
+              <span style={{ fontSize: 18 }}>📌</span>
+              <div className="fr-modal-title" style={{ margin: 0 }}>Rules of engagement</div>
+            </div>
+            <p style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.6, margin: '0 0 14px' }}>
+              The Parlor is a room for thoughtful conversation. By posting here, you agree to keep it that way.
+            </p>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {THREAD_GUIDELINES.map((it, i) => (
+                <li key={i} style={{ fontSize: 14.5, color: '#333', lineHeight: 1.85 }}>{it}</li>
+              ))}
+            </ul>
+            <div style={{ fontSize: 13, color: 'var(--muted)', fontStyle: 'italic', margin: '14px 0 4px', lineHeight: 1.6 }}>
+              If you wouldn’t say it in a room full of thoughtful people, don’t post it here. Moderators may remove posts that break these rules.
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="fr-postbtn" onClick={() => setShowRules(false)}>Got it</button>
             </div>
           </div>
         </div>

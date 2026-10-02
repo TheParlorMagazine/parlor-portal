@@ -11,8 +11,10 @@ import EmailsSection from './_components/EmailsSection'
 import PortalManagementSection from './_components/PortalManagementSection'
 import ReadingRoomSection from './_components/ReadingRoomSection'
 import EventsSection from './_components/EventsSection'
+import AnnouncementsSection from './_components/AnnouncementsSection'
 import CommunityPostsSection from './_components/CommunityPostsSection'
 import OrdersSection from './_components/OrdersSection'
+import ShopProductsSection from './_components/ShopProductsSection'
 import PrintMailingsSection from './_components/PrintMailingsSection'
 import LiveVisitors from './_components/LiveVisitors'
 
@@ -35,11 +37,13 @@ const ITEM_ROLES = {
   'reading-room': ['admin', 'editor'], 'community-posts': ['admin', 'editor'],
   subscribers: ['admin'], emails: ['admin', 'social_admin'], pitches: ['admin', 'editor'],
   events: ['admin', 'editor', 'social_admin'],
+  announcements: ['admin', 'editor', 'social_admin'],
   portal: ['admin', 'social_admin'],
   'plan-circle': ['admin'], 'plan-press': ['admin'],
   'print-mailings': ['admin', 'editor', 'finance_admin'],
   orders: ['admin', 'finance_admin'],
   invoices: ['admin', 'finance_admin'],
+  'shop-products': ['admin', 'editor'],
   social: ['admin', 'social_admin'],
   roles: ['admin'], analytics: ['admin'], publication: ['admin'],
 }
@@ -85,6 +89,7 @@ const NAV = [
     { key: 'media',     label: 'Media',       href: '/admin/media' },
     { key: 'pitches',   label: 'Submissions' },
     { key: 'community-posts', label: 'Community Posts' },
+    { key: 'announcements', label: 'Announcements' },
   ]},
   { section: 'Community', items: [
     { key: 'subscribers',  label: 'Subscribers' },
@@ -98,6 +103,9 @@ const NAV = [
     { key: 'plan-press',  label: 'Printing Press' },
     { key: 'print-mailings', label: 'Print Mailings' },
   ]},
+  { section: 'Shop', items: [
+    { key: 'shop-products', label: 'Products' },
+  ] },
   { section: 'Finance', items: [
     { key: 'orders',    label: 'Orders' },
     { key: 'invoices',  label: 'Invoices' },
@@ -844,11 +852,13 @@ function MainContent({ section, supabase, setActiveSection, role }) {
     case 'reading-room': return <ReadingRoomSection supabase={supabase} />
     case 'community-posts': return <CommunityPostsSection supabase={supabase} />
     case 'events':       return <EventsSection supabase={supabase} />
+    case 'announcements': return <AnnouncementsSection supabase={supabase} />
     case 'roles':        return <RolesSection supabase={supabase} />
     case 'analytics':    return <AnalyticsSection supabase={supabase} />
     case 'plan-circle':  return <PlansSection supabase={supabase} plan="circle" />
     case 'plan-press':   return <PlansSection supabase={supabase} plan="press" />
     case 'orders':       return <OrdersSection supabase={supabase} />
+    case 'shop-products': return <ShopProductsSection supabase={supabase} />
     case 'print-mailings': return <PrintMailingsSection supabase={supabase} />
     case 'pitches':      return <ComingSoon title="Submissions" />
     case 'invoices':     return <ComingSoon title="Invoices" />

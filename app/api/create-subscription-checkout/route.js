@@ -1,6 +1,7 @@
 import Stripe from 'stripe'
 import { serviceClient } from '../../../lib/apiAuth'
 import { ensureStripeCustomer } from '../../../lib/stripeCustomer'
+import { currencyForRequest } from '../../../lib/geo'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
@@ -43,7 +44,18 @@ export async function POST(request) {
     if (planId === PRINTING_PRESS_ID) {
       params.shipping_address_collection = { allowed_countries: SHIP_COUNTRIES }
     }
-    const session = await stripe.checkout.sessions.create(params)
+    // Same-numeral geo pricing: charge €7/£7 (not FX-converted) via the price's
+    // currency_options. A returning customer whose Stripe currency is already
+    // locked can't switch — fall back to their existing currency in that case.
+    const currency = currencyForRequest(request)
+    let session
+    try {
+      session = await stripe.checkout.sessions.create({ ...params, currency })
+    } catch (e) {
+      if (/currency/i.test(e?.message || '')) {
+        session = await stripe.checkout.sessions.create(params)
+      } else { throw e }
+    }
 
     return Response.json({ url: session.url })
   } catch (err) {

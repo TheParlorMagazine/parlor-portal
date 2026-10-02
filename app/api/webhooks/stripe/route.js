@@ -1,6 +1,6 @@
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
-import { sendPaymentConfirmedEmail, sendPaymentFailedEmail, sendCancellationEmail } from '../../../../lib/emails'
+import { sendPaymentConfirmedEmail, sendPaymentFailedEmail, sendCancellationEmail, sendOrderConfirmationEmail } from '../../../../lib/emails'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
@@ -93,7 +93,9 @@ async function handleShopOrder(session) {
     memberId = m?.id || null
   }
 
-  const ship = session.shipping_details || session.customer_details || {}
+  // Stripe moved shipping to collected_information.shipping_details (newer API);
+  // fall back to the legacy field and then billing details.
+  const ship = session.collected_information?.shipping_details || session.shipping_details || session.customer_details || {}
   const shippingAddress = ship?.address?.line1 ? formatAddress(null, ship.address) : null
 
   let orderNumber = null
@@ -115,19 +117,90 @@ async function handleShopOrder(session) {
   }).select().single()
   if (error) { console.error('shop order insert error:', error); return }
 
-  // Pull the purchased line items from Stripe and record them.
+  // Pull the purchased line items from Stripe and record them (with any Printify
+  // mapping carried on the price's product metadata).
+  let printifyItems = []
   try {
     const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { expand: ['data.price.product'], limit: 50 })
-    const rows = (lineItems.data || []).map(li => ({
-      order_id: order.id,
-      product_name: li.description || li.price?.product?.name || 'Item',
-      quantity: li.quantity || 1,
-      unit_price_cents: li.price?.unit_amount ?? (li.amount_subtotal && li.quantity ? Math.round(li.amount_subtotal / li.quantity) : 0),
-      image_url: li.price?.product?.images?.[0] || null,
-      stripe_price_id: li.price?.id || null,
-    }))
-    if (rows.length) await supabase.from('order_items').insert(rows)
+    const rows = (lineItems.data || []).map(li => {
+      const md = li.price?.product?.metadata || {}
+      const variantId = md.printify_variant_id ? Number(md.printify_variant_id) : null
+      if (md.fulfillment === 'printify' && md.printify_product_id && variantId) {
+        printifyItems.push({ product_id: md.printify_product_id, variant_id: variantId, quantity: li.quantity || 1 })
+      }
+      return {
+        order_id: order.id,
+        product_name: li.description || li.price?.product?.name || 'Item',
+        quantity: li.quantity || 1,
+        unit_price_cents: li.price?.unit_amount ?? (li.amount_subtotal && li.quantity ? Math.round(li.amount_subtotal / li.quantity) : 0),
+        image_url: li.price?.product?.images?.[0] || null,
+        stripe_price_id: li.price?.id || null,
+        shop_product_id: md.shop_product_id || null,
+        printify_product_id: md.printify_product_id || null,
+        printify_variant_id: variantId,
+      }
+    })
+    if (rows.length) {
+      const { error: oiErr } = await supabase.from('order_items').insert(rows)
+      // If the Printify link columns aren't migrated yet, still record the items.
+      if (oiErr && /printify_|shop_product_id/.test(oiErr.message || '')) {
+        const stripped = rows.map(({ shop_product_id, printify_product_id, printify_variant_id, ...r }) => r)
+        await supabase.from('order_items').insert(stripped)
+      }
+    }
+    // Order confirmation email (the "thank you" receipt).
+    const buyerEmail = session.customer_details?.email || order.email
+    if (buyerEmail) {
+      try { await sendOrderConfirmationEmail({ to: buyerEmail, name: order.shipping_name || session.customer_details?.name, order, items: rows }) }
+      catch (e) { console.error('order confirmation email error:', e.message) }
+    }
   } catch (e) { console.error('shop order line items error:', e.message) }
+
+  // Dropship: forward Printify line items to Printify for fulfillment.
+  if (printifyItems.length) {
+    try { await createPrintifyOrder(supabase, order, session, printifyItems) }
+    catch (e) { console.error('printify order error:', e.message) }
+  }
+}
+
+// Build a Printify order from a paid checkout and record its id/status.
+async function createPrintifyOrder(supabase, order, session, lineItems) {
+  const { printifyConfigured, resolveShopId, createOrder } = await import('../../../../lib/printify')
+  if (!printifyConfigured()) { console.warn('Printify token missing; skipping auto-order'); return }
+  const shopId = await resolveShopId()
+  if (!shopId) return
+
+  const ship = session.collected_information?.shipping_details || session.shipping_details || session.customer_details || {}
+  const a = ship.address || {}
+  const fullName = ship.name || session.customer_details?.name || ''
+  const [firstName, ...rest] = fullName.trim().split(/\s+/)
+  const address_to = {
+    first_name: firstName || 'Customer',
+    last_name: rest.join(' ') || '—',
+    email: session.customer_details?.email || order.email || '',
+    phone: session.customer_details?.phone || '',
+    country: a.country || 'US',
+    region: a.state || '',
+    address1: a.line1 || '',
+    address2: a.line2 || '',
+    city: a.city || '',
+    zip: a.postal_code || '',
+  }
+
+  const payload = {
+    external_id: order.order_number || session.id,
+    label: order.order_number || undefined,
+    line_items: lineItems,
+    shipping_method: 1, // standard
+    send_shipping_notification: false,
+    address_to,
+  }
+  const result = await createOrder(shopId, payload)
+  const printifyId = result?.id ? String(result.id) : null
+  await supabase.from('orders').update({
+    printify_order_id: printifyId,
+    printify_status: printifyId ? 'submitted' : 'error',
+  }).eq('id', order.id)
 }
 
 function formatAddress(name, a) {
@@ -160,7 +233,7 @@ async function handleSubscriptionCheckout(session) {
   }
   // If a shipping address was collected (Printing Press / physical), save it so
   // Settings and future print deliveries stay in sync.
-  const ship = session.shipping_details || session.customer_details
+  const ship = session.collected_information?.shipping_details || session.shipping_details || session.customer_details
   if (ship?.address?.line1) update.mailing_address = formatAddress(ship.name, ship.address)
 
   const supabase = getSupabase()

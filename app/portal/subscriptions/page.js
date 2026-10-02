@@ -4,11 +4,14 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 import PortalShell, { usePortal } from '../_components/PortalShell'
 import { fieldCss } from '../_components/formCss'
+import { useCurrency } from '../../../lib/useCurrency'
 
+// Same-numeral geo pricing: the number is identical across currencies ($7/€7/£7),
+// only the symbol changes by region.
 const PLANS = [
-  { id: 'fccb348a-7433-4080-8699-9ef8c0e7a519', label: "Reader's Circle", price: '$7 / month',
+  { id: 'fccb348a-7433-4080-8699-9ef8c0e7a519', label: "Reader's Circle", amount: 7, period: '/ month',
     desc: 'Full digital access — all articles, audio, and member-only content.' },
-  { id: 'c666f321-47e5-40c1-bc2a-565a2f52f64d', label: 'Printing Press', price: '$30 / every 4 months',
+  { id: 'c666f321-47e5-40c1-bc2a-565a2f52f64d', label: 'Printing Press', amount: 30, period: '/ every 4 months',
     desc: "Everything in Reader's Circle, plus the triannual print magazine mailed to you." },
 ]
 
@@ -55,6 +58,7 @@ function fmtDay(iso) {
 function Subscriptions() {
   const ctx = usePortal()
   const supabase = createClient()
+  const { symbol } = useCurrency()
   const m = ctx?.member || {}
   const hasBilling = !!m.stripe_customer_id
   const planName = m.plan || 'Free'
@@ -262,7 +266,7 @@ function Subscriptions() {
               <div key={p.id} className={`sub-plan${isCurrent ? ' current' : ''}`}>
                 {isCurrent && <span className="sub-current-tag">Current plan</span>}
                 <div className="sub-plan-name">{p.label}</div>
-                <div className="sub-plan-price">{p.price}</div>
+                <div className="sub-plan-price">{symbol}{p.amount} {p.period}</div>
                 <div className="sub-plan-desc">{p.desc}</div>
                 {isCurrent ? (
                   <button className="btn-secondary" disabled>Your plan</button>
