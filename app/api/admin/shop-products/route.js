@@ -11,7 +11,7 @@ async function gate(request) {
   return { db, user }
 }
 
-const STRINGS = ['name', 'variant', 'description', 'category', 'tint', 'sku', 'fulfillment', 'external_url', 'stripe_price_id', 'printify_shop_id', 'printify_product_id']
+const STRINGS = ['name', 'variant', 'description', 'category', 'tint', 'sku', 'fulfillment', 'external_url', 'stripe_price_id', 'printify_shop_id', 'printify_product_id', 'featured_blurb']
 const NUMBERS = ['price', 'price_eur', 'price_gbp', 'sort', 'inventory', 'printify_variant_id']
 const BOOLS = ['active', 'featured']
 
@@ -46,7 +46,14 @@ export async function POST(request) {
   if (!patch.name) return Response.json({ error: 'name required' }, { status: 400 })
   const { data, error } = await g.db.from('shop_products').insert(patch).select().single()
   if (error) return Response.json({ error: error.message }, { status: 500 })
+  if (patch.featured === true) await clearOtherFeatured(g.db, data.id)
   return Response.json({ product: data })
+}
+
+// Only one product is featured on the storefront hero at a time. When a product
+// is set featured, clear the flag on every other product.
+async function clearOtherFeatured(db, keepId) {
+  await db.from('shop_products').update({ featured: false }).eq('featured', true).neq('id', keepId)
 }
 
 // PATCH { id, ...fields } → update
@@ -57,6 +64,7 @@ export async function PATCH(request) {
   const patch = pick(b)
   const { data, error } = await g.db.from('shop_products').update(patch).eq('id', b.id).select().single()
   if (error) return Response.json({ error: error.message }, { status: 500 })
+  if (patch.featured === true) await clearOtherFeatured(g.db, b.id)
   return Response.json({ product: data })
 }
 

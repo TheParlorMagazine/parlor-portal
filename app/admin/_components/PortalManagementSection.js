@@ -420,7 +420,6 @@ function ForumsTab({ token }) {
   const [show, setShow] = useState(false)
 
   async function load() {
-    setLoading(true)
     try {
       const [fr, sg] = await Promise.all([
         fetch('/api/admin/forums', { headers: { Authorization: `Bearer ${await token()}` } }).then(r => r.json()),

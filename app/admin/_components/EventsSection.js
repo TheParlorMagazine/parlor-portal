@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { prepareImageUpload, isDuplicateUpload } from '../../../lib/uploadImage'
+import { confirmDialog } from '../../../lib/confirmDialog'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -243,13 +244,12 @@ export default function EventsSection({ supabase }) {
   const [attending, setAttending] = useState(null)
 
   async function load() {
-    setLoading(true)
     try { const res = await fetch('/api/admin/events', { headers: { Authorization: `Bearer ${await token()}` } }); const d = await res.json(); setEvents(d.events || []); setForums(d.forums || []) } catch {} finally { setLoading(false) }
   }
   useEffect(() => { load() }, [])
 
   async function del(id) {
-    if (!confirm('Delete this event? (RSVPs are removed; a tied forum is detached.)')) return
+    if (!(await confirmDialog('Delete this event? (RSVPs are removed; a tied forum is detached.)'))) return
     await fetch('/api/admin/events', { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ id }) })
     setEvents(es => es.filter(e => e.id !== id))
   }

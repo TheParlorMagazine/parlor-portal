@@ -8,6 +8,7 @@ import PortalShell from '../../_components/PortalShell'
 import { THREAD_GUIDELINES } from '../../_components/PostGuidelines'
 import PostsWall from '../../_components/PostsWall'
 import { forumCss } from '../forumCss'
+import { confirmDialog, alertDialog } from '../../../../lib/confirmDialog'
 
 function Av({ name, src }) {
   return <div className="fr-av">{src ? <img src={src} alt="" /> : (name || 'M')[0].toUpperCase()}</div>
@@ -123,12 +124,12 @@ function ModPanel({ id, auth, supabase, onChanged }) {
   }
   async function setRole(mid, role) {
     const res = await fetch(`/api/portal/groups/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ set_role_member_id: mid, role }) })
-    if (res.ok) { load(); onChanged?.() } else { const d = await res.json().catch(() => ({})); alert(d.error || 'Could not update') }
+    if (res.ok) { load(); onChanged?.() } else { const d = await res.json().catch(() => ({})); alertDialog(d.error || 'Could not update') }
   }
   async function removeMember(mid, name) {
-    if (!window.confirm(`Remove ${name} from this forum?`)) return
+    if (!(await confirmDialog(`Remove ${name} from this forum?`))) return
     const res = await fetch(`/api/portal/groups/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ remove_member_id: mid }) })
-    if (res.ok) { load(); onChanged?.() } else { const d = await res.json().catch(() => ({})); alert(d.error || 'Could not remove') }
+    if (res.ok) { load(); onChanged?.() } else { const d = await res.json().catch(() => ({})); alertDialog(d.error || 'Could not remove') }
   }
 
   return (

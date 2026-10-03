@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../../../lib/supabase'
 import { prepareImageUpload, isDuplicateUpload } from '../../../../lib/uploadImage'
 import ImageEditor from '../../_components/ImageEditor'
+import { confirmDialog } from '../../../../lib/confirmDialog'
 
 const FOLDERS = ['body', 'covers', 'authors']
 
@@ -32,7 +33,6 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
   useEffect(() => { loadFiles() }, [folder])
 
   async function loadFiles() {
-    setLoading(true)
     const { data } = await supabase.storage.from('Media').list(folder, {
       limit: 200, sortBy: { column: 'created_at', order: 'desc' },
     })
@@ -150,7 +150,7 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
             {[
               { label: 'Edit', color: '#e0e0e0', action: () => { setEditingImage(ctxMenu.file); setCtxMenu(null) } },
               { label: 'Rename', color: '#e0e0e0', action: () => { setRenamingFile({ file: ctxMenu.file, newName: ctxMenu.file.name.replace(/\.[^.]+$/, '') }); setCtxMenu(null) } },
-              { label: 'Delete', color: '#f87171', action: () => { if (window.confirm(`Delete "${ctxMenu.file.name}"?`)) deleteFile(ctxMenu.file); setCtxMenu(null) } },
+              { label: 'Delete', color: '#f87171', action: async () => { if (await confirmDialog(`Delete "${ctxMenu.file.name}"?`)) deleteFile(ctxMenu.file); setCtxMenu(null) } },
             ].map(({ label, color, action }) => (
               <button key={label} type="button" onClick={action}
                 style={{ ...menuBtnStyle, color }}

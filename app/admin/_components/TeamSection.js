@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { confirmDialog } from '../../../lib/confirmDialog'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -54,7 +55,7 @@ function TeamMemberRow({ member, isLast, onRoleChange, onDeactivate }) {
   }
 
   async function handleDeactivate() {
-    if (!window.confirm(`Deactivate ${displayName || 'this team member'}? They will lose dashboard access but keep their account.`)) return
+    if (!(await confirmDialog(`Deactivate ${displayName || 'this team member'}? They will lose dashboard access but keep their account.`))) return
     setDeactivating(true)
     await onDeactivate(member.id)
     setDeactivating(false)

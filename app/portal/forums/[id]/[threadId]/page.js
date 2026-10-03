@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { createClient } from '../../../../../lib/supabase'
 import PortalShell from '../../../_components/PortalShell'
 import { forumCss } from '../../forumCss'
+import { alertDialog } from '../../../../../lib/confirmDialog'
 
 function timeAgo(iso) {
   const d = new Date(iso); const s = Math.floor((Date.now() - d.getTime()) / 1000)
@@ -63,7 +64,7 @@ function Thread() {
     const reason = prompt('Report this post — why? (optional)')
     if (reason === null) return
     const res = await fetch('/api/portal/forum-report', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ kind, id: rid, reason }) })
-    if (res.ok) alert('Thanks — a moderator will take a look.')
+    if (res.ok) alertDialog('Thanks — a moderator will take a look.')
   }
 
   if (d.loading) return <div className="fr-wrap"><style>{forumCss}</style><p style={{ color: 'var(--muted)' }}>Loading…</p></div>

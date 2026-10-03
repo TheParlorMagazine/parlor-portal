@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '../../../lib/supabase'
 import PortalShell, { usePortal } from '../_components/PortalShell'
 import PostGuidelines, { FORUM_GUIDELINES } from '../_components/PostGuidelines'
+import { confirmDialog } from '../../../lib/confirmDialog'
 
 const SERIF = "'thermal-variable', Georgia, serif"
 
@@ -142,7 +143,7 @@ function Groups() {
     try {
       const res = await fetch(`/api/portal/groups/${g.id}`, { method: 'POST', headers: await auth() })
       const d = await res.json()
-      if (d.state === 'upgrade') { if (confirm('This forum is for paid members. Go to subscriptions?')) window.location.href = '/portal/subscriptions'; return }
+      if (d.state === 'upgrade') { if (await confirmDialog('This forum is for paid members. Go to subscriptions?')) window.location.href = '/portal/subscriptions'; return }
       if (res.ok) setGroups(gs => gs.map(x => x.id === g.id ? { ...x, my_role: d.state === 'member' ? 'member' : x.my_role, requested: d.state === 'requested', member_count: d.state === 'member' ? (x.member_count || 0) + 1 : x.member_count } : x))
     } finally { setBusyId(null) }
   }

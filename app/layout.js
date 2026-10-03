@@ -2,6 +2,7 @@ import PageViewTracker from './_components/PageViewTracker'
 import RecoveryRedirect from './_components/RecoveryRedirect'
 import CartDrawer from './_components/CartDrawer'
 import ShopStateSync from './_components/ShopStateSync'
+import ConfirmHost from './_components/ConfirmHost'
 
 export const metadata = {
   title: 'The Parlor',
@@ -14,6 +15,10 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Image hosts — open the connection early so covers/hero load sooner. */}
+        <link rel="preconnect" href="https://static.wixstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://nxpwcdtduxsorbzoajbm.supabase.co" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap" rel="stylesheet" />
       </head>
       <body>
@@ -22,6 +27,7 @@ export default function RootLayout({ children }) {
         {children}
         <ShopStateSync />
         <CartDrawer />
+        <ConfirmHost />
       </body>
     </html>
   )

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { confirmDialog } from '../../../lib/confirmDialog'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -112,7 +113,7 @@ function IssueDetail({ issue, token, onChanged }) {
   }
 
   async function shipAll() {
-    if (!window.confirm('Mark every pending copy shipped and email those subscribers?')) return
+    if (!(await confirmDialog('Mark every pending copy shipped and email those subscribers?'))) return
     setBusy('shipall')
     const res = await fetch('/api/admin/print-mailings/shipments', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ action: 'ship_all', issue_id: issue.id, carrier: bulk.carrier || undefined, estimated_arrival: bulk.estimated_arrival || undefined }) })
     setBusy('')
@@ -157,7 +158,7 @@ function IssueCard({ issue, token, onChanged }) {
   const [busy, setBusy] = useState(false)
   const sm = STATUS_META[issue.status] || STATUS_META.scheduled
   const set = async (patch) => { setBusy(true); await fetch('/api/admin/print-mailings', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ id: issue.id, ...patch }) }); setBusy(false); onChanged() }
-  async function remove() { if (!window.confirm(`Delete "${issue.title}" and its shipments?`)) return; setBusy(true); await fetch(`/api/admin/print-mailings?id=${issue.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${await token()}` } }); setBusy(false); onChanged() }
+  async function remove() { if (!(await confirmDialog(`Delete "${issue.title}" and its shipments?`))) return; setBusy(true); await fetch(`/api/admin/print-mailings?id=${issue.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${await token()}` } }); setBusy(false); onChanged() }
 
   return (
     <div style={{ border: `1px solid ${BORDER}`, borderRadius: 11, marginBottom: 12, background: '#fff', overflow: 'hidden' }}>

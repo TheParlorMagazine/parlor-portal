@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { confirmDialog } from '../../../lib/confirmDialog'
 
 
 export default function AdminArticlesPage() {
@@ -58,7 +59,7 @@ export default function AdminArticlesPage() {
   }, [])
 
   async function handleDelete(id, title) {
-    if (!window.confirm(`Delete "${title || 'this article'}"? This cannot be undone.`)) return
+    if (!(await confirmDialog(`Delete "${title || 'this article'}"? This cannot be undone.`))) return
     setDeletingId(id)
     await supabase.from('articles').delete().eq('id', id)
     setArticles(prev => prev.filter(a => a.id !== id))

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { alertDialog } from '../../../lib/confirmDialog'
 
 const FONTS = [
   { label: 'Playfair Display',   value: 'Playfair Display' },
@@ -471,7 +472,7 @@ export default function ImageEditor({ imageUrl, fileName, folder, supabase, onSa
         originX:'center', originY:'center', selectable:true, evented:true, data:{ role:'main' } })
       fc.remove(img); fc.add(newImg); imgObjRef.current = newImg
       fc.setActiveObject(newImg); fc.renderAll(); URL.revokeObjectURL(url); saveSnapshot()
-    } catch(e) { alert('Background removal failed: ' + e.message) }
+    } catch(e) { alertDialog('Background removal failed: ' + e.message) }
     setRemoving(false)
   }
 
@@ -516,7 +517,7 @@ export default function ImageEditor({ imageUrl, fileName, folder, supabase, onSa
       if (error) throw error
       const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)
       onSave(publicUrl)
-    } catch(e) { alert('Save failed: ' + e.message) }
+    } catch(e) { alertDialog('Save failed: ' + e.message) }
     setSaving(false)
   }
 

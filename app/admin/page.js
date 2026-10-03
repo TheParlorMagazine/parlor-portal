@@ -17,6 +17,7 @@ import OrdersSection from './_components/OrdersSection'
 import ShopProductsSection from './_components/ShopProductsSection'
 import PrintMailingsSection from './_components/PrintMailingsSection'
 import LiveVisitors from './_components/LiveVisitors'
+import { confirmDialog } from '../../lib/confirmDialog'
 
 // ── Role definitions ──────────────────────────────────────────
 const ROLE_OPTIONS = [
@@ -292,6 +293,15 @@ function DashboardHome({ supabase, setActiveSection }) {
   const freeCount    = subscribers.filter(m => !m.plan || m.plan === 'free').length
   const onboarding   = subscribers.filter(m => m.onboarding_sent || m.onboarding_sent_at).length
 
+  // Combined MRR across all plans (active members only), at the real monthly rate:
+  // Reader's Circle $10/mo, Printing Press $25 every 4 months = $6.25/mo.
+  const activePaid = subscribers.filter(m => !m.subscription_status || m.subscription_status === 'active')
+  const mrr = activePaid.reduce((sum, m) => {
+    if (['Printing Press', 'printing_press', 'press', 'print'].includes(m.plan)) return sum + 6.25
+    if (["Reader's Circle", 'readers_circle', 'circle'].includes(m.plan)) return sum + 10
+    return sum
+  }, 0)
+
   // ── Build unified activity feed ──
   const feed = []
   data.recentArticles.forEach(a => feed.push({
@@ -362,17 +372,18 @@ function DashboardHome({ supabase, setActiveSection }) {
           </svg>
         </button>
         {subExpanded && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderTop: '1px solid #f5f5f5' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', borderTop: '1px solid #f5f5f5' }}>
             {[
               { label: 'Site Members',     value: subscribers.length },
               { label: 'Newsletter',       value: newsletterCount != null ? newsletterCount : '—' },
               { label: 'New This Week',    value: newThisWeek, color: '#2d8f5a' },
               { label: "Reader's Circle",  value: circleCount, sub: '$10/mo', color: '#4a6fd4' },
-              { label: 'Printing Press',   value: pressCount,  sub: '$25/mo', color: DARK_PINK },
+              { label: 'Printing Press',   value: pressCount,  sub: '$25/4mo', color: DARK_PINK },
               { label: 'Free',             value: freeCount },
+              { label: 'MRR (total)',      value: `$${Math.round(mrr).toLocaleString()}`, sub: `$${Math.round(mrr * 12).toLocaleString()}/yr`, color: '#2d8f5a' },
               { label: 'Onboarding Sent',  value: onboarding },
             ].map((s, i) => (
-              <div key={s.label} style={{ padding: '16px 14px', borderRight: i < 6 ? '1px solid #f5f5f5' : 'none' }}>
+              <div key={s.label} style={{ padding: '16px 14px', borderRight: i < 7 ? '1px solid #f5f5f5' : 'none' }}>
                 <div style={{ fontSize: '22px', fontWeight: '700', color: s.color || '#0a0a0a', fontFamily: ffH, lineHeight: 1 }}>{s.value}</div>
                 <div style={{ fontSize: '11px', color: '#aaa', marginTop: '4px', fontFamily: ff }}>{s.label}</div>
                 {s.sub && <div style={{ fontSize: '11px', color: s.color, marginTop: '2px', fontFamily: ff }}>{s.sub}</div>}
@@ -764,7 +775,7 @@ function RolesSection({ supabase }) {
                 {deactivating[m.id] ? '…' : isInactive ? 'Reactivate' : 'Deactivate'}
               </button>
               {/* Remove role */}
-              <button onClick={() => { if (window.confirm('Remove role? They will become a regular subscriber.')) saveRole(m.id, '') }} style={{ padding: '6px 12px', background: 'none', border: '1px solid #e8e8e8', borderRadius: '6px', color: '#aaa', fontSize: '12px', cursor: 'pointer', fontFamily: ff, flexShrink: 0 }}>
+              <button onClick={async () => { if (await confirmDialog('Remove role? They will become a regular subscriber.')) saveRole(m.id, '') }} style={{ padding: '6px 12px', background: 'none', border: '1px solid #e8e8e8', borderRadius: '6px', color: '#aaa', fontSize: '12px', cursor: 'pointer', fontFamily: ff, flexShrink: 0 }}>
                 Remove role
               </button>
             </div>

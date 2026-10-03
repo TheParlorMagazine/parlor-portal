@@ -5,6 +5,7 @@ import { createClient } from '../../../lib/supabase'
 import PortalShell, { usePortal } from '../_components/PortalShell'
 import { fieldCss } from '../_components/formCss'
 import { useCurrency } from '../../../lib/useCurrency'
+import { confirmDialog } from '../../../lib/confirmDialog'
 
 // Same-numeral geo pricing: the number is identical across currencies ($7/€7/£7),
 // only the symbol changes by region.
@@ -132,7 +133,7 @@ function Subscriptions() {
   }
 
   async function setCancel(action) {
-    if (action === 'cancel' && !window.confirm('Cancel your subscription? You’ll keep access until the end of your current billing period, then billing stops.')) return
+    if (action === 'cancel' && !(await confirmDialog('Cancel your subscription? You’ll keep access until the end of your current billing period, then billing stops.'))) return
     setBusy(action); setErr('')
     try {
       const res = await fetch('/api/portal/cancel-subscription', {

@@ -6,6 +6,7 @@ import { prepareImageUpload, isDuplicateUpload } from '../../../lib/uploadImage'
 import PortalShell from '../_components/PortalShell'
 import RichTextEditor from '../../admin/articles/_components/RichTextEditor'
 import { VERTICALS, MEMBER_POST_CONSENT, HOW_MEMBER_POSTS_WORK_HREF, PITCH_HREF } from '../../../lib/memberPosts'
+import { confirmDialog } from '../../../lib/confirmDialog'
 
 const SERIF = "'thermal-variable', Georgia, serif"
 
@@ -212,7 +213,7 @@ function Editor({ id, onClose, auth, supabase }) {
           <button onClick={() => { if (!f.title.trim()) { setMsg('Give your piece a title first.'); return } setShowConsent(true) }} disabled={busy} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '11px 24px', fontFamily: SERIF, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Submit for review</button>
           <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved automatically' : 'Autosaves as you write'}</span>
           {msg && <span style={{ fontSize: 13, color: '#c04040' }}>{msg}</span>}
-          {subId && <button onClick={async () => { if (!window.confirm('Delete this draft?')) return; await fetch('/api/portal/submissions', { method: 'DELETE', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ id: subId }) }); onClose(true) }} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#c04040', fontSize: 13, cursor: 'pointer', fontFamily: SERIF }}>Delete draft</button>}
+          {subId && <button onClick={async () => { if (!(await confirmDialog('Delete this draft?'))) return; await fetch('/api/portal/submissions', { method: 'DELETE', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ id: subId }) }); onClose(true) }} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#c04040', fontSize: 13, cursor: 'pointer', fontFamily: SERIF }}>Delete draft</button>}
         </div>
       )}
 
@@ -233,7 +234,6 @@ function Write() {
   }, [supabase])
 
   const load = useCallback(async () => {
-    setLoading(true)
     try { const res = await fetch('/api/portal/submissions', { headers: await auth() }); const d = await res.json(); setSubs(d.submissions || []) } catch {} finally { setLoading(false) }
   }, [auth])
   useEffect(() => { if (view.mode === 'list') load() }, [view.mode, load])

@@ -12,6 +12,7 @@ import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import TextAlign from '@tiptap/extension-text-align'
+import { confirmDialog } from '../../../lib/confirmDialog'
 
 // ── Style tokens ──────────────────────────────────────────────
 const ff   = "'Source Serif 4', Georgia, serif"
@@ -194,8 +195,8 @@ function TemplateEditorModal({ template, footer, onSave, onClose, supabase }) {
     if (!bodyHtml && defaultHtml) setBodyHtml(defaultHtml)   // start from the built-in design
     setOverriding(true)
   }
-  function revertToBuiltIn() {
-    if (!window.confirm('Discard this custom design and use the built-in design again?')) return
+  async function revertToBuiltIn() {
+    if (!(await confirmDialog('Discard this custom design and use the built-in design again?'))) return
     setBodyHtml(''); setOverriding(false)
   }
 

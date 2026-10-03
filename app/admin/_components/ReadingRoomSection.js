@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { prepareImageUpload, isDuplicateUpload } from '../../../lib/uploadImage'
+import { confirmDialog } from '../../../lib/confirmDialog'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -106,7 +107,6 @@ function PromptsModal({ token, book, onClose, onChanged }) {
   const [busy, setBusy] = useState(false)
 
   async function load() {
-    setLoading(true)
     const res = await fetch(`/api/admin/book-club/${book.id}/prompts`, { headers: { Authorization: `Bearer ${await token()}` } })
     const d = await res.json(); setPrompts(d.prompts || []); setLoading(false)
   }
@@ -120,7 +120,7 @@ function PromptsModal({ token, book, onClose, onChanged }) {
     if (res.ok) { setTitle(''); setBody(''); setPinned(false); await load(); onChanged?.() }
   }
   async function del(id) {
-    if (!confirm('Remove this prompt?')) return
+    if (!(await confirmDialog('Remove this prompt?'))) return
     await fetch(`/api/admin/book-club/${book.id}/prompts`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ prompt_id: id }) })
     setPrompts(ps => ps.filter(p => p.id !== id)); onChanged?.()
   }
@@ -165,7 +165,6 @@ export default function ReadingRoomSection({ supabase }) {
   const [prompting, setPrompting] = useState(null)
 
   async function load() {
-    setLoading(true)
     try {
       const res = await fetch('/api/admin/book-club', { headers: { Authorization: `Bearer ${await token()}` } })
       const d = await res.json(); setBooks(d.books || [])
@@ -174,7 +173,7 @@ export default function ReadingRoomSection({ supabase }) {
   useEffect(() => { load() }, [])
 
   async function del(id) {
-    if (!confirm('Delete this book and its discussions?')) return
+    if (!(await confirmDialog('Delete this book and its discussions?'))) return
     await fetch('/api/admin/book-club', { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ id }) })
     setBooks(bs => bs.filter(b => b.id !== id))
   }

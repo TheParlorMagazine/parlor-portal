@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
 import PortalShell from '../../_components/PortalShell'
 import { evCss } from '../evCss'
+import { confirmDialog } from '../../../../lib/confirmDialog'
 
 const LOC = { virtual: 'Online', in_person: 'In person', hybrid: 'Hybrid' }
 function fmtWhen(iso) {
@@ -40,7 +41,7 @@ function Detail() {
     if (res.ok) await load()
   }
   async function cancel() {
-    if (!confirm('Cancel your RSVP? You’ll lose access to the event discussion.')) return
+    if (!(await confirmDialog('Cancel your RSVP? You’ll lose access to the event discussion.'))) return
     setBusy(true)
     const res = await fetch(`/api/portal/events/${id}/rsvp`, { method: 'DELETE', headers: await auth() })
     setBusy(false)

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '../../../../lib/supabase'
+import { confirmDialog, alertDialog } from '../../../../lib/confirmDialog'
 
 const SERIF = "'Source Serif 4', Georgia, serif"
 const DISPLAY = "'Playfair Display', Georgia, serif"
@@ -94,7 +95,7 @@ export default function CommentsSection({ articleId, articleSlug, userId }) {
   }
 
   async function remove(id) {
-    if (!confirm('Delete this comment?')) return
+    if (!(await confirmDialog('Delete this comment?'))) return
     const headers = { 'Content-Type': 'application/json', ...(await authHeader()) }
     const res = await fetch('/api/comments', { method: 'DELETE', headers, body: JSON.stringify({ id }) })
     if (res.ok) await load()
@@ -105,8 +106,8 @@ export default function CommentsSection({ articleId, articleSlug, userId }) {
     if (reason === null) return
     const headers = { 'Content-Type': 'application/json', ...(await authHeader()) }
     const res = await fetch('/api/comments/report', { method: 'POST', headers, body: JSON.stringify({ comment_id: id, reason }) })
-    if (res.ok) alert('Thanks — a moderator will take a look.')
-    else if (res.status === 401) alert('Sign in to report a comment.')
+    if (res.ok) alertDialog('Thanks — a moderator will take a look.')
+    else if (res.status === 401) alertDialog('Sign in to report a comment.')
   }
 
   const linkBtn = { background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: SERIF, fontSize: 13, color: '#999' }

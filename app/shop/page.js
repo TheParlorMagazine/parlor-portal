@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import SiteFooter from '../_components/SiteFooter'
 import { useCurrency, fmtPrice } from '../../lib/useCurrency'
 import { useCart } from '../../lib/useCart'
@@ -17,8 +17,8 @@ const BLACK = '#0a0a0a'
 const PINK = '#f2b8c6'
 const MAROON = '#7a2531'
 
-// Storefront categories — these drive product filtering. "Home" in the nav is a
-// link back to the main site, not a filter.
+// Storefront categories — these drive product filtering. Fallback only; the live
+// list comes from /api/shop/categories.
 const FALLBACK_CATEGORIES = ['Limited Edition', 'Self Care', 'Tea & Rituals', 'Apparel & Accessories']
 
 const qtyBtn = { width: 26, height: 26, borderRadius: '50%', border: '1px solid #ddd', background: '#fff', color: '#555', fontSize: 15, lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
@@ -26,8 +26,8 @@ const qtyBtn = { width: 26, height: 26, borderRadius: '50%', border: '1px solid 
 // Countries we ship to (must mirror SHIP_COUNTRIES in the checkout/shipping API).
 const SHIP_COUNTRIES = [['US', 'United States'], ['CA', 'Canada'], ['GB', 'United Kingdom'], ['IE', 'Ireland'], ['AU', 'Australia'], ['NZ', 'New Zealand'], ['FR', 'France'], ['DE', 'Germany'], ['ES', 'Spain'], ['IT', 'Italy'], ['NL', 'Netherlands'], ['SE', 'Sweden'], ['NO', 'Norway'], ['DK', 'Denmark'], ['FI', 'Finland'], ['BE', 'Belgium'], ['AT', 'Austria'], ['CH', 'Switzerland'], ['PT', 'Portugal'], ['MX', 'Mexico'], ['BR', 'Brazil'], ['JP', 'Japan']]
 
-// Placeholder catalog. First iteration only — swap for a real products table
-// later. `tint` gives each card a soft placeholder image block.
+// Placeholder catalog. First iteration only — swapped for the real products table
+// once /api/shop/products loads. `tint` gives each card a soft placeholder block.
 const PRODUCTS = [
   { id: 'issue-2', name: 'The Parlor — Vol. 2', variant: 'The World We’re Building', price: 35, category: 'Limited Edition', tint: '#f6cdd8', featured: true },
   { id: 'issue-1', name: 'The Parlor — Vol. 1', variant: 'Borderlands of Identity', price: 35, category: 'Limited Edition', tint: '#e7d5c4' },
@@ -42,6 +42,23 @@ const PRODUCTS = [
   { id: 'tee', name: 'The Parlor Tee', variant: 'Vintage black', price: 34, category: 'Apparel & Accessories', tint: '#d9d9dd' },
   { id: 'pin', name: 'Enamel Pin', variant: 'Mascot', price: 12, category: 'Apparel & Accessories', tint: '#f6d3c9' },
 ]
+
+// Scroll the collection grid to just below the pinned filter strip, so the
+// "The collection" heading clears the sticky search bar instead of hiding under it.
+function scrollToCollection() {
+  if (typeof document === 'undefined') return
+  const el = document.getElementById('shop-collection')
+  if (!el) return
+  const nav = document.querySelector('.shop-navbar')
+  const top = el.getBoundingClientRect().top + window.scrollY - (nav?.offsetHeight || 0) - 16
+  window.scrollTo({ top, behavior: 'smooth' })
+}
+
+// Case-insensitive match of a product against a search query (name/variant/category).
+function matchesQuery(p, q) {
+  if (!q) return true
+  return [p.name, p.variant, p.category].filter(Boolean).some(s => String(s).toLowerCase().includes(q))
+}
 
 // Same shopping-bag icon as the main site header, in opposite colors for the
 // dark shop header (white bag, white count badge with dark text).
@@ -60,13 +77,19 @@ function BagIcon({ count }) {
 
 export default function ShopPage() {
   const [cat, setCat] = useState('all')
+  const [query, setQuery] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false) // search dropdown visible
+  const [drawerOpen, setDrawerOpen] = useState(false) // left filter drawer
+  const [sort, setSort] = useState('featured') // featured | price-asc | price-desc
   const { cart, add: cartAdd } = useCart() // shared localStorage cart
   const wish = useWishlist()
   const [scrolled, setScrolled] = useState(false)
   const [variantSel, setVariantSel] = useState({}) // productId → chosen printify_variant_id
+  const [imgRatios, setImgRatios] = useState({}) // productId → primary image aspect ratio (w/h)
   const [products, setProducts] = useState(PRODUCTS) // hardcoded list is the fallback until the catalogue loads
   const [categories, setCategories] = useState(FALLBACK_CATEGORIES)
   const { symbol } = useCurrency() // same-numeral geo pricing: $7 → €7 → £7
+  const searchWrapRef = useRef(null)
 
   // Load the live catalogue from the admin-managed DB; keep the seed list if empty/offline.
   useEffect(() => {
@@ -80,12 +103,32 @@ export default function ShopPage() {
       .catch(() => {})
   }, [])
 
-  // Pre-filter the collection when arriving via a category link. (The cart drawer
-  // itself — and its ?cart/?checkout/?wishlist/?ordered handling — is global.)
+  // Measure each product's primary image aspect ratio so wide/landscape images
+  // (e.g. the 2-issue bundle shot, 16:9) are shown "contain" (fit, no crop) in the
+  // 4/5 portrait card instead of being cropped to "cover". Browser cache makes
+  // these loads free since the same images are rendered on the cards.
+  useEffect(() => {
+    let alive = true
+    for (const p of products) {
+      const src = p.images?.[0]
+      if (!src || imgRatios[p.id] != null) continue
+      const im = new Image()
+      im.onload = () => { if (alive && im.naturalHeight) setImgRatios(r => (r[p.id] != null ? r : { ...r, [p.id]: im.naturalWidth / im.naturalHeight })) }
+      im.src = src
+    }
+    return () => { alive = false }
+  }, [products]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pre-filter/search the collection when arriving via a category or search link.
+  // (The cart drawer — and its ?cart/?checkout/?wishlist/?ordered handling — is global.)
   useEffect(() => {
     try {
-      const c = new URLSearchParams(window.location.search).get('cat')
-      if (c) { setCat(c); setTimeout(() => document.getElementById('shop-collection')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100) }
+      const sp = new URLSearchParams(window.location.search)
+      const c = sp.get('cat')
+      const q = sp.get('q')
+      if (c) setCat(c)
+      if (q) setQuery(q)
+      if (c || q) setTimeout(() => scrollToCollection(), 100)
     } catch {}
   }, [])
 
@@ -97,10 +140,45 @@ export default function ShopPage() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // Close the search dropdown on outside click / Escape; close the drawer on Escape.
+  useEffect(() => {
+    const onDown = e => { if (searchWrapRef.current && !searchWrapRef.current.contains(e.target)) setSearchOpen(false) }
+    const onKey = e => { if (e.key === 'Escape') { setSearchOpen(false); setDrawerOpen(false) } }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
+  }, [])
+
+  // Lock body scroll while the filter drawer is open.
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    document.body.style.overflow = drawerOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [drawerOpen])
+
+  const q = query.trim().toLowerCase()
+
+  // Quick preview results for the search dropdown (top 6 matches).
+  const searchResults = useMemo(() => (q ? products.filter(p => matchesQuery(p, q)).slice(0, 6) : []), [q, products])
+
   const shown = useMemo(() => {
-    if (cat === 'all') return products
-    return products.filter(p => p.category === cat)
-  }, [cat, products])
+    let list = products
+    if (cat !== 'all') list = list.filter(p => p.category === cat)
+    if (q) list = list.filter(p => matchesQuery(p, q))
+    if (sort === 'price-asc' || sort === 'price-desc') {
+      list = [...list].sort((a, b) => (Number(a.price || 0) - Number(b.price || 0)) * (sort === 'price-asc' ? 1 : -1))
+    }
+    return list
+  }, [cat, products, q, sort])
+
+  // Per-category counts for the filter drawer.
+  const catCount = c => products.filter(p => p.category === c).length
+
+  const applyCat = c => {
+    setCat(c)
+    setDrawerOpen(false)
+    setTimeout(() => scrollToCollection(), 60)
+  }
 
   // The variant a card currently has selected (defaults to the first).
   const chosenVariant = p => {
@@ -112,6 +190,27 @@ export default function ShopPage() {
 
   const add = p => { const v = chosenVariant(p); cartAdd(p.id, v?.printify_variant_id ?? null); openCart() }
 
+  // Landscape images (wider than ~5:4) get cropped badly in the 4/5 portrait card,
+  // so show them "contain" (whole image, centered). Portrait/square product shots
+  // keep "cover" so they fill the card. Defaults to cover until measured.
+  const fitOf = p => (imgRatios[p.id] > 1.1 ? 'contain' : 'cover')
+
+  const heading = cat !== 'all' ? cat : (q ? `Results for “${query.trim()}”` : 'The collection')
+
+  // The single featured product drives the storefront hero promo.
+  const featured = useMemo(() => products.find(p => p.featured) || null, [products])
+  const heroImgs = (featured?.images?.length ? featured.images : ['https://static.wixstatic.com/media/d449e2_fd8c48fe8b274b67be10d4773240837b~mv2.png'])
+  const heroHeadline = (featured?.featured_blurb || featured?.name || '').trim()
+
+  // Auto-cycling hero image carousel through all of the featured product's images.
+  const [heroImgIdx, setHeroImgIdx] = useState(0)
+  useEffect(() => { setHeroImgIdx(0) }, [featured?.id])
+  useEffect(() => {
+    if (heroImgs.length < 2) return
+    const t = setInterval(() => setHeroImgIdx(i => (i + 1) % heroImgs.length), 4000)
+    return () => clearInterval(t)
+  }, [featured?.id, heroImgs.length])
+
   return (
     <div style={{ background: '#fff', minHeight: '100vh' }}>
       <style>{`
@@ -122,33 +221,84 @@ export default function ShopPage() {
         .shop-fab-cart.show { opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
         .shop-fab-cart:hover { transform:translateY(0) scale(1.07); }
         @media (max-width:560px){ .shop-fab-cart { bottom:18px; right:18px; width:54px; height:54px; } }
-        .shop-nav-link { background:none; border:none; cursor:pointer; color:#fff; font-family:${DISPLAY}; font-size:19px; letter-spacing:0.06em; padding:2px 0; position:relative; opacity:0.9; transition:opacity 0.15s; }
-        .shop-nav-link:hover { opacity:1; }
-        .shop-nav-link.active { opacity:1; }
-        .shop-nav-link.active::after { content:''; position:absolute; left:0; right:0; bottom:-6px; height:2px; background:${PINK}; }
         .shop-browse { color:#fff; font-family:${BODY}; font-size:14px; letter-spacing:0.1em; text-transform:uppercase; background:none; border:none; cursor:pointer; padding:0; transition:color 0.15s; }
         .shop-browse:hover { color:${PINK}; }
         .shop-card { background:#fff; text-align:left; }
-        .shop-card-img { border-radius:4px; aspect-ratio:4/5; display:flex; align-items:flex-end; justify-content:flex-start; padding:12px; }
+        .shop-card-img { position:relative; border-radius:4px; aspect-ratio:4/5; display:flex; align-items:flex-end; justify-content:flex-start; padding:12px; overflow:hidden; }
         .shop-add { margin-top:10px; background:${BLACK}; color:#fff; border:none; border-radius:24px; padding:9px 20px; font-family:${BODY}; font-size:13px; letter-spacing:0.04em; cursor:pointer; transition:background 0.15s; }
         .shop-add:hover { background:${MAROON}; }
         .shop-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:34px 26px; }
         .shop-hero-title { font-family:${DISPLAY}; font-weight:700; font-size:60px; line-height:1.05; color:#1a1a1a; margin:0; }
         .shop-welcome { font-family:${DISPLAY}; font-weight:700; font-size:64px; line-height:1.03; color:#fff; margin:0; }
+        .shop-back { display:inline-flex; align-items:center; gap:9px; color:rgba(255,255,255,0.78); font-family:${BODY}; font-size:13px; letter-spacing:0.08em; text-transform:uppercase; text-decoration:none; padding:26px 48px 0; transition:color 0.15s; }
+        .shop-back:hover { color:#fff; }
+        .shop-back-arrow { transition:transform 0.18s ease; transform-origin:left center; }
+        .shop-back:hover .shop-back-arrow { transform:translateX(-3px) scale(1.35); }
+        .shop-hero-left { padding: 56px 48px 64px 96px; }
+        .shop-hero-figwrap { position:absolute; inset:0; width:100%; height:100%; display:block; }
+        .shop-hero-figimg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 25%; transition:opacity 0.8s ease; }
+
+        /* ── Filter strip (hamburger + search) ── */
+        .shop-filterstrip { display:flex; align-items:center; gap:16px; padding:13px 24px; max-width:1180px; margin:0 auto; }
+        .shop-ham { flex:0 0 auto; display:flex; align-items:center; gap:9px; background:none; border:none; cursor:pointer; color:#fff; font-family:${BODY}; font-size:13px; letter-spacing:0.08em; text-transform:uppercase; padding:8px 10px; border-radius:7px; transition:background 0.15s; }
+        .shop-ham:hover { background:rgba(255,255,255,0.1); }
+        .shop-ham-label { opacity:0.92; }
+        .shop-search-wrap { position:relative; flex:1 1 auto; }
+        .shop-search-input { width:100%; box-sizing:border-box; background:#fff; border:none; border-radius:30px; padding:12px 44px 12px 20px; font-family:${BODY}; font-size:15px; color:#1a1a1a; outline:none; }
+        .shop-search-input::placeholder { color:#9a9a9a; }
+        .shop-search-ico { position:absolute; right:16px; top:50%; transform:translateY(-50%); pointer-events:none; color:#6a6a6a; }
+        .shop-search-panel { position:absolute; top:calc(100% + 10px); left:0; right:0; background:#fff; border-radius:12px; box-shadow:0 18px 50px rgba(0,0,0,0.26); overflow:hidden; z-index:60; }
+        .shop-sr-head { font-family:${BODY}; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#999; padding:14px 18px 6px; }
+        .shop-sr-row { display:flex; align-items:center; gap:12px; padding:9px 18px; text-decoration:none; color:#1a1a1a; cursor:pointer; }
+        .shop-sr-row:hover { background:#faf6f2; }
+        .shop-sr-thumb { width:42px; height:52px; border-radius:4px; flex:0 0 auto; background-size:cover; background-position:center; }
+        .shop-sr-name { font-family:${DISPLAY}; font-size:15px; line-height:1.2; }
+        .shop-sr-price { font-family:${BODY}; font-size:13px; color:#777; }
+        .shop-sr-chip { display:inline-block; font-family:${BODY}; font-size:13px; color:#333; background:#f1ece7; border:none; border-radius:16px; padding:7px 14px; margin:2px 6px 2px 0; cursor:pointer; }
+        .shop-sr-chip:hover { background:${PINK}; }
+
+        /* ── Category chip on card ── */
+        .shop-cat-chip { position:absolute; top:10px; left:10px; z-index:2; font-family:${BODY}; font-size:11px; letter-spacing:0.04em; text-transform:uppercase; color:#1a1a1a; background:rgba(255,255,255,0.92); border:none; border-radius:16px; padding:5px 11px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,0.1); transition:background 0.15s; }
+        .shop-cat-chip:hover { background:${PINK}; }
+
+        /* ── Left filter drawer ── */
+        .shop-drawer-back { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:80; opacity:0; transition:opacity 0.25s; }
+        .shop-drawer-back.show { opacity:1; }
+        .shop-drawer { position:fixed; top:0; left:0; bottom:0; width:340px; max-width:86vw; background:#fff; z-index:81; box-shadow:12px 0 40px rgba(0,0,0,0.22); transform:translateX(-100%); transition:transform 0.28s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column; }
+        .shop-drawer.show { transform:translateX(0); }
+        .shop-drawer-top { display:flex; align-items:center; justify-content:space-between; padding:20px 22px; background:${BLACK}; color:#fff; }
+        .shop-drawer-top h4 { margin:0; font-family:${DISPLAY}; font-weight:700; font-size:20px; }
+        .shop-drawer-x { background:none; border:none; color:#fff; cursor:pointer; font-size:22px; line-height:1; padding:4px; }
+        .shop-drawer-body { overflow-y:auto; padding:8px 0 24px; }
+        .shop-drawer-sec { font-family:${BODY}; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#999; padding:18px 22px 6px; }
+        .shop-drawer-item { display:flex; align-items:center; justify-content:space-between; width:100%; text-align:left; background:none; border:none; cursor:pointer; font-family:${DISPLAY}; font-size:18px; color:#1a1a1a; padding:13px 22px; transition:background 0.12s; }
+        .shop-drawer-item:hover { background:#faf6f2; }
+        .shop-drawer-item.active { color:${MAROON}; }
+        .shop-drawer-item .count { font-family:${BODY}; font-size:13px; color:#aaa; }
+        .shop-sort-row { display:flex; gap:8px; flex-wrap:wrap; padding:6px 22px 2px; }
+        .shop-sort-btn { font-family:${BODY}; font-size:13px; color:#444; background:#f1ece7; border:none; border-radius:16px; padding:8px 14px; cursor:pointer; }
+        .shop-sort-btn.active { background:${BLACK}; color:#fff; }
+
         @media (max-width: 1000px) {
           .shop-topgrid { grid-template-columns:1fr !important; }
           .shop-herogrid { grid-template-columns:1fr !important; }
           .shop-grid { grid-template-columns:repeat(2,1fr); }
           .shop-welcome { font-size:46px; }
           .shop-hero-title { font-size:42px; }
-          .shop-nav-row { flex-wrap:wrap; gap:18px 24px !important; }
+          .shop-hero-left { padding:48px 32px; }
         }
-        @media (max-width: 560px) { .shop-grid { grid-template-columns:1fr; } }
+        @media (max-width: 560px) { .shop-grid { grid-template-columns:1fr; } .shop-ham-label { display:none; } }
       `}</style>
 
       {/* ── Header ─────────────────────────────────────────────── */}
       <header style={{ background: BLACK }}>
-        <div className="shop-topgrid" style={{ display: 'grid', gridTemplateColumns: '1.05fr 1fr', gap: 40, padding: '56px 48px 46px' }}>
+        <a href="/" className="shop-back">
+          <svg className="shop-back-arrow" width="22" height="16" viewBox="0 0 28 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <line x1="27" y1="12" x2="3" y2="12" /><polyline points="10 19 3 12 10 5" />
+          </svg>
+          Home
+        </a>
+        <div className="shop-topgrid" style={{ display: 'grid', gridTemplateColumns: '1.05fr 1fr', gap: 40, padding: '14px 48px 46px' }}>
           <h1 className="shop-welcome">Welcome<br />to The Parlor<br />Shop</h1>
           <div style={{ position: 'relative', paddingTop: 6 }}>
             <div style={{ position: 'absolute', top: -8, right: 0, cursor: 'pointer' }} onClick={openCart}><BagIcon count={cart.length} /></div>
@@ -159,56 +309,125 @@ export default function ShopPage() {
               The Parlor Shop is how we sustain the work. Limited print editions and curated goods that support reader-funded essays, community gatherings, and multi-media projects.
             </p>
             <div style={{ width: 96, height: 1, background: 'rgba(255,255,255,0.55)', marginBottom: 18 }} />
-            <button className="shop-browse" onClick={() => { setCat('all'); document.getElementById('shop-collection')?.scrollIntoView({ behavior: 'smooth' }) }}>
+            <button className="shop-browse" onClick={() => { setCat('all'); setQuery(''); scrollToCollection() }}>
               Browse the collection
             </button>
           </div>
         </div>
-
       </header>
 
-      {/* Sticky category bar — stays pinned to the top as the hero above scrolls away */}
+      {/* Sticky filter strip — hamburger (category drawer) + live search. Pins to the
+          top as the hero scrolls away. */}
       <div className="shop-navbar">
-        {/* pink double rule */}
         <div style={{ borderTop: `2px solid ${PINK}`, borderBottom: `2px solid ${PINK}`, height: 4, background: BLACK }} />
-
-        {/* category nav */}
-        <nav className="shop-nav-row" style={{ display: 'flex', justifyContent: 'center', gap: 46, padding: '20px 24px' }}>
-          <a href="/" className="shop-nav-link" style={{ textDecoration: 'none' }}>Home</a>
-          {categories.map(c => (
-            <button key={c} className={`shop-nav-link${cat === c ? ' active' : ''}`} onClick={() => { setCat(c); document.getElementById('shop-collection')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>{c}</button>
-          ))}
-        </nav>
+        <div className="shop-filterstrip">
+          <button className="shop-ham" onClick={() => setDrawerOpen(true)} aria-label="Filter by category">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+            <span className="shop-ham-label">{cat === 'all' ? 'All' : cat}</span>
+          </button>
+          <div className="shop-search-wrap" ref={searchWrapRef}>
+            <input
+              className="shop-search-input"
+              value={query}
+              onChange={e => { const v = e.target.value; setQuery(v); setSearchOpen(true); if (v.trim()) setCat('all') }}
+              onFocus={() => setSearchOpen(true)}
+              onKeyDown={e => { if (e.key === 'Enter') { setSearchOpen(false); scrollToCollection() } }}
+              placeholder="Search the shop…"
+              aria-label="Search products"
+            />
+            <span className="shop-search-ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </span>
+            {searchOpen && (
+              <div className="shop-search-panel">
+                {q ? (
+                  searchResults.length ? (
+                    <>
+                      <div className="shop-sr-head">Products</div>
+                      {searchResults.map(p => (
+                        <a key={p.id} href={`/shop/${p.id}`} className="shop-sr-row">
+                          <span className="shop-sr-thumb" style={{ backgroundColor: p.tint || '#eee', backgroundImage: p.images?.[0] ? `url(${p.images[0]})` : undefined }} />
+                          <span>
+                            <span className="shop-sr-name">{p.name}</span>
+                            <span className="shop-sr-price" style={{ display: 'block', marginTop: 2 }}>{fmtPrice(priceOf(p), symbol)}</span>
+                          </span>
+                        </a>
+                      ))}
+                    </>
+                  ) : (
+                    <div style={{ padding: '16px 18px' }}>
+                      <div style={{ fontFamily: BODY, fontSize: 14, color: '#555', marginBottom: 10 }}>No products match “{query.trim()}”. Try a category:</div>
+                      {categories.map(c => <button key={c} className="shop-sr-chip" onClick={() => { setQuery(''); setSearchOpen(false); applyCat(c) }}>{c}</button>)}
+                    </div>
+                  )
+                ) : (
+                  <div style={{ padding: '4px 0 12px' }}>
+                    <div className="shop-sr-head">Browse by category</div>
+                    <div style={{ padding: '6px 14px 2px' }}>
+                      <button className="shop-sr-chip" onClick={() => { setSearchOpen(false); applyCat('all') }}>All products</button>
+                      {categories.map(c => <button key={c} className="shop-sr-chip" onClick={() => { setSearchOpen(false); applyCat(c) }}>{c}</button>)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* ── Hero ───────────────────────────────────────────────── */}
-      <section style={{ background: '#e9e7e3' }}>
+      {/* ── Featured hero ──────────────────────────────────────── */}
+      {/* Driven by the single product flagged "featured" in the admin (Shop →
+          Products). The headline is that product's hero blurb; the image is its
+          primary image; the button links to its page. Hidden when nothing is
+          featured. */}
+      {featured && (
+      <section style={{ background: '#f3c3d1' }}>
         <div className="shop-herogrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-          <div style={{ padding: '56px 48px' }}>
-            <h2 className="shop-hero-title">Get our<br />Second Issue<br />in Print!</h2>
-            <button
-              onClick={() => { setCat('Limited Edition'); document.getElementById('shop-collection')?.scrollIntoView({ behavior: 'smooth' }) }}
-              style={{ marginTop: 24, background: BLACK, color: '#fff', border: 'none', borderRadius: 26, padding: '12px 26px', fontFamily: BODY, fontSize: 14.5, letterSpacing: '0.04em', cursor: 'pointer' }}>
-              Order Vol. 2 — $35
-            </button>
+          <div className="shop-hero-left">
+            <h2 className="shop-hero-title" style={{ whiteSpace: 'pre-line' }}>{heroHeadline}</h2>
+            <a
+              href={`/shop/${featured.id}`}
+              style={{ display: 'inline-block', marginTop: 24, background: BLACK, color: '#fff', textDecoration: 'none', border: 'none', borderRadius: 26, padding: '12px 26px', fontFamily: BODY, fontSize: 14.5, letterSpacing: '0.04em', cursor: 'pointer' }}>
+              Order now — {fmtPrice(priceOf(featured), symbol)} plus shipping
+            </a>
           </div>
-          {/* Vol. 2 print cover — same illustration used on the /print landing page. */}
-          <div style={{ alignSelf: 'stretch', minHeight: 420, background: 'linear-gradient(160deg,#f7d7e0,#f3c3d1)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 32px' }}>
-            <img
-              src="https://static.wixstatic.com/media/d449e2_fd8c48fe8b274b67be10d4773240837b~mv2.png"
-              alt="The Parlor — Vol. 2, The World We’re Building (print cover)"
-              style={{ maxWidth: '100%', maxHeight: 400, width: 'auto', borderRadius: 6, boxShadow: '0 10px 34px rgba(0,0,0,0.18)', transform: 'rotate(-3deg)' }}
-            />
+          <div style={{ position: 'relative', alignSelf: 'stretch', minHeight: 440, overflow: 'hidden', background: '#e9e7e3' }}>
+            <a href={`/shop/${featured.id}`} className="shop-hero-figwrap" aria-label={featured.name || 'Featured product'}>
+              {heroImgs.map((src, i) => (
+                <img
+                  key={i}
+                  src={src}
+                  alt={i === heroImgIdx ? (featured.name || 'Featured product') : ''}
+                  className="shop-hero-figimg"
+                  style={{ opacity: i === heroImgIdx ? 1 : 0 }}
+                  aria-hidden={i !== heroImgIdx}
+                  loading={i === 0 ? 'eager' : 'lazy'}
+                />
+              ))}
+            </a>
           </div>
         </div>
       </section>
+      )}
 
       {/* ── Collection ─────────────────────────────────────────── */}
       <section id="shop-collection" style={{ padding: '54px 48px 72px' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 26 }}>
-          <h3 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 30, color: '#1a1a1a', margin: 0 }}>{cat === 'all' ? 'The collection' : cat}</h3>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 26, flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
+            <h3 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 30, color: '#1a1a1a', margin: 0 }}>{heading}</h3>
+            {(cat !== 'all' || q) && (
+              <button onClick={() => { setCat('all'); setQuery('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: BODY, fontSize: 13, color: MAROON, textDecoration: 'underline' }}>Clear</button>
+            )}
+          </div>
           <span style={{ fontFamily: BODY, fontSize: 13, color: '#777' }}>{shown.length} item{shown.length === 1 ? '' : 's'}</span>
         </div>
+        {shown.length === 0 ? (
+          <div style={{ fontFamily: BODY, fontSize: 16, color: '#777', padding: '40px 0' }}>Nothing here yet. <button onClick={() => { setCat('all'); setQuery('') }} style={{ background: 'none', border: 'none', color: MAROON, textDecoration: 'underline', cursor: 'pointer', fontFamily: BODY, fontSize: 16 }}>View all products</button>.</div>
+        ) : (
         <div className="shop-grid">
           {shown.map(p => (
             <div key={p.id} className="shop-card" style={{ position: 'relative' }}>
@@ -216,10 +435,16 @@ export default function ShopPage() {
                 style={{ position: 'absolute', top: 10, right: 10, zIndex: 2, width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.9)', cursor: 'pointer', fontSize: 16, lineHeight: 1, color: wish.has(p.id) ? '#c4364a' : '#555', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}>
                 {wish.has(p.id) ? '♥' : '♡'}
               </button>
-              <a href={`/shop/${p.id}`} className="shop-card-img" style={{ display: 'block', backgroundColor: p.tint || '#eee', backgroundImage: p.images?.[0] ? `url(${p.images[0]})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                {!p.images?.[0] && <span style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 15, color: 'rgba(0,0,0,0.32)' }}>{p.category === 'Limited Edition' ? 'Limited' : ''}</span>}
+              <a href={`/shop/${p.id}`} className="shop-card-img" style={{ display: 'flex', backgroundColor: fitOf(p) === 'contain' ? '#fff' : (p.tint || '#eee'), backgroundImage: p.images?.[0] ? `url(${p.images[0]})` : undefined, backgroundSize: fitOf(p) === 'contain' ? '116%' : 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
+                {p.category && (
+                  <span className="shop-cat-chip" role="button" tabIndex={0}
+                    onClick={e => { e.preventDefault(); applyCat(p.category) }}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); applyCat(p.category) } }}>
+                    {p.category}
+                  </span>
+                )}
               </a>
-              <a href={`/shop/${p.id}`} style={{ fontFamily: DISPLAY, fontSize: 17, color: '#1a1a1a', marginTop: 12, textDecoration: 'none' }}>{p.name}</a>
+              <a href={`/shop/${p.id}`} style={{ fontFamily: DISPLAY, fontSize: 17, color: '#1a1a1a', marginTop: 12, textDecoration: 'none', display: 'block' }}>{p.name}</a>
               {p.variant && <div style={{ fontFamily: BODY, fontSize: 13, color: '#777', marginTop: 2 }}>{p.variant}</div>}
               {variantsOf(p).length > 1 && (
                 <select
@@ -234,7 +459,33 @@ export default function ShopPage() {
             </div>
           ))}
         </div>
+        )}
       </section>
+
+      {/* ── Left filter drawer (Shop by category) ── */}
+      <div className={`shop-drawer-back${drawerOpen ? ' show' : ''}`} style={{ pointerEvents: drawerOpen ? 'auto' : 'none' }} onClick={() => setDrawerOpen(false)} aria-hidden={!drawerOpen} />
+      <aside className={`shop-drawer${drawerOpen ? ' show' : ''}`} role="dialog" aria-label="Shop by category" aria-hidden={!drawerOpen}>
+        <div className="shop-drawer-top">
+          <h4>Shop by category</h4>
+          <button className="shop-drawer-x" onClick={() => setDrawerOpen(false)} aria-label="Close">✕</button>
+        </div>
+        <div className="shop-drawer-body">
+          <button className={`shop-drawer-item${cat === 'all' ? ' active' : ''}`} onClick={() => applyCat('all')}>
+            <span>All products</span><span className="count">{products.length}</span>
+          </button>
+          {categories.map(c => (
+            <button key={c} className={`shop-drawer-item${cat === c ? ' active' : ''}`} onClick={() => applyCat(c)}>
+              <span>{c}</span><span className="count">{catCount(c)}</span>
+            </button>
+          ))}
+          <div className="shop-drawer-sec">Sort by</div>
+          <div className="shop-sort-row">
+            {[['featured', 'Featured'], ['price-asc', 'Price ↑'], ['price-desc', 'Price ↓']].map(([val, label]) => (
+              <button key={val} className={`shop-sort-btn${sort === val ? ' active' : ''}`} onClick={() => setSort(val)}>{label}</button>
+            ))}
+          </div>
+        </div>
+      </aside>
 
       {/* Floating cart — appears once you scroll past the header cart */}
       <button

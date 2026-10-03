@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { confirmDialog, alertDialog } from '../../../lib/confirmDialog'
 
 const ff = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -26,13 +27,13 @@ function ReviewModal({ sub, token, onClose, onDone }) {
   const paras = (sub.body || '').split(/\n{2,}/).map(p => p.trim()).filter(Boolean)
 
   async function act(action) {
-    if (action === 'changes' && !note.trim()) { alert('Add a note so the author knows what to change.'); return }
-    if (action === 'remove' && !window.confirm('Remove this post? The author will be notified.')) return
+    if (action === 'changes' && !note.trim()) { alertDialog('Add a note so the author knows what to change.'); return }
+    if (action === 'remove' && !(await confirmDialog('Remove this post? The author will be notified.'))) return
     setBusy(action)
     try {
       const res = await fetch('/api/admin/submissions', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ id: sub.id, action, editor_note: note }) })
       const d = await res.json()
-      if (!res.ok) { alert(d.error || 'Failed'); return }
+      if (!res.ok) { alertDialog(d.error || 'Failed'); return }
       if (action === 'approve' && d.article_id) { window.location.href = `/admin/articles/${d.article_id}/edit`; return }
       onDone()
     } finally { setBusy('') }
@@ -88,7 +89,6 @@ export default function CommunityPostsSection({ supabase }) {
   const [reviewing, setReviewing] = useState(null)
 
   async function load() {
-    setLoading(true)
     try { const res = await fetch('/api/admin/submissions', { headers: { Authorization: `Bearer ${await token()}` } }); const d = await res.json(); setSubs(d.submissions || []) } catch {} finally { setLoading(false) }
   }
   useEffect(() => { load() }, [])

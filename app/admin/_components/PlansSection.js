@@ -12,6 +12,7 @@ const PLAN_DEFS = {
     key:   'circle',
     label: "Reader's Circle",
     price: '$10 / month',
+    wixPrice: '$10 / month',   // what Wix-managed (migrated) members actually pay
     matchValues: ["Reader's Circle", 'readers_circle', 'circle', 'readers-circle'],
     color: '#4a6fd4',
     bg:    'rgba(160,180,242,0.1)',
@@ -22,6 +23,7 @@ const PLAN_DEFS = {
     key:   'press',
     label: 'Printing Press',
     price: '$25 / month',
+    wixPrice: '$25 / every 4 months',   // what Wix-managed (migrated) members actually pay
     matchValues: ['Printing Press', 'printing_press', 'press', 'print'],
     color: DARK_PINK,
     bg:    'rgba(196,54,74,0.08)',
@@ -36,6 +38,21 @@ const inputStyle = {
   outline: 'none', boxSizing: 'border-box', width: '100%',
 }
 const textareaStyle = { ...inputStyle, resize: 'vertical', lineHeight: '1.5' }
+
+// Estimate a plan's MONTHLY price from its free-text label, normalizing the
+// billing period so MRR is comparable across plans:
+//   "$10 / month" → 10 · "$30 / every 4 months" → 7.5 · "$120 / year" → 10
+function monthlyPrice(priceStr) {
+  const s = String(priceStr || '')
+  const amount = parseFloat((s.match(/[\d.,]+/) || ['0'])[0].replace(/,/g, '')) || 0
+  const every = s.match(/every\s+(\d+)\s*month/i)
+  let months = 1
+  if (every) months = parseInt(every[1], 10) || 1
+  else if (/year|annual/i.test(s)) months = 12
+  else if (/quarter/i.test(s)) months = 3
+  else if (/week/i.test(s)) months = 1 / 4.345   // ~4.345 weeks per month
+  return months > 0 ? amount / months : amount
+}
 
 export default function PlansSection({ supabase, plan: planKey }) {
   const plan = PLAN_DEFS[planKey] || PLAN_DEFS.circle
@@ -85,17 +102,28 @@ export default function PlansSection({ supabase, plan: planKey }) {
 
   useEffect(() => {
     setLoading(true)
-    supabase.from('members').select('id,full_name,email,joined_at,subscription_status')
-      .in('plan', plan.matchValues)
-      .order('joined_at', { ascending: false })
-      .then(({ data }) => {
-        setMembers(data || [])
+    const full = 'id,full_name,email,joined_at,subscription_status,billing_source,stripe_subscription_id,stripe_customer_id'
+    const base = 'id,full_name,email,joined_at,subscription_status'
+    supabase.from('members').select(full).in('plan', plan.matchValues).order('joined_at', { ascending: false })
+      .then(async ({ data, error }) => {
+        // Fall back if the billing columns aren't deployed yet (pre-migration).
+        if (error) {
+          const r = await supabase.from('members').select(base).in('plan', plan.matchValues).order('joined_at', { ascending: false })
+          setMembers(r.data || [])
+        } else setMembers(data || [])
         setLoading(false)
       })
   }, [planKey])
 
   const active  = members.filter(m => !m.subscription_status || m.subscription_status === 'active').length
   const churned = members.filter(m => m.subscription_status === 'churned' || m.subscription_status === 'cancelled').length
+
+  // MRR uses each member's REAL price: Wix-managed migrations pay the Wix rate,
+  // everyone else the in-app (display) price.
+  const mrr = members
+    .filter(m => !m.subscription_status || m.subscription_status === 'active')
+    .reduce((sum, m) => sum + monthlyPrice(m.billing_source === 'wix' ? (plan.wixPrice || data.price) : data.price), 0)
+  const wixCount = members.filter(m => m.billing_source === 'wix').length
 
   const thStyle = { fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#aaa', fontFamily: ff, padding: '10px 16px', textAlign: 'left', background: '#fafafa', borderBottom: '1px solid #f0f0f0', fontWeight: '500' }
   const tdStyle = { padding: '11px 16px', fontSize: '13px', fontFamily: ff, verticalAlign: 'middle' }
@@ -147,7 +175,7 @@ export default function PlansSection({ supabase, plan: planKey }) {
           { label: 'Total Subscribers', value: members.length },
           { label: 'Active',            value: active, color: '#2d8f5a' },
           { label: 'Churned',           value: churned, color: '#c04040' },
-          { label: 'MRR (est.)',        value: `$${(active * (parseInt((data.price || '0').replace(/\D/g, ''), 10) || 0)).toLocaleString()}`, color: plan.color },
+          { label: 'MRR (est.)',        value: `$${Math.round(mrr).toLocaleString()}`, color: plan.color },
         ].map(s => (
           <div key={s.label} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', padding: '16px 18px' }}>
             <div style={{ fontSize: '22px', fontWeight: '700', color: s.color || '#0a0a0a', fontFamily: ffH, lineHeight: 1 }}>{s.value}</div>
@@ -189,6 +217,7 @@ export default function PlansSection({ supabase, plan: planKey }) {
               <tr>
                 <th style={thStyle}>Subscriber</th>
                 <th style={thStyle}>Joined</th>
+                <th style={thStyle}>Billing</th>
                 <th style={thStyle}>Status</th>
               </tr>
             </thead>
@@ -198,6 +227,8 @@ export default function PlansSection({ supabase, plan: planKey }) {
                 const email = m.email || null
                 const status   = m.subscription_status || 'active'
                 const isActive = !m.subscription_status || m.subscription_status === 'active'
+                const onWix    = m.billing_source === 'wix'
+                const hasStripe = !!(m.stripe_subscription_id || m.stripe_customer_id)
                 return (
                   <tr key={m.id} style={{ borderBottom: i === members.length - 1 ? 'none' : '1px solid #f5f5f5' }}>
                     <td style={tdStyle}>
@@ -206,6 +237,20 @@ export default function PlansSection({ supabase, plan: planKey }) {
                     </td>
                     <td style={{ ...tdStyle, fontSize: '12px', color: '#aaa' }}>
                       {m.joined_at ? new Date(m.joined_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                    </td>
+                    <td style={tdStyle}>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {onWix && (
+                          <span title="Subscription is billed through Wix, not Stripe" style={{ padding: '2px 9px', borderRadius: '20px', fontSize: '11px', fontFamily: ff, background: '#eef0f2', color: '#5a6472' }}>
+                            Managed on Wix
+                          </span>
+                        )}
+                        {hasStripe && (
+                          <span title="A Stripe subscription is connected" style={{ padding: '2px 9px', borderRadius: '20px', fontSize: '11px', fontFamily: ff, background: 'rgba(99,91,255,0.1)', color: '#635bff' }}>
+                            ✓ Stripe
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={tdStyle}>
                       <span style={{ padding: '2px 9px', borderRadius: '20px', fontSize: '11px', fontFamily: ff, background: isActive ? 'rgba(110,201,154,0.1)' : 'rgba(224,112,112,0.08)', color: isActive ? '#2d8f5a' : '#c04040' }}>

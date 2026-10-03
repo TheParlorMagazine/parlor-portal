@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { prepareImageUpload, isDuplicateUpload } from '../../../lib/uploadImage'
+import { confirmDialog } from '../../../lib/confirmDialog'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -25,6 +26,7 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
     fulfillment: item?.fulfillment || 'manual', external_url: item?.external_url || '',
     printify_product_id: item?.printify_product_id || '', printify_shop_id: item?.printify_shop_id || '',
     active: item?.active ?? true, featured: item?.featured ?? false,
+    featured_blurb: item?.featured_blurb || '',
   })
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -40,7 +42,7 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
       const urls = []
       for (const file of files) {
         if (isDuplicateUpload(dropRef, file)) continue
-        const { blob: up, contentType, ext } = await prepareImageUpload(file)
+        const { file: up, contentType, ext } = await prepareImageUpload(file)
         const path = `shop/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
         const { error } = await supabase.storage.from('Media').upload(path, up, { cacheControl: '31536000', contentType })
         if (error) { setErr(error.message); continue }
@@ -159,6 +161,20 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
           </label>
         </div>
 
+        {/* Featured hero controls — this product drives the big promo block at the
+            top of /shop. Only one product is featured at a time; saving this
+            unfeatures whatever was featured before. */}
+        {f.featured && (
+          <div style={{ marginTop: 12, padding: 14, background: '#fdf4f6', border: `1px solid ${PINK}`, borderRadius: 10 }}>
+            <div style={{ fontSize: 12, color: DP, fontFamily: ff, marginBottom: 8 }}>
+              ★ This product fills the shop hero. Saving it as featured replaces the current featured item.
+            </div>
+            <div style={{ ...label, marginTop: 0 }}>Hero blurb <span style={{ textTransform: 'none', letterSpacing: 0, color: '#bbb' }}>(the big headline, e.g. “Get our Second Issue in Print!”)</span></div>
+            <textarea value={f.featured_blurb} onChange={e => set('featured_blurb', e.target.value)} rows={2} placeholder="Get our Second Issue in Print!" style={{ ...input, resize: 'vertical' }} />
+            <div style={{ fontSize: 11.5, color: '#999', marginTop: 6 }}>The hero image uses this product’s primary image, and the button links to its page at the current price.</div>
+          </div>
+        )}
+
         {err && <div style={{ color: DP, fontSize: 13, marginTop: 12 }}>{err}</div>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
           <button onClick={onClose} style={{ padding: '10px 18px', border: `1px solid ${BORDER}`, borderRadius: 24, background: '#fff', color: '#555', fontFamily: ff, fontSize: 14, cursor: 'pointer' }}>Cancel</button>
@@ -248,39 +264,48 @@ export default function ShopProductsSection({ supabase }) {
   const [filter, setFilter] = useState('all')
   const [addingCat, setAddingCat] = useState(false)
   const [newCat, setNewCat] = useState('')
-  const [moveFor, setMoveFor] = useState(null) // product id whose "move" menu is open
-  const [hoverRow, setHoverRow] = useState(null)
+  const [ctxMenu, setCtxMenu] = useState(null) // { product, x, y, openLeft } right-click menu
+  const [moveSub, setMoveSub] = useState(false) // "Move" submenu open
   const [err, setErr] = useState('')
   const token = async () => { const { data: { session } } = await supabase.auth.getSession(); return session?.access_token }
 
+  // Refetch WITHOUT tearing down the list (no loading flash). The first load
+  // shows the skeleton; later refreshes swap the data in place.
   async function load() {
-    setLoading(true)
     const res = await fetch('/api/admin/shop-products', { headers: { Authorization: `Bearer ${await token()}` } })
     const j = await res.json().catch(() => ({}))
     setProducts(Array.isArray(j.products) ? j.products : [])
-    setLoading(false)
   }
   async function loadCategories() {
     const res = await fetch('/api/admin/shop-categories', { headers: { Authorization: `Bearer ${await token()}` } })
     const j = await res.json().catch(() => ({}))
     setCategories(Array.isArray(j.categories) ? j.categories : [])
   }
-  useEffect(() => { load(); loadCategories() }, [])
+  useEffect(() => { (async () => { await Promise.all([load(), loadCategories()]); setLoading(false) })() }, [])
 
+  // Actions update local state optimistically (instant, no refetch flash).
   async function toggleActive(p) {
+    setProducts(ps => ps.map(x => x.id === p.id ? { ...x, active: !x.active } : x))
     await fetch('/api/admin/shop-products', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ id: p.id, active: !p.active }) })
-    load()
   }
   async function remove(p) {
-    if (!confirm(`Delete "${p.name}"? This cannot be undone.`)) return
+    if (!(await confirmDialog({ title: 'Delete product?', message: `Delete "${p.name}"? This can’t be undone.`, confirmText: 'Delete' }))) return
+    setProducts(ps => ps.filter(x => x.id !== p.id))
     await fetch('/api/admin/shop-products', { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ id: p.id }) })
-    load()
   }
   async function moveProduct(p, category) {
-    setMoveFor(null)
+    setCtxMenu(null)
+    setProducts(ps => ps.map(x => x.id === p.id ? { ...x, category } : x))
     await fetch('/api/admin/shop-products', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ id: p.id, category }) })
-    load()
   }
+
+  // Close the context menu on Escape.
+  useEffect(() => {
+    if (!ctxMenu) return
+    const onKey = e => { if (e.key === 'Escape') setCtxMenu(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [ctxMenu])
   async function addCategory() {
     const name = newCat.trim()
     if (!name) return
@@ -313,7 +338,7 @@ export default function ShopProductsSection({ supabase }) {
           <button onClick={() => setEditing(null)} style={{ padding: '9px 18px', border: 'none', borderRadius: 24, background: BLACK, color: '#fff', fontFamily: ff, fontSize: 14, cursor: 'pointer' }}>+ New product</button>
         </div>
       </div>
-      <p style={{ color: '#888', fontSize: 13.5, margin: '0 0 18px' }}>Manage everything on <a href="/shop" target="_blank" style={{ color: DP }}>the storefront</a>. Products marked <em>Printify</em> are fulfilled print-on-demand. Hover a product (or double-click it) to move it to another category.</p>
+      <p style={{ color: '#888', fontSize: 13.5, margin: '0 0 18px' }}>Manage everything on <a href="/shop" target="_blank" style={{ color: DP }}>the storefront</a>. Products marked <em>Printify</em> are fulfilled print-on-demand. Right-click a product to edit, move, or delete it.</p>
 
       {/* Category chips: filter + delete-if-empty + add */}
       <div style={{ display: 'flex', gap: 8, marginBottom: err ? 8 : 18, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -348,9 +373,8 @@ export default function ShopProductsSection({ supabase }) {
       ) : (
         <div style={{ border: `1px solid ${BORDER}`, borderRadius: 10, overflow: 'visible' }}>
           {shown.map((p, i) => {
-            const showMove = hoverRow === p.id || moveFor === p.id
             return (
-            <div key={p.id} onMouseEnter={() => setHoverRow(p.id)} onMouseLeave={() => setHoverRow(h => (h === p.id ? null : h))} onDoubleClick={() => setMoveFor(moveFor === p.id ? null : p.id)}
+            <div key={p.id} onContextMenu={e => { e.preventDefault(); setCtxMenu({ product: p, x: e.clientX, y: e.clientY, openLeft: e.clientX > window.innerWidth - 380 }); setMoveSub(false) }}
               style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderTop: i ? `1px solid ${BORDER}` : 'none', background: p.active ? '#fff' : '#faf9f9' }}>
               <div style={{ width: 52, height: 52, borderRadius: 8, flexShrink: 0, background: p.tint || '#eee', overflow: 'hidden', border: `1px solid ${BORDER}` }}>
                 {p.images?.[0] && <img src={p.images[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
@@ -364,24 +388,6 @@ export default function ShopProductsSection({ supabase }) {
                 <div style={{ fontSize: 12.5, color: '#999' }}>{[p.variant, p.category || 'Uncategorized'].filter(Boolean).join(' · ')}</div>
               </div>
 
-              {/* Move-to-category arrow (on hover / double-click) */}
-              <div style={{ position: 'relative', width: 30, flexShrink: 0 }}>
-                {showMove && (
-                  <button onClick={() => setMoveFor(moveFor === p.id ? null : p.id)} title="Move to category"
-                    style={{ width: 28, height: 28, borderRadius: '50%', border: `1px solid ${BORDER}`, background: moveFor === p.id ? BLACK : '#fff', color: moveFor === p.id ? '#fff' : '#555', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}>→</button>
-                )}
-                {moveFor === p.id && (
-                  <div style={{ position: 'absolute', top: 32, right: 0, zIndex: 20, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.14)', minWidth: 180, overflow: 'hidden' }}>
-                    <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#aaa', padding: '9px 14px 5px' }}>Move to</div>
-                    {catNames.filter(c => c !== p.category).map(c => (
-                      <button key={c} onClick={() => moveProduct(p, c)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', border: 'none', background: '#fff', color: '#333', fontFamily: ff, fontSize: 13.5, cursor: 'pointer' }}
-                        onMouseEnter={e => e.currentTarget.style.background = '#f6eef0'} onMouseLeave={e => e.currentTarget.style.background = '#fff'}>{c}</button>
-                    ))}
-                    {catNames.filter(c => c !== p.category).length === 0 && <div style={{ padding: '9px 14px', fontSize: 13, color: '#aaa' }}>No other categories</div>}
-                  </div>
-                )}
-              </div>
-
               <div style={{ fontFamily: ffH, fontSize: 15, color: '#333', width: 70, textAlign: 'right' }}>{money(p.price)}</div>
               <button onClick={() => toggleActive(p)} title={p.active ? 'Active' : 'Hidden'} style={{ width: 46, height: 24, borderRadius: 20, border: 'none', background: p.active ? '#2d8f5a' : '#ccc', position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
                 <span style={{ position: 'absolute', top: 2, left: p.active ? 24 : 2, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
@@ -392,6 +398,34 @@ export default function ShopProductsSection({ supabase }) {
           )})}
         </div>
       )}
+
+      {/* Right-click context menu */}
+      {ctxMenu && (() => {
+        const p = ctxMenu.product
+        const others = catNames.filter(c => c !== p.category)
+        const ctxItem = { display: 'block', width: '100%', textAlign: 'left', padding: '8px 16px', border: 'none', background: '#fff', fontFamily: ff, fontSize: 13.5, color: '#333', cursor: 'pointer', whiteSpace: 'nowrap' }
+        const hov = e => e.currentTarget.style.background = '#f6eef0'
+        const unhov = e => e.currentTarget.style.background = '#fff'
+        return (
+          <>
+            <div onClick={() => setCtxMenu(null)} onContextMenu={e => { e.preventDefault(); setCtxMenu(null) }} style={{ position: 'fixed', inset: 0, zIndex: 300 }} />
+            <div style={{ position: 'fixed', top: Math.min(ctxMenu.y, (typeof window !== 'undefined' ? window.innerHeight : 800) - 170), left: ctxMenu.x, zIndex: 301, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: '0 12px 34px rgba(0,0,0,0.18)', minWidth: 160, padding: '5px 0' }}>
+              <button style={ctxItem} onMouseEnter={hov} onMouseLeave={unhov} onClick={() => { setCtxMenu(null); setEditing(p) }}>Edit</button>
+              <div onMouseEnter={() => setMoveSub(true)} onMouseLeave={() => setMoveSub(false)} style={{ position: 'relative' }}>
+                <button style={{ ...ctxItem, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20 }} onMouseEnter={hov} onMouseLeave={unhov}>Move <span style={{ color: '#bbb' }}>▸</span></button>
+                {moveSub && (
+                  <div style={{ position: 'absolute', top: -5, [ctxMenu.openLeft ? 'right' : 'left']: '100%', background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: '0 12px 34px rgba(0,0,0,0.18)', minWidth: 180, padding: '5px 0', maxHeight: 280, overflowY: 'auto' }}>
+                    {others.length ? others.map(c => (
+                      <button key={c} style={ctxItem} onMouseEnter={hov} onMouseLeave={unhov} onClick={() => moveProduct(p, c)}>{c}</button>
+                    )) : <div style={{ padding: '8px 16px', fontSize: 13, color: '#aaa' }}>No other categories</div>}
+                  </div>
+                )}
+              </div>
+              <button style={{ ...ctxItem, color: DP }} onMouseEnter={e => e.currentTarget.style.background = '#fdf1f3'} onMouseLeave={unhov} onClick={() => { setCtxMenu(null); remove(p) }}>Delete</button>
+            </div>
+          </>
+        )
+      })()}
 
       {editing !== undefined && <ProductModal token={token} item={editing} supabase={supabase} categories={catNames} onClose={() => setEditing(undefined)} onSaved={() => { setEditing(undefined); load() }} />}
       {importing && <PrintifyImportModal token={token} onClose={() => setImporting(false)} onDone={load} />}

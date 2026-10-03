@@ -8,6 +8,7 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import TipTapLink from '@tiptap/extension-link'
+import { confirmDialog } from '../../../lib/confirmDialog'
 
 function slugify(str) {
   return str.toLowerCase()
@@ -56,7 +57,7 @@ export default function AdminWritersPage() {
   }, [])
 
   async function handleDelete(writer) {
-    if (!window.confirm(`Delete "${writer.name}"? This cannot be undone.`)) return
+    if (!(await confirmDialog(`Delete "${writer.name}"? This cannot be undone.`))) return
     setDeletingId(writer.id)
     await supabase.from('writers').delete().eq('id', writer.id)
     setWriters(prev => prev.filter(w => w.id !== writer.id))

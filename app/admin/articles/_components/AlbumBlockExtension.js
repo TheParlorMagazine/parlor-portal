@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../../../lib/supabase'
 import { prepareImageUpload } from '../../../../lib/uploadImage'
 import ImageEditor from '../../_components/ImageEditor'
+import { confirmDialog } from '../../../../lib/confirmDialog'
 
 // ── Editor NodeView ───────────────────────────────────────────
 // Renders the album images in their actual layout, scaled for the editor.
@@ -98,7 +99,7 @@ function AlbumBlockView({ node, selected, updateAttributes, deleteNode }) {
             </button>
             <button
               type="button"
-              onClick={() => { if (confirm('Remove this entire album?')) deleteNode() }}
+              onClick={async () => { if (await confirmDialog('Remove this entire album?')) deleteNode() }}
               title="Delete album"
               style={{ padding: '4px 8px', border: '1px solid #e0e0e0', borderRadius: '20px', cursor: 'pointer', fontSize: '11px', background: '#fff', color: '#bbb', lineHeight: 1 }}
             >
@@ -177,7 +178,6 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
   useEffect(() => { loadFiles() }, [folder])
 
   async function loadFiles() {
-    setLoading(true)
     const { data } = await supabase.storage.from('Media').list(folder, {
       limit: 200, sortBy: { column: 'created_at', order: 'desc' },
     })
@@ -414,7 +414,7 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
             </button>
             <button
               type="button"
-              onClick={() => { if (window.confirm(`Delete "${contextMenu.file.name}"? This cannot be undone.`)) deleteFile(contextMenu.file); setContextMenu(null) }}
+              onClick={async () => { if (await confirmDialog(`Delete "${contextMenu.file.name}"? This cannot be undone.`)) deleteFile(contextMenu.file); setContextMenu(null) }}
               style={{ display: 'block', width: '100%', padding: '10px 16px', background: 'none', border: 'none', color: '#f87171', fontSize: '13px', textAlign: 'left', cursor: 'pointer', fontFamily: "'Source Serif 4', Georgia, serif" }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.1)'}
               onMouseLeave={e => e.currentTarget.style.background = 'none'}

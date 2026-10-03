@@ -230,6 +230,8 @@ async function handleSubscriptionCheckout(session) {
     plan: planInfo.plan,
     plan_id: planInfo.plan_id,
     stripe_customer_id: session.customer,
+    stripe_subscription_id: session.subscription,
+    billing_source: 'stripe',   // billed through Stripe (vs. 'wix' migrations)
   }
   // If a shipping address was collected (Printing Press / physical), save it so
   // Settings and future print deliveries stay in sync.
@@ -277,7 +279,7 @@ async function handleInvoicePaymentSucceeded(invoice) {
   const supabase = getSupabase()
   const { error } = await supabase
     .from('members')
-    .update({ plan: planInfo.plan, plan_id: planInfo.plan_id })
+    .update({ plan: planInfo.plan, plan_id: planInfo.plan_id, billing_source: 'stripe', stripe_subscription_id: invoice.subscription })
     .eq('stripe_customer_id', invoice.customer)
 
   if (error) console.error('members renewal update error:', error)

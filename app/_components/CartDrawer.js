@@ -5,6 +5,7 @@ import { createClient } from '../../lib/supabase'
 import { useCart, lineKey } from '../../lib/useCart'
 import { useWishlist } from '../../lib/useWishlist'
 import { useCurrency, fmtPrice } from '../../lib/useCurrency'
+import { alertDialog } from '../../lib/confirmDialog'
 
 const DISPLAY = "'Playfair Display', Georgia, serif"
 const BODY = "'Source Serif 4', Georgia, serif"
@@ -113,8 +114,8 @@ export default function CartDrawer() {
       })
       const j = await res.json().catch(() => ({}))
       if (j.url) { window.location.href = j.url; return }
-      alert(j.error || 'Checkout is unavailable right now.')
-    } catch { alert('Checkout failed. Please try again.') }
+      alertDialog(j.error || 'Checkout is unavailable right now.')
+    } catch { alertDialog('Checkout failed. Please try again.') }
     finally { setCheckingOut(false) }
   }
 

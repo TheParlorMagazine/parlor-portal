@@ -7,6 +7,7 @@ import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import TextAlign from '@tiptap/extension-text-align'
+import { confirmDialog, alertDialog } from '../../../lib/confirmDialog'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -104,7 +105,7 @@ function CampaignBuilder({ campaign, segments, onSave, onSend, onClose }) {
   }
 
   async function handleSend() {
-    if (!window.confirm(`Send "${name || subject}" now to ${sendTo === 'all' ? 'all subscribers' : 'selected segment'}?`)) return
+    if (!(await confirmDialog(`Send "${name || subject}" now to ${sendTo === 'all' ? 'all subscribers' : 'selected segment'}?`))) return
     setSending(true)
     const saved = await onSave({
       ...(campaign || {}), name, subject, preview_text: preview, body_html: bodyHtml,
@@ -230,13 +231,13 @@ export default function CampaignsTab({ supabase }) {
     if (res.ok) {
       setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: 'sent', sent_at: new Date().toISOString(), recipient_count: json.sent } : c))
     } else {
-      alert('Send failed: ' + (json.error || 'Unknown error'))
+      alertDialog('Send failed: ' + (json.error || 'Unknown error'))
     }
     setSending(prev => ({ ...prev, [id]: false }))
   }
 
   async function deleteCampaign(id) {
-    if (!window.confirm('Delete this campaign?')) return
+    if (!(await confirmDialog('Delete this campaign?'))) return
     setDeleting(prev => ({ ...prev, [id]: true }))
     await supabase.from('email_campaigns').delete().eq('id', id)
     setCampaigns(prev => prev.filter(c => c.id !== id))

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { confirmDialog, alertDialog } from '../../../lib/confirmDialog'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -72,7 +73,6 @@ function ManageMembersModal({ segment, predefined, token, onClose, onChanged }) 
   const searchTimer = useRef(null)
 
   async function load() {
-    setLoading(true)
     const res = await fetch(`/api/admin/segments/${segment.id}/members`, { headers: { Authorization: `Bearer ${await token()}` } })
     const d = await res.json(); setMembers(d.members || []); setLoading(false)
   }
@@ -96,7 +96,7 @@ function ManageMembersModal({ segment, predefined, token, onClose, onChanged }) 
     })
     const d = await res.json()
     setBusy(false)
-    if (!res.ok) { alert(d.error || 'Could not add'); return }
+    if (!res.ok) { alertDialog(d.error || 'Could not add'); return }
     onChanged?.(d.member_count)
     setQ(''); setResults([]); setEmails(''); setFromKey('')
     await load()
@@ -205,7 +205,7 @@ export default function SegmentsTab({ supabase }) {
   }
 
   async function deleteSegment(id) {
-    if (!window.confirm('Delete this segment? Forums gated to it will lose their audience source.')) return
+    if (!(await confirmDialog('Delete this segment? Forums gated to it will lose their audience source.'))) return
     setDeleting(prev => ({ ...prev, [id]: true }))
     await fetch('/api/admin/segments', { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ id }) })
     setCustom(prev => prev.filter(s => s.id !== id))

@@ -5,6 +5,7 @@ import { createClient } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ImageEditor from '../_components/ImageEditor'
+import { confirmDialog } from '../../../lib/confirmDialog'
 
 const menuBtnStyle = {
   display: 'block', width: '100%', padding: '9px 14px',
@@ -111,7 +112,7 @@ export default function AdminMediaPage() {
 
   async function handleDelete(file) {
     const url = getUrl(file)
-    if (!window.confirm('Delete this image? This cannot be undone.')) return
+    if (!(await confirmDialog('Delete this image? This cannot be undone.'))) return
     setDeletingId(file.id || file.name)
     await supabase.storage.from('Media').remove([`${file.folder}/${file.name}`])
     setFiles(prev => prev.filter(f => f.name !== file.name || f.folder !== file.folder))

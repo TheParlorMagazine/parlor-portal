@@ -5,6 +5,7 @@ import { createClient } from '../../../lib/supabase'
 import { prepareImageUpload, isDuplicateUpload } from '../../../lib/uploadImage'
 import { toEmbedUrl } from '../../../lib/videoEmbed'
 import { usePortal } from './PortalShell'
+import { confirmDialog, alertDialog } from '../../../lib/confirmDialog'
 
 function VideoEmbed({ src }) {
   if (!src) return null
@@ -75,7 +76,7 @@ function PostComments({ postId, currentUserId, me, auth, onCountChange }) {
     } finally { setBusy(false) }
   }
   async function del(cid) {
-    if (!confirm('Delete this comment?')) return
+    if (!(await confirmDialog('Delete this comment?'))) return
     const res = await fetch(`/api/portal/posts/${postId}/comments`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ comment_id: cid }) })
     if (res.ok) { setComments(c => c.filter(x => x.id !== cid)); onCountChange?.(-1) }
   }
@@ -213,14 +214,14 @@ export default function PostsWall({ memberId, currentUserId, forumId }) {
   }
 
   async function remove(id) {
-    if (!confirm('Delete this post?')) return
+    if (!(await confirmDialog('Delete this post?'))) return
     const res = await fetch('/api/portal/posts', { method: 'DELETE', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ id }) })
     if (res.ok) setPosts(p => p.filter(x => x.id !== id))
   }
   async function report(id) {
-    if (!confirm('Report this post to moderators?')) return
+    if (!(await confirmDialog('Report this post to moderators?'))) return
     await fetch('/api/portal/posts', { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ id, action: 'report' }) })
-    alert('Thanks — a moderator will take a look.')
+    alertDialog('Thanks — a moderator will take a look.')
   }
 
   return (

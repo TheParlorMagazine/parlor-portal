@@ -1,6 +1,18 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { isPaidPlan } from '../../../lib/plans'
+
+// Match a member's plan against the filter dropdown. Plan values are real names
+// ("Reader's Circle", "Printing Press") — not the literal "paid"/"print" options.
+function matchesPlan(plan, filter) {
+  if (filter === 'all') return true
+  const p = (plan || 'free').toLowerCase()
+  if (filter === 'free') return !isPaidPlan(plan)
+  if (filter === 'print') return /print|press/.test(p)
+  if (filter === 'paid') return isPaidPlan(plan)
+  return p === filter
+}
 
 // ── Style tokens (light theme) ────────────────────────────────
 const ff  = "'Source Serif 4', Georgia, serif"
@@ -305,9 +317,8 @@ export default function SubscribersSection({ supabase }) {
       (m.email || '').toLowerCase().includes(search_) ||
       (m.name || m.full_name || '').toLowerCase().includes(search_) ||
       m.id.toLowerCase().includes(search_)
-    const plan = m.plan || 'free'
     const status = m.status || m.subscription_status || 'active'
-    const matchPlan = filterPlan === 'all' || plan === filterPlan
+    const matchPlan = matchesPlan(m.plan, filterPlan)
     const matchStatus = filterStatus === 'all' || status === filterStatus
     return matchSearch && matchPlan && matchStatus
   })
@@ -351,7 +362,7 @@ export default function SubscribersSection({ supabase }) {
         <div>
           <h1 style={{ fontFamily: ffH, fontSize: '26px', fontWeight: '700', color: '#0a0a0a', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Subscribers</h1>
           <div style={{ fontSize: '13px', color: '#888', fontFamily: ff }}>
-            {loading ? '…' : `${all.length} total · ${all.filter(m => (m.plan || 'free') === 'paid').length} paid`}
+            {loading ? '…' : `${all.length} total · ${all.filter(m => isPaidPlan(m.plan)).length} paid`}
           </div>
         </div>
         <button onClick={exportCSV} style={{ padding: '9px 18px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '7px', color: '#444', fontSize: '13px', cursor: 'pointer', fontFamily: ff }}>

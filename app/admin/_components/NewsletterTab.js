@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { confirmDialog } from '../../../lib/confirmDialog'
 
 const ff   = "'Source Serif 4', Georgia, serif"
 const ffH  = "'Playfair Display', Georgia, serif"
@@ -27,7 +28,7 @@ export default function NewsletterTab({ supabase }) {
   }, [supabase])
 
   const load = useCallback(async () => {
-    setLoading(true); setMsg('')
+    setMsg('')
     try {
       const res = await fetch('/api/admin/newsletter/preview', { headers: { Authorization: `Bearer ${await token()}` } })
       const d = await res.json()
@@ -39,7 +40,7 @@ export default function NewsletterTab({ supabase }) {
   useEffect(() => { load() }, [load])
 
   async function sendNow() {
-    if (!window.confirm(`Send the newsletter to ${data?.recipientCount ?? 'all'} subscribers now?`)) return
+    if (!(await confirmDialog(`Send the newsletter to ${data?.recipientCount ?? 'all'} subscribers now?`))) return
     setSending(true); setMsg('')
     try {
       const res = await fetch('/api/admin/newsletter/send', { method: 'POST', headers: { Authorization: `Bearer ${await token()}` } })

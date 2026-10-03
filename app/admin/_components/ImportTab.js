@@ -19,25 +19,49 @@ const FIELD_MAP = [
   { key: 'skip',      label: '— Skip this column —' },
 ]
 
-// Simple CSV parser (handles quoted fields with commas inside)
+// Robust CSV parser. Handles the quirks common to third-party exports (MailerLite,
+// Instagram/Meta, Excel, European locales):
+//   • a UTF-8 BOM at the start of the file
+//   • comma, semicolon, or tab delimiters (auto-detected from the header row)
+//   • quoted fields that contain the delimiter, commas, OR embedded newlines
+//   • escaped quotes ("") inside quoted fields
+//   • \r\n, \r, or \n line endings
 function parseCSV(text) {
-  const lines = text.split(/\r?\n/).filter(l => l.trim())
-  if (!lines.length) return { headers: [], rows: [] }
-  function parseLine(line) {
-    const fields = []
-    let cur = '', inQ = false
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i]
-      if (ch === '"') { inQ = !inQ }
-      else if (ch === ',' && !inQ) { fields.push(cur.trim()); cur = '' }
-      else { cur += ch }
-    }
-    fields.push(cur.trim())
-    return fields
+  if (!text) return { headers: [], rows: [] }
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1) // strip BOM
+
+  // Detect the delimiter from the first (header) line, ignoring quoted sections.
+  const nl = text.search(/\r\n|\r|\n/)
+  const firstLine = nl === -1 ? text : text.slice(0, nl)
+  const counts = { ',': 0, ';': 0, '\t': 0 }
+  let q = false
+  for (const ch of firstLine) {
+    if (ch === '"') q = !q
+    else if (!q && counts[ch] !== undefined) counts[ch]++
   }
-  const headers = parseLine(lines[0])
-  const rows = lines.slice(1).map(parseLine)
-  return { headers, rows }
+  const delim = Object.keys(counts).reduce((best, d) => (counts[d] > counts[best] ? d : best), ',')
+
+  // Tokenize the whole file (so quoted newlines stay inside their field).
+  const rows = []
+  let field = '', row = [], inQ = false
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (inQ) {
+      if (ch === '"') { if (text[i + 1] === '"') { field += '"'; i++ } else inQ = false }
+      else field += ch
+    } else if (ch === '"') { inQ = true }
+    else if (ch === delim) { row.push(field); field = '' }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++ // CRLF
+      row.push(field); rows.push(row); row = []; field = ''
+    } else field += ch
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row) }
+
+  // Trim cells and drop fully-blank rows.
+  const cleaned = rows.map(r => r.map(c => c.trim())).filter(r => r.some(c => c !== ''))
+  if (!cleaned.length) return { headers: [], rows: [] }
+  return { headers: cleaned[0], rows: cleaned.slice(1) }
 }
 
 // Try to auto-map a CSV column header to a members field
@@ -60,21 +84,42 @@ export default function ImportTab({ supabase }) {
   const [mapping,   setMapping]   = useState({})          // { csvHeader: fieldKey }
   const [importing, setImporting] = useState(false)
   const [progress,  setProgress]  = useState({ done: 0, total: 0, created: 0, updated: 0, skipped: 0 })
+  const [err,       setErr]       = useState('')
+  const [dragOver,  setDragOver]  = useState(false)
 
-  function handleFile(e) {
-    const file = e.target.files?.[0]
+  function processFile(file) {
+    setErr('')
     if (!file) return
     const reader = new FileReader()
+    reader.onerror = () => setErr('Could not read that file.')
     reader.onload = ev => {
-      const { headers, rows } = parseCSV(ev.target.result)
-      const autoMapping = {}
-      headers.forEach(h => { autoMapping[h] = autoMap(h) })
-      setParsed({ headers, rows })
-      setMapping(autoMapping)
-      setStep('map')
+      try {
+        const { headers, rows } = parseCSV(ev.target.result || '')
+        if (!headers.length || !rows.length) {
+          setErr('No rows found in this file. Make sure it’s a CSV with a header row and an email column.')
+          return
+        }
+        const autoMapping = {}
+        headers.forEach(h => { autoMapping[h] = autoMap(h) })
+        setParsed({ headers, rows })
+        setMapping(autoMapping)
+        setStep('map')
+      } catch (e) {
+        setErr('Could not parse this file as CSV.')
+      }
     }
     reader.readAsText(file)
+  }
+
+  function handleFile(e) {
+    processFile(e.target.files?.[0])
     e.target.value = ''
+  }
+
+  function handleDrop(e) {
+    e.preventDefault()
+    setDragOver(false)
+    processFile(e.dataTransfer?.files?.[0])
   }
 
   function getField(row, field) {
@@ -87,6 +132,8 @@ export default function ImportTab({ supabase }) {
   function buildRecord(row) {
     const email = getField(row, 'email')?.toLowerCase().trim()
     if (!email) return null
+    // Map CSV fields to the ACTUAL members columns. The table has no tags/source
+    // columns, so that metadata is preserved in `notes` instead of failing the insert.
     const record = { email }
     const name     = getField(row, 'name')
     const plan     = getField(row, 'plan')
@@ -94,12 +141,14 @@ export default function ImportTab({ supabase }) {
     const tags     = getField(row, 'tags')
     const source   = getField(row, 'source')
     const status   = getField(row, 'status')
-    if (name)     record.name = name
+    if (name)     record.full_name = name
     if (plan)     record.plan = plan
     if (joinedAt) { const d = new Date(joinedAt); if (!isNaN(d)) record.joined_at = d.toISOString() }
-    if (tags)     record.tags = tags.split(/[;,]/).map(t => t.trim()).filter(Boolean)
-    if (source)   record.source = source
-    if (status)   record.status = status
+    if (status)   record.subscription_status = status
+    const noteBits = []
+    if (tags)   noteBits.push(`Tags: ${tags}`)
+    if (source) noteBits.push(`Source: ${source}`)
+    if (noteBits.length) record.notes = noteBits.join(' · ')
     return record
   }
 
@@ -112,21 +161,20 @@ export default function ImportTab({ supabase }) {
     const records = parsed.rows.map(r => buildRecord(r)).filter(Boolean)
     setProgress({ done: 0, total: records.length, created: 0, updated: 0, skipped: 0 })
 
+    // Import through the server route, which also creates a linked auth account for
+    // each subscriber (so a later sign-in lands on this record, not a duplicate).
+    const { data: sess } = await supabase.auth.getSession()
+    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${sess?.session?.access_token || ''}` }
+
     let created = 0, updated = 0, skipped = 0
     const CHUNK = 50
     for (let i = 0; i < records.length; i += CHUNK) {
       const chunk = records.slice(i, i + CHUNK)
-      for (const rec of chunk) {
-        const { data: existing } = await supabase.from('members').select('id').eq('email', rec.email).single()
-        if (existing) {
-          await supabase.from('members').update(rec).eq('id', existing.id)
-          updated++
-        } else {
-          const { error } = await supabase.from('members').insert({ ...rec, joined_at: rec.joined_at || new Date().toISOString() })
-          if (error) { skipped++; continue }
-          created++
-        }
-      }
+      try {
+        const res = await fetch('/api/admin/import-members', { method: 'POST', headers, body: JSON.stringify({ records: chunk }) })
+        const j = await res.json().catch(() => ({}))
+        created += j.created || 0; updated += j.updated || 0; skipped += j.skipped || 0
+      } catch { skipped += chunk.length }
       const done = Math.min(i + CHUNK, records.length)
       setProgress(p => ({ ...p, done, created, updated, skipped }))
     }
@@ -154,12 +202,19 @@ export default function ImportTab({ supabase }) {
       {/* Upload */}
       {step === 'upload' && (
         <div>
-          <div style={{ background: '#fff', border: '2px dashed #e0e0e0', borderRadius: '10px', padding: '48px', textAlign: 'center', cursor: 'pointer' }} onClick={() => fileRef.current?.click()}>
+          <div
+            onClick={() => fileRef.current?.click()}
+            onDragOver={e => { e.preventDefault(); if (!dragOver) setDragOver(true) }}
+            onDragEnter={e => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={e => { e.preventDefault(); setDragOver(false) }}
+            onDrop={handleDrop}
+            style={{ background: dragOver ? '#fdf4f6' : '#fff', border: `2px dashed ${dragOver ? DP : '#e0e0e0'}`, borderRadius: '10px', padding: '48px', textAlign: 'center', cursor: 'pointer', transition: 'background 0.15s, border-color 0.15s' }}>
             <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.3 }}>📤</div>
             <div style={{ fontSize: '14px', color: '#555', fontFamily: ff, marginBottom: '6px' }}>Drop a CSV file or click to browse</div>
             <div style={{ fontSize: '12px', color: '#aaa', fontFamily: ff }}>Accepts MailerLite exports or any CSV with email column</div>
           </div>
-          <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={handleFile} style={{ display: 'none' }} />
+          <input ref={fileRef} type="file" accept=".csv,text/csv,text/plain" onChange={handleFile} style={{ display: 'none' }} />
+          {err && <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(196,54,74,0.06)', border: `1px solid ${DP}`, borderRadius: '8px', fontSize: '13px', color: DP, fontFamily: ff }}>{err}</div>}
           <div style={{ marginTop: '16px', padding: '14px 18px', background: '#fffbe6', border: '1px solid #f0e06a', borderRadius: '8px', fontSize: '12px', color: '#7a6000', fontFamily: ff, lineHeight: '1.6' }}>
             <strong>MailerLite export columns supported:</strong> Email, Full Name, Plan, Date Added, Tags, Source, Status
           </div>
@@ -208,16 +263,16 @@ export default function ImportTab({ supabase }) {
                 <th style={thStyle}>Name</th>
                 <th style={thStyle}>Plan</th>
                 <th style={thStyle}>Joined</th>
-                <th style={thStyle}>Tags</th>
+                <th style={thStyle}>Notes</th>
               </tr></thead>
               <tbody>
                 {preview.map((r, i) => (
                   <tr key={i} style={{ borderBottom: i < preview.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
                     <td style={tdStyle}>{r.email}</td>
-                    <td style={tdStyle}>{r.name || '—'}</td>
+                    <td style={tdStyle}>{r.full_name || '—'}</td>
                     <td style={tdStyle}>{r.plan || '—'}</td>
                     <td style={tdStyle}>{r.joined_at ? new Date(r.joined_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</td>
-                    <td style={tdStyle}>{Array.isArray(r.tags) ? r.tags.join(', ') : '—'}</td>
+                    <td style={tdStyle}>{r.notes || '—'}</td>
                   </tr>
                 ))}
               </tbody>

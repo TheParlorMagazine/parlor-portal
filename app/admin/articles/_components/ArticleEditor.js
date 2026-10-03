@@ -9,6 +9,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import MediaLibraryModal from './MediaLibraryModal'
 import { hasDisclaimerBlock, withDisclaimer } from '../../../../lib/memberPosts'
+import { confirmDialog } from '../../../../lib/confirmDialog'
 
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), {
   ssr: false,
@@ -1405,7 +1406,7 @@ function SectionPicker({ supabase, issueId, sectionId, onSelect }) {
 
   async function handleDeleteSection() {
     if (!editingId) return
-    if (!window.confirm('Delete this section? Articles assigned to it will need a new section.')) return
+    if (!(await confirmDialog('Delete this section? Articles assigned to it will need a new section.'))) return
     setAddSaving(true)
     setAddError('')
     const { error } = await supabase.from('sections').delete().eq('id', editingId)
@@ -1805,7 +1806,7 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
     // Member posts have two hard gates before they can go live.
     if (f.media_type === 'member_post') {
       if (!hasDisclaimerBlock(f.body)) {
-        const fix = window.confirm('This member post is missing the required disclaimer block. Re-insert it now? (You’ll then need to click Publish again.)')
+        const fix = await confirmDialog('This member post is missing the required disclaimer block. Re-insert it now? (You’ll then need to click Publish again.)')
         if (fix) { update('body', withDisclaimer(f.body)); await performSave({}) }
         setSaveError('Member posts must include the disclaimer block before publishing.')
         return
@@ -1878,7 +1879,7 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
 
   async function handleDelete() {
     const title = formRef.current.title || 'this article'
-    if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return
+    if (!(await confirmDialog(`Delete "${title}"? This cannot be undone.`))) return
     if (savedIdRef.current) {
       await supabase.from('articles').delete().eq('id', savedIdRef.current)
     }

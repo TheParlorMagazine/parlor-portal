@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { prepareImageUpload, isDuplicateUpload } from '../../../lib/uploadImage'
+import { confirmDialog } from '../../../lib/confirmDialog'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -147,7 +148,6 @@ export default function AnnouncementsSection({ supabase }) {
   const shown = items.filter(a => (tab === 'homepage' ? a.placement === 'homepage' : (a.placement || 'ribbon') !== 'homepage'))
 
   async function load() {
-    setLoading(true)
     try {
       const res = await fetch('/api/admin/announcements', { headers: { Authorization: `Bearer ${await token()}` } })
       const d = await res.json(); setItems(d.announcements || [])
@@ -160,7 +160,7 @@ export default function AnnouncementsSection({ supabase }) {
     load()
   }
   async function del(id) {
-    if (!confirm('Delete this announcement?')) return
+    if (!(await confirmDialog('Delete this announcement?'))) return
     await fetch('/api/admin/announcements', { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ id }) })
     load()
   }

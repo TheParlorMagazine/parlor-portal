@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { confirmDialog } from '../../../lib/confirmDialog'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -49,7 +50,7 @@ function OrderRow({ order, token, onChanged }) {
   }
 
   async function remove() {
-    if (!window.confirm(`Delete order ${order.order_number || ''}? This can’t be undone.`)) return
+    if (!(await confirmDialog(`Delete order ${order.order_number || ''}? This can’t be undone.`))) return
     setBusy(true)
     const res = await fetch(`/api/admin/orders?id=${order.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${await token()}` } })
     setBusy(false)
