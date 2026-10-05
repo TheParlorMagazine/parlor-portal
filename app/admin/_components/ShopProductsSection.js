@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { prepareImageUpload, isDuplicateUpload } from '../../../lib/uploadImage'
 import { confirmDialog } from '../../../lib/confirmDialog'
+import BundlesSection from './BundlesSection'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -22,8 +23,9 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
     name: item?.name || '', variant: item?.variant || '', description: item?.description || '',
     category: item?.category || '', price: item?.price ?? '', price_eur: item?.price_eur ?? '', price_gbp: item?.price_gbp ?? '',
     images: Array.isArray(item?.images) ? item.images : [], tint: item?.tint || '#eee',
-    sku: item?.sku || '', inventory: item?.inventory ?? '', sort: item?.sort ?? 0,
+    sku: item?.sku || '', inventory: item?.inventory ?? '', weight_oz: item?.weight_oz ?? '', sort: item?.sort ?? 0,
     fulfillment: item?.fulfillment || 'manual', external_url: item?.external_url || '',
+    ships_to: item?.ships_to || 'worldwide',
     printify_product_id: item?.printify_product_id || '', printify_shop_id: item?.printify_shop_id || '',
     active: item?.active ?? true, featured: item?.featured ?? false,
     featured_blurb: item?.featured_blurb || '',
@@ -128,10 +130,11 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
           <div><div style={label}>Sort</div><input type="number" value={f.sort} onChange={e => set('sort', e.target.value)} style={input} /></div>
         </div>
 
-        {/* Inventory / SKU */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        {/* Inventory / SKU / Weight */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
           <div><div style={label}>SKU <span style={{ textTransform: 'none', letterSpacing: 0, color: '#bbb' }}>(opt)</span></div><input value={f.sku} onChange={e => set('sku', e.target.value)} style={input} /></div>
           <div><div style={label}>Inventory <span style={{ textTransform: 'none', letterSpacing: 0, color: '#bbb' }}>(blank = ∞)</span></div><input type="number" value={f.inventory} onChange={e => set('inventory', e.target.value)} placeholder="∞" style={input} /></div>
+          <div><div style={label}>Weight (oz) <span style={{ textTransform: 'none', letterSpacing: 0, color: '#bbb' }}>(shipping)</span></div><input type="number" step="0.1" value={f.weight_oz} onChange={e => set('weight_oz', e.target.value)} placeholder="8" style={input} /></div>
         </div>
 
         {/* Fulfillment */}
@@ -149,6 +152,16 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
         )}
         {f.fulfillment === 'external' && (
           <><div style={label}>External URL</div><input value={f.external_url} onChange={e => set('external_url', e.target.value)} placeholder="https://…" style={input} /></>
+        )}
+
+        {/* Shipping restriction */}
+        <div style={label}>Shipping region</div>
+        <select value={f.ships_to} onChange={e => set('ships_to', e.target.value)} style={{ ...input, cursor: 'pointer' }}>
+          <option value="worldwide">Ships worldwide</option>
+          <option value="us_only">US only</option>
+        </select>
+        {f.ships_to === 'us_only' && (
+          <div style={{ fontSize: 12, color: '#8a6b72', marginTop: 5 }}>Customers with non-US addresses will see an error before checkout.</div>
         )}
 
         {/* Flags */}
@@ -256,6 +269,7 @@ function PrintifyImportModal({ token, onClose, onDone }) {
 
 // ── Section ───────────────────────────────────────────────────
 export default function ShopProductsSection({ supabase }) {
+  const [shopTab, setShopTab] = useState('products') // 'products' | 'bundles'
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([]) // [{ id, name }]
   const [loading, setLoading] = useState(true)
@@ -329,8 +343,27 @@ export default function ShopProductsSection({ supabase }) {
   const uncategorized = products.filter(p => !p.category).length
   const shown = filter === 'all' ? products : filter === '__uncat__' ? products.filter(p => !p.category) : products.filter(p => p.category === filter)
 
+  if (shopTab === 'bundles') {
+    const token = async () => { const { data: { session } } = await supabase.auth.getSession(); return session?.access_token }
+    return (
+      <div style={{ fontFamily: ff }}>
+        <div style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${BORDER}`, marginBottom: 24 }}>
+          {['products', 'bundles'].map(t => (
+            <button key={t} onClick={() => setShopTab(t)} style={{ background: 'none', border: 'none', borderBottom: shopTab === t ? `2px solid ${BLACK}` : '2px solid transparent', padding: '10px 22px', fontFamily: ff, fontSize: 14, color: shopTab === t ? BLACK : '#888', cursor: 'pointer', textTransform: 'capitalize' }}>{t}</button>
+          ))}
+        </div>
+        <BundlesSection token={token} />
+      </div>
+    )
+  }
+
   return (
     <div style={{ fontFamily: ff }}>
+      <div style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${BORDER}`, marginBottom: 24 }}>
+        {['products', 'bundles'].map(t => (
+          <button key={t} onClick={() => setShopTab(t)} style={{ background: 'none', border: 'none', borderBottom: shopTab === t ? `2px solid ${BLACK}` : '2px solid transparent', padding: '10px 22px', fontFamily: ff, fontSize: 14, color: shopTab === t ? BLACK : '#888', cursor: 'pointer', textTransform: 'capitalize' }}>{t}</button>
+        ))}
+      </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <h2 style={{ fontFamily: ffH, fontSize: 26, margin: 0, color: BLACK }}>Shop Products</h2>
         <div style={{ display: 'flex', gap: 10 }}>

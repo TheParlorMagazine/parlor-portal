@@ -56,8 +56,8 @@ export async function POST(request) {
       const { data: found } = await g.db.from('shop_products').select('id').eq('printify_product_id', mapped.printify_product_id).maybeSingle()
       if (found) {
         // Re-sync Printify-owned fields only; leave category/featured/sort/active as the admin set them.
-        const { name, description, images, price, variants, printify_variant_id, printify_data, printify_shop_id } = mapped
-        await g.db.from('shop_products').update({ name, description, images, price, variants, printify_variant_id, printify_data, printify_shop_id }).eq('id', found.id)
+        const { name, description, images, price, variants, printify_variant_id, printify_data, printify_shop_id, print_provider_id } = mapped
+        await g.db.from('shop_products').update({ name, description, images, price, variants, printify_variant_id, printify_data, printify_shop_id, print_provider_id }).eq('id', found.id)
         updated++
       } else {
         // New imports start inactive so an admin can set a category and review before publishing.

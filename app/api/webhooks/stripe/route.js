@@ -93,9 +93,17 @@ async function handleShopOrder(session) {
     memberId = m?.id || null
   }
 
-  // Stripe moved shipping to collected_information.shipping_details (newer API);
-  // fall back to the legacy field and then billing details.
-  const ship = session.collected_information?.shipping_details || session.shipping_details || session.customer_details || {}
+  // Shipping address: prefer what Stripe collected (address collection step), then
+  // what we pre-filled via payment_intent_data.shipping (in-app address form),
+  // then billing details as a last resort.
+  let ship = session.collected_information?.shipping_details || session.shipping_details || null
+  if (!ship?.address?.line1 && typeof session.payment_intent === 'string') {
+    try {
+      const pi = await stripe.paymentIntents.retrieve(session.payment_intent)
+      if (pi?.shipping?.address?.line1) ship = pi.shipping
+    } catch {}
+  }
+  ship = ship || session.customer_details || {}
   const shippingAddress = ship?.address?.line1 ? formatAddress(null, ship.address) : null
 
   let orderNumber = null
@@ -122,24 +130,58 @@ async function handleShopOrder(session) {
   let printifyItems = []
   try {
     const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { expand: ['data.price.product'], limit: 50 })
-    const rows = (lineItems.data || []).map(li => {
+    const rows = []
+    for (const li of lineItems.data || []) {
       const md = li.price?.product?.metadata || {}
+      const qty = li.quantity || 1
+
+      // Bundle: expand into its component Printify line items for fulfillment
+      if (md.fulfillment === 'bundle' && md.shop_bundle_id) {
+        const { data: bundle } = await supabase
+          .from('shop_bundles')
+          .select('title, shop_bundle_items(quantity, variant_id, shop_products(printify_product_id, printify_variant_id, variants, fulfillment))')
+          .eq('id', md.shop_bundle_id).single()
+        if (bundle) {
+          for (const bi of bundle.shop_bundle_items || []) {
+            const p = bi.shop_products
+            if (p?.fulfillment === 'printify' && p.printify_product_id) {
+              const vid = bi.variant_id
+                ? Number(bi.variant_id)
+                : (p.printify_variant_id || p.variants?.[0]?.printify_variant_id || null)
+              if (vid) printifyItems.push({ product_id: p.printify_product_id, variant_id: Number(vid), quantity: (bi.quantity || 1) * qty })
+            }
+          }
+        }
+        rows.push({
+          order_id: order.id,
+          product_name: li.description || li.price?.product?.name || 'Bundle',
+          quantity: qty,
+          unit_price_cents: li.price?.unit_amount ?? 0,
+          image_url: li.price?.product?.images?.[0] || null,
+          stripe_price_id: li.price?.id || null,
+          shop_product_id: null,
+          printify_product_id: null,
+          printify_variant_id: null,
+        })
+        continue
+      }
+
       const variantId = md.printify_variant_id ? Number(md.printify_variant_id) : null
       if (md.fulfillment === 'printify' && md.printify_product_id && variantId) {
-        printifyItems.push({ product_id: md.printify_product_id, variant_id: variantId, quantity: li.quantity || 1 })
+        printifyItems.push({ product_id: md.printify_product_id, variant_id: variantId, quantity: qty })
       }
-      return {
+      rows.push({
         order_id: order.id,
         product_name: li.description || li.price?.product?.name || 'Item',
-        quantity: li.quantity || 1,
+        quantity: qty,
         unit_price_cents: li.price?.unit_amount ?? (li.amount_subtotal && li.quantity ? Math.round(li.amount_subtotal / li.quantity) : 0),
         image_url: li.price?.product?.images?.[0] || null,
         stripe_price_id: li.price?.id || null,
         shop_product_id: md.shop_product_id || null,
         printify_product_id: md.printify_product_id || null,
         printify_variant_id: variantId,
-      }
-    })
+      })
+    }
     if (rows.length) {
       const { error: oiErr } = await supabase.from('order_items').insert(rows)
       // If the Printify link columns aren't migrated yet, still record the items.

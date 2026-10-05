@@ -17,5 +17,7 @@ export async function POST(request) {
     currency,
     symbol: CURRENCY_SYMBOL[currency] || '$',
     printify: quote.printify,
+    manualSubtotal: quote.manualSubtotal,
+    manualShipFree: quote.manualShipFree,
   })
 }

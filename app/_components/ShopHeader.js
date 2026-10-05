@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useCart } from '../../lib/useCart'
 import { openCart } from '../../lib/cartUI'
 
@@ -32,9 +32,12 @@ function BagIcon({ count }) {
 export default function ShopHeader({ activeCat }) {
   const { cart } = useCart()
   const [categories, setCategories] = useState(FALLBACK_CATEGORIES)
+  const [products, setProducts] = useState([])
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState('')
   const inputRef = useRef(null)
+  const searchWrapRef = useRef(null)
 
   useEffect(() => {
     fetch('/api/shop/categories').then(r => r.json())
@@ -43,12 +46,26 @@ export default function ShopHeader({ activeCat }) {
   }, [])
 
   useEffect(() => {
-    const onKey = e => { if (e.key === 'Escape') setDrawerOpen(false) }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    fetch('/api/shop/products').then(r => r.json())
+      .then(d => { if (Array.isArray(d.products)) setProducts(d.products) })
+      .catch(() => {})
   }, [])
 
-  const submit = e => { e.preventDefault(); const q = query.trim(); window.location.href = q ? `/shop?q=${encodeURIComponent(q)}` : '/shop' }
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') { setDrawerOpen(false); setSearchOpen(false) } }
+    const onDown = e => { if (searchWrapRef.current && !searchWrapRef.current.contains(e.target)) setSearchOpen(false) }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('mousedown', onDown)
+    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onDown) }
+  }, [])
+
+  const q = query.trim().toLowerCase()
+  const searchResults = useMemo(() => {
+    if (!q) return []
+    return products.filter(p => p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q)).slice(0, 6)
+  }, [q, products])
+
+  const submit = e => { e.preventDefault(); const qv = query.trim(); window.location.href = qv ? `/shop?q=${encodeURIComponent(qv)}` : '/shop' }
 
   return (
     <>
@@ -69,6 +86,15 @@ export default function ShopHeader({ activeCat }) {
         .sh-search-input { width:100%; box-sizing:border-box; background:#fff; border:none; border-radius:30px; padding:12px 44px 12px 20px; font-family:${BODY}; font-size:15px; color:#1a1a1a; outline:none; }
         .sh-search-input::placeholder { color:#9a9a9a; }
         .sh-search-ico { position:absolute; right:14px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:#6a6a6a; padding:0; display:flex; }
+        .sh-search-panel { position:absolute; top:calc(100% + 10px); left:0; right:0; background:#fff; border-radius:12px; box-shadow:0 18px 50px rgba(0,0,0,0.26); overflow:hidden; z-index:60; }
+        .sh-sr-head { font-family:${BODY}; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#999; padding:14px 18px 6px; }
+        .sh-sr-row { display:flex; align-items:center; gap:12px; padding:9px 18px; text-decoration:none; color:#1a1a1a; cursor:pointer; }
+        .sh-sr-row:hover { background:#faf6f2; }
+        .sh-sr-thumb { width:42px; height:52px; border-radius:4px; flex:0 0 auto; background-size:cover; background-position:center; background-color:#eee; }
+        .sh-sr-name { font-family:${DISPLAY}; font-size:15px; line-height:1.2; }
+        .sh-sr-price { font-family:${BODY}; font-size:13px; color:#777; }
+        .sh-sr-chip { display:inline-block; font-family:${BODY}; font-size:13px; color:#333; background:#f1ece7; border:none; border-radius:16px; padding:7px 14px; margin:2px 6px 2px 0; cursor:pointer; }
+        .sh-sr-chip:hover { background:${PINK}; }
         .sh-drawer-back { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:80; opacity:0; transition:opacity 0.25s; }
         .sh-drawer-back.show { opacity:1; }
         .sh-drawer { position:fixed; top:0; left:0; bottom:0; width:340px; max-width:86vw; background:#fff; z-index:81; box-shadow:12px 0 40px rgba(0,0,0,0.22); transform:translateX(-100%); transition:transform 0.28s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column; }
@@ -117,13 +143,53 @@ export default function ShopHeader({ activeCat }) {
             </svg>
             <span className="sh-ham-label">{activeCat || 'All'}</span>
           </button>
-          <form className="sh-search-wrap" onSubmit={submit}>
-            <input ref={inputRef} className="sh-search-input" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search the shop…" aria-label="Search products" />
+          <form className="sh-search-wrap" ref={searchWrapRef} onSubmit={submit}>
+            <input
+              ref={inputRef}
+              className="sh-search-input"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onFocus={() => setSearchOpen(true)}
+              placeholder="Search the shop…"
+              aria-label="Search products"
+            />
             <button type="submit" className="sh-search-ico" aria-label="Search">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
                 <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
             </button>
+            {searchOpen && (
+              <div className="sh-search-panel">
+                {q ? (
+                  searchResults.length ? (
+                    <>
+                      <div className="sh-sr-head">Products</div>
+                      {searchResults.map(p => (
+                        <a key={p.id} href={`/shop/${p.id}`} className="sh-sr-row">
+                          <span className="sh-sr-thumb" style={{ backgroundImage: p.images?.[0] ? `url(${p.images[0]})` : undefined }} />
+                          <span>
+                            <span className="sh-sr-name">{p.name}</span>
+                          </span>
+                        </a>
+                      ))}
+                    </>
+                  ) : (
+                    <div style={{ padding: '16px 18px' }}>
+                      <div style={{ fontFamily: BODY, fontSize: 14, color: '#555', marginBottom: 10 }}>No products match "{query.trim()}". Try a category:</div>
+                      {categories.map(c => <button key={c} className="sh-sr-chip" onClick={() => { window.location.href = `/shop?cat=${encodeURIComponent(c)}` }}>{c}</button>)}
+                    </div>
+                  )
+                ) : (
+                  <div style={{ padding: '4px 0 12px' }}>
+                    <div className="sh-sr-head">Browse by category</div>
+                    <div style={{ padding: '6px 14px 2px' }}>
+                      <button className="sh-sr-chip" onClick={() => { window.location.href = '/shop' }}>All products</button>
+                      {categories.map(c => <button key={c} className="sh-sr-chip" onClick={() => { window.location.href = `/shop?cat=${encodeURIComponent(c)}` }}>{c}</button>)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </form>
         </div>
       </div>

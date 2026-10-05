@@ -59,57 +59,217 @@ function ShareLinks({ url, title }) {
 export default function ProductPage({ params }) {
   const { id } = use(params)
   const [products, setProducts] = useState(null)
+  const [bundles, setBundles] = useState(null)
   const [imgIdx, setImgIdx] = useState(0)
   const [variantSel, setVariantSel] = useState('')
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
   const { symbol, currency, country } = useCurrency()
-  const { add } = useCart()
+  const { add, cart } = useCart()
   const wish = useWishlist()
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 320)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   useEffect(() => {
     fetch('/api/shop/products').then(r => r.json())
       .then(d => setProducts(Array.isArray(d.products) ? d.products : []))
       .catch(() => setProducts([]))
+    fetch('/api/shop/bundles').then(r => r.json())
+      .then(d => setBundles(Array.isArray(d.bundles) ? d.bundles : []))
+      .catch(() => setBundles([]))
   }, [])
 
+  const loaded = products !== null && bundles !== null
+
+  // Try to find the ID as a bundle first, then as a product.
+  const bundle = useMemo(() => bundles?.find(b => String(b.id) === String(id)) || null, [bundles, id])
+
   const { product, prev, next } = useMemo(() => {
-    if (!products) return {}
+    if (!products || bundle) return {}
     const i = products.findIndex(p => String(p.id) === String(id))
     return { product: products[i] || null, prev: products[i - 1] || null, next: products[i + 1] || null }
-  }, [products, id])
+  }, [products, bundle, id])
 
   const variants = variantsOf(product)
   const chosen = variants.length ? (variants.find(v => String(v.printify_variant_id) === String(variantSel)) || variants[0]) : null
   const unit = chosen?.price != null ? Number(chosen.price) : Number(product?.price || 0)
-  const images = product?.images?.length ? product.images : []
+  const images = (bundle?.images ?? product?.images ?? [])
+  const notFound = loaded && !bundle && product === null
+
+  // Bundle savings: sum individual item prices vs bundle price.
+  const bundleIndividualTotal = useMemo(() => {
+    if (!bundle) return 0
+    return (bundle.shop_bundle_items || []).reduce((sum, bi) => {
+      const p = bi.shop_products
+      if (!p) return sum
+      const price = Number(p.price || 0)
+      return sum + price * (bi.quantity || 1)
+    }, 0)
+  }, [bundle])
+  const bundleSavings = bundle ? Math.max(0, +(bundleIndividualTotal - Number(bundle.price || 0)).toFixed(2)) : 0
 
   function addToCart() {
+    if (bundle) {
+      for (let i = 0; i < qty; i++) add(bundle.id, null)
+      setAdded(true); openCart(); return
+    }
     for (let i = 0; i < qty; i++) add(product.id, chosen?.printify_variant_id ?? null)
     setAdded(true)
-    openCart() // open the global drawer over this page
+    openCart()
   }
 
+  const FabCart = () => (
+    <button
+      className={`shop-fab-cart${scrolled ? ' show' : ''}`}
+      aria-label={`Cart, ${cart.length} item${cart.length === 1 ? '' : 's'}`}
+      onClick={openCart}>
+      <div style={{ position: 'relative', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <path d="M16 10a4 4 0 01-8 0" />
+        </svg>
+        <span style={{ position: 'absolute', top: -2, right: -4, background: '#fff', color: BLACK, fontFamily: BODY, fontSize: 9, fontWeight: 700, width: 16, height: 16, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{cart.length}</span>
+      </div>
+    </button>
+  )
+
+  const sharedStyles = `
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,400&display=swap');
+    .pdp-grid { display:grid; grid-template-columns:1.1fr 1fr; gap:56px; max-width:1180px; margin:0 auto; padding:44px 48px 80px; }
+    .pdp-main-img { width:100%; aspect-ratio:1/1; border-radius:6px; background-color:#fff; background-size:cover; background-position:center; background-repeat:no-repeat; box-shadow:0 8px 30px rgba(0,0,0,0.08); }
+    .pdp-thumbs { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
+    .pdp-thumb { width:66px; height:66px; border-radius:5px; background-color:#fff; background-size:cover; background-position:center; background-repeat:no-repeat; cursor:pointer; border:2px solid transparent; }
+    .pdp-thumb.active { border-color:#0a0a0a; }
+    .pdp-qty { display:inline-flex; align-items:center; border:1px solid #cbb8bd; border-radius:4px; overflow:hidden; }
+    .pdp-qty button { width:42px; height:44px; border:none; background:#fff; font-size:18px; color:#555; cursor:pointer; }
+    .pdp-qty span { width:48px; text-align:center; font-family:${BODY}; font-size:15px; }
+    .pdp-add { flex:1; background:${BLACK}; color:#fff; border:none; border-radius:2px; padding:16px 0; font-family:${BODY}; font-size:15.5px; letter-spacing:.02em; cursor:pointer; }
+    .pdp-add:hover { background:#333; }
+    @media (max-width:860px){ .pdp-grid { grid-template-columns:1fr; gap:32px; padding:28px 20px 60px; } }
+    .shop-fab-cart { position:fixed; bottom:26px; right:26px; z-index:100; width:60px; height:60px; border-radius:50%; background:${BLACK}; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 28px rgba(0,0,0,0.32); opacity:0; transform:translateY(14px) scale(0.9); pointer-events:none; transition:opacity 0.25s ease, transform 0.25s cubic-bezier(.34,1.56,.64,1); }
+    .shop-fab-cart.show { opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
+    .shop-fab-cart:hover { transform:translateY(0) scale(1.07); }
+    @media (max-width:560px){ .shop-fab-cart { bottom:18px; right:18px; width:54px; height:54px; } }
+  `
+
+  // ── Bundle detail page ──────────────────────────────────────────────────────
+  if (bundle) {
+    const bundleItems = bundle.shop_bundle_items || []
+    return (
+      <div style={{ background: PINK_BG, minHeight: '100vh' }}>
+        <style>{sharedStyles}</style>
+        <ShopHeader activeCat={bundle.category} />
+
+        <div style={{ maxWidth: 1180, margin: '0 auto', padding: '26px 48px 0', fontFamily: BODY, fontSize: 14, color: '#8a6b72' }}>
+          <a href="/" style={{ color: '#8a6b72', textDecoration: 'none' }}>Home</a> / <a href="/shop" style={{ color: '#8a6b72', textDecoration: 'none' }}>All Products</a> / <span style={{ color: '#5a3d44' }}>{bundle.title}</span>
+        </div>
+
+        <div className="pdp-grid">
+          {/* Left: gallery + description */}
+          <div>
+            <div className="pdp-main-img" style={{ backgroundImage: images[imgIdx] ? `url(${images[imgIdx]})` : undefined, backgroundColor: images[imgIdx] ? undefined : '#f0e8ea' }} />
+            {images.length > 1 && (
+              <div className="pdp-thumbs">
+                {images.map((src, i) => (
+                  <div key={src} className={`pdp-thumb${i === imgIdx ? ' active' : ''}`} style={{ backgroundImage: `url(${src})` }} onClick={() => setImgIdx(i)} />
+                ))}
+              </div>
+            )}
+            {bundle.description && (
+              <div style={{ marginTop: 34 }}>
+                <Description text={bundle.description} />
+              </div>
+            )}
+
+            {/* What's included */}
+            {bundleItems.length > 0 && (
+              <div style={{ marginTop: 36 }}>
+                <div style={{ fontFamily: BODY, fontSize: 11.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#8a6b72', marginBottom: 14 }}>What's included</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {bundleItems.map((bi, idx) => {
+                    const p = bi.shop_products
+                    if (!p) return null
+                    return (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px', background: 'rgba(255,255,255,0.7)', borderRadius: 8, border: '1px solid rgba(203,184,189,0.4)' }}>
+                        <div style={{ width: 52, height: 52, borderRadius: 6, flexShrink: 0, backgroundImage: p.images?.[0] ? `url(${p.images[0]})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#eee' }} />
+                        <div style={{ flex: 1 }}>
+                          <a href={`/shop/${p.id}`} style={{ fontFamily: DISPLAY, fontSize: 15, color: BLACK, textDecoration: 'none', display: 'block' }}>{p.name}</a>
+                          {bi.quantity > 1 && <div style={{ fontFamily: BODY, fontSize: 12.5, color: '#8a6b72', marginTop: 2 }}>Qty: {bi.quantity}</div>}
+                        </div>
+                        <div style={{ fontFamily: BODY, fontSize: 14, color: '#5a3d44', flexShrink: 0 }}>{fmtPrice(Number(p.price || 0), symbol)}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right: purchase panel */}
+          <div>
+            <div style={{ display: 'inline-block', fontFamily: BODY, fontSize: 11.5, letterSpacing: '0.08em', textTransform: 'uppercase', background: '#f2b8c6', color: '#7a2531', borderRadius: 16, padding: '5px 13px', marginBottom: 14 }}>Bundle</div>
+            <h1 style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 600, color: BLACK, margin: '0 0 18px', lineHeight: 1.1 }}>{bundle.title}</h1>
+
+            <div style={{ fontFamily: BODY, fontSize: 26, color: BLACK, marginBottom: 4 }}>{fmtPrice(Number(bundle.price || 0), symbol)}</div>
+
+            {bundleSavings > 0 && (
+              <div style={{ marginBottom: 22 }}>
+                <div style={{ fontFamily: BODY, fontSize: 13.5, color: '#8a6b72', marginBottom: 4 }}>
+                  Individual total: <span style={{ textDecoration: 'line-through' }}>{fmtPrice(bundleIndividualTotal, symbol)}</span>
+                </div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f0faf4', border: '1px solid #c6e8d2', borderRadius: 20, padding: '5px 13px' }}>
+                  <span style={{ fontSize: 13 }}>✓</span>
+                  <span style={{ fontFamily: BODY, fontSize: 13.5, color: '#2d7a4f', fontWeight: 600 }}>You save {fmtPrice(bundleSavings, symbol)}</span>
+                </div>
+              </div>
+            )}
+
+            <div style={{ fontFamily: BODY, fontSize: 13.5, color: '#5a3d44', marginBottom: 8 }}>Quantity</div>
+            <div className="pdp-qty" style={{ marginBottom: 26 }}>
+              <button onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
+              <span>{qty}</span>
+              <button onClick={() => setQty(q => Math.min(20, q + 1))}>+</button>
+            </div>
+
+            <div style={{ display: 'flex', gap: 14, alignItems: 'stretch', maxWidth: 460 }}>
+              <button className="pdp-add" onClick={addToCart}>Add Bundle to Cart</button>
+            </div>
+
+            {added && (
+              <div style={{ marginTop: 16, fontFamily: BODY, fontSize: 14.5, color: '#2d8f5a' }}>
+                ✓ Added to cart — <button onClick={openCart} style={{ background: 'none', border: 'none', padding: 0, color: BLACK, fontWeight: 600, fontFamily: BODY, fontSize: 14.5, cursor: 'pointer', textDecoration: 'underline' }}>View cart &amp; checkout →</button>
+              </div>
+            )}
+
+            <div style={{ marginTop: 22, fontFamily: BODY, fontSize: 13, color: '#8a6b72' }}>
+              Shipping calculated at checkout.
+            </div>
+
+            <ShareLinks url={typeof window !== 'undefined' ? window.location.href : ''} title={bundle.title} />
+          </div>
+        </div>
+
+        <FabCart />
+        <SiteFooter />
+      </div>
+    )
+  }
+
+  // ── Regular product detail page ─────────────────────────────────────────────
   return (
     <div style={{ background: PINK_BG, minHeight: '100vh' }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,400&display=swap');
-        .pdp-grid { display:grid; grid-template-columns:1.1fr 1fr; gap:56px; max-width:1180px; margin:0 auto; padding:44px 48px 80px; }
-        .pdp-main-img { width:100%; aspect-ratio:1/1; border-radius:6px; background-color:#fff; background-size:cover; background-position:center; background-repeat:no-repeat; box-shadow:0 8px 30px rgba(0,0,0,0.08); }
-        .pdp-thumbs { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
-        .pdp-thumb { width:66px; height:66px; border-radius:5px; background-color:#fff; background-size:cover; background-position:center; background-repeat:no-repeat; cursor:pointer; border:2px solid transparent; }
-        .pdp-thumb.active { border-color:#0a0a0a; }
-        .pdp-qty { display:inline-flex; align-items:center; border:1px solid #cbb8bd; border-radius:4px; overflow:hidden; }
-        .pdp-qty button { width:42px; height:44px; border:none; background:#fff; font-size:18px; color:#555; cursor:pointer; }
-        .pdp-qty span { width:48px; text-align:center; font-family:${BODY}; font-size:15px; }
-        .pdp-add { flex:1; background:${BLACK}; color:#fff; border:none; border-radius:2px; padding:16px 0; font-family:${BODY}; font-size:15.5px; letter-spacing:.02em; cursor:pointer; }
-        .pdp-add:hover { background:#333; }
-        @media (max-width:860px){ .pdp-grid { grid-template-columns:1fr; gap:32px; padding:28px 20px 60px; } }
-      `}</style>
+      <style>{sharedStyles}</style>
 
       <ShopHeader activeCat={product?.category} />
 
-      {product === null && products && (
+      {notFound && (
         <div style={{ textAlign: 'center', padding: '120px 20px', fontFamily: BODY, color: '#7a5560' }}>Product not found. <a href="/shop" style={{ color: BLACK }}>Back to the shop →</a></div>
       )}
 
@@ -194,6 +354,7 @@ export default function ProductPage({ params }) {
         </>
       )}
 
+      <FabCart />
       <SiteFooter />
     </div>
   )

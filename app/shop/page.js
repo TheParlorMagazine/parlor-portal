@@ -87,6 +87,7 @@ export default function ShopPage() {
   const [variantSel, setVariantSel] = useState({}) // productId → chosen printify_variant_id
   const [imgRatios, setImgRatios] = useState({}) // productId → primary image aspect ratio (w/h)
   const [products, setProducts] = useState(PRODUCTS) // hardcoded list is the fallback until the catalogue loads
+  const [bundles, setBundles] = useState([])
   const [categories, setCategories] = useState(FALLBACK_CATEGORIES)
   const { symbol } = useCurrency() // same-numeral geo pricing: $7 → €7 → £7
   const searchWrapRef = useRef(null)
@@ -101,7 +102,14 @@ export default function ShopPage() {
       .then(r => r.json())
       .then(d => { if (Array.isArray(d.categories) && d.categories.length) setCategories(d.categories) })
       .catch(() => {})
+    fetch('/api/shop/bundles')
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d.bundles) && d.bundles.length) setBundles(d.bundles.map(b => ({ ...b, _isBundle: true }))) })
+      .catch(() => {})
   }, [])
+
+  // Merge products + bundles into one list for display (must be before effects that use it).
+  const allItems = useMemo(() => [...products, ...bundles], [products, bundles])
 
   // Measure each product's primary image aspect ratio so wide/landscape images
   // (e.g. the 2-issue bundle shot, 16:9) are shown "contain" (fit, no crop) in the
@@ -109,7 +117,7 @@ export default function ShopPage() {
   // these loads free since the same images are rendered on the cards.
   useEffect(() => {
     let alive = true
-    for (const p of products) {
+    for (const p of allItems) {
       const src = p.images?.[0]
       if (!src || imgRatios[p.id] != null) continue
       const im = new Image()
@@ -117,7 +125,7 @@ export default function ShopPage() {
       im.src = src
     }
     return () => { alive = false }
-  }, [products]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [allItems]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pre-filter/search the collection when arriving via a category or search link.
   // (The cart drawer — and its ?cart/?checkout/?wishlist/?ordered handling — is global.)
@@ -159,20 +167,20 @@ export default function ShopPage() {
   const q = query.trim().toLowerCase()
 
   // Quick preview results for the search dropdown (top 6 matches).
-  const searchResults = useMemo(() => (q ? products.filter(p => matchesQuery(p, q)).slice(0, 6) : []), [q, products])
+  const searchResults = useMemo(() => (q ? allItems.filter(p => matchesQuery(p, q)).slice(0, 6) : []), [q, allItems])
 
   const shown = useMemo(() => {
-    let list = products
+    let list = allItems
     if (cat !== 'all') list = list.filter(p => p.category === cat)
     if (q) list = list.filter(p => matchesQuery(p, q))
     if (sort === 'price-asc' || sort === 'price-desc') {
       list = [...list].sort((a, b) => (Number(a.price || 0) - Number(b.price || 0)) * (sort === 'price-asc' ? 1 : -1))
     }
     return list
-  }, [cat, products, q, sort])
+  }, [cat, allItems, q, sort])
 
   // Per-category counts for the filter drawer.
-  const catCount = c => products.filter(p => p.category === c).length
+  const catCount = c => allItems.filter(p => p.category === c).length
 
   const applyCat = c => {
     setCat(c)
@@ -186,9 +194,9 @@ export default function ShopPage() {
     if (!vs.length) return null
     return vs.find(v => String(v.printify_variant_id) === String(variantSel[p.id])) || vs[0]
   }
-  const priceOf = p => { const v = chosenVariant(p); return v?.price != null ? Number(v.price) : Number(p.price || 0) }
+  const priceOf = p => { if (p._isBundle) return Number(p.price || 0); const v = chosenVariant(p); return v?.price != null ? Number(v.price) : Number(p.price || 0) }
 
-  const add = p => { const v = chosenVariant(p); cartAdd(p.id, v?.printify_variant_id ?? null); openCart() }
+  const add = p => { if (p._isBundle) { cartAdd(p.id, null); openCart(); return } const v = chosenVariant(p); cartAdd(p.id, v?.printify_variant_id ?? null); openCart() }
 
   // Landscape images (wider than ~5:4) get cropped badly in the 4/5 portrait card,
   // so show them "contain" (whole image, centered). Portrait/square product shots
@@ -198,7 +206,7 @@ export default function ShopPage() {
   const heading = cat !== 'all' ? cat : (q ? `Results for “${query.trim()}”` : 'The collection')
 
   // The single featured product drives the storefront hero promo.
-  const featured = useMemo(() => products.find(p => p.featured) || null, [products])
+  const featured = useMemo(() => allItems.find(p => p.featured) || null, [allItems])
   const heroImgs = (featured?.images?.length ? featured.images : ['https://static.wixstatic.com/media/d449e2_fd8c48fe8b274b67be10d4773240837b~mv2.png'])
   const heroHeadline = (featured?.featured_blurb || featured?.name || '').trim()
 
@@ -386,7 +394,7 @@ export default function ShopPage() {
           featured. */}
       {featured && (
       <section style={{ background: '#f3c3d1' }}>
-        <div className="shop-herogrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
+        <div className="shop-herogrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', alignItems: 'center' }}>
           <div className="shop-hero-left">
             <h2 className="shop-hero-title" style={{ whiteSpace: 'pre-line' }}>{heroHeadline}</h2>
             <a
@@ -436,23 +444,31 @@ export default function ShopPage() {
                 {wish.has(p.id) ? '♥' : '♡'}
               </button>
               <a href={`/shop/${p.id}`} className="shop-card-img" style={{ display: 'flex', backgroundColor: fitOf(p) === 'contain' ? '#fff' : (p.tint || '#eee'), backgroundImage: p.images?.[0] ? `url(${p.images[0]})` : undefined, backgroundSize: fitOf(p) === 'contain' ? '116%' : 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
-                {p.category && (
+                {p._isBundle ? (
+                  <span className="shop-cat-chip" style={{ background: '#f2b8c6', color: '#7a2531' }}>Bundle</span>
+                ) : p.category ? (
                   <span className="shop-cat-chip" role="button" tabIndex={0}
                     onClick={e => { e.preventDefault(); applyCat(p.category) }}
                     onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); applyCat(p.category) } }}>
                     {p.category}
                   </span>
-                )}
+                ) : null}
               </a>
               <a href={`/shop/${p.id}`} style={{ fontFamily: DISPLAY, fontSize: 17, color: '#1a1a1a', marginTop: 12, textDecoration: 'none', display: 'block' }}>{p.name}</a>
-              {p.variant && <div style={{ fontFamily: BODY, fontSize: 13, color: '#777', marginTop: 2 }}>{p.variant}</div>}
-              {variantsOf(p).length > 1 && (
-                <select
-                  value={String(chosenVariant(p)?.printify_variant_id ?? '')}
-                  onChange={e => setVariantSel(s => ({ ...s, [p.id]: e.target.value }))}
-                  style={{ marginTop: 8, width: '100%', padding: '7px 9px', border: '1px solid #ddd', borderRadius: 6, fontFamily: BODY, fontSize: 13, color: '#333', background: '#fff', cursor: 'pointer' }}>
-                  {variantsOf(p).map(v => <option key={v.printify_variant_id} value={String(v.printify_variant_id)}>{v.name || 'Option'}</option>)}
-                </select>
+              {p._isBundle ? (
+                <div style={{ fontFamily: BODY, fontSize: 13, color: '#777', marginTop: 2 }}>{p.description || 'Curated bundle'}</div>
+              ) : (
+                <>
+                  {p.variant && <div style={{ fontFamily: BODY, fontSize: 13, color: '#777', marginTop: 2 }}>{p.variant}</div>}
+                  {variantsOf(p).length > 1 && (
+                    <select
+                      value={String(chosenVariant(p)?.printify_variant_id ?? '')}
+                      onChange={e => setVariantSel(s => ({ ...s, [p.id]: e.target.value }))}
+                      style={{ marginTop: 8, width: '100%', padding: '7px 9px', border: '1px solid #ddd', borderRadius: 6, fontFamily: BODY, fontSize: 13, color: '#333', background: '#fff', cursor: 'pointer' }}>
+                      {variantsOf(p).map(v => <option key={v.printify_variant_id} value={String(v.printify_variant_id)}>{v.name || 'Option'}</option>)}
+                    </select>
+                  )}
+                </>
               )}
               <div style={{ fontFamily: BODY, fontSize: 15, color: '#1a1a1a', marginTop: 6 }}>{fmtPrice(priceOf(p), symbol)}</div>
               <button className="shop-add" onClick={() => add(p)}>Add to cart</button>
