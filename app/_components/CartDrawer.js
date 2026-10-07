@@ -78,13 +78,14 @@ export default function CartDrawer() {
 
   const cartGroups = useMemo(() => {
     const m = new Map()
-    cart.forEach(({ id, vid }) => { const k = lineKey(id, vid); const g = m.get(k) || { id, vid, qty: 0 }; g.qty++; m.set(k, g) })
-    return [...m.values()].map(({ id, vid, qty }) => {
+    cart.forEach(({ id, vid, meta }) => { const k = lineKey(id, vid, meta); const g = m.get(k) || { id, vid, meta, qty: 0 }; g.qty++; m.set(k, g) })
+    return [...m.values()].map(({ id, vid, meta, qty }) => {
       const product = products.find(p => String(p.id) === String(id)) || bundles.find(b => String(b.id) === String(id))
       if (!product) return null
       const variant = (!product._isBundle && vid != null) ? variantsOf(product).find(v => String(v.printify_variant_id) === String(vid)) : null
-      const unit = variant?.price != null ? Number(variant.price) : Number(product.price || 0)
-      return { key: lineKey(id, vid), product, variant, qty, unit }
+      const baseUnit = variant?.price != null ? Number(variant.price) : Number(product.price || 0)
+      const unit = meta?.bundle_unit_price != null ? Number(meta.bundle_unit_price) : baseUnit
+      return { key: lineKey(id, vid, meta), product, variant, meta, qty, unit }
     }).filter(Boolean)
   }, [cart, products, bundles])
   const cartTotal = cartGroups.reduce((s, g) => s + g.unit * g.qty, 0)
@@ -142,7 +143,7 @@ export default function CartDrawer() {
     let alive = true; setShipLoading(true)
     fetch('/api/shop/shipping', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null })), country: effCountry }),
+      body: JSON.stringify({ items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null })), country: effCountry }),
     }).then(r => r.json()).then(d => { if (alive) { setShipping(d); setShipLoading(false) } }).catch(() => { if (alive) setShipLoading(false) })
     return () => { alive = false }
   }, [open, cart, effCountry]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -157,7 +158,7 @@ export default function CartDrawer() {
       const res = await fetch('/api/shop/checkout', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null })),
+          items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null })),
           country: effCountry, userId: user.id, address: addrPayload,
           successUrl: window.location.origin + '/shop/order-confirmed?session_id={CHECKOUT_SESSION_ID}',
           cancelUrl: window.location.href,
@@ -261,6 +262,16 @@ export default function CartDrawer() {
           <div style={{ padding: '18px 22px', borderTop: '1px solid #eee' }}>
             {/* Shipping address */}
             <div style={{ marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
+                <div style={{ fontFamily: BODY, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#999' }}>Shipping address</div>
+                <div style={{ position: 'relative', display: 'inline-flex' }} onMouseEnter={e => e.currentTarget.querySelector('[data-tip]').style.opacity = 1} onMouseLeave={e => e.currentTarget.querySelector('[data-tip]').style.opacity = 0}>
+                  <span style={{ width: 15, height: 15, borderRadius: '50%', background: '#e8e4e0', color: '#999', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'default', flexShrink: 0 }}>?</span>
+                  <div data-tip style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)', background: '#1a1a1a', color: '#fff', fontFamily: BODY, fontSize: 12, whiteSpace: 'nowrap', padding: '5px 10px', borderRadius: 6, pointerEvents: 'none', opacity: 0, transition: 'opacity 0.15s', zIndex: 200 }}>
+                    Enter address to calculate shipping
+                    <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', borderWidth: 5, borderStyle: 'solid', borderColor: '#1a1a1a transparent transparent transparent' }} />
+                  </div>
+                </div>
+              </div>
               <button onClick={() => setAddrOpen(o => !o)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: '1px solid #e0dbd8', borderRadius: 8, padding: '9px 13px', cursor: 'pointer', fontFamily: BODY, fontSize: 13, color: '#555' }}>
                 <span>{addr.line1.trim() ? `${addr.line1}${addr.city ? `, ${addr.city}` : ''}` : 'Enter shipping address…'}</span>
                 <span style={{ fontSize: 11, color: '#aaa', marginLeft: 8 }}>{addrOpen ? '▲' : '▼'}</span>

@@ -11,8 +11,8 @@ async function gate(request) {
   return { db, user }
 }
 
-const STRINGS = ['name', 'variant', 'description', 'category', 'tint', 'sku', 'fulfillment', 'external_url', 'stripe_price_id', 'printify_shop_id', 'printify_product_id', 'featured_blurb']
-const NUMBERS = ['price', 'price_eur', 'price_gbp', 'sort', 'inventory', 'printify_variant_id']
+const STRINGS = ['name', 'variant', 'description', 'category', 'tint', 'sku', 'fulfillment', 'external_url', 'stripe_price_id', 'printify_shop_id', 'printify_product_id', 'featured_blurb', 'ships_to']
+const NUMBERS = ['price', 'price_eur', 'price_gbp', 'sort', 'inventory', 'printify_variant_id', 'weight_oz']
 const BOOLS = ['active', 'featured']
 
 function pick(b) {
@@ -23,6 +23,7 @@ function pick(b) {
   if ('images' in b) out.images = Array.isArray(b.images) ? b.images.filter(Boolean) : []
   if ('variants' in b) out.variants = b.variants ?? null
   if ('printify_data' in b) out.printify_data = b.printify_data ?? null
+  if ('bundle_config' in b) out.bundle_config = b.bundle_config ?? null
   // price is NOT NULL — default to 0 rather than null
   if ('price' in out && out.price == null) out.price = 0
   if ('fulfillment' in out && !out.fulfillment) out.fulfillment = 'manual'

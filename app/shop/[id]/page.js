@@ -20,6 +20,8 @@ const variantsOf = p => (Array.isArray(p?.variants) ? p.variants : [])
 // admin's plain-text description can carry emphasis, like the reference layout.
 function fmtInline(s) {
   return (s || '')
+    // Decode common HTML entities that Printify embeds in otherwise-plain text
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
@@ -28,6 +30,14 @@ function fmtInline(s) {
 
 function Description({ text }) {
   if (!text) return null
+  // Printify descriptions arrive as HTML; plain-text admin descriptions use markdown.
+  const isHtml = /<[a-z][\s\S]*>/i.test(text)
+  if (isHtml) {
+    return (
+      <div className="printify-desc" style={{ fontFamily: BODY, fontSize: 16.5, lineHeight: 1.75, color: '#2a2a2a' }}
+        dangerouslySetInnerHTML={{ __html: text }} />
+    )
+  }
   const paras = text.split(/\n{2,}/)
   return (
     <div style={{ fontFamily: BODY, fontSize: 16.5, lineHeight: 1.75, color: '#2a2a2a' }}>
@@ -64,6 +74,9 @@ export default function ProductPage({ params }) {
   const [variantSel, setVariantSel] = useState('')
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
+  const [purchaseMode, setPurchaseMode] = useState('single') // 'single' | 'bundle'
+  const [bundlePicks, setBundlePicks] = useState(['', '', '']) // product ids chosen for bundle
+  const [bundleProducts, setBundleProducts] = useState([]) // referenced products for pick-your-own
   const { symbol, currency, country } = useCurrency()
   const { add, cart } = useCart()
   const wish = useWishlist()
@@ -114,9 +127,33 @@ export default function ProductPage({ params }) {
   }, [bundle])
   const bundleSavings = bundle ? Math.max(0, +(bundleIndividualTotal - Number(bundle.price || 0)).toFixed(2)) : 0
 
+  const bundleConfig = product?.bundle_config
+  const bundleQty = bundleConfig?.qty ?? 3
+  const bundlePrice = bundleConfig?.price ?? 0
+  const bundlePicksFilled = bundlePicks.slice(0, bundleQty).filter(Boolean).length === bundleQty
+
+  // Fetch the products referenced in bundle_config.product_ids
+  useEffect(() => {
+    const ids = bundleConfig?.product_ids
+    if (!ids?.length || !products) { setBundleProducts([]); return }
+    setBundleProducts(products.filter(p => ids.includes(p.id)))
+  }, [bundleConfig, products])
+
+  function setBundlePick(i, val) {
+    setBundlePicks(prev => { const next = [...prev]; next[i] = val; return next })
+  }
+
   function addToCart() {
     if (bundle) {
       for (let i = 0; i < qty; i++) add(bundle.id, null)
+      setAdded(true); openCart(); return
+    }
+    if (purchaseMode === 'bundle' && bundleConfig) {
+      // Add each picked product as a separate cart line at bundle-per-unit price.
+      const perUnit = +(bundlePrice / bundleQty).toFixed(2)
+      bundlePicks.slice(0, bundleQty).forEach(pid => {
+        add(pid, null, { bundle_unit_price: perUnit, bundleGroupId: product.id })
+      })
       setAdded(true); openCart(); return
     }
     for (let i = 0; i < qty; i++) add(product.id, chosen?.printify_variant_id ?? null)
@@ -142,7 +179,7 @@ export default function ProductPage({ params }) {
 
   const sharedStyles = `
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,400&display=swap');
-    .pdp-grid { display:grid; grid-template-columns:1.1fr 1fr; gap:56px; max-width:1180px; margin:0 auto; padding:44px 48px 80px; }
+    .pdp-grid { display:grid; grid-template-columns:1.1fr 1fr; gap:56px; padding:44px 48px 80px; }
     .pdp-main-img { width:100%; aspect-ratio:1/1; border-radius:6px; background-color:#fff; background-size:cover; background-position:center; background-repeat:no-repeat; box-shadow:0 8px 30px rgba(0,0,0,0.08); }
     .pdp-thumbs { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
     .pdp-thumb { width:66px; height:66px; border-radius:5px; background-color:#fff; background-size:cover; background-position:center; background-repeat:no-repeat; cursor:pointer; border:2px solid transparent; }
@@ -157,6 +194,11 @@ export default function ProductPage({ params }) {
     .shop-fab-cart.show { opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
     .shop-fab-cart:hover { transform:translateY(0) scale(1.07); }
     @media (max-width:560px){ .shop-fab-cart { bottom:18px; right:18px; width:54px; height:54px; } }
+    .printify-desc p { margin:0 0 14px; }
+    .printify-desc ul,.printify-desc ol { margin:0 0 14px; padding-left:22px; }
+    .printify-desc li { margin-bottom:6px; }
+    .printify-desc strong { font-weight:700; }
+    .printify-desc em { font-style:italic; }
   `
 
   // ── Bundle detail page ──────────────────────────────────────────────────────
@@ -313,25 +355,62 @@ export default function ProductPage({ params }) {
                 <BnplMessage amount={unit} currency={currency} country={country || 'US'} fontFamily={BODY} />
               </div>
 
-              {variants.length > 1 && (
-                <div style={{ marginBottom: 22 }}>
-                  <div style={{ fontFamily: BODY, fontSize: 13, color: '#5a3d44', marginBottom: 7 }}>Option</div>
-                  <select value={String(chosen?.printify_variant_id ?? '')} onChange={e => setVariantSel(e.target.value)}
-                    style={{ width: '100%', maxWidth: 320, padding: '11px 12px', border: '1px solid #cbb8bd', borderRadius: 3, fontFamily: BODY, fontSize: 15, background: '#fff', cursor: 'pointer' }}>
-                    {variants.map(v => <option key={v.printify_variant_id} value={String(v.printify_variant_id)}>{v.name || 'Option'}</option>)}
-                  </select>
+              {/* Purchase mode tabs — only shown for collection products */}
+              {bundleConfig && (
+                <div style={{ display: 'flex', gap: 0, marginBottom: 24, border: '1px solid #cbb8bd', borderRadius: 6, overflow: 'hidden', maxWidth: 360 }}>
+                  {[['single', 'Buy one'], ['bundle', `Bundle of ${bundleQty} — ${symbol}${bundlePrice}`]].map(([mode, label]) => (
+                    <button key={mode} onClick={() => setPurchaseMode(mode)}
+                      style={{ flex: 1, padding: '10px 12px', border: 'none', fontFamily: BODY, fontSize: 13.5, cursor: 'pointer', background: purchaseMode === mode ? BLACK : '#fff', color: purchaseMode === mode ? '#fff' : '#5a3d44', transition: 'background 0.15s' }}>
+                      {label}
+                    </button>
+                  ))}
                 </div>
               )}
 
-              <div style={{ fontFamily: BODY, fontSize: 13.5, color: '#5a3d44', marginBottom: 8 }}>Quantity</div>
-              <div className="pdp-qty" style={{ marginBottom: 26 }}>
-                <button onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
-                <span>{qty}</span>
-                <button onClick={() => setQty(q => Math.min(20, q + 1))}>+</button>
-              </div>
+              {/* Bundle pick-your-own selectors */}
+              {bundleConfig && purchaseMode === 'bundle' ? (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontFamily: BODY, fontSize: 13, color: '#5a3d44', marginBottom: 10 }}>Choose any {bundleQty}:</div>
+                  {Array.from({ length: bundleQty }).map((_, i) => (
+                    <div key={i} style={{ marginBottom: 10 }}>
+                      <select value={bundlePicks[i] || ''}
+                        onChange={e => setBundlePick(i, e.target.value)}
+                        style={{ width: '100%', padding: '11px 12px', border: `1px solid ${bundlePicks[i] ? '#cbb8bd' : '#e0c0c8'}`, borderRadius: 3, fontFamily: BODY, fontSize: 14.5, background: '#fff', cursor: 'pointer', color: bundlePicks[i] ? BLACK : '#9a7a84' }}>
+                        <option value="">— Pick {i + 1} —</option>
+                        {bundleProducts.map(p => <option key={p.id} value={p.id}>{p.name}{p.variant ? ` — ${p.variant}` : ''}</option>)}
+                      </select>
+                    </div>
+                  ))}
+                  <div style={{ fontFamily: BODY, fontSize: 13, color: '#8a6b72', marginTop: 4 }}>
+                    {symbol}{bundlePrice} total · {symbol}{(bundlePrice / bundleQty).toFixed(2)} each
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {variants.length > 1 && (
+                    <div style={{ marginBottom: 22 }}>
+                      <div style={{ fontFamily: BODY, fontSize: 13, color: '#5a3d44', marginBottom: 7 }}>Option</div>
+                      <select value={String(chosen?.printify_variant_id ?? '')} onChange={e => setVariantSel(e.target.value)}
+                        style={{ width: '100%', maxWidth: 320, padding: '11px 12px', border: '1px solid #cbb8bd', borderRadius: 3, fontFamily: BODY, fontSize: 15, background: '#fff', cursor: 'pointer' }}>
+                        {variants.map(v => <option key={v.printify_variant_id} value={String(v.printify_variant_id)}>{v.name || 'Option'}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <div style={{ fontFamily: BODY, fontSize: 13.5, color: '#5a3d44', marginBottom: 8 }}>Quantity</div>
+                  <div className="pdp-qty" style={{ marginBottom: 26 }}>
+                    <button onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
+                    <span>{qty}</span>
+                    <button onClick={() => setQty(q => Math.min(20, q + 1))}>+</button>
+                  </div>
+                </>
+              )}
 
               <div style={{ display: 'flex', gap: 14, alignItems: 'stretch', maxWidth: 460 }}>
-                <button className="pdp-add" onClick={addToCart}>Add to Cart</button>
+                <button className="pdp-add" onClick={addToCart}
+                  disabled={bundleConfig && purchaseMode === 'bundle' && !bundlePicksFilled}
+                  style={{ opacity: bundleConfig && purchaseMode === 'bundle' && !bundlePicksFilled ? 0.45 : 1 }}>
+                  {bundleConfig && purchaseMode === 'bundle' ? `Add Bundle — ${symbol}${bundlePrice}` : 'Add to Cart'}
+                </button>
                 <button onClick={() => wish.toggle(product.id)} aria-label={wish.has(product.id) ? 'Remove from wishlist' : 'Add to wishlist'} title="Wishlist"
                   style={{ width: 52, flexShrink: 0, border: '1px solid #cbb8bd', borderRadius: '50%', background: '#fff', cursor: 'pointer', fontSize: 20, color: wish.has(product.id) ? '#c4364a' : '#8a6b72', lineHeight: 1 }}>
                   {wish.has(product.id) ? '♥' : '♡'}

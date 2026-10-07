@@ -81,9 +81,14 @@ export async function POST(request) {
     const p = byId.get(it.id)
     if (!p) continue
     if (p.external_url) continue
-    const amount = Math.round(priceForCurrency(p, currency) * 100)
+    // bundle_unit_price overrides the product price (pick-your-own bundles).
+    const basePrice = it.bundle_unit_price != null ? Number(it.bundle_unit_price) : priceForCurrency(p, currency)
+    const amount = Math.round(basePrice * 100)
     if (!amount) continue
     const variantId = it.printify_variant_id || p.printify_variant_id || p.variants?.[0]?.printify_variant_id || null
+    // For collection products, each variant may point to a different Printify product.
+    const variantObj = p.variants?.find(v => String(v.printify_variant_id) === String(variantId))
+    const printifyProductId = it.printify_product_id || variantObj?.printify_product_id || p.printify_product_id || ''
     line_items.push({
       quantity: qty,
       price_data: {
@@ -91,12 +96,12 @@ export async function POST(request) {
         unit_amount: amount,
         product_data: {
           name: p.name,
-          description: p.variant || undefined,
+          description: (variantObj?.name || p.variant) || undefined,
           images: p.images?.length ? [p.images[0]] : undefined,
           metadata: {
             shop_product_id: p.id,
             fulfillment: p.fulfillment || 'manual',
-            printify_product_id: p.printify_product_id || '',
+            printify_product_id: printifyProductId,
             printify_variant_id: variantId ? String(variantId) : '',
           },
         },

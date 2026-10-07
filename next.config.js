@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  turbopack: {
+    root: __dirname,
+  },
   images: {
     // Allow Next's image optimizer to resize/serve webp for our image hosts, so
     // large originals (some Wix covers are 7+ MB) are downscaled to display size.

@@ -18,7 +18,7 @@ const label = { fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em'
 function money(n) { return n == null || n === '' ? '—' : `$${Number(n).toFixed(2)}` }
 
 // ── Editor modal ──────────────────────────────────────────────
-function ProductModal({ token, item, supabase, onClose, onSaved, categories = [] }) {
+function ProductModal({ token, item, supabase, onClose, onSaved, categories = [], allProducts = [] }) {
   const [f, setF] = useState({
     name: item?.name || '', variant: item?.variant || '', description: item?.description || '',
     category: item?.category || '', price: item?.price ?? '', price_eur: item?.price_eur ?? '', price_gbp: item?.price_gbp ?? '',
@@ -29,6 +29,8 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
     printify_product_id: item?.printify_product_id || '', printify_shop_id: item?.printify_shop_id || '',
     active: item?.active ?? true, featured: item?.featured ?? false,
     featured_blurb: item?.featured_blurb || '',
+    bundle_config: item?.bundle_config ?? null,
+    variants: Array.isArray(item?.variants) ? item.variants : [],
   })
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -62,7 +64,7 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
   async function save() {
     if (!f.name.trim()) { setErr('Name is required'); return }
     setSaving(true); setErr('')
-    const payload = { ...f, price: f.price === '' ? 0 : f.price }
+    const payload = { ...f, price: f.price === '' ? 0 : f.price, bundle_config: f.bundle_config || null }
     if (item?.id) payload.id = item.id
     const res = await fetch('/api/admin/shop-products', {
       method: item?.id ? 'PATCH' : 'POST',
@@ -188,12 +190,156 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
           </div>
         )}
 
+        {/* Collection / pick-your-own bundle config */}
+        <div style={{ marginTop: 18, padding: 14, background: '#f9f6fa', border: `1px solid ${BORDER}`, borderRadius: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontFamily: ff, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pick-your-own bundle</div>
+            <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 13, color: '#555', cursor: 'pointer' }}>
+              <input type="checkbox"
+                checked={!!f.bundle_config}
+                onChange={e => set('bundle_config', e.target.checked ? { qty: 3, price: 45, product_ids: [] } : null)}
+                style={{ accentColor: BLACK }} />
+              Enable
+            </label>
+          </div>
+          {f.bundle_config && (<>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <div style={label}>Bundle qty (how many to pick)</div>
+                <input type="number" min="2" value={f.bundle_config.qty ?? 3}
+                  onChange={e => set('bundle_config', { ...f.bundle_config, qty: Number(e.target.value) })}
+                  style={input} />
+              </div>
+              <div>
+                <div style={label}>Bundle price (USD)</div>
+                <input type="number" step="0.01" value={f.bundle_config.price ?? ''}
+                  onChange={e => set('bundle_config', { ...f.bundle_config, price: Number(e.target.value) })}
+                  placeholder="45" style={input} />
+              </div>
+            </div>
+            {/* Product picker — select existing shop products to include */}
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#888', marginBottom: 6 }}>Products included in bundle</div>
+              {(f.bundle_config.product_ids || []).map(pid => {
+                const p = allProducts.find(x => x.id === pid)
+                return (
+                  <div key={pid} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, padding: '7px 10px', background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 8 }}>
+                    {p?.images?.[0] && <img src={p.images[0]} alt="" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />}
+                    <div style={{ flex: 1, fontSize: 13, fontFamily: ff }}>{p ? p.name : <span style={{ color: '#bbb' }}>Unknown product ({pid.slice(0,8)}…)</span>}</div>
+                    <button onClick={() => set('bundle_config', { ...f.bundle_config, product_ids: (f.bundle_config.product_ids || []).filter(id => id !== pid) })}
+                      style={{ background: 'none', border: 'none', color: '#c0a0a8', fontSize: 18, cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}>×</button>
+                  </div>
+                )
+              })}
+              <BundleProductSearch
+                allProducts={allProducts}
+                selectedIds={f.bundle_config.product_ids || []}
+                currentId={item?.id}
+                onAdd={pid => set('bundle_config', { ...f.bundle_config, product_ids: [...(f.bundle_config.product_ids || []), pid] })}
+              />
+            </div>
+            <div style={{ fontSize: 11.5, color: '#999', marginTop: 8 }}>Customers pick any {f.bundle_config.qty} of the above for ${f.bundle_config.price}. They can also buy each product individually at its own price.</div>
+          </>)}
+        </div>
+
+        {/* Per-variant editor — only for Printify products (not bundle products) */}
+        {f.fulfillment === 'printify' && (
+          <div style={{ marginTop: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div style={{ fontSize: 12, fontFamily: ff, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Variants ({f.variants.length})</div>
+              <button onClick={() => set('variants', [...f.variants, { name: '', printify_product_id: '', printify_variant_id: '', price: '' }])}
+                style={{ fontSize: 12, background: 'none', border: `1px solid ${BORDER}`, borderRadius: 20, padding: '4px 12px', cursor: 'pointer', color: '#555' }}>+ Add variant</button>
+            </div>
+            {f.variants.length === 0 && <div style={{ fontSize: 12.5, color: '#bbb', fontFamily: ff }}>No variants — add one above, or import from Printify to auto-populate.</div>}
+            {f.variants.map((v, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr auto', gap: 6, alignItems: 'center', marginBottom: 6, padding: '8px 10px', background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 8 }}>
+                <input value={v.name || ''} onChange={e => { const vs = [...f.variants]; vs[i] = { ...vs[i], name: e.target.value }; set('variants', vs) }} placeholder="Poster name" style={{ ...input, padding: '7px 10px', fontSize: 13 }} />
+                <input value={v.printify_product_id || ''} onChange={e => { const vs = [...f.variants]; vs[i] = { ...vs[i], printify_product_id: e.target.value }; set('variants', vs) }} placeholder="Printify product ID" style={{ ...input, padding: '7px 10px', fontSize: 12 }} />
+                <input value={v.printify_variant_id || ''} onChange={e => { const vs = [...f.variants]; vs[i] = { ...vs[i], printify_variant_id: e.target.value }; set('variants', vs) }} placeholder="Variant ID" style={{ ...input, padding: '7px 10px', fontSize: 12 }} />
+                <input type="number" step="0.01" value={v.price || ''} onChange={e => { const vs = [...f.variants]; vs[i] = { ...vs[i], price: e.target.value }; set('variants', vs) }} placeholder="$" style={{ ...input, padding: '7px 10px', fontSize: 13 }} />
+                <button onClick={() => set('variants', f.variants.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', color: '#c0a0a8', fontSize: 18, cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}>×</button>
+              </div>
+            ))}
+            {f.variants.length > 0 && <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>Name · Printify product ID · Printify variant ID · Price (USD)</div>}
+          </div>
+        )}
+
         {err && <div style={{ color: DP, fontSize: 13, marginTop: 12 }}>{err}</div>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
           <button onClick={onClose} style={{ padding: '10px 18px', border: `1px solid ${BORDER}`, borderRadius: 24, background: '#fff', color: '#555', fontFamily: ff, fontSize: 14, cursor: 'pointer' }}>Cancel</button>
           <button onClick={save} disabled={saving} style={{ padding: '10px 22px', border: 'none', borderRadius: 24, background: BLACK, color: '#fff', fontFamily: ff, fontSize: 14, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? 'Saving…' : 'Save product'}</button>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Bundle product search/picker ──────────────────────────────
+function BundleProductSearch({ allProducts, selectedIds, currentId, onAdd }) {
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState('')
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const available = allProducts.filter(p =>
+    p.id !== currentId && !selectedIds.includes(p.id)
+  )
+  const filtered = q.trim()
+    ? available.filter(p => p.name.toLowerCase().includes(q.toLowerCase()))
+    : available
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      {/* Trigger */}
+      <button
+        type="button"
+        onClick={() => { setOpen(o => !o); setQ('') }}
+        style={{ ...input, padding: '8px 12px', fontSize: 13, background: '#fff', cursor: 'pointer', textAlign: 'left', color: '#888', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>+ Add a product…</span>
+        <span style={{ fontSize: 10, color: '#bbb' }}>▾</span>
+      </button>
+
+      {open && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, zIndex: 20, marginTop: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', overflow: 'hidden' }}>
+          {/* Search field inside dropdown */}
+          <div style={{ padding: '8px 10px', borderBottom: `1px solid ${BORDER}` }}>
+            <input
+              autoFocus
+              value={q} onChange={e => setQ(e.target.value)}
+              placeholder="Search by name…"
+              style={{ width: '100%', padding: '7px 10px', border: `1px solid ${BORDER}`, borderRadius: 6, fontFamily: ff, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+          {/* Scrollable product list */}
+          <div style={{ maxHeight: 280, overflowY: 'auto' }}>
+            {filtered.length === 0 && (
+              <div style={{ padding: '14px 12px', fontSize: 13, color: '#bbb', fontFamily: ff }}>No products found</div>
+            )}
+            {filtered.map(p => (
+              <button key={p.id} type="button"
+                onClick={() => { onAdd(p.id); setOpen(false); setQ('') }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', background: 'none', border: 'none', borderBottom: `1px solid ${BORDER}`, cursor: 'pointer', textAlign: 'left' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#faf5f7'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                <div style={{ width: 36, height: 36, borderRadius: 6, flexShrink: 0, background: p.tint || '#f0e8eb', overflow: 'hidden' }}>
+                  {p.images?.[0] && <img src={p.images[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontFamily: ff, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                  {p.variant && <div style={{ fontSize: 11, color: '#aaa', marginTop: 1 }}>{p.variant}</div>}
+                </div>
+                <div style={{ marginLeft: 'auto', fontSize: 12, color: '#aaa', flexShrink: 0 }}>${Number(p.price || 0).toFixed(2)}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -460,7 +606,7 @@ export default function ShopProductsSection({ supabase }) {
         )
       })()}
 
-      {editing !== undefined && <ProductModal token={token} item={editing} supabase={supabase} categories={catNames} onClose={() => setEditing(undefined)} onSaved={() => { setEditing(undefined); load() }} />}
+      {editing !== undefined && <ProductModal token={token} item={editing} supabase={supabase} categories={catNames} allProducts={products} onClose={() => setEditing(undefined)} onSaved={() => { setEditing(undefined); load() }} />}
       {importing && <PrintifyImportModal token={token} onClose={() => setImporting(false)} onDone={load} />}
     </div>
   )

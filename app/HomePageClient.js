@@ -868,7 +868,7 @@ export default function HomePageClient({ initial = {} }) {
         .printpop-close { position: absolute; top: 8px; right: 12px; background: none; border: none; font-size: 26px; line-height: 1; color: #fff; cursor: pointer; z-index: 2; opacity: 0.8; }
         .printpop-close:hover { opacity: 1; }
         .printpop-img { background: linear-gradient(160deg,#f7d7e0,#f3c3d1); display: flex; align-items: center; justify-content: center; }
-        .printpop-img img { width: 100%; height: 100%; object-fit: contain; padding: 26px; display: block; }
+        .printpop-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .printpop-body { padding: 34px 32px; display: flex; flex-direction: column; justify-content: center; }
         .printpop-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink); margin-bottom: 14px; }
         .printpop-headline { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(24px,2.6vw,30px); font-weight: 700; color: #fff; line-height: 1.1; margin: 0 0 8px; }
