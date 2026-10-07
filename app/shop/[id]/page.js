@@ -77,6 +77,7 @@ export default function ProductPage({ params }) {
   const [purchaseMode, setPurchaseMode] = useState('single') // 'single' | 'bundle'
   const [bundlePicks, setBundlePicks] = useState(['', '', '']) // product ids chosen for bundle
   const [bundleProducts, setBundleProducts] = useState([]) // referenced products for pick-your-own
+  const [singlePick, setSinglePick] = useState('') // product id chosen when buying one from a bundle product
   const { symbol, currency, country } = useCurrency()
   const { add, cart } = useCart()
   const wish = useWishlist()
@@ -112,7 +113,8 @@ export default function ProductPage({ params }) {
   const variants = variantsOf(product)
   const chosen = variants.length ? (variants.find(v => String(v.printify_variant_id) === String(variantSel)) || variants[0]) : null
   const unit = chosen?.price != null ? Number(chosen.price) : Number(product?.price || 0)
-  const images = (bundle?.images ?? product?.images ?? [])
+  const pickedProduct = singlePick ? bundleProducts.find(p => p.id === singlePick) : null
+  const images = pickedProduct?.images?.length ? pickedProduct.images : (bundle?.images ?? product?.images ?? [])
   const notFound = loaded && !bundle && product === null
 
   // Bundle savings: sum individual item prices vs bundle price.
@@ -132,12 +134,14 @@ export default function ProductPage({ params }) {
   const bundlePrice = bundleConfig?.price ?? 0
   const bundlePicksFilled = bundlePicks.slice(0, bundleQty).filter(Boolean).length === bundleQty
 
-  // Fetch the products referenced in bundle_config.product_ids
+  // Fetch the products referenced in bundle_config.product_ids (may be inactive on storefront)
   useEffect(() => {
     const ids = bundleConfig?.product_ids
-    if (!ids?.length || !products) { setBundleProducts([]); return }
-    setBundleProducts(products.filter(p => ids.includes(p.id)))
-  }, [bundleConfig, products])
+    if (!ids?.length) { setBundleProducts([]); return }
+    fetch('/api/shop/products/by-ids', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) })
+      .then(r => r.json()).then(d => setBundleProducts(Array.isArray(d.products) ? d.products : []))
+      .catch(() => setBundleProducts([]))
+  }, [bundleConfig])
 
   function setBundlePick(i, val) {
     setBundlePicks(prev => { const next = [...prev]; next[i] = val; return next })
@@ -154,6 +158,11 @@ export default function ProductPage({ params }) {
       bundlePicks.slice(0, bundleQty).forEach(pid => {
         add(pid, null, { bundle_unit_price: perUnit, bundleGroupId: product.id })
       })
+      setAdded(true); openCart(); return
+    }
+    // "Buy one" from a bundle product — add the picked item individually
+    if (bundleConfig && singlePick) {
+      for (let i = 0; i < qty; i++) add(singlePick, null)
       setAdded(true); openCart(); return
     }
     for (let i = 0; i < qty; i++) add(product.id, chosen?.printify_variant_id ?? null)
@@ -411,7 +420,31 @@ export default function ProductPage({ params }) {
                 </div>
               ) : (
                 <>
-                  {variants.length > 1 && (
+                  {/* If this is a bundle product in "Buy one" mode, show item picker with image switching */}
+                  {bundleConfig && bundleProducts.length > 0 && (
+                    <div style={{ marginBottom: 22 }}>
+                      <div style={{ fontFamily: BODY, fontSize: 13, color: '#5a3d44', marginBottom: 10 }}>Choose a print:</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8, marginBottom: 12 }}>
+                        {bundleProducts.map(p => {
+                          const img = p.images?.[0]
+                          const selected = singlePick === p.id
+                          return (
+                            <div key={p.id} onClick={() => { setSinglePick(p.id); if (img) setImgIdx(0) }}
+                              style={{ cursor: 'pointer', borderRadius: 6, border: selected ? '2px solid #c4717e' : '2px solid #e8d5d8', overflow: 'hidden', position: 'relative', background: '#fdf5f6' }}>
+                              {img
+                                ? <img src={img} alt={p.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
+                                : <div style={{ width: '100%', aspectRatio: '1', background: '#f0dde0' }} />}
+                              {selected && (
+                                <div style={{ position: 'absolute', top: 3, right: 3, background: '#c4717e', color: '#fff', borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>✓</div>
+                              )}
+                              <div style={{ padding: '4px 5px', fontFamily: BODY, fontSize: 10.5, color: '#5a3d44', lineHeight: 1.3 }}>{p.name}</div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {variants.length > 1 && !bundleConfig && (
                     <div style={{ marginBottom: 22 }}>
                       <div style={{ fontFamily: BODY, fontSize: 13, color: '#5a3d44', marginBottom: 7 }}>Option</div>
                       <select value={String(chosen?.printify_variant_id ?? '')} onChange={e => setVariantSel(e.target.value)}
