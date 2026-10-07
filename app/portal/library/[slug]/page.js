@@ -56,7 +56,7 @@ export default function LibraryDetailPage() {
       <style>{libCss}</style>
       <div className="lib-shell">
         <aside className="sidebar">
-          <div className="sb-logo"><div>The Parlor<small>The Library</small></div>
+          <div className="sb-logo"><div>The Parlor<small>The Archive</small></div>
             <a href="/" title="Parlor home" className="sb-home-btn"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2L2 7v7h4v-4h4v4h4V7L8 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></a>
           </div>
           <a href="/portal" className="sb-item sb-slim sb-border"><svg viewBox="0 0 16 16" fill="none"><path d="M6 3L1 8l5 5M1 8h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>Back to dashboard</a>
@@ -136,7 +136,7 @@ export default function LibraryDetailPage() {
                     ) : (
                       <div className="disc-prompt">
                         <div className="disc-prompt-label">Start the conversation</div>
-                        <div className="disc-prompt-q" style={{ fontSize: 15, color: 'var(--muted)' }}>No one has written about this piece yet. The Reading Room is coming to the portal soon.</div>
+                        <div className="disc-prompt-q" style={{ fontSize: 15, color: 'var(--muted)' }}>No one has written about this piece yet. Discussions are coming soon.</div>
                         <div style={{ height: 16 }} />
                       </div>
                     )}

@@ -40,7 +40,7 @@ const NAV = [
   ]},
   { section: 'Explore', items: [
     { key: 'groups', label: 'Forums', icon: 'forum', href: '/portal/groups' },
-    { key: 'library', label: 'Library', icon: 'library', href: '/portal/library' },
+    { key: 'library', label: 'The Archive', icon: 'library', href: '/portal/library' },
     { key: 'readingroom', label: 'Reading Room', icon: 'library', href: '/portal/reading-room' },
     { key: 'events', label: 'Events', icon: 'events', href: '/portal/events' },
   ]},

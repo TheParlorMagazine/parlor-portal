@@ -10,7 +10,7 @@ async function paidGate(request) {
   if (!user) return { error: Response.json({ error: 'Not signed in' }, { status: 401 }) }
   const db = serviceClient()
   const me = await memberOf(db, user.id)
-  if (!hasPaidAccess(me)) return { error: Response.json({ error: 'The Reading Room is for paid members.' }, { status: 403 }) }
+  if (!hasPaidAccess(me)) return { error: Response.json({ error: 'The Archive is for paid members.' }, { status: 403 }) }
   return { db, user, me }
 }
 

@@ -115,7 +115,7 @@ export default function PortalLibraryPage() {
       <style>{libCss}</style>
       <div className="lib-shell">
         <aside className="sidebar">
-          <div className="sb-logo"><div>The Parlor<small>The Library</small></div>
+          <div className="sb-logo"><div>The Parlor<small>The Archive</small></div>
             <a href="/" title="Parlor home" className="sb-home-btn"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2L2 7v7h4v-4h4v4h4V7L8 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></a>
           </div>
           <a href="/portal" className="sb-item sb-slim"><svg viewBox="0 0 16 16" fill="none"><path d="M6 3L1 8l5 5M1 8h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>Back to dashboard</a>
@@ -142,8 +142,7 @@ export default function PortalLibraryPage() {
 
         <div className="library-content">
           <div className="lib-topbar">
-            <div className="lib-page-eyebrow">The Reading Room</div>
-            <div className="lib-page-title">The Library</div>
+            <div className="lib-page-title">The Archive</div>
           </div>
 
           {activeTheme && (
