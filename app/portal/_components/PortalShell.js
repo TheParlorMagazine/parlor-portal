@@ -138,6 +138,7 @@ export default function PortalShell({ active = 'dashboard', children }) {
         .psb-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
         .psb-item.active { background:rgba(241,183,192,0.15); color:#fff; font-weight:500; border-left:2px solid var(--pink); }
         .psb-item svg { width:13px; height:13px; flex-shrink:0; opacity:0.55; }
+        [data-nav="library"] svg { width:11px; height:16px; }
         .psb-item.active svg, .psb-item:hover svg { opacity:1; }
         .psb-item.soon { cursor:default; color:rgba(255,255,255,0.3); }
         .psb-item.soon:hover { background:transparent; color:rgba(255,255,255,0.3); }
@@ -189,7 +190,7 @@ export default function PortalShell({ active = 'dashboard', children }) {
                     </>
                     if (it.soon) return <div key={it.key} className={cls}>{inner}</div>
                     if (it.action) return <button key={it.key} type="button" className={cls} style={{ width: '100%', background: 'none', textAlign: 'left', fontFamily: 'inherit', fontSize: '13px', border: 'none', borderLeft: '2px solid transparent', cursor: 'pointer' }} onClick={() => it.action === 'notif' ? setNotifOpen(true) : setInboxOpen(true)}>{inner}</button>
-                    return <a key={it.key} href={it.href} className={cls}>{inner}</a>
+                    return <a key={it.key} href={it.href} className={cls} data-nav={it.key}>{inner}</a>
                   })}
                 </div>
               ))}
