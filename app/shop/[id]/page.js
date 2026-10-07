@@ -115,13 +115,6 @@ export default function ProductPage({ params }) {
   const unit = chosen?.price != null ? Number(chosen.price) : Number(product?.price || 0)
   const pickedProduct = singlePick ? bundleProducts.find(p => p.id === singlePick) : null
   const images = pickedProduct?.images?.length ? pickedProduct.images : (bundle?.images ?? product?.images ?? [])
-  // Price display: bundle mode → bundle price; single/buy-one mode → picked item's price (or first item's price)
-  const singleUnitPrice = bundleConfig
-    ? (pickedProduct?.price != null ? Number(pickedProduct.price) : (bundleProducts[0]?.price != null ? Number(bundleProducts[0].price) : unit))
-    : unit
-  const displayPrice = bundleConfig
-    ? (purchaseMode === 'bundle' ? bundlePrice : singleUnitPrice)
-    : unit
   const notFound = loaded && !bundle && product === null
 
   // Bundle savings: sum individual item prices vs bundle price.
@@ -139,6 +132,13 @@ export default function ProductPage({ params }) {
   const bundleConfig = product?.bundle_config
   const bundleQty = bundleConfig?.qty ?? 3
   const bundlePrice = bundleConfig?.price ?? 0
+  // Price display: bundle mode → bundle price; single/buy-one mode → picked item's price (or first item's price)
+  const singleUnitPrice = bundleConfig
+    ? (pickedProduct?.price != null ? Number(pickedProduct.price) : (bundleProducts[0]?.price != null ? Number(bundleProducts[0].price) : unit))
+    : unit
+  const displayPrice = bundleConfig
+    ? (purchaseMode === 'bundle' ? bundlePrice : singleUnitPrice)
+    : unit
   const bundlePicksFilled = bundlePicks.slice(0, bundleQty).filter(Boolean).length === bundleQty
 
   // Fetch the products referenced in bundle_config.product_ids (may be inactive on storefront)
