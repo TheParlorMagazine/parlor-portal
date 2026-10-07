@@ -100,7 +100,15 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
 
         {/* Pricing */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-          <div><div style={label}>Price (USD)</div><input type="number" step="0.01" value={f.price} onChange={e => set('price', e.target.value)} placeholder="35" style={input} /></div>
+          <div>
+            <div style={{ ...label, display: 'flex', alignItems: 'center', gap: 5 }}>
+              Price (USD)
+              {f.bundle_config && (
+                <span title="This is the single unit price — shown when a customer chooses 'Buy one' from a pick-your-own bundle" style={{ cursor: 'help', color: '#bbb', fontSize: 11, border: '1px solid #ddd', borderRadius: '50%', width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontStyle: 'normal' }}>?</span>
+              )}
+            </div>
+            <input type="number" step="0.01" value={f.price} onChange={e => set('price', e.target.value)} placeholder="35" style={input} />
+          </div>
           <div><div style={label}>EUR <span style={{ textTransform: 'none', letterSpacing: 0, color: '#bbb' }}>(opt)</span></div><input type="number" step="0.01" value={f.price_eur} onChange={e => set('price_eur', e.target.value)} placeholder="35" style={input} /></div>
           <div><div style={label}>GBP <span style={{ textTransform: 'none', letterSpacing: 0, color: '#bbb' }}>(opt)</span></div><input type="number" step="0.01" value={f.price_gbp} onChange={e => set('price_gbp', e.target.value)} placeholder="35" style={input} /></div>
         </div>

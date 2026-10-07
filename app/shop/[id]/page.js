@@ -115,6 +115,13 @@ export default function ProductPage({ params }) {
   const unit = chosen?.price != null ? Number(chosen.price) : Number(product?.price || 0)
   const pickedProduct = singlePick ? bundleProducts.find(p => p.id === singlePick) : null
   const images = pickedProduct?.images?.length ? pickedProduct.images : (bundle?.images ?? product?.images ?? [])
+  // Price display: bundle mode → bundle price; single/buy-one mode → picked item's price (or first item's price)
+  const singleUnitPrice = bundleConfig
+    ? (pickedProduct?.price != null ? Number(pickedProduct.price) : (bundleProducts[0]?.price != null ? Number(bundleProducts[0].price) : unit))
+    : unit
+  const displayPrice = bundleConfig
+    ? (purchaseMode === 'bundle' ? bundlePrice : singleUnitPrice)
+    : unit
   const notFound = loaded && !bundle && product === null
 
   // Bundle savings: sum individual item prices vs bundle price.
@@ -359,9 +366,9 @@ export default function ProductPage({ params }) {
               <h1 style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 600, color: BLACK, margin: '4px 0 22px', lineHeight: 1.1 }}>{product.name}</h1>
               {product.variant && <div style={{ fontFamily: BODY, fontSize: 16, color: '#7a5560', marginTop: -14, marginBottom: 20 }}>{product.variant}</div>}
 
-              <div style={{ fontFamily: BODY, fontSize: 26, color: BLACK, marginBottom: 8 }}>{fmtPrice(unit, symbol)}</div>
+              <div style={{ fontFamily: BODY, fontSize: 26, color: BLACK, marginBottom: 8 }}>{fmtPrice(displayPrice, symbol)}</div>
               <div style={{ marginBottom: 28 }}>
-                <BnplMessage amount={unit} currency={currency} country={country || 'US'} fontFamily={BODY} />
+                <BnplMessage amount={displayPrice} currency={currency} country={country || 'US'} fontFamily={BODY} />
               </div>
 
               {/* Purchase mode tabs — only shown for collection products */}
