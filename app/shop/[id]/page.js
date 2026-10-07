@@ -370,18 +370,42 @@ export default function ProductPage({ params }) {
               {/* Bundle pick-your-own selectors */}
               {bundleConfig && purchaseMode === 'bundle' ? (
                 <div style={{ marginBottom: 24 }}>
-                  <div style={{ fontFamily: BODY, fontSize: 13, color: '#5a3d44', marginBottom: 10 }}>Choose any {bundleQty}:</div>
-                  {Array.from({ length: bundleQty }).map((_, i) => (
-                    <div key={i} style={{ marginBottom: 10 }}>
-                      <select value={bundlePicks[i] || ''}
-                        onChange={e => setBundlePick(i, e.target.value)}
-                        style={{ width: '100%', padding: '11px 12px', border: `1px solid ${bundlePicks[i] ? '#cbb8bd' : '#e0c0c8'}`, borderRadius: 3, fontFamily: BODY, fontSize: 14.5, background: '#fff', cursor: 'pointer', color: bundlePicks[i] ? BLACK : '#9a7a84' }}>
-                        <option value="">— Pick {i + 1} —</option>
-                        {bundleProducts.map(p => <option key={p.id} value={p.id}>{p.name}{p.variant ? ` — ${p.variant}` : ''}</option>)}
-                      </select>
-                    </div>
-                  ))}
-                  <div style={{ fontFamily: BODY, fontSize: 13, color: '#8a6b72', marginTop: 4 }}>
+                  <div style={{ fontFamily: BODY, fontSize: 13, color: '#5a3d44', marginBottom: 12 }}>
+                    Choose any {bundleQty} — <span style={{ color: '#8a6b72' }}>{bundlePicks.filter(Boolean).length}/{bundleQty} selected</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 10, marginBottom: 14 }}>
+                    {bundleProducts.map(p => {
+                      const img = p.images?.[0]
+                      const pickCount = bundlePicks.filter(id => id === p.id).length
+                      const isSelected = pickCount > 0
+                      const nextSlot = bundlePicks.findIndex(id => !id)
+                      const canAdd = nextSlot !== -1
+                      function handleClick() {
+                        if (isSelected) {
+                          // deselect last occurrence
+                          const idx = bundlePicks.map((id,i) => id === p.id ? i : -1).filter(i => i !== -1).pop()
+                          setBundlePick(idx, '')
+                        } else if (canAdd) {
+                          setBundlePick(nextSlot, p.id)
+                        }
+                      }
+                      return (
+                        <div key={p.id} onClick={handleClick}
+                          style={{ cursor: canAdd || isSelected ? 'pointer' : 'default', borderRadius: 6, border: isSelected ? '2px solid #c4717e' : '2px solid #e8d5d8', overflow: 'hidden', opacity: !canAdd && !isSelected ? 0.45 : 1, position: 'relative', background: '#fdf5f6' }}>
+                          {img
+                            ? <img src={img} alt={p.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
+                            : <div style={{ width: '100%', aspectRatio: '1', background: '#f0dde0' }} />}
+                          {isSelected && (
+                            <div style={{ position: 'absolute', top: 4, right: 4, background: '#c4717e', color: '#fff', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
+                              {pickCount > 1 ? pickCount : '✓'}
+                            </div>
+                          )}
+                          <div style={{ padding: '5px 6px', fontFamily: BODY, fontSize: 11, color: '#5a3d44', lineHeight: 1.3 }}>{p.name}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div style={{ fontFamily: BODY, fontSize: 13, color: '#8a6b72' }}>
                     {symbol}{bundlePrice} total · {symbol}{(bundlePrice / bundleQty).toFixed(2)} each
                   </div>
                 </div>
