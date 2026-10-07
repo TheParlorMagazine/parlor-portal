@@ -471,7 +471,9 @@ export default function ShopPage() {
                 </>
               )}
               <div style={{ fontFamily: BODY, fontSize: 15, color: '#1a1a1a', marginTop: 6 }}>{fmtPrice(priceOf(p), symbol)}</div>
-              <button className="shop-add" onClick={() => add(p)}>Add to cart</button>
+              <button className="shop-add" onClick={() => p.bundle_config ? (window.location.href = `/shop/${p.id}`) : add(p)}>
+                {p.bundle_config ? 'Pick your items' : 'Add to cart'}
+              </button>
             </div>
           ))}
         </div>
