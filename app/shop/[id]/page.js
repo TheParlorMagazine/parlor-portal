@@ -195,7 +195,9 @@ export default function ProductPage({ params }) {
 
   const sharedStyles = `
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,400&display=swap');
-    .pdp-grid { display:grid; grid-template-columns:1.1fr 1fr; gap:56px; padding:44px 48px 80px; }
+    .pdp-grid { display:grid; grid-template-columns:1.1fr 1fr; gap:0; padding:0 0 80px; }
+    .pdp-right { padding:44px 48px 0; }
+    .pdp-left-text { padding:0 48px; }
     .pdp-main-img { width:100%; aspect-ratio:1/1; border-radius:6px; background-color:#fff; background-size:cover; background-position:center; background-repeat:no-repeat; box-shadow:0 8px 30px rgba(0,0,0,0.08); }
     .pdp-thumbs { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
     .pdp-thumb { width:66px; height:66px; border-radius:5px; background-color:#fff; background-size:cover; background-position:center; background-repeat:no-repeat; cursor:pointer; border:2px solid transparent; }
@@ -205,7 +207,7 @@ export default function ProductPage({ params }) {
     .pdp-qty span { width:48px; text-align:center; font-family:${BODY}; font-size:15px; }
     .pdp-add { flex:1; background:${BLACK}; color:#fff; border:none; border-radius:2px; padding:16px 0; font-family:${BODY}; font-size:15.5px; letter-spacing:.02em; cursor:pointer; }
     .pdp-add:hover { background:#333; }
-    @media (max-width:860px){ .pdp-grid { grid-template-columns:1fr; gap:32px; padding:28px 20px 60px; } }
+    @media (max-width:860px){ .pdp-grid { grid-template-columns:1fr; gap:0; padding:0 0 60px; } .pdp-right { padding:28px 20px 0; } }
     .shop-fab-cart { position:fixed; bottom:26px; right:26px; z-index:100; width:60px; height:60px; border-radius:50%; background:${BLACK}; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 28px rgba(0,0,0,0.32); opacity:0; transform:translateY(14px) scale(0.9); pointer-events:none; transition:opacity 0.25s ease, transform 0.25s cubic-bezier(.34,1.56,.64,1); }
     .shop-fab-cart.show { opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
     .shop-fab-cart:hover { transform:translateY(0) scale(1.07); }
@@ -225,7 +227,7 @@ export default function ProductPage({ params }) {
         <style>{sharedStyles}</style>
         <ShopHeader activeCat={bundle.category} />
 
-        <div style={{ maxWidth: 1180, margin: '0 auto', padding: '26px 48px 0', fontFamily: BODY, fontSize: 14, color: '#8a6b72' }}>
+        <div style={{ padding: '26px 48px 0', fontFamily: BODY, fontSize: 14, color: '#8a6b72' }}>
           <a href="/" style={{ color: '#8a6b72', textDecoration: 'none' }}>Home</a> / <a href="/shop" style={{ color: '#8a6b72', textDecoration: 'none' }}>All Products</a> / <span style={{ color: '#5a3d44' }}>{bundle.title}</span>
         </div>
 
@@ -233,6 +235,7 @@ export default function ProductPage({ params }) {
           {/* Left: gallery + description */}
           <div>
             <div className="pdp-main-img" style={{ backgroundImage: images[imgIdx] ? `url(${images[imgIdx]})` : undefined, backgroundColor: images[imgIdx] ? undefined : '#f0e8ea' }} />
+            <div className="pdp-left-text">
             {images.length > 1 && (
               <div className="pdp-thumbs">
                 {images.map((src, i) => (
@@ -268,10 +271,11 @@ export default function ProductPage({ params }) {
                 </div>
               </div>
             )}
+            </div>{/* end pdp-left-text */}
           </div>
 
           {/* Right: purchase panel */}
-          <div>
+          <div className="pdp-right">
             <div style={{ display: 'inline-block', fontFamily: BODY, fontSize: 11.5, letterSpacing: '0.08em', textTransform: 'uppercase', background: '#f2b8c6', color: '#7a2531', borderRadius: 16, padding: '5px 13px', marginBottom: 14 }}>Bundle</div>
             <h1 style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 600, color: BLACK, margin: '0 0 18px', lineHeight: 1.1 }}>{bundle.title}</h1>
 
@@ -334,7 +338,7 @@ export default function ProductPage({ params }) {
       {product && (
         <>
           {/* Breadcrumb + prev/next */}
-          <div style={{ maxWidth: 1180, margin: '0 auto', padding: '26px 48px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: BODY, fontSize: 14 }}>
+          <div style={{ padding: '26px 48px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: BODY, fontSize: 14 }}>
             <div style={{ color: '#8a6b72' }}>
               <a href="/" style={{ color: '#8a6b72', textDecoration: 'none' }}>Home</a> / <a href="/shop" style={{ color: '#8a6b72', textDecoration: 'none' }}>All Products</a> / <span style={{ color: '#5a3d44' }}>{product.name}</span>
             </div>
@@ -349,20 +353,22 @@ export default function ProductPage({ params }) {
             {/* Left: gallery + description */}
             <div>
               <div className="pdp-main-img" style={{ backgroundImage: images[imgIdx] ? `url(${images[imgIdx]})` : undefined, backgroundColor: images[imgIdx] ? undefined : (product.tint || '#fff') }} />
-              {images.length > 1 && (
-                <div className="pdp-thumbs">
-                  {images.map((src, i) => (
-                    <div key={src} className={`pdp-thumb${i === imgIdx ? ' active' : ''}`} style={{ backgroundImage: `url(${src})` }} onClick={() => setImgIdx(i)} />
-                  ))}
+              <div className="pdp-left-text">
+                {images.length > 1 && (
+                  <div className="pdp-thumbs">
+                    {images.map((src, i) => (
+                      <div key={src} className={`pdp-thumb${i === imgIdx ? ' active' : ''}`} style={{ backgroundImage: `url(${src})` }} onClick={() => setImgIdx(i)} />
+                    ))}
+                  </div>
+                )}
+                <div style={{ marginTop: 34 }}>
+                  <Description text={product.description} />
                 </div>
-              )}
-              <div style={{ marginTop: 34 }}>
-                <Description text={product.description} />
               </div>
             </div>
 
             {/* Right: purchase panel */}
-            <div>
+            <div className="pdp-right">
               <h1 style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 600, color: BLACK, margin: '4px 0 22px', lineHeight: 1.1 }}>{product.name}</h1>
               {product.variant && <div style={{ fontFamily: BODY, fontSize: 16, color: '#7a5560', marginTop: -14, marginBottom: 20 }}>{product.variant}</div>}
 
