@@ -51,18 +51,7 @@ export default function CartDrawer() {
     if (loaded) return
     setLoaded(true)
     fetch('/api/shop/products').then(r => r.json())
-      .then(d => {
-        const active = Array.isArray(d.products) ? d.products : []
-        setProducts(active)
-        // Fetch any cart items not in the active catalogue (e.g. inactive bundle posters)
-        const activeIds = new Set(active.map(p => String(p.id)))
-        const missing = [...new Set(cart.map(i => String(i.id)).filter(id => !activeIds.has(id)))]
-        if (missing.length) {
-          fetch('/api/shop/products/by-ids', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: missing }) })
-            .then(r => r.json()).then(r => { if (Array.isArray(r.products)) setProducts(p => [...p, ...r.products]) })
-            .catch(() => {})
-        }
-      })
+      .then(d => { if (Array.isArray(d.products)) setProducts(d.products) })
       .catch(() => {})
     fetch('/api/shop/bundles').then(r => r.json())
       .then(d => { if (Array.isArray(d.bundles)) setBundles(d.bundles.map(b => ({ ...b, _isBundle: true }))) })
@@ -95,7 +84,7 @@ export default function CartDrawer() {
       if (!product) return null
       const variant = (!product._isBundle && vid != null) ? variantsOf(product).find(v => String(v.printify_variant_id) === String(vid)) : null
       const baseUnit = variant?.price != null ? Number(variant.price) : Number(product.price || 0)
-      const unit = meta?.bundle_unit_price != null ? Number(meta.bundle_unit_price) : baseUnit
+      const unit = meta?.bundle_price != null ? Number(meta.bundle_price) : (meta?.bundle_unit_price != null ? Number(meta.bundle_unit_price) : baseUnit)
       return { key: lineKey(id, vid, meta), product, variant, meta, qty, unit }
     }).filter(Boolean)
   }, [cart, products, bundles])
@@ -154,7 +143,7 @@ export default function CartDrawer() {
     let alive = true; setShipLoading(true)
     fetch('/api/shop/shipping', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null })), country: effCountry }),
+      body: JSON.stringify({ items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null, bundle_picks: g.meta?.bundle_picks ?? null })), country: effCountry }),
     }).then(r => r.json()).then(d => { if (alive) { setShipping(d); setShipLoading(false) } }).catch(() => { if (alive) setShipLoading(false) })
     return () => { alive = false }
   }, [open, cart, effCountry]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -169,7 +158,7 @@ export default function CartDrawer() {
       const res = await fetch('/api/shop/checkout', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null })),
+          items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null, bundle_picks: g.meta?.bundle_picks ?? null, bundle_price: g.meta?.bundle_price ?? null })),
           country: effCountry, userId: user.id, address: addrPayload,
           successUrl: window.location.origin + '/shop/order-confirmed?session_id={CHECKOUT_SESSION_ID}',
           cancelUrl: window.location.href,
@@ -245,15 +234,17 @@ export default function CartDrawer() {
                     {!isManual && <span style={{ fontFamily: BODY, fontSize: 12, color: '#5a9e78' }}>— combined shipping below</span>}
                   </div>
                 )}
-                {items.map(({ key, product: p, variant, qty, unit }) => (
+                {items.map(({ key, product: p, variant, meta, qty, unit }) => (
                   <div key={key} style={{ display: 'flex', gap: 12, padding: '14px 0', borderBottom: '1px solid #f0f0f0' }}>
                     <div style={{ width: 56, height: 56, borderRadius: 8, flexShrink: 0, backgroundColor: p.tint || '#eee', backgroundImage: p.images?.[0] ? `url(${p.images[0]})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span style={{ fontFamily: DISPLAY, fontSize: 15, color: '#1a1a1a' }}>{p.name}</span>
-                        {p._isBundle && <span style={{ fontSize: 10.5, background: '#f2b8c6', color: '#7a2531', borderRadius: 10, padding: '2px 7px', fontFamily: BODY, fontWeight: 600, letterSpacing: '0.04em', flexShrink: 0 }}>Bundle</span>}
+                        {(p._isBundle || meta?.bundle_picks) && <span style={{ fontSize: 10.5, background: '#f2b8c6', color: '#7a2531', borderRadius: 10, padding: '2px 7px', fontFamily: BODY, fontWeight: 600, letterSpacing: '0.04em', flexShrink: 0 }}>Bundle</span>}
                       </div>
-                      {p._isBundle ? (p.description && <div style={{ fontFamily: BODY, fontSize: 12.5, color: '#888' }}>{p.description}</div>) : (variant?.name || p.variant) ? <div style={{ fontFamily: BODY, fontSize: 12.5, color: '#888' }}>{variant?.name || p.variant}</div> : null}
+                      {meta?.bundle_picks_names?.length
+                        ? <div style={{ fontFamily: BODY, fontSize: 12, color: '#888', marginTop: 2 }}>{meta.bundle_picks_names.join(' · ')}</div>
+                        : p._isBundle ? (p.description && <div style={{ fontFamily: BODY, fontSize: 12.5, color: '#888' }}>{p.description}</div>) : (variant?.name || p.variant) ? <div style={{ fontFamily: BODY, fontSize: 12.5, color: '#888' }}>{variant?.name || p.variant}</div> : null}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
                         <button onClick={() => dec(key)} style={qtyBtn}>−</button>
                         <span style={{ fontFamily: BODY, fontSize: 14, minWidth: 18, textAlign: 'center' }}>{qty}</span>

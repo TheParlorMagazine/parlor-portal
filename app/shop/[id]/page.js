@@ -160,11 +160,10 @@ export default function ProductPage({ params }) {
       setAdded(true); openCart(); return
     }
     if (purchaseMode === 'bundle' && bundleConfig) {
-      // Add each picked product as a separate cart line at bundle-per-unit price.
-      const perUnit = +(bundlePrice / bundleQty).toFixed(2)
-      bundlePicks.slice(0, bundleQty).forEach(pid => {
-        add(pid, null, { bundle_unit_price: perUnit, bundleGroupId: product.id })
-      })
+      // Add the bundle product itself (active) as one cart line; picks stored in meta for fulfillment
+      const picks = bundlePicks.slice(0, bundleQty).filter(Boolean)
+      const pickNames = picks.map(pid => bundleProducts.find(p => p.id === pid)?.name || '')
+      add(product.id, null, { bundle_picks: picks, bundle_picks_names: pickNames, bundle_price: bundlePrice })
       setAdded(true); openCart(); return
     }
     // "Buy one" from a bundle product — add the picked item individually

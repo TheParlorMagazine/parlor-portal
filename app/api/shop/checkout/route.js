@@ -81,7 +81,33 @@ export async function POST(request) {
     const p = byId.get(it.id)
     if (!p) continue
     if (p.external_url) continue
-    // bundle_unit_price overrides the product price (pick-your-own bundles).
+
+    // Pick-your-own bundle: product is the active bundle holder; picks are individual poster IDs
+    if (it.bundle_picks?.length) {
+      const amount = Math.round((it.bundle_price != null ? Number(it.bundle_price) : priceForCurrency(p, currency)) * 100)
+      if (!amount) continue
+      line_items.push({
+        quantity: qty,
+        price_data: {
+          currency,
+          unit_amount: amount,
+          product_data: {
+            name: p.name,
+            images: p.images?.length ? [p.images[0]] : undefined,
+            metadata: {
+              shop_product_id: p.id,
+              fulfillment: 'pick_bundle',
+              bundle_pick_ids: it.bundle_picks.join(','),
+              printify_product_id: '',
+              printify_variant_id: '',
+            },
+          },
+        },
+      })
+      continue
+    }
+
+    // bundle_unit_price overrides the product price (legacy pick-your-own bundles).
     const basePrice = it.bundle_unit_price != null ? Number(it.bundle_unit_price) : priceForCurrency(p, currency)
     const amount = Math.round(basePrice * 100)
     if (!amount) continue
