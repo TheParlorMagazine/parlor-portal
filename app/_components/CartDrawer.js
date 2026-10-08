@@ -77,6 +77,14 @@ export default function CartDrawer() {
     } catch {}
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // When products finish loading, purge any cart entries whose product no longer exists.
+  useEffect(() => {
+    if (!loaded || (!products.length && !bundles.length)) return
+    const allIds = new Set([...products.map(p => p.id), ...bundles.map(b => b.id)])
+    const stale = cart.filter(({ id }) => !allIds.has(id))
+    stale.forEach(({ id, vid, meta }) => removeAll(lineKey(id, vid, meta)))
+  }, [loaded, products, bundles]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const cartGroups = useMemo(() => {
     const m = new Map()
     cart.forEach(({ id, vid, meta }) => { const k = lineKey(id, vid, meta); const g = m.get(k) || { id, vid, meta, qty: 0 }; g.qty++; m.set(k, g) })
@@ -190,7 +198,7 @@ export default function CartDrawer() {
       <div onClick={e => e.stopPropagation()} style={{ width: 'min(420px, 92vw)', height: '100%', background: '#fff', display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.2)' }}>
         <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #eee', padding: '0 22px' }}>
           <button onClick={() => setTab('cart')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: DISPLAY, fontWeight: 700, fontSize: 18, color: tab === 'cart' ? '#1a1a1a' : '#aaa', padding: '20px 0', borderBottom: tab === 'cart' ? '2px solid #1a1a1a' : '2px solid transparent', marginBottom: -1 }}>
-            Cart{uniqueLineCount(cart) ? ` (${uniqueLineCount(cart)})` : ''}
+            Cart{cartGroups.length ? ` (${cartGroups.length})` : ''}
           </button>
           <button onClick={() => setTab('wishlist')} title="Wishlist" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 19, color: tab === 'wishlist' ? '#c4364a' : '#bbb', padding: '20px 0', marginLeft: 22, borderBottom: tab === 'wishlist' ? '2px solid #c4364a' : '2px solid transparent', marginBottom: -1 }}>
             {tab === 'wishlist' ? '♥' : '♡'}{wish.count ? ` ${wish.count}` : ''}
