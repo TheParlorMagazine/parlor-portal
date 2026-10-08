@@ -34,7 +34,7 @@ export default function CartDrawer() {
   const [shipping, setShipping] = useState(null)
   const [shipLoading, setShipLoading] = useState(false)
   const [addr, setAddr] = useState({ name: '', line1: '', line2: '', city: '', state: '', zip: '', country: '' })
-  const [addrOpen, setAddrOpen] = useState(false)
+  const [addrOpen, setAddrOpen] = useState(true)
   const effCountry = addr.country || geoCountry || 'US'
   const setA = (k, v) => setAddr(a => ({ ...a, [k]: v }))
 
@@ -143,7 +143,7 @@ export default function CartDrawer() {
     let alive = true; setShipLoading(true)
     fetch('/api/shop/shipping', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null, bundle_picks: g.meta?.bundle_picks ?? null })), country: effCountry }),
+      body: JSON.stringify({ items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null, bundle_picks: g.meta?.bundle_picks ?? null, single_pick: g.meta?.single_pick ?? null })), country: effCountry }),
     }).then(r => r.json()).then(d => { if (alive) { setShipping(d); setShipLoading(false) } }).catch(() => { if (alive) setShipLoading(false) })
     return () => { alive = false }
   }, [open, cart, effCountry]) // eslint-disable-line react-hooks/exhaustive-deps
