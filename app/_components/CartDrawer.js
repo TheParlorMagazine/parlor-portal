@@ -143,10 +143,10 @@ export default function CartDrawer() {
     let alive = true; setShipLoading(true)
     fetch('/api/shop/shipping', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null, bundle_picks: g.meta?.bundle_picks ?? null, single_pick: g.meta?.single_pick ?? null })), country: effCountry }),
+      body: JSON.stringify({ items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null, bundle_picks: g.meta?.bundle_picks ?? null, single_pick: g.meta?.single_pick ?? null })), country: effCountry, state: addr.state || '' }),
     }).then(r => r.json()).then(d => { if (alive) { setShipping(d); setShipLoading(false) } }).catch(() => { if (alive) setShipLoading(false) })
     return () => { alive = false }
-  }, [open, cart, effCountry]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, cart, effCountry, addr.state]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function checkout() {
     if (!cartGroups.length || checkingOut) return

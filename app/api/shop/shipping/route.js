@@ -5,10 +5,10 @@ import { quoteCartShipping } from '../../../../lib/shopShipping'
 // POST { items, country } → live shipping quote for the cart to that country.
 export async function POST(request) {
   let body = {}; try { body = await request.json() } catch {}
-  const { items, country } = body
+  const { items, country, state } = body
   if (!Array.isArray(items) || !items.length) return Response.json({ cents: 0 })
   const db = serviceClient()
-  const quote = await quoteCartShipping(db, items, country)
+  const quote = await quoteCartShipping(db, items, country, state)
   // Billing currency follows the visitor's region (not the ship-to country).
   const currency = currencyForRequest(request)
   return Response.json({
