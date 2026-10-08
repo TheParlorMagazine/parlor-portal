@@ -147,29 +147,60 @@ function ModPanel({ id, auth, supabase, onChanged }) {
           <div style={{ fontSize: 12, color: 'var(--muted)', margin: '12px 0 6px' }}>Description <span style={{ opacity: 0.7 }}>— a short line shown under the forum name</span></div>
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="What this forum is about…" style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13.5, outline: 'none', boxSizing: 'border-box', marginBottom: 8, resize: 'vertical' }} />
           <div style={{ fontSize: 12, color: 'var(--muted)', margin: '12px 0 6px' }}>Banner image <span style={{ opacity: 0.7 }}>— wide image across the top of the forum</span></div>
-          <div
+          <label
             onDragOver={e => { e.preventDefault(); setDrag(true) }}
             onDragLeave={() => setDrag(false)}
             onDrop={e => { e.preventDefault(); setDrag(false); const fl = e.dataTransfer.files?.[0]; if (fl) uploadCover(fl) }}
-            style={{ position: 'relative', border: `1.5px dashed ${drag ? '#7a2531' : 'var(--border)'}`, borderRadius: 8, background: drag ? '#faf3f5' : 'var(--cream)', padding: cover ? 8 : 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-            {cover
-              ? <><img src={cover} alt="" style={{ width: 90, height: 50, borderRadius: 6, objectFit: 'cover', flexShrink: 0, background: '#eee' }} /><div style={{ fontSize: 12, color: 'var(--muted)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cover}</div><button onClick={() => setCover('')} style={{ background: 'none', border: 'none', color: '#7a2531', fontSize: 12.5, cursor: 'pointer', fontFamily: "'thermal-variable', Georgia, serif" }}>Remove</button></>
-              : <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{uploading ? 'Uploading…' : <><strong style={{ color: '#555' }}>Drag &amp; drop</strong> a banner image, or <label style={{ color: '#7a2531', cursor: 'pointer' }}>upload<input type="file" accept="image/*" hidden onChange={e => { const fl = e.target.files?.[0]; if (fl) uploadCover(fl); e.target.value = '' }} /></label></>}</div>}
-          </div>
-          <input value={cover} onChange={e => setCover(e.target.value)} placeholder="…or paste a banner image URL" style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13, outline: 'none', boxSizing: 'border-box', margin: '8px 0' }} />
+            style={{ display: 'block', position: 'relative', borderRadius: 8, overflow: 'hidden', cursor: 'pointer', border: `1.5px dashed ${drag ? '#7a2531' : cover ? 'transparent' : 'var(--border)'}`, background: drag ? '#faf3f5' : cover ? 'transparent' : 'var(--cream)', minHeight: cover ? 0 : 60 }}>
+            <input type="file" accept="image/*" hidden onChange={e => { const fl = e.target.files?.[0]; if (fl) uploadCover(fl); e.target.value = '' }} />
+            {cover ? (
+              <>
+                <img src={cover} alt="" style={{ display: 'block', width: '100%', height: 90, objectFit: 'cover', background: '#eee' }} />
+                <div style={{ position: 'absolute', inset: 0, background: drag ? 'rgba(122,37,49,0.18)' : 'transparent', transition: 'background 0.15s' }} />
+                <div style={{ position: 'absolute', top: 7, right: 7, width: 28, height: 28, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </div>
+                {uploading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', fontFamily: "'thermal-variable', Georgia, serif" }}>Uploading…</div>}
+              </>
+            ) : (
+              <div style={{ padding: 16, fontSize: 12.5, color: 'var(--muted)' }}>
+                {uploading ? 'Uploading…' : <><strong style={{ color: '#555' }}>Drag &amp; drop</strong> a banner image, or <span style={{ color: '#7a2531' }}>click to upload</span></>}
+              </div>
+            )}
+          </label>
+          {cover && <button onClick={() => setCover('')} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12, cursor: 'pointer', fontFamily: "'thermal-variable', Georgia, serif", padding: '4px 0', marginTop: 4 }}>Remove banner</button>}
 
           {/* Square profile image — used as the thumbnail on the forums list */}
           <div style={{ fontSize: 12, color: 'var(--muted)', margin: '12px 0 6px' }}>Profile image <span style={{ opacity: 0.7 }}>— square thumbnail shown on the forums list</span></div>
-          <div
-            onDragOver={e => { e.preventDefault(); setAvatarDrag(true) }}
-            onDragLeave={() => setAvatarDrag(false)}
-            onDrop={e => { e.preventDefault(); setAvatarDrag(false); const fl = e.dataTransfer.files?.[0]; if (fl) uploadAvatar(fl) }}
-            style={{ position: 'relative', border: `1.5px dashed ${avatarDrag ? '#7a2531' : 'var(--border)'}`, borderRadius: 8, background: avatarDrag ? '#faf3f5' : 'var(--cream)', padding: avatar ? 8 : 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-            {avatar
-              ? <><img src={avatar} alt="" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, background: '#eee' }} /><div style={{ fontSize: 12, color: 'var(--muted)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{avatar}</div><button onClick={() => setAvatar('')} style={{ background: 'none', border: 'none', color: '#7a2531', fontSize: 12.5, cursor: 'pointer', fontFamily: "'thermal-variable', Georgia, serif" }}>Remove</button></>
-              : <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{avatarUploading ? 'Uploading…' : <><strong style={{ color: '#555' }}>Drag &amp; drop</strong> a square image, or <label style={{ color: '#7a2531', cursor: 'pointer' }}>upload<input type="file" accept="image/*" hidden onChange={e => { const fl = e.target.files?.[0]; if (fl) uploadAvatar(fl); e.target.value = '' }} /></label></>}</div>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <label
+              onDragOver={e => { e.preventDefault(); setAvatarDrag(true) }}
+              onDragLeave={() => setAvatarDrag(false)}
+              onDrop={e => { e.preventDefault(); setAvatarDrag(false); const fl = e.dataTransfer.files?.[0]; if (fl) uploadAvatar(fl) }}
+              style={{ position: 'relative', display: 'block', width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: `1.5px dashed ${avatarDrag ? '#7a2531' : avatar ? 'transparent' : 'var(--border)'}`, background: avatarDrag ? '#faf3f5' : avatar ? 'transparent' : 'var(--cream)', flexShrink: 0 }}>
+              <input type="file" accept="image/*" hidden onChange={e => { const fl = e.target.files?.[0]; if (fl) uploadAvatar(fl); e.target.value = '' }} />
+              {avatar ? (
+                <>
+                  <img src={avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </div>
+                  </div>
+                  {avatarUploading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted)' }}>…</div>}
+                </>
+              ) : (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {avatarUploading ? <span style={{ fontSize: 11, color: 'var(--muted)' }}>…</span> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>}
+                </div>
+              )}
+            </label>
+            <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+              {avatar
+                ? <><strong style={{ color: '#555', display: 'block', marginBottom: 2 }}>Profile image set</strong>Click or drag onto the circle to replace{avatarUploading ? ' — uploading…' : ''}<br /><button onClick={() => setAvatar('')} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12, cursor: 'pointer', padding: 0, fontFamily: "'thermal-variable', Georgia, serif", marginTop: 4 }}>Remove</button></>
+                : <><strong style={{ color: '#555' }}>Drag &amp; drop</strong> or click the circle to upload</>}
+            </div>
           </div>
-          <input value={avatar} onChange={e => setAvatar(e.target.value)} placeholder="…or paste a profile image URL" style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13, outline: 'none', boxSizing: 'border-box', margin: '8px 0' }} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
             <button onClick={saveEdit} disabled={savingEdit} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>{savingEdit ? 'Saving…' : 'Save details'}</button>
