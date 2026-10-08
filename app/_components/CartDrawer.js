@@ -237,7 +237,7 @@ export default function CartDrawer() {
                 )}
                 {items.map(({ key, product: p, variant, meta, qty, unit }) => (
                   <div key={key} style={{ display: 'flex', gap: 12, padding: '14px 0', borderBottom: '1px solid #f0f0f0' }}>
-                    <div style={{ width: 56, height: 56, borderRadius: 8, flexShrink: 0, backgroundColor: p.tint || '#eee', backgroundImage: p.images?.[0] ? `url(${p.images[0]})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                    <div style={{ width: 56, height: 56, borderRadius: 8, flexShrink: 0, backgroundColor: p.tint || '#eee', backgroundImage: (meta?.single_pick_image || p.images?.[0]) ? `url(${meta?.single_pick_image || p.images[0]})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span style={{ fontFamily: DISPLAY, fontSize: 15, color: '#1a1a1a' }}>{p.name}</span>

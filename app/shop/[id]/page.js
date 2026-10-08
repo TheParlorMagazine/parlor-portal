@@ -169,7 +169,8 @@ export default function ProductPage({ params }) {
     // "Buy one" from a bundle product — add bundle product with single_pick meta
     if (bundleConfig && singlePick) {
       const pick = bundleProducts.find(p => p.id === singlePick)
-      for (let i = 0; i < qty; i++) add(product.id, null, { single_pick: singlePick, single_pick_name: pick?.name || '', single_pick_price: Number(pick?.price || 0) })
+      const pickImg = pick?.images?.[0] || null
+      for (let i = 0; i < qty; i++) add(product.id, null, { single_pick: singlePick, single_pick_name: pick?.name || '', single_pick_price: Number(pick?.price || 0), single_pick_image: pickImg })
       setAdded(true); openCart(); return
     }
     for (let i = 0; i < qty; i++) add(product.id, chosen?.printify_variant_id ?? null)
