@@ -114,7 +114,10 @@ export default function ProductPage({ params }) {
   const chosen = variants.length ? (variants.find(v => String(v.printify_variant_id) === String(variantSel)) || variants[0]) : null
   const unit = chosen?.price != null ? Number(chosen.price) : Number(product?.price || 0)
   const pickedProduct = singlePick ? bundleProducts.find(p => p.id === singlePick) : null
-  const images = pickedProduct?.images?.length ? pickedProduct.images : (bundle?.images ?? product?.images ?? [])
+  const baseImages = bundle?.images ?? product?.images ?? []
+  const posterImages = bundleConfig ? bundleProducts.map(p => p.images?.[0]).filter(Boolean) : []
+  const allImages = bundleConfig ? [...new Set([...baseImages, ...posterImages])] : baseImages
+  const images = (purchaseMode === 'single' && pickedProduct?.images?.length) ? pickedProduct.images : allImages
   const notFound = loaded && !bundle && product === null
 
   // Bundle savings: sum individual item prices vs bundle price.
@@ -376,7 +379,7 @@ export default function ProductPage({ params }) {
               {bundleConfig && (
                 <div style={{ display: 'flex', gap: 0, marginBottom: 24, border: '1px solid #cbb8bd', borderRadius: 6, overflow: 'hidden', maxWidth: 360 }}>
                   {[['single', 'Buy one'], ['bundle', `Bundle of ${bundleQty} — ${symbol}${bundlePrice}`]].map(([mode, label]) => (
-                    <button key={mode} onClick={() => setPurchaseMode(mode)}
+                    <button key={mode} onClick={() => { setPurchaseMode(mode); setImgIdx(0) }}
                       style={{ flex: 1, padding: '10px 12px', border: 'none', fontFamily: BODY, fontSize: 13.5, cursor: 'pointer', background: purchaseMode === mode ? BLACK : '#fff', color: purchaseMode === mode ? '#fff' : '#5a3d44', transition: 'background 0.15s' }}>
                       {label}
                     </button>
