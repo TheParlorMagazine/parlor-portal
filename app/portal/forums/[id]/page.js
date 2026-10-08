@@ -202,6 +202,10 @@ function Detail() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const bannerDedupeRef = useMemo(() => ({ current: null }), [])
   const avatarDedupeRef2 = useMemo(() => ({ current: null }), [])
+  const [showCreateEvent, setShowCreateEvent] = useState(false)
+  const [eventForm, setEventForm] = useState({ title: '', blurb: '', starts_at: '', ends_at: '', location_type: 'virtual', location: '', join_url: '', capacity: '' })
+  const [creatingEvent, setCreatingEvent] = useState(false)
+  const [eventErr, setEventErr] = useState('')
 
   const auth = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -233,6 +237,26 @@ function Detail() {
         await load()
       }
     } finally { setBusy(false) }
+  }
+
+  async function createEvent() {
+    if (!eventForm.title.trim()) { setEventErr('Title is required'); return }
+    setCreatingEvent(true); setEventErr('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const headers = { 'Content-Type': 'application/json', ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) }
+      const res = await fetch('/api/portal/events', { method: 'POST', headers, body: JSON.stringify({ ...eventForm, forum_id: id, capacity: eventForm.capacity ? Number(eventForm.capacity) : null }) })
+      if (res.ok) {
+        const d = await res.json()
+        setShowCreateEvent(false)
+        setEventForm({ title: '', blurb: '', starts_at: '', ends_at: '', location_type: 'virtual', location: '', join_url: '', capacity: '' })
+        await load()
+        window.location.href = `/portal/events/${d.id}`
+      } else {
+        const d = await res.json()
+        setEventErr(d.error || 'Could not create event')
+      }
+    } finally { setCreatingEvent(false) }
   }
 
   useEffect(() => { load() }, [load])
@@ -324,10 +348,16 @@ function Detail() {
             <PeopleGroup label="Moderators" people={(data.members || []).filter(m => m.role === 'host')} empty="No moderators" />
             <PeopleGroup label="Members" people={(data.members || []).filter(m => m.role !== 'host')} empty="No members yet" top />
           </div>
-          {((data.events?.upcoming?.length || 0) + (data.events?.past?.length || 0)) > 0 && (
+          {(((data.events?.upcoming?.length || 0) + (data.events?.past?.length || 0)) > 0 || f.my_role === 'host') && (
             <div style={{ border: '1px solid var(--border)', borderRadius: 12, background: '#fff', padding: '16px 16px 8px', marginTop: 16 }}>
               <EventGroup label="Upcoming events" events={data.events?.upcoming || []} />
-              <EventGroup label="Past events" events={data.events?.past || []} top />
+              <EventGroup label="Past events" events={data.events?.past || []} top={!!(data.events?.upcoming?.length)} />
+              {f.my_role === 'host' && (
+                <button onClick={() => setShowCreateEvent(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: '1px dashed var(--border)', borderRadius: 8, padding: '7px 12px', width: '100%', cursor: 'pointer', fontFamily: "'thermal-variable', Georgia, serif", fontSize: 12.5, color: 'var(--muted)', marginTop: 10, marginBottom: 6 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Create event
+                </button>
+              )}
             </div>
           )}
         </aside>
@@ -353,6 +383,57 @@ function Detail() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
               <button className="fr-postbtn" onClick={() => setShowRules(false)}>Got it</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateEvent && (
+        <div className="fr-modal-bg" onClick={() => setShowCreateEvent(false)}>
+          <div className="fr-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div className="fr-modal-title" style={{ margin: 0 }}>Create event</div>
+              <button onClick={() => setShowCreateEvent(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--muted)', lineHeight: 1 }}>✕</button>
+            </div>
+            {[
+              ['Title', 'title', 'text', 'e.g. Democracy Salons – October', true],
+              ['Short blurb', 'blurb', 'text', 'One-line teaser for the event card', false],
+            ].map(([label, key, type, placeholder, required]) => (
+              <div key={key} style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>{label}{required && <span style={{ color: '#c04040' }}> *</span>}</div>
+                <input value={eventForm[key]} onChange={e => setEventForm(f => ({ ...f, [key]: e.target.value }))} placeholder={placeholder} style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13.5, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            ))}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              {[['Start date & time', 'starts_at'], ['End date & time', 'ends_at']].map(([label, key]) => (
+                <div key={key}>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>{label}</div>
+                  <input type="datetime-local" value={eventForm[key]} onChange={e => setEventForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+              ))}
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Location type</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[['virtual', 'Virtual'], ['in_person', 'In person'], ['hybrid', 'Hybrid']].map(([v, l]) => (
+                  <button key={v} onClick={() => setEventForm(f => ({ ...f, location_type: v }))} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${eventForm.location_type === v ? '#0a0a0a' : 'var(--border)'}`, background: eventForm.location_type === v ? '#0a0a0a' : '#fff', color: eventForm.location_type === v ? '#fff' : 'var(--ink)', fontFamily: "'thermal-variable', Georgia, serif", fontSize: 12.5, cursor: 'pointer' }}>{l}</button>
+                ))}
+              </div>
+            </div>
+            {[
+              ['Location / venue', 'location', '"Zoom" or address'],
+              ['Join URL', 'join_url', 'https://…'],
+              ['Capacity (leave blank for unlimited)', 'capacity', ''],
+            ].map(([label, key, placeholder]) => (
+              <div key={key} style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>{label}</div>
+                <input value={eventForm[key]} onChange={e => setEventForm(f => ({ ...f, [key]: e.target.value }))} placeholder={placeholder} type={key === 'capacity' ? 'number' : 'text'} style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13.5, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            ))}
+            {eventErr && <div style={{ fontSize: 12.5, color: '#c04040', marginBottom: 10 }}>{eventErr}</div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
+              <button onClick={() => setShowCreateEvent(false)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={createEvent} disabled={creatingEvent} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>{creatingEvent ? 'Creating…' : 'Create event'}</button>
             </div>
           </div>
         </div>

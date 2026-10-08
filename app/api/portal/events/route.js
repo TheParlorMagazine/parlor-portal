@@ -1,5 +1,31 @@
 import { requireUser, serviceClient } from '../../../../lib/apiAuth'
 
+// POST → create a new event (moderators only — caller must be a host of the forum_id)
+export async function POST(request) {
+  const user = await requireUser(request)
+  if (!user) return Response.json({ error: 'Not signed in' }, { status: 401 })
+  const db = serviceClient()
+  const body = await request.json()
+  const { title, blurb, description, starts_at, ends_at, location_type, location, join_url, capacity, forum_id, status = 'published' } = body
+  if (!title?.trim()) return Response.json({ error: 'Title required' }, { status: 400 })
+
+  // If a forum_id is given, verify the caller is a host of that forum.
+  if (forum_id) {
+    const { data: mem } = await db.from('forum_memberships').select('role').eq('forum_id', forum_id).eq('member_id', user.id).maybeSingle()
+    if (!mem || mem.role !== 'host') return Response.json({ error: 'Not a moderator of this forum' }, { status: 403 })
+  }
+
+  const { data: event, error } = await db.from('events').insert({
+    title: title.trim(), blurb: blurb?.trim() || null, description: description?.trim() || null,
+    starts_at: starts_at || null, ends_at: ends_at || null,
+    location_type: location_type || 'virtual', location: location?.trim() || null,
+    join_url: join_url?.trim() || null, capacity: capacity ? Number(capacity) : null,
+    forum_id: forum_id || null, status, created_by: user.id,
+  }).select('id').single()
+  if (error) return Response.json({ error: error.message }, { status: 500 })
+  return Response.json({ id: event.id }, { status: 201 })
+}
+
 // GET → published events split into upcoming / past, each with the going count
 // and this member's RSVP status.
 export async function GET(request) {
