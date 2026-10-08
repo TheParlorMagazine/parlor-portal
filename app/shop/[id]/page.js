@@ -361,7 +361,7 @@ export default function ProductPage({ params }) {
                 </div>
               )}
               <div style={{ marginTop: 34 }}>
-                <Description text={product.description} />
+                <Description text={(purchaseMode === 'single' && pickedProduct?.description) ? pickedProduct.description : product.description} />
               </div>
             </div>
 
