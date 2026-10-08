@@ -114,10 +114,6 @@ export default function ProductPage({ params }) {
   const chosen = variants.length ? (variants.find(v => String(v.printify_variant_id) === String(variantSel)) || variants[0]) : null
   const unit = chosen?.price != null ? Number(chosen.price) : Number(product?.price || 0)
   const pickedProduct = singlePick ? bundleProducts.find(p => p.id === singlePick) : null
-  const baseImages = bundle?.images ?? product?.images ?? []
-  const posterImages = bundleConfig ? bundleProducts.map(p => p.images?.[0]).filter(Boolean) : []
-  const allImages = bundleConfig ? [...new Set([...baseImages, ...posterImages])] : baseImages
-  const images = (purchaseMode === 'single' && pickedProduct?.images?.length) ? pickedProduct.images : allImages
   const notFound = loaded && !bundle && product === null
 
   // Bundle savings: sum individual item prices vs bundle price.
@@ -135,6 +131,10 @@ export default function ProductPage({ params }) {
   const bundleConfig = product?.bundle_config
   const bundleQty = bundleConfig?.qty ?? 3
   const bundlePrice = bundleConfig?.price ?? 0
+  const baseImages = bundle?.images ?? product?.images ?? []
+  const posterImages = bundleConfig ? bundleProducts.map(p => p.images?.[0]).filter(Boolean) : []
+  const allImages = bundleConfig ? [...new Set([...baseImages, ...posterImages])] : baseImages
+  const images = (purchaseMode === 'single' && pickedProduct?.images?.length) ? pickedProduct.images : allImages
   // Price display: bundle mode → bundle price; single/buy-one mode → picked item's price (or first item's price)
   const singleUnitPrice = bundleConfig
     ? (pickedProduct?.price != null ? Number(pickedProduct.price) : (bundleProducts[0]?.price != null ? Number(bundleProducts[0].price) : unit))
