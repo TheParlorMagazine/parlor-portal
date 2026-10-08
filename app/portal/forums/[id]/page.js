@@ -57,38 +57,15 @@ function ModPanel({ id, auth, supabase, onChanged }) {
   const [inviteMsg, setInviteMsg] = useState('')
   const [inviteLinks, setInviteLinks] = useState([])
   const [inviting, setInviting] = useState(false)
-  // Edit forum (name + description + banner + square profile image)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [cover, setCover] = useState('')
-  const [avatar, setAvatar] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
   const [editMsg, setEditMsg] = useState('')
-  const [drag, setDrag] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [avatarDrag, setAvatarDrag] = useState(false)
-  const [avatarUploading, setAvatarUploading] = useState(false)
-  const dedupeRef = useMemo(() => ({ current: null }), [])
-  const avatarDedupeRef = useMemo(() => ({ current: null }), [])
-
-  async function uploadImage(file, { maxDim, folder, setBusy, setUrl, ref }) {
-    if (!file || !file.type.startsWith('image/')) return
-    if (isDuplicateUpload(ref, file)) return
-    setBusy(true)
-    try {
-      const { file: up, ext, contentType } = await prepareImageUpload(file, { maxDim })
-      const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const { error } = await supabase.storage.from('Media').upload(path, up, { cacheControl: '31536000', contentType })
-      if (!error) { const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path); setUrl(publicUrl) }
-    } finally { setBusy(false) }
-  }
-  const uploadCover = f => uploadImage(f, { maxDim: 1600, folder: 'forums', setBusy: setUploading, setUrl: setCover, ref: dedupeRef })
-  const uploadAvatar = f => uploadImage(f, { maxDim: 600, folder: 'forum-avatars', setBusy: setAvatarUploading, setUrl: setAvatar, ref: avatarDedupeRef })
 
   async function saveEdit() {
     if (!name.trim()) { setEditMsg('Name required'); return }
     setSavingEdit(true); setEditMsg('')
-    const res = await fetch(`/api/portal/groups/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ name, description, cover_image_url: cover, avatar_url: avatar }) })
+    const res = await fetch(`/api/portal/groups/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ name, description }) })
     setSavingEdit(false)
     if (res.ok) { setEditMsg('Saved ✓'); setTimeout(() => window.location.reload(), 500) } else setEditMsg('Could not save')
   }
@@ -112,7 +89,7 @@ function ModPanel({ id, auth, supabase, onChanged }) {
   }
   const load = useCallback(async () => {
     const res = await fetch(`/api/portal/groups/${id}`, { headers: await auth() })
-    if (res.ok) { const d = await res.json(); setData({ requests: d.requests || [], members: d.members || [], policy: d.group?.join_policy || 'request' }); setName(d.group?.name || ''); setDescription(d.group?.description || ''); setCover(d.group?.cover_image_url || ''); setAvatar(d.group?.avatar_url || '') }
+    if (res.ok) { const d = await res.json(); setData({ requests: d.requests || [], members: d.members || [], policy: d.group?.join_policy || 'request' }); setName(d.group?.name || ''); setDescription(d.group?.description || '') }
   }, [id, auth])
   useEffect(() => { if (open) load() }, [open, load])
 
@@ -146,61 +123,7 @@ function ModPanel({ id, auth, supabase, onChanged }) {
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Forum name" style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
           <div style={{ fontSize: 12, color: 'var(--muted)', margin: '12px 0 6px' }}>Description <span style={{ opacity: 0.7 }}>— a short line shown under the forum name</span></div>
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="What this forum is about…" style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13.5, outline: 'none', boxSizing: 'border-box', marginBottom: 8, resize: 'vertical' }} />
-          <div style={{ fontSize: 12, color: 'var(--muted)', margin: '12px 0 6px' }}>Banner image <span style={{ opacity: 0.7 }}>— wide image across the top of the forum</span></div>
-          <label
-            onDragOver={e => { e.preventDefault(); setDrag(true) }}
-            onDragLeave={() => setDrag(false)}
-            onDrop={e => { e.preventDefault(); setDrag(false); const fl = e.dataTransfer.files?.[0]; if (fl) uploadCover(fl) }}
-            style={{ display: 'block', position: 'relative', borderRadius: 8, overflow: 'hidden', cursor: 'pointer', border: `1.5px dashed ${drag ? '#7a2531' : cover ? 'transparent' : 'var(--border)'}`, background: drag ? '#faf3f5' : cover ? 'transparent' : 'var(--cream)', minHeight: cover ? 0 : 60 }}>
-            <input type="file" accept="image/*" hidden onChange={e => { const fl = e.target.files?.[0]; if (fl) uploadCover(fl); e.target.value = '' }} />
-            {cover ? (
-              <>
-                <img src={cover} alt="" style={{ display: 'block', width: '100%', height: 90, objectFit: 'cover', background: '#eee' }} />
-                <div style={{ position: 'absolute', inset: 0, background: drag ? 'rgba(122,37,49,0.18)' : 'transparent', transition: 'background 0.15s' }} />
-                <div style={{ position: 'absolute', top: 7, right: 7, width: 28, height: 28, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                </div>
-                {uploading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', fontFamily: "'thermal-variable', Georgia, serif" }}>Uploading…</div>}
-              </>
-            ) : (
-              <div style={{ padding: 16, fontSize: 12.5, color: 'var(--muted)' }}>
-                {uploading ? 'Uploading…' : <><strong style={{ color: '#555' }}>Drag &amp; drop</strong> a banner image, or <span style={{ color: '#7a2531' }}>click to upload</span></>}
-              </div>
-            )}
-          </label>
-          {cover && <button onClick={() => setCover('')} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12, cursor: 'pointer', fontFamily: "'thermal-variable', Georgia, serif", padding: '4px 0', marginTop: 4 }}>Remove banner</button>}
-
-          {/* Square profile image — used as the thumbnail on the forums list */}
-          <div style={{ fontSize: 12, color: 'var(--muted)', margin: '12px 0 6px' }}>Profile image <span style={{ opacity: 0.7 }}>— square thumbnail shown on the forums list</span></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <label
-              onDragOver={e => { e.preventDefault(); setAvatarDrag(true) }}
-              onDragLeave={() => setAvatarDrag(false)}
-              onDrop={e => { e.preventDefault(); setAvatarDrag(false); const fl = e.dataTransfer.files?.[0]; if (fl) uploadAvatar(fl) }}
-              style={{ position: 'relative', display: 'block', width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: `1.5px dashed ${avatarDrag ? '#7a2531' : avatar ? 'transparent' : 'var(--border)'}`, background: avatarDrag ? '#faf3f5' : avatar ? 'transparent' : 'var(--cream)', flexShrink: 0 }}>
-              <input type="file" accept="image/*" hidden onChange={e => { const fl = e.target.files?.[0]; if (fl) uploadAvatar(fl); e.target.value = '' }} />
-              {avatar ? (
-                <>
-                  <img src={avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </div>
-                  </div>
-                  {avatarUploading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted)' }}>…</div>}
-                </>
-              ) : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {avatarUploading ? <span style={{ fontSize: 11, color: 'var(--muted)' }}>…</span> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>}
-                </div>
-              )}
-            </label>
-            <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
-              {avatar
-                ? <><strong style={{ color: '#555', display: 'block', marginBottom: 2 }}>Profile image set</strong>Click or drag onto the circle to replace{avatarUploading ? ' — uploading…' : ''}<br /><button onClick={() => setAvatar('')} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12, cursor: 'pointer', padding: 0, fontFamily: "'thermal-variable', Georgia, serif", marginTop: 4 }}>Remove</button></>
-                : <><strong style={{ color: '#555' }}>Drag &amp; drop</strong> or click the circle to upload</>}
-            </div>
-          </div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', margin: '12px 0 4px', lineHeight: 1.5 }}>To change the <strong style={{ color: '#555' }}>banner</strong> or <strong style={{ color: '#555' }}>profile image</strong>, click the pencil icon directly on each image above.</div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
             <button onClick={saveEdit} disabled={savingEdit} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>{savingEdit ? 'Saving…' : 'Save details'}</button>
@@ -276,6 +199,10 @@ function Detail() {
   const [data, setData] = useState({ loading: true, forum: null, members: [], events: { upcoming: [], past: [] } })
   const [uid, setUid] = useState(null)
   const [showRules, setShowRules] = useState(false)
+  const [uploadingBanner, setUploadingBanner] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const bannerDedupeRef = useMemo(() => ({ current: null }), [])
+  const avatarDedupeRef2 = useMemo(() => ({ current: null }), [])
 
   const auth = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -290,6 +217,24 @@ function Detail() {
       setData({ loading: false, forum: d.forum, members: d.members || [], events: d.events || { upcoming: [], past: [] } })
     } catch { setData({ loading: false, forum: null, members: [], events: { upcoming: [], past: [] } }) }
   }, [id, auth])
+
+  async function uploadForumImage(file, { maxDim, folder, setBusy, field, ref }) {
+    if (!file || !file.type.startsWith('image/')) return
+    if (isDuplicateUpload(ref, file)) return
+    setBusy(true)
+    try {
+      const { file: up, ext, contentType } = await prepareImageUpload(file, { maxDim })
+      const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error } = await supabase.storage.from('Media').upload(path, up, { cacheControl: '31536000', contentType })
+      if (!error) {
+        const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)
+        const { data: { session } } = await supabase.auth.getSession()
+        const headers = session ? { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
+        await fetch(`/api/portal/groups/${id}`, { method: 'PATCH', headers, body: JSON.stringify({ [field]: publicUrl }) })
+        await load()
+      }
+    } finally { setBusy(false) }
+  }
 
   useEffect(() => { load() }, [load])
   useEffect(() => { (async () => { const { data: { user } } = await supabase.auth.getUser(); setUid(user?.id || null) })() }, [supabase])
@@ -307,15 +252,39 @@ function Detail() {
     <div className="fr-wrap" style={{ maxWidth: 'none' }}>
       <style>{forumCss}</style>
       <a className="fr-back" href="/portal/forums">← Forums</a>
-      {f.cover_image_url && (
-        <img src={f.cover_image_url} alt="" style={{ width: '100%', height: 'auto', borderRadius: 12, display: 'block', margin: '10px 0 20px', background: '#f2ece4' }} />
+      {(f.cover_image_url || f.my_role === 'host') && (
+        <div style={{ position: 'relative', margin: '10px 0 20px' }}>
+          {f.cover_image_url
+            ? <img src={f.cover_image_url} alt="" style={{ width: '100%', height: 'auto', borderRadius: 12, display: 'block', background: '#f2ece4' }} />
+            : f.my_role === 'host' && <div style={{ width: '100%', height: 120, borderRadius: 12, background: '#f2ece4', border: '1.5px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>No banner yet — click pencil to add</div>}
+          {f.my_role === 'host' && (
+            <label style={{ position: 'absolute', top: 10, right: 10, width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }} title="Change banner image">
+              <input type="file" accept="image/*" hidden onChange={e => { const fl = e.target.files?.[0]; if (fl) uploadForumImage(fl, { maxDim: 1600, folder: 'forums', setBusy: setUploadingBanner, field: 'cover_image_url', ref: bannerDedupeRef }); e.target.value = '' }} />
+              {uploadingBanner
+                ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="9" strokeDasharray="28 56" strokeLinecap="round"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/></circle></svg>
+                : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>}
+            </label>
+          )}
+        </div>
       )}
       <div style={{ display: 'flex', gap: 26, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 460px', minWidth: 0 }}>
       <div className="fr-topbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-          {(f.avatar_url || f.cover_image_url)
-            ? <img src={f.avatar_url || f.cover_image_url} alt="" style={{ width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, background: '#f2ece4', boxShadow: '0 0 0 3px #fff, 0 1px 4px rgba(0,0,0,0.12)' }} />
+          {(f.avatar_url || f.cover_image_url || f.my_role === 'host')
+            ? <div style={{ position: 'relative', flexShrink: 0 }}>
+                {(f.avatar_url || f.cover_image_url)
+                  ? <img src={f.avatar_url || f.cover_image_url} alt="" style={{ width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', background: '#f2ece4', boxShadow: '0 0 0 3px #fff, 0 1px 4px rgba(0,0,0,0.12)', display: 'block' }} />
+                  : <div style={{ width: 54, height: 54, borderRadius: '50%', background: '#e9e2d8', color: '#7a2531', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 600, fontFamily: "'thermal-variable', Georgia, serif" }}>{(f.name || 'F')[0].toUpperCase()}</div>}
+                {f.my_role === 'host' && (
+                  <label style={{ position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }} title="Change profile image">
+                    <input type="file" accept="image/*" hidden onChange={e => { const fl = e.target.files?.[0]; if (fl) uploadForumImage(fl, { maxDim: 600, folder: 'forum-avatars', setBusy: setUploadingAvatar, field: 'avatar_url', ref: avatarDedupeRef2 }); e.target.value = '' }} />
+                    {uploadingAvatar
+                      ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="9" strokeDasharray="28 56" strokeLinecap="round"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/></circle></svg>
+                      : <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>}
+                  </label>
+                )}
+              </div>
             : <div style={{ width: 54, height: 54, borderRadius: '50%', flexShrink: 0, background: '#e9e2d8', color: '#7a2531', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 600, fontFamily: "'thermal-variable', Georgia, serif" }}>{(f.name || 'F')[0].toUpperCase()}</div>}
           <div style={{ minWidth: 0 }}>
             <h1 className="fr-h1">{f.name}</h1>
