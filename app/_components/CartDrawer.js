@@ -35,8 +35,9 @@ export default function CartDrawer() {
   const [shipLoading, setShipLoading] = useState(false)
   const [addr, setAddr] = useState({ name: '', line1: '', line2: '', city: '', state: '', zip: '', country: '' })
   const [addrOpen, setAddrOpen] = useState(true)
+  const [addrError, setAddrError] = useState(false)
   const effCountry = addr.country || geoCountry || 'US'
-  const setA = (k, v) => setAddr(a => ({ ...a, [k]: v }))
+  const setA = (k, v) => { setAddr(a => ({ ...a, [k]: v })); setAddrError(false) }
 
   // Auth (orders tie to the member).
   useEffect(() => {
@@ -151,7 +152,7 @@ export default function CartDrawer() {
   async function checkout() {
     if (!cartGroups.length || checkingOut) return
     if (usOnlyError) return
-    if (!addr.line1.trim() || !addr.city.trim() || !addr.zip.trim() || !addr.country.trim()) { setAddrOpen(true); return }
+    if (!addr.line1.trim() || !addr.city.trim() || !addr.zip.trim() || !addr.country.trim()) { setAddrOpen(true); setAddrError(true); return }
     if (!user) { window.location.href = '/signup?returnTo=' + encodeURIComponent('/shop?checkout=1'); return }
     setCheckingOut(true)
     const addrPayload = addr.line1.trim() ? addr : null
@@ -177,6 +178,7 @@ export default function CartDrawer() {
     if (resume && user && cartGroups.length && !checkingOut) {
       setResume(false)
       try { window.history.replaceState({}, '', window.location.pathname) } catch {}
+      if (!addr.line1.trim() || !addr.city.trim() || !addr.zip.trim() || !addr.country.trim()) { setAddrOpen(true); setAddrError(true); return }
       checkout()
     }
   }, [resume, user, cartGroups, checkingOut]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -277,10 +279,13 @@ export default function CartDrawer() {
                   </div>
                 </div>
               </div>
-              <button onClick={() => setAddrOpen(o => !o)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: '1px solid #e0dbd8', borderRadius: 8, padding: '9px 13px', cursor: 'pointer', fontFamily: BODY, fontSize: 13, color: '#555' }}>
+              <button onClick={() => setAddrOpen(o => !o)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: `1px solid ${addrError && !addr.line1.trim() ? '#e57373' : '#e0dbd8'}`, borderRadius: 8, padding: '9px 13px', cursor: 'pointer', fontFamily: BODY, fontSize: 13, color: '#555' }}>
                 <span>{addr.line1.trim() ? `${addr.line1}${addr.city ? `, ${addr.city}` : ''}` : 'Enter shipping address…'}</span>
                 <span style={{ fontSize: 11, color: '#aaa', marginLeft: 8 }}>{addrOpen ? '▲' : '▼'}</span>
               </button>
+              {addrError && !addr.line1.trim() && (
+                <div style={{ marginTop: 6, fontFamily: BODY, fontSize: 12, color: '#c0392b' }}>Please enter your shipping address to continue.</div>
+              )}
               {addrOpen && (
                 <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 7 }}>
                   <input value={addr.name} onChange={e => setA('name', e.target.value)} placeholder="Full name" style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', border: '1px solid #ddd', borderRadius: 6, fontFamily: BODY, fontSize: 13, outline: 'none' }} />
