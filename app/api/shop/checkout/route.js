@@ -82,6 +82,38 @@ export async function POST(request) {
     if (!p) continue
     if (p.external_url) continue
 
+    // "Buy one" from a pick-your-own bundle: use the pick's Printify data for fulfillment
+    if (it.single_pick) {
+      const amount = Math.round((it.single_pick_price != null ? Number(it.single_pick_price) : priceForCurrency(p, currency)) * 100)
+      if (!amount) continue
+      // Fetch the pick's Printify IDs (it's inactive so not in byId)
+      const { data: pickData } = await db.from('shop_products')
+        .select('id, name, images, fulfillment, printify_product_id, printify_variant_id, variants')
+        .eq('id', it.single_pick).single()
+      const pick = pickData || p
+      const variantId = pick.printify_variant_id || pick.variants?.[0]?.printify_variant_id || null
+      const variantObj = pick.variants?.find(v => String(v.printify_variant_id) === String(variantId))
+      const printifyProductId = variantObj?.printify_product_id || pick.printify_product_id || ''
+      line_items.push({
+        quantity: qty,
+        price_data: {
+          currency,
+          unit_amount: amount,
+          product_data: {
+            name: pick.name || p.name,
+            images: (pick.images || p.images)?.length ? [(pick.images || p.images)[0]] : undefined,
+            metadata: {
+              shop_product_id: pick.id,
+              fulfillment: pick.fulfillment || 'printify',
+              printify_product_id: printifyProductId,
+              printify_variant_id: variantId ? String(variantId) : '',
+            },
+          },
+        },
+      })
+      continue
+    }
+
     // Pick-your-own bundle: product is the active bundle holder; picks are individual poster IDs
     if (it.bundle_picks?.length) {
       const amount = Math.round((it.bundle_price != null ? Number(it.bundle_price) : priceForCurrency(p, currency)) * 100)

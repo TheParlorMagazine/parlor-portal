@@ -166,9 +166,10 @@ export default function ProductPage({ params }) {
       add(product.id, null, { bundle_picks: picks, bundle_picks_names: pickNames, bundle_price: bundlePrice })
       setAdded(true); openCart(); return
     }
-    // "Buy one" from a bundle product — add the picked item individually
+    // "Buy one" from a bundle product — add bundle product with single_pick meta
     if (bundleConfig && singlePick) {
-      for (let i = 0; i < qty; i++) add(singlePick, null)
+      const pick = bundleProducts.find(p => p.id === singlePick)
+      for (let i = 0; i < qty; i++) add(product.id, null, { single_pick: singlePick, single_pick_name: pick?.name || '', single_pick_price: Number(pick?.price || 0) })
       setAdded(true); openCart(); return
     }
     for (let i = 0; i < qty; i++) add(product.id, chosen?.printify_variant_id ?? null)

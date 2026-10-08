@@ -84,7 +84,7 @@ export default function CartDrawer() {
       if (!product) return null
       const variant = (!product._isBundle && vid != null) ? variantsOf(product).find(v => String(v.printify_variant_id) === String(vid)) : null
       const baseUnit = variant?.price != null ? Number(variant.price) : Number(product.price || 0)
-      const unit = meta?.bundle_price != null ? Number(meta.bundle_price) : (meta?.bundle_unit_price != null ? Number(meta.bundle_unit_price) : baseUnit)
+      const unit = meta?.single_pick_price != null ? Number(meta.single_pick_price) : (meta?.bundle_price != null ? Number(meta.bundle_price) : (meta?.bundle_unit_price != null ? Number(meta.bundle_unit_price) : baseUnit))
       return { key: lineKey(id, vid, meta), product, variant, meta, qty, unit }
     }).filter(Boolean)
   }, [cart, products, bundles])
@@ -158,7 +158,7 @@ export default function CartDrawer() {
       const res = await fetch('/api/shop/checkout', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null, bundle_picks: g.meta?.bundle_picks ?? null, bundle_price: g.meta?.bundle_price ?? null })),
+          items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null, bundle_picks: g.meta?.bundle_picks ?? null, bundle_price: g.meta?.bundle_price ?? null, single_pick: g.meta?.single_pick ?? null, single_pick_price: g.meta?.single_pick_price ?? null })),
           country: effCountry, userId: user.id, address: addrPayload,
           successUrl: window.location.origin + '/shop/order-confirmed?session_id={CHECKOUT_SESSION_ID}',
           cancelUrl: window.location.href,
@@ -242,9 +242,11 @@ export default function CartDrawer() {
                         <span style={{ fontFamily: DISPLAY, fontSize: 15, color: '#1a1a1a' }}>{p.name}</span>
                         {(p._isBundle || meta?.bundle_picks) && <span style={{ fontSize: 10.5, background: '#f2b8c6', color: '#7a2531', borderRadius: 10, padding: '2px 7px', fontFamily: BODY, fontWeight: 600, letterSpacing: '0.04em', flexShrink: 0 }}>Bundle</span>}
                       </div>
-                      {meta?.bundle_picks_names?.length
-                        ? <div style={{ fontFamily: BODY, fontSize: 12, color: '#888', marginTop: 2 }}>{meta.bundle_picks_names.join(' · ')}</div>
-                        : p._isBundle ? (p.description && <div style={{ fontFamily: BODY, fontSize: 12.5, color: '#888' }}>{p.description}</div>) : (variant?.name || p.variant) ? <div style={{ fontFamily: BODY, fontSize: 12.5, color: '#888' }}>{variant?.name || p.variant}</div> : null}
+                      {meta?.single_pick_name
+                        ? <div style={{ fontFamily: BODY, fontSize: 12, color: '#888', marginTop: 2 }}>{meta.single_pick_name}</div>
+                        : meta?.bundle_picks_names?.length
+                          ? <div style={{ fontFamily: BODY, fontSize: 12, color: '#888', marginTop: 2 }}>{meta.bundle_picks_names.join(' · ')}</div>
+                          : p._isBundle ? (p.description && <div style={{ fontFamily: BODY, fontSize: 12.5, color: '#888' }}>{p.description}</div>) : (variant?.name || p.variant) ? <div style={{ fontFamily: BODY, fontSize: 12.5, color: '#888' }}>{variant?.name || p.variant}</div> : null}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
                         <button onClick={() => dec(key)} style={qtyBtn}>−</button>
                         <span style={{ fontFamily: BODY, fontSize: 14, minWidth: 18, textAlign: 'center' }}>{qty}</span>
