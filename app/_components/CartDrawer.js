@@ -51,7 +51,18 @@ export default function CartDrawer() {
     if (loaded) return
     setLoaded(true)
     fetch('/api/shop/products').then(r => r.json())
-      .then(d => { if (Array.isArray(d.products)) setProducts(d.products) })
+      .then(d => {
+        const active = Array.isArray(d.products) ? d.products : []
+        setProducts(active)
+        // Fetch any cart items not in the active catalogue (e.g. inactive bundle posters)
+        const activeIds = new Set(active.map(p => String(p.id)))
+        const missing = [...new Set(cart.map(i => String(i.id)).filter(id => !activeIds.has(id)))]
+        if (missing.length) {
+          fetch('/api/shop/products/by-ids', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: missing }) })
+            .then(r => r.json()).then(r => { if (Array.isArray(r.products)) setProducts(p => [...p, ...r.products]) })
+            .catch(() => {})
+        }
+      })
       .catch(() => {})
     fetch('/api/shop/bundles').then(r => r.json())
       .then(d => { if (Array.isArray(d.bundles)) setBundles(d.bundles.map(b => ({ ...b, _isBundle: true }))) })
