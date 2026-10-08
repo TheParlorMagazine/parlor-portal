@@ -151,6 +151,7 @@ export default function CartDrawer() {
   async function checkout() {
     if (!cartGroups.length || checkingOut) return
     if (usOnlyError) return
+    if (!addr.line1.trim() || !addr.city.trim() || !addr.zip.trim() || !addr.country.trim()) { setAddrOpen(true); return }
     if (!user) { window.location.href = '/signup?returnTo=' + encodeURIComponent('/shop?checkout=1'); return }
     setCheckingOut(true)
     const addrPayload = addr.line1.trim() ? addr : null
@@ -358,7 +359,7 @@ export default function CartDrawer() {
               </div>
             )}
 
-            <button onClick={checkout} disabled={checkingOut || !!usOnlyError} style={{ width: '100%', background: BLACK, color: '#fff', border: 'none', borderRadius: 26, padding: '14px 0', fontFamily: BODY, fontSize: 15, letterSpacing: '0.03em', cursor: (checkingOut || usOnlyError) ? 'default' : 'pointer', opacity: (checkingOut || usOnlyError) ? 0.6 : 1 }}>
+            <button onClick={checkout} disabled={checkingOut || !!usOnlyError} style={{ width: '100%', background: BLACK, color: '#fff', border: 'none', borderRadius: 26, padding: '14px 0', fontFamily: BODY, fontSize: 15, letterSpacing: '0.03em', cursor: (checkingOut || usOnlyError) ? 'default' : 'pointer', opacity: (checkingOut || usOnlyError || !addr.line1.trim() || !addr.city.trim() || !addr.zip.trim() || !addr.country.trim()) ? 0.6 : 1 }}>
               {checkingOut ? 'Redirecting…' : user ? 'Checkout' : 'Sign in to check out'}
             </button>
             {!user && <div style={{ fontFamily: BODY, fontSize: 11.5, color: '#999', textAlign: 'center', marginTop: 8 }}>Create an account or sign in to complete your order and track it.</div>}
