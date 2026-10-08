@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '../../lib/supabase'
-import { useCart, lineKey } from '../../lib/useCart'
+import { useCart, lineKey, uniqueLineCount } from '../../lib/useCart'
 import { useWishlist } from '../../lib/useWishlist'
 import { useCurrency, fmtPrice } from '../../lib/useCurrency'
 import { alertDialog } from '../../lib/confirmDialog'
@@ -190,7 +190,7 @@ export default function CartDrawer() {
       <div onClick={e => e.stopPropagation()} style={{ width: 'min(420px, 92vw)', height: '100%', background: '#fff', display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.2)' }}>
         <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #eee', padding: '0 22px' }}>
           <button onClick={() => setTab('cart')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: DISPLAY, fontWeight: 700, fontSize: 18, color: tab === 'cart' ? '#1a1a1a' : '#aaa', padding: '20px 0', borderBottom: tab === 'cart' ? '2px solid #1a1a1a' : '2px solid transparent', marginBottom: -1 }}>
-            Cart{cart.length ? ` (${cart.length})` : ''}
+            Cart{uniqueLineCount(cart) ? ` (${uniqueLineCount(cart)})` : ''}
           </button>
           <button onClick={() => setTab('wishlist')} title="Wishlist" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 19, color: tab === 'wishlist' ? '#c4364a' : '#bbb', padding: '20px 0', marginLeft: 22, borderBottom: tab === 'wishlist' ? '2px solid #c4364a' : '2px solid transparent', marginBottom: -1 }}>
             {tab === 'wishlist' ? '♥' : '♡'}{wish.count ? ` ${wish.count}` : ''}

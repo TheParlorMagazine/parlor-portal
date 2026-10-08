@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import SiteFooter from '../_components/SiteFooter'
 import { useCurrency, fmtPrice } from '../../lib/useCurrency'
-import { useCart } from '../../lib/useCart'
+import { useCart, uniqueLineCount } from '../../lib/useCart'
 import { useWishlist } from '../../lib/useWishlist'
 import { openCart } from '../../lib/cartUI'
 
@@ -309,7 +309,7 @@ export default function ShopPage() {
         <div className="shop-topgrid" style={{ display: 'grid', gridTemplateColumns: '1.05fr 1fr', gap: 40, padding: '14px 48px 46px' }}>
           <h1 className="shop-welcome">Welcome<br />to The Parlor<br />Shop</h1>
           <div style={{ position: 'relative', paddingTop: 6 }}>
-            <div style={{ position: 'absolute', top: -8, right: 0, cursor: 'pointer' }} onClick={openCart}><BagIcon count={cart.length} /></div>
+            <div style={{ position: 'absolute', top: -8, right: 0, cursor: 'pointer' }} onClick={openCart}><BagIcon count={uniqueLineCount(cart)} /></div>
             <div style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: 21, color: '#fff', marginBottom: 14, maxWidth: 460 }}>
               Sip a tea. Light a Candle. Fund a revolution.
             </div>
@@ -508,9 +508,9 @@ export default function ShopPage() {
       {/* Floating cart — appears once you scroll past the header cart */}
       <button
         className={`shop-fab-cart${scrolled ? ' show' : ''}`}
-        aria-label={`Cart, ${cart.length} item${cart.length === 1 ? '' : 's'}`}
+        aria-label={`Cart, ${uniqueLineCount(cart)} item${uniqueLineCount(cart) === 1 ? '' : 's'}`}
         onClick={openCart}>
-        <BagIcon count={cart.length} />
+        <BagIcon count={uniqueLineCount(cart)} />
       </button>
 
       <SiteFooter />

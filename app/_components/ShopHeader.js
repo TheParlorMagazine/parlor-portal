@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { useCart } from '../../lib/useCart'
+import { useCart, uniqueLineCount } from '../../lib/useCart'
 import { openCart } from '../../lib/cartUI'
 
 const DISPLAY = "'Playfair Display', Georgia, serif"
@@ -31,6 +31,7 @@ function BagIcon({ count }) {
 // live filtering); on the index those same controls filter in-page.
 export default function ShopHeader({ activeCat }) {
   const { cart } = useCart()
+  const cartLineCount = uniqueLineCount(cart)
   const [categories, setCategories] = useState(FALLBACK_CATEGORIES)
   const [products, setProducts] = useState([])
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -120,7 +121,7 @@ export default function ShopHeader({ activeCat }) {
         <div className="sh-topgrid" style={{ display: 'grid', gridTemplateColumns: '1.05fr 1fr', gap: 40, padding: '14px 48px 46px' }}>
           <a href="/shop" style={{ textDecoration: 'none' }}><h1 className="sh-welcome">Welcome<br />to The Parlor<br />Shop</h1></a>
           <div style={{ position: 'relative', paddingTop: 6 }}>
-            <div style={{ position: 'absolute', top: -8, right: 0, cursor: 'pointer' }} onClick={openCart}><BagIcon count={cart.length} /></div>
+            <div style={{ position: 'absolute', top: -8, right: 0, cursor: 'pointer' }} onClick={openCart}><BagIcon count={cartLineCount} /></div>
             <div style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: 21, color: '#fff', marginBottom: 14, maxWidth: 460 }}>
               Sip a tea. Light a Candle. Fund a revolution.
             </div>

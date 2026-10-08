@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, use } from 'react'
 import ShopHeader from '../../_components/ShopHeader'
 import SiteFooter from '../../_components/SiteFooter'
 import { useCurrency, fmtPrice } from '../../../lib/useCurrency'
-import { useCart } from '../../../lib/useCart'
+import { useCart, uniqueLineCount } from '../../../lib/useCart'
 import { useWishlist } from '../../../lib/useWishlist'
 import BnplMessage from '../../_components/BnplMessage'
 import { openCart } from '../../../lib/cartUI'
@@ -181,7 +181,7 @@ export default function ProductPage({ params }) {
   const FabCart = () => (
     <button
       className={`shop-fab-cart${scrolled ? ' show' : ''}`}
-      aria-label={`Cart, ${cart.length} item${cart.length === 1 ? '' : 's'}`}
+      aria-label={`Cart, ${uniqueLineCount(cart)} item${uniqueLineCount(cart) === 1 ? '' : 's'}`}
       onClick={openCart}>
       <div style={{ position: 'relative', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -189,7 +189,7 @@ export default function ProductPage({ params }) {
           <line x1="3" y1="6" x2="21" y2="6" />
           <path d="M16 10a4 4 0 01-8 0" />
         </svg>
-        <span style={{ position: 'absolute', top: -2, right: -4, background: '#fff', color: BLACK, fontFamily: BODY, fontSize: 9, fontWeight: 700, width: 16, height: 16, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{cart.length}</span>
+        <span style={{ position: 'absolute', top: -2, right: -4, background: '#fff', color: BLACK, fontFamily: BODY, fontSize: 9, fontWeight: 700, width: 16, height: 16, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{uniqueLineCount(cart)}</span>
       </div>
     </button>
   )

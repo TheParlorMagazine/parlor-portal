@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../lib/supabase'
-import { useCart } from '../../lib/useCart'
+import { useCart, uniqueLineCount } from '../../lib/useCart'
 import { openCart } from '../../lib/cartUI'
 
 const NAV_LINKS = ["Work & Wealth", "Society & Culture", "World & Politics", "Perspectives & Identity"]
@@ -333,7 +333,7 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <path d="M16 10a4 4 0 01-8 0"/>
               </svg>
-              {cart.length > 0 && <span className="cart-count">{cart.length}</span>}
+              {uniqueLineCount(cart) > 0 && <span className="cart-count">{uniqueLineCount(cart)}</span>}
             </a>
           </div>
         </div>
