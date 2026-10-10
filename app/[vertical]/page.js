@@ -246,23 +246,18 @@ export default function VerticalPage({ params }) {
         </section>
       ) : vertical === 'work-wealth' ? (
         <div style={{ position: 'relative', height: '100vh', overflow: 'hidden', background: '#0a0a0a' }}>
-          {/* Illustration — outer: scroll parallax; inner img: entrance fade */}
-          <div style={{
-            position: 'absolute', top: '-15%', left: 0, right: 0, height: '130%',
-            transform: `translateY(${-scrollY * 0.3}px)`,
-            willChange: 'transform',
-          }}>
-            <img
-              src="/hero-work-wealth.png"
-              alt=""
-              style={{
-                width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center bottom', display: 'block',
-                opacity: ready ? 1 : 0,
-                filter: ready ? 'blur(0px)' : 'blur(12px)',
-                transition: 'opacity 0.9s ease, filter 0.9s ease',
-              }}
-            />
-          </div>
+          {/* Illustration — static, fade in on load */}
+          <img
+            src="/hero-work-wealth.png"
+            alt=""
+            style={{
+              position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+              objectFit: 'cover', objectPosition: 'center 30%', display: 'block',
+              opacity: ready ? 1 : 0,
+              filter: ready ? 'blur(0px)' : 'blur(12px)',
+              transition: 'opacity 0.9s ease, filter 0.9s ease',
+            }}
+          />
           {/* Dark overlay */}
           <div style={{
             position: 'absolute', inset: 0, zIndex: 2,
