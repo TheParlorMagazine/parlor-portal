@@ -251,17 +251,19 @@ export default function VerticalPage({ params }) {
             src="/hero-work-wealth.png"
             alt=""
             style={{
-              display: 'block', width: '100%', height: 'auto', marginTop: '-12%',
+              display: 'block', width: '100%', height: 'auto', marginTop: '-14%', marginBottom: '-14%',
               opacity: ready ? 1 : 0,
               filter: ready ? 'blur(0px)' : 'blur(12px)',
               transition: 'opacity 0.9s ease, filter 0.9s ease',
             }}
           />
-          {/* Dark overlay */}
+          {/* Vignette gradient — fades all four edges to black */}
           <div style={{
-            position: 'absolute', inset: 0, zIndex: 2,
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.4) 100%)',
-            pointerEvents: 'none',
+            position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
+            background: `
+              linear-gradient(to bottom, #0a0a0a 0%, transparent 25%, transparent 75%, #0a0a0a 100%),
+              linear-gradient(to right, #0a0a0a 0%, transparent 15%, transparent 85%, #0a0a0a 100%)
+            `,
           }} />
           {/* Title — fades in on load, centered */}
           <div style={{
