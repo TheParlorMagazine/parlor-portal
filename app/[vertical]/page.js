@@ -47,7 +47,16 @@ export default function VerticalPage({ params }) {
   const category = VERTICALS[vertical]
   const [articles, setArticles] = useState([])
   const [loading, setLoading] = useState(true)
+  const [scrollY, setScrollY] = useState(0)
+  const [ready, setReady] = useState(false)
   const supabase = createClient()
+
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 60)
+    const onScroll = () => setScrollY(window.scrollY)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => { clearTimeout(t); window.removeEventListener('scroll', onScroll) }
+  }, [])
 
   useEffect(() => {
     if (!category) return
@@ -235,16 +244,60 @@ export default function VerticalPage({ params }) {
             <a className="feat-hero-cta" href={featured.slug ? `/post/${featured.slug}` : '#'}>Read the story</a>
           </div>
         </section>
-      ) : (
-        <section className="vertical-hero">
-          <h1 className="vertical-title">{category}</h1>
-          {vertical === 'work-wealth' && (
+      ) : vertical === 'work-wealth' ? (
+        <div style={{ position: 'relative', height: '100vh', overflow: 'hidden', background: '#0a0a0a' }}>
+          {/* Illustration — outer: scroll parallax; inner img: entrance fade */}
+          <div style={{
+            position: 'absolute', top: '-15%', left: 0, right: 0, height: '130%',
+            transform: `translateY(${-scrollY * 0.3}px)`,
+            willChange: 'transform',
+          }}>
             <img
               src="/hero-work-wealth.png"
               alt=""
-              className="vertical-hero-img"
+              style={{
+                width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center bottom', display: 'block',
+                opacity: ready ? 1 : 0,
+                filter: ready ? 'blur(0px)' : 'blur(12px)',
+                transition: 'opacity 0.9s ease, filter 0.9s ease',
+              }}
             />
-          )}
+          </div>
+          {/* Dark overlay */}
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 2,
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0.65) 100%)',
+            pointerEvents: 'none',
+          }} />
+          {/* Title fades in on scroll */}
+          {(() => {
+            const vh = typeof window !== 'undefined' ? window.innerHeight : 800
+            const prog = Math.min(1, scrollY / (vh * 0.8))
+            const titleOpacity = Math.min(1, prog * 2)
+            const titleY = 30 - prog * 30
+            return (
+              <div style={{
+                position: 'absolute', bottom: '12%', left: 0, right: 0,
+                textAlign: 'center', zIndex: 4, padding: '0 24px',
+                opacity: titleOpacity,
+                transform: `translateY(${titleY}px)`,
+                willChange: 'opacity, transform',
+              }}>
+                <h1 style={{
+                  fontFamily: "'Playfair Display', Georgia, serif",
+                  fontWeight: 700, fontSize: 'clamp(42px, 7vw, 88px)', lineHeight: 1.02,
+                  color: '#fff', margin: 0, letterSpacing: '-0.01em',
+                  textShadow: '0 2px 24px rgba(0,0,0,0.4)',
+                }}>
+                  {category}
+                </h1>
+              </div>
+            )
+          })()}
+        </div>
+      ) : (
+        <section className="vertical-hero">
+          <h1 className="vertical-title">{category}</h1>
         </section>
       )}
 
