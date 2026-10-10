@@ -245,7 +245,7 @@ export default function VerticalPage({ params }) {
           </div>
         </section>
       ) : vertical === 'work-wealth' ? (
-        <div style={{ position: 'relative', height: '100vh', overflow: 'hidden', background: '#0a0a0a' }}>
+        <div style={{ position: 'relative', height: '65vh', overflow: 'hidden', background: '#0a0a0a' }}>
           {/* Illustration — static, fade in on load */}
           <img
             src="/hero-work-wealth.png"
