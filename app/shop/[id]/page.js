@@ -200,9 +200,9 @@ export default function ProductPage({ params }) {
   const sharedStyles = `
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,400&display=swap');
     .pdp-grid { display:grid; grid-template-columns:1.1fr 1fr; gap:56px; padding:44px 48px 80px; }
-    .pdp-main-img { width:100%; aspect-ratio:1/1; border-radius:6px; background-color:#fff; background-size:cover; background-position:center; background-repeat:no-repeat; box-shadow:0 8px 30px rgba(0,0,0,0.08); }
+    .pdp-main-img { width:100%; aspect-ratio:1/1; border-radius:6px; background-color:#fff; background-size:contain; background-position:center; background-repeat:no-repeat; box-shadow:0 8px 30px rgba(0,0,0,0.08); }
     .pdp-thumbs { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
-    .pdp-thumb { width:66px; height:66px; border-radius:5px; background-color:#fff; background-size:cover; background-position:center; background-repeat:no-repeat; cursor:pointer; border:2px solid transparent; }
+    .pdp-thumb { width:66px; height:66px; border-radius:5px; background-color:#fff; background-size:contain; background-position:center; background-repeat:no-repeat; cursor:pointer; border:2px solid transparent; }
     .pdp-thumb.active { border-color:#0a0a0a; }
     .pdp-qty { display:inline-flex; align-items:center; border:1px solid #cbb8bd; border-radius:4px; overflow:hidden; }
     .pdp-qty button { width:42px; height:44px; border:none; background:#fff; font-size:18px; color:#555; cursor:pointer; }
