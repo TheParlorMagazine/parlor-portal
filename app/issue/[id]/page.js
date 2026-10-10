@@ -34,7 +34,7 @@ export default async function IssuePage({ params }) {
 
   const { data: articles } = await db
     .from('articles')
-    .select('slug, title, subtitle, cover_image_url, category, author_name, date_published')
+    .select('slug, title, subtitle, excerpt, cover_image_url, category, article_category, theme, media_type, author_name, author_photo_url, date_published')
     .eq('published', true)
     .eq('issue_id', id)
     .order('date_published', { ascending: false })
@@ -70,40 +70,67 @@ export default async function IssuePage({ params }) {
       )}
 
       {/* Articles */}
+      <style>{`
+        .issue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 40px; }
+        .issue-card { text-decoration: none; color: inherit; display: flex; flex-direction: column; }
+        .issue-card:hover .issue-card-title { text-decoration: underline; text-decoration-color: #ccc; }
+        .issue-card-img { width: 100%; aspect-ratio: 4/3; overflow: hidden; border-radius: 4px; margin-bottom: 14px; background: #f2ece4; flex-shrink: 0; }
+        .issue-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s ease; }
+        .issue-card:hover .issue-card-img img { transform: scale(1.03); }
+        .issue-card-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+        .issue-pill-type { font-family: 'Source Serif 4', Georgia, serif; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #0a0a0a; color: #fff; border-radius: 999px; padding: 3px 10px; }
+        .issue-pill-cat { font-family: 'Source Serif 4', Georgia, serif; font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; border: 1px solid #c89aa5; color: #7a2531; border-radius: 999px; padding: 3px 10px; }
+        .issue-card-byline { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .issue-card-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #e8e2db; }
+        .issue-card-author { font-family: 'Source Serif 4', Georgia, serif; font-size: 13px; color: #555; }
+        .issue-card-date { font-family: 'Source Serif 4', Georgia, serif; font-size: 13px; color: #999; }
+        .issue-card-title { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; line-height: 1.2; margin: 0 0 8px; color: #0a0a0a; }
+        .issue-card-desc { font-family: 'Source Serif 4', Georgia, serif; font-size: 15px; line-height: 1.6; color: #555; margin: 0; font-weight: 300; }
+      `}</style>
       <section style={{ maxWidth: '1120px', margin: '0 auto', padding: 'clamp(40px,6vh,72px) 24px 96px' }}>
         {(!articles || articles.length === 0) ? (
           <p style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '17px', color: '#888', textAlign: 'center', fontStyle: 'italic' }}>
             Articles from this issue are coming soon.
           </p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '40px' }}>
-            {articles.map(a => (
-              <Link key={a.slug} href={`/post/${a.slug}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-                {a.cover_image_url && (
-                  <div style={{ width: '100%', aspectRatio: '4/3', overflow: 'hidden', borderRadius: '4px', marginBottom: '16px', background: '#f2ece4' }}>
-                    <img src={a.cover_image_url} alt={a.title || ''} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                  </div>
-                )}
-                {a.category && (
-                  <div style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9a7580', marginBottom: '8px' }}>
-                    {a.category}
-                  </div>
-                )}
-                <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 700, lineHeight: 1.2, margin: '0 0 8px', color: '#0a0a0a' }}>
-                  {a.title}
-                </h2>
-                {a.subtitle && (
-                  <p style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '16px', lineHeight: 1.5, color: '#666', margin: '0 0 10px', fontWeight: 300 }}>
-                    {a.subtitle}
-                  </p>
-                )}
-                {a.author_name && (
-                  <div style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '13px', color: '#999' }}>
-                    By {a.author_name}
-                  </div>
-                )}
-              </Link>
-            ))}
+          <div className="issue-grid">
+            {articles.map(a => {
+              const typeLabel = a.media_type && a.media_type !== 'member_post'
+                ? a.media_type.replace(/_/g, ' ')
+                : null
+              const catLabel = a.article_category || a.theme || a.category || null
+              const desc = a.excerpt || a.subtitle || null
+              const dateStr = a.date_published
+                ? new Date(a.date_published).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                : null
+              return (
+                <Link key={a.slug} href={`/post/${a.slug}`} className="issue-card">
+                  {a.cover_image_url && (
+                    <div className="issue-card-img">
+                      <img src={a.cover_image_url} alt={a.title || ''} />
+                    </div>
+                  )}
+                  {(typeLabel || catLabel) && (
+                    <div className="issue-card-pills">
+                      {typeLabel && <span className="issue-pill-type">{typeLabel}</span>}
+                      {catLabel && <span className="issue-pill-cat">{catLabel}</span>}
+                    </div>
+                  )}
+                  {a.author_name && (
+                    <div className="issue-card-byline">
+                      {a.author_photo_url
+                        ? <img src={a.author_photo_url} alt={a.author_name} className="issue-card-avatar" />
+                        : <div className="issue-card-avatar" />
+                      }
+                      <span className="issue-card-author">{a.author_name}</span>
+                      {dateStr && <span className="issue-card-date">· {dateStr}</span>}
+                    </div>
+                  )}
+                  <h2 className="issue-card-title">{a.title}</h2>
+                  {desc && <p className="issue-card-desc">{desc}</p>}
+                </Link>
+              )
+            })}
           </div>
         )}
       </section>
