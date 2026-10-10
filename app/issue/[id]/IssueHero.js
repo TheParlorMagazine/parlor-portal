@@ -8,27 +8,36 @@ const BODY = "'Source Serif 4', Georgia, serif"
 export default function IssueHero({ issue, issued }) {
   const heroRef = useRef(null)
   const [scrollY, setScrollY] = useState(0)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
     const onScroll = () => setScrollY(window.scrollY)
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    // Trigger entrance animations after first paint
+    const t = setTimeout(() => setReady(true), 60)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      clearTimeout(t)
+    }
   }, [])
 
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800
-  // Progress 0→1 over first viewport height of scroll
   const prog = Math.min(1, scrollY / (vh * 0.8))
 
-  // Title fades in as you scroll down
   const titleOpacity = Math.min(1, prog * 2)
   const titleY = 30 - prog * 30
-
-  // Clouds float upward and forward (scale slightly) on scroll
-  const cloudsY = -scrollY * 0.55
+  const cloudsScrollY = -scrollY * 0.55
   const cloudsScale = 1 + prog * 0.08
 
   return (
-    <div ref={heroRef} style={{ position: 'relative', height: '100vh', overflow: 'hidden' }}>
+    <div ref={heroRef} style={{ position: 'relative', height: '100vh', overflow: 'hidden', background: '#2a1c14' }}>
+      <style>{`
+        @keyframes scrollPulse {
+          0%, 100% { opacity: 0.5; transform: translateX(-50%) translateY(0); }
+          50%       { opacity: 1; transform: translateX(-50%) translateY(5px); }
+        }
+      `}</style>
+
       {/* Back button */}
       <a
         href="/"
@@ -42,16 +51,16 @@ export default function IssueHero({ issue, issued }) {
         onMouseEnter={e => e.currentTarget.style.color = '#fff'}
         onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.85)'}
       >
-        <svg width="22" height="16" viewBox="0 0 28 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform 0.18s ease' }}>
+        <svg width="22" height="16" viewBox="0 0 28 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="27" y1="12" x2="3" y2="12" /><polyline points="10 19 3 12 10 5" />
         </svg>
         Home
       </a>
 
-      {/* Full-bleed cover — outer handles parallax, img handles blur+fade */}
+      {/* Cover — outer: scroll parallax only; inner img: entrance fade+blur */}
       <div style={{
-        position: 'absolute', inset: 0, width: '100%', height: '115%',
-        transform: `translateY(${scrollY * 0.3}px)`,
+        position: 'absolute', top: '-15%', left: 0, right: 0, height: '130%',
+        transform: `translateY(${-scrollY * 0.3}px)`,
         willChange: 'transform',
       }}>
         <img
@@ -59,27 +68,25 @@ export default function IssueHero({ issue, issued }) {
           alt=""
           style={{
             width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block',
-            animation: 'coverReveal 1.2s cubic-bezier(.4,0,.2,1) both',
+            opacity: ready ? 1 : 0,
+            filter: ready ? 'blur(0px)' : 'blur(14px)',
+            transition: 'opacity 0.9s ease, filter 0.9s ease',
           }}
         />
       </div>
 
-      {/* Dark gradient overlay so text is readable */}
+      {/* Dark gradient overlay */}
       <div style={{
-        position: 'absolute', inset: 0,
+        position: 'absolute', inset: 0, zIndex: 2,
         background: 'linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.55) 100%)',
-        zIndex: 2,
+        pointerEvents: 'none',
       }} />
 
       {/* Gradient behind text — fades in with title */}
       <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        height: '45%', zIndex: 3,
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: '45%', zIndex: 3,
         background: 'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.28) 60%, transparent 100%)',
-        opacity: titleOpacity,
-        transition: 'none',
-        willChange: 'opacity',
-        pointerEvents: 'none',
+        opacity: titleOpacity, pointerEvents: 'none',
       }} />
 
       {/* Title — fades in on scroll */}
@@ -88,7 +95,6 @@ export default function IssueHero({ issue, issued }) {
         textAlign: 'center', zIndex: 4, padding: '0 24px',
         opacity: titleOpacity,
         transform: `translateY(${titleY}px)`,
-        transition: 'none',
         willChange: 'opacity, transform',
       }}>
         <h1 style={{
@@ -109,11 +115,11 @@ export default function IssueHero({ issue, issued }) {
         )}
       </div>
 
-      {/* Clouds — outer handles parallax, img handles slide-up on load */}
+      {/* Clouds — outer: scroll parallax only; inner: entrance slide-up */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         zIndex: 3, pointerEvents: 'none',
-        transform: `translateY(${cloudsY}px) scale(${cloudsScale})`,
+        transform: `translateY(${cloudsScrollY}px) scale(${cloudsScale})`,
         transformOrigin: 'bottom center',
         willChange: 'transform',
       }}>
@@ -122,31 +128,17 @@ export default function IssueHero({ issue, issued }) {
           alt=""
           style={{
             width: '100%', height: 'auto', display: 'block',
-            animation: 'cloudsSlideUp 1.4s 0.3s cubic-bezier(.22,1,.36,1) both',
+            opacity: ready ? 1 : 0,
+            transform: ready ? 'translateY(0)' : 'translateY(60px)',
+            transition: 'opacity 1.1s 0.25s ease, transform 1.4s 0.25s cubic-bezier(.22,1,.36,1)',
           }}
         />
       </div>
 
-      <style>{`
-        @keyframes scrollPulse {
-          0%, 100% { opacity: 0.5; transform: translateX(-50%) translateY(0); }
-          50% { opacity: 1; transform: translateX(-50%) translateY(5px); }
-        }
-        @keyframes coverReveal {
-          from { opacity: 0; filter: blur(16px) brightness(0.75); }
-          to   { opacity: 1; filter: blur(0px) brightness(1); }
-        }
-        @keyframes cloudsSlideUp {
-          from { opacity: 0; transform: translateY(60px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-
-      {/* Scroll cue — outer controls fade-on-scroll, inner animates */}
+      {/* Scroll cue */}
       <div style={{
         position: 'absolute', bottom: 28, left: '50%', transform: 'translateX(-50%)',
         zIndex: 5, opacity: Math.max(0, 1 - prog * 4),
-        willChange: 'opacity',
       }}>
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
