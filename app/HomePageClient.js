@@ -152,6 +152,7 @@ export default function HomePageClient({ initial = {} }) {
   // Slides whose cover is portrait get the two-column "split" layout (image left,
   // title right); wide/near-square covers keep the full-bleed layout.
   const [portraitSlides, setPortraitSlides] = useState({})
+  const [heroClassified, setHeroClassified] = useState(false)
   const [printPopupOpen, setPrintPopupOpen] = useState(false)
   const aboutRef = useRef(null)
   const memberRef = useRef(null)
@@ -236,6 +237,7 @@ export default function HomePageClient({ initial = {} }) {
       })
     }
     scan()
+    setHeroClassified(true)
     // A couple of retries catch images that finish decoding just after mount.
     const t = setTimeout(scan, 200)
     return () => clearTimeout(t)
@@ -1304,7 +1306,7 @@ export default function HomePageClient({ initial = {} }) {
         const realActive = cloneMode ? ((heroIndex - 1) % n + n) % n : 0
         const ext = cloneMode ? [heroSlides[n - 1], ...heroSlides, heroSlides[0]] : heroSlides
         return (
-        <section className="issue-hero" aria-label="Featured issue">
+        <section className="issue-hero" aria-label="Featured issue" style={{ opacity: heroClassified ? 1 : 0, transition: 'opacity 0.3s ease' }}>
           <div className="issue-hero-track" onTransitionEnd={handleHeroTransitionEnd} style={{ transform: `translateX(-${pos * 100}%)`, transition: heroNoTrans ? 'none' : undefined }}>
           {ext.map((s, i) => {
             const orig = cloneMode ? ((i - 1) % n + n) % n : i
