@@ -49,6 +49,7 @@ export default function VerticalPage({ params }) {
   const [loading, setLoading] = useState(true)
   const [scrollY, setScrollY] = useState(0)
   const [ready, setReady] = useState(false)
+  const [spotStep, setSpotStep] = useState(0)
   const supabase = createClient()
 
   useEffect(() => {
@@ -57,6 +58,16 @@ export default function VerticalPage({ params }) {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => { clearTimeout(t); window.removeEventListener('scroll', onScroll) }
   }, [])
+
+  useEffect(() => {
+    if (vertical !== 'perspectives-identity') return
+    const timers = [
+      setTimeout(() => setSpotStep(1), 400),
+      setTimeout(() => setSpotStep(2), 1800),
+      setTimeout(() => setSpotStep(3), 3200),
+    ]
+    return () => timers.forEach(clearTimeout)
+  }, [vertical])
 
   useEffect(() => {
     if (!category) return
@@ -264,23 +275,37 @@ export default function VerticalPage({ params }) {
               transition: 'opacity 0.9s ease, filter 0.9s ease',
             }}
           />
+          {/* Sequential spotlights for Perspectives & Identity */}
+          {vertical === 'perspectives-identity' && [
+            { x: '20%', y: '48%', step: 1 },
+            { x: '50%', y: '44%', step: 2 },
+            { x: '78%', y: '48%', step: 3 },
+          ].map(({ x, y, step }) => (
+            <div key={step} style={{
+              position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none',
+              background: `radial-gradient(ellipse 22% 32% at ${x} ${y}, rgba(255,252,220,0.55) 0%, rgba(255,245,180,0.2) 40%, transparent 70%)`,
+              opacity: spotStep === step ? 1 : 0,
+              transition: 'opacity 0.7s ease',
+              mixBlendMode: 'screen',
+            }} />
+          ))}
           {/* Vignette gradient — fades all four edges to black */}
           <div style={{
-            position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
+            position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none',
             background: `
               linear-gradient(to bottom, #0a0a0a 0%, transparent 25%, transparent 65%, #0a0a0a 100%),
               linear-gradient(to right, #0a0a0a 0%, transparent 15%, transparent 85%, #0a0a0a 100%)
             `,
           }} />
-          {/* Title — fades in on load, centered */}
+          {/* Title — fades in after spotlight sequence (or on load for other verticals) */}
           <div style={{
             position: 'absolute', inset: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 4, padding: '0 24px',
+            zIndex: 5, padding: '0 24px',
             paddingTop: '8%',
             background: 'radial-gradient(ellipse 60% 40% at 50% 50%, rgba(0,0,0,0.55) 0%, transparent 100%)',
-            opacity: ready ? 1 : 0,
-            transform: ready ? 'translateY(0)' : 'translateY(20px)',
+            opacity: vertical === 'perspectives-identity' ? (spotStep >= 3 ? 1 : 0) : (ready ? 1 : 0),
+            transform: (vertical === 'perspectives-identity' ? spotStep >= 3 : ready) ? 'translateY(0)' : 'translateY(20px)',
             transition: 'opacity 1s 0.2s ease, transform 1.2s 0.2s cubic-bezier(.22,1,.36,1)',
           }}>
             <h1 style={{
