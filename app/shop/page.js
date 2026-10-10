@@ -203,7 +203,7 @@ export default function ShopPage() {
   // Landscape images (wider than ~5:4) get cropped badly in the 4/5 portrait card,
   // so show them "contain" (whole image, centered). Portrait/square product shots
   // keep "cover" so they fill the card. Defaults to cover until measured.
-  const fitOf = p => { const r = imgRatios[p.id]; return (r > 1.1 || (r != null && r < 0.78)) ? 'contain' : 'cover' }
+  const fitOf = p => (imgRatios[p.id] > 1.1 ? 'contain' : 'cover')
 
   const heading = cat !== 'all' ? cat : (q ? `Results for “${query.trim()}”` : 'The collection')
 
