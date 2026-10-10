@@ -257,6 +257,19 @@ export default function VerticalPage({ params }) {
         </section>
       ) : (vertical === 'work-wealth' || vertical === 'society-culture' || vertical === 'world-politics' || vertical === 'perspectives-identity') ? (
         <div style={{ position: 'relative', background: '#0a0a0a', lineHeight: 0, overflow: 'hidden' }}>
+          {/* Backlights — sit BEHIND the illustration, glow through transparent areas */}
+          {vertical === 'perspectives-identity' && [
+            { x: '20%', y: '55%', step: 1 },
+            { x: '50%', y: '50%', step: 2 },
+            { x: '78%', y: '55%', step: 3 },
+          ].map(({ x, y, step }) => (
+            <div key={`bl-${step}`} style={{
+              position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
+              background: `radial-gradient(ellipse 30% 45% at ${x} ${y}, rgba(255,230,140,0.9) 0%, rgba(255,200,80,0.5) 30%, rgba(255,160,40,0.2) 60%, transparent 80%)`,
+              opacity: spotStep === step ? 1 : 0,
+              transition: 'opacity 0.7s ease',
+            }} />
+          ))}
           {/* Illustration — shifted up to crop transparent top area */}
           <img
             src={
@@ -268,6 +281,7 @@ export default function VerticalPage({ params }) {
             alt=""
             style={{
               display: 'block', width: '100%', height: 'auto',
+              position: 'relative', zIndex: 2,
               marginTop: vertical === 'society-culture' ? '-8%' : '-14%',
               marginBottom: vertical === 'society-culture' ? '-14%' : '-14%',
               opacity: ready ? 1 : 0,
@@ -275,13 +289,13 @@ export default function VerticalPage({ params }) {
               transition: 'opacity 0.9s ease, filter 0.9s ease',
             }}
           />
-          {/* Sequential spotlights for Perspectives & Identity */}
+          {/* Sequential spotlights over the illustration for Perspectives & Identity */}
           {vertical === 'perspectives-identity' && [
             { x: '20%', y: '48%', step: 1 },
             { x: '50%', y: '44%', step: 2 },
             { x: '78%', y: '48%', step: 3 },
           ].map(({ x, y, step }) => (
-            <div key={step} style={{
+            <div key={`sp-${step}`} style={{
               position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none',
               background: `radial-gradient(ellipse 22% 32% at ${x} ${y}, rgba(255,252,220,0.55) 0%, rgba(255,245,180,0.2) 40%, transparent 70%)`,
               opacity: spotStep === step ? 1 : 0,
