@@ -245,13 +245,13 @@ export default function VerticalPage({ params }) {
           </div>
         </section>
       ) : vertical === 'work-wealth' ? (
-        <div style={{ position: 'relative', background: '#0a0a0a', lineHeight: 0 }}>
-          {/* Illustration — natural size, no black padding */}
+        <div style={{ position: 'relative', background: '#0a0a0a', lineHeight: 0, overflow: 'hidden' }}>
+          {/* Illustration — shifted up to crop transparent top area */}
           <img
             src="/hero-work-wealth.png"
             alt=""
             style={{
-              display: 'block', width: '100%', height: 'auto',
+              display: 'block', width: '100%', height: 'auto', marginTop: '-12%',
               opacity: ready ? 1 : 0,
               filter: ready ? 'blur(0px)' : 'blur(12px)',
               transition: 'opacity 0.9s ease, filter 0.9s ease',
