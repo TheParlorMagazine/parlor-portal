@@ -83,17 +83,18 @@ export default function VerticalPage({ params }) {
 
         .vertical-hero {
           background: #0a0a0a;
-          padding: 64px 40px 48px;
+          padding: 64px 40px 0;
           text-align: center;
-        }
-        .vertical-eyebrow {
-          font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase;
-          color: #f2b8c6; margin-bottom: 16px;
+          overflow: hidden;
         }
         .vertical-title {
           font-family: 'Playfair Display', Georgia, serif;
           font-size: clamp(36px, 5vw, 56px); font-weight: 700;
-          color: #ffffff; line-height: 1.08;
+          color: #ffffff; line-height: 1.08; margin: 0;
+        }
+        .vertical-hero-img {
+          display: block; width: 100%; max-width: 820px;
+          margin: 0 auto -4px; height: auto;
         }
 
         /* Full-width featured hero — the vertical's featured article. */
@@ -236,8 +237,14 @@ export default function VerticalPage({ params }) {
         </section>
       ) : (
         <section className="vertical-hero">
-          <div className="vertical-eyebrow">Section</div>
           <h1 className="vertical-title">{category}</h1>
+          {vertical === 'work-wealth' && (
+            <img
+              src="/hero-work-wealth.png"
+              alt=""
+              className="vertical-hero-img"
+            />
+          )}
         </section>
       )}
 
