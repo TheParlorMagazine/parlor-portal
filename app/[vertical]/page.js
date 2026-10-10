@@ -277,7 +277,7 @@ export default function VerticalPage({ params }) {
             position: 'absolute', inset: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 4, padding: '0 24px',
-            paddingTop: vertical === 'perspectives-identity' ? '12%' : '8%',
+            paddingTop: '8%',
             background: 'radial-gradient(ellipse 60% 40% at 50% 50%, rgba(0,0,0,0.55) 0%, transparent 100%)',
             opacity: ready ? 1 : 0,
             transform: ready ? 'translateY(0)' : 'translateY(20px)',
