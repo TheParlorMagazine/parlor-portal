@@ -48,17 +48,19 @@ export default function IssueHero({ issue, issued }) {
         Home
       </a>
 
-      {/* Full-bleed cover — parallax slower than scroll */}
-      <img
-        src="/issue-02-cover.png"
-        alt=""
-        style={{
-          position: 'absolute', inset: 0, width: '100%', height: '115%',
-          objectFit: 'cover', objectPosition: 'center top',
-          transform: `translateY(${scrollY * 0.3}px)`,
-          willChange: 'transform',
-        }}
-      />
+      {/* Full-bleed cover — entrance blur+fade, then parallax on scroll */}
+      <div style={{
+        position: 'absolute', inset: 0, width: '100%', height: '115%',
+        animation: 'coverReveal 1.2s cubic-bezier(.4,0,.2,1) both',
+        transform: `translateY(${scrollY * 0.3}px)`,
+        willChange: 'transform',
+      }}>
+        <img
+          src="/issue-02-cover.png"
+          alt=""
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
+        />
+      </div>
 
       {/* Dark gradient overlay so text is readable */}
       <div style={{
@@ -97,33 +99,42 @@ export default function IssueHero({ issue, issued }) {
         </h1>
         {issue.number && (
           <div style={{
-            fontFamily: BODY, fontSize: 12, letterSpacing: '0.22em',
-            textTransform: 'uppercase', color: 'rgba(242,184,198,0.9)',
+            fontFamily: BODY, fontSize: 15, letterSpacing: '0.2em',
+            textTransform: 'uppercase', color: '#f2b8c6',
           }}>
             Issue {String(issue.number).padStart(2, '0')}{issued ? ` · ${issued}` : ''}
           </div>
         )}
       </div>
 
-      {/* Clouds — float up faster than the cover on scroll */}
-      <img
-        src="/issue-02-clouds.png"
-        alt=""
-        style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0,
-          width: '100%', height: 'auto',
-          transform: `translateY(${cloudsY}px) scale(${cloudsScale})`,
-          transformOrigin: 'bottom center',
-          zIndex: 3,
-          willChange: 'transform',
-          pointerEvents: 'none',
-        }}
-      />
+      {/* Clouds — slide up on load, then parallax on scroll */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        zIndex: 3, pointerEvents: 'none',
+        animation: 'cloudsSlideUp 1.4s 0.3s cubic-bezier(.22,1,.36,1) both',
+        transform: `translateY(${cloudsY}px) scale(${cloudsScale})`,
+        transformOrigin: 'bottom center',
+        willChange: 'transform',
+      }}>
+        <img
+          src="/issue-02-clouds.png"
+          alt=""
+          style={{ width: '100%', height: 'auto', display: 'block' }}
+        />
+      </div>
 
       <style>{`
         @keyframes scrollPulse {
           0%, 100% { opacity: 0.5; transform: translateX(-50%) translateY(0); }
           50% { opacity: 1; transform: translateX(-50%) translateY(5px); }
+        }
+        @keyframes coverReveal {
+          from { opacity: 0; filter: blur(18px) brightness(0.7); transform: scale(1.04); }
+          to   { opacity: 1; filter: blur(0px) brightness(1);    transform: scale(1); }
+        }
+        @keyframes cloudsSlideUp {
+          from { opacity: 0; transform: translateY(60px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
 

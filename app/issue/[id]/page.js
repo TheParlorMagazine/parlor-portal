@@ -34,7 +34,7 @@ export default async function IssuePage({ params }) {
 
   const { data: articles } = await db
     .from('articles')
-    .select('slug, title, subtitle, excerpt, cover_image_url, category, article_category, theme, media_type, author_name, author_photo_url, date_published')
+    .select('slug, title, subtitle, excerpt, cover_image_url, category, article_category, theme, media_type, author_name, author_photo_url, date_published, sections(title)')
     .eq('published', true)
     .eq('issue_id', id)
     .order('date_published', { ascending: false })
@@ -71,21 +71,24 @@ export default async function IssuePage({ params }) {
 
       {/* Articles */}
       <style>{`
-        .issue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 40px; }
-        .issue-card { text-decoration: none; color: inherit; display: flex; flex-direction: column; }
+        .issue-grid { display: flex; flex-direction: column; gap: 0; }
+        .issue-card { text-decoration: none; color: inherit; display: grid; grid-template-columns: 320px 1fr; gap: 36px; align-items: start; padding: 40px 0; border-bottom: 1px solid #e8e3dd; }
+        .issue-card:first-child { border-top: 1px solid #e8e3dd; }
         .issue-card:hover .issue-card-title { text-decoration: underline; text-decoration-color: #ccc; }
-        .issue-card-img { width: 100%; aspect-ratio: 4/3; overflow: hidden; border-radius: 4px; margin-bottom: 14px; background: #f2ece4; flex-shrink: 0; }
+        .issue-card-img { width: 100%; aspect-ratio: 4/3; overflow: hidden; border-radius: 4px; background: #f2ece4; flex-shrink: 0; }
         .issue-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s ease; }
         .issue-card:hover .issue-card-img img { transform: scale(1.03); }
-        .issue-card-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+        .issue-card-body { display: flex; flex-direction: column; justify-content: center; }
+        .issue-card-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
         .issue-pill-type { font-family: 'Source Serif 4', Georgia, serif; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #0a0a0a; color: #fff; border-radius: 999px; padding: 3px 10px; }
         .issue-pill-cat { font-family: 'Source Serif 4', Georgia, serif; font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; border: 1px solid #c89aa5; color: #7a2531; border-radius: 999px; padding: 3px 10px; }
-        .issue-card-byline { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .issue-card-byline { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
         .issue-card-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #e8e2db; }
         .issue-card-author { font-family: 'Source Serif 4', Georgia, serif; font-size: 13px; color: #555; }
         .issue-card-date { font-family: 'Source Serif 4', Georgia, serif; font-size: 13px; color: #999; }
-        .issue-card-title { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; line-height: 1.2; margin: 0 0 8px; color: #0a0a0a; }
-        .issue-card-desc { font-family: 'Source Serif 4', Georgia, serif; font-size: 15px; line-height: 1.6; color: #555; margin: 0; font-weight: 300; }
+        .issue-card-title { font-family: 'Playfair Display', Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1.15; margin: 0 0 12px; color: #0a0a0a; }
+        .issue-card-desc { font-family: 'Source Serif 4', Georgia, serif; font-size: 16px; line-height: 1.7; color: #555; margin: 0; font-weight: 300; max-width: 60ch; }
+        @media (max-width: 700px) { .issue-card { grid-template-columns: 1fr; gap: 16px; } }
       `}</style>
       <section style={{ maxWidth: '1120px', margin: '0 auto', padding: 'clamp(40px,6vh,72px) 24px 96px' }}>
         {(!articles || articles.length === 0) ? (
@@ -95,9 +98,7 @@ export default async function IssuePage({ params }) {
         ) : (
           <div className="issue-grid">
             {articles.map(a => {
-              const typeLabel = a.media_type && a.media_type !== 'member_post'
-                ? a.media_type.replace(/_/g, ' ')
-                : null
+              const typeLabel = a.sections?.title || null
               const catLabel = a.article_category || a.theme || a.category || null
               const desc = a.excerpt || a.subtitle || null
               const dateStr = a.date_published
@@ -110,24 +111,26 @@ export default async function IssuePage({ params }) {
                       <img src={a.cover_image_url} alt={a.title || ''} />
                     </div>
                   )}
-                  {(typeLabel || catLabel) && (
-                    <div className="issue-card-pills">
-                      {typeLabel && <span className="issue-pill-type">{typeLabel}</span>}
-                      {catLabel && <span className="issue-pill-cat">{catLabel}</span>}
-                    </div>
-                  )}
-                  {a.author_name && (
-                    <div className="issue-card-byline">
-                      {a.author_photo_url
-                        ? <img src={a.author_photo_url} alt={a.author_name} className="issue-card-avatar" />
-                        : <div className="issue-card-avatar" />
-                      }
-                      <span className="issue-card-author">{a.author_name}</span>
-                      {dateStr && <span className="issue-card-date">· {dateStr}</span>}
-                    </div>
-                  )}
-                  <h2 className="issue-card-title">{a.title}</h2>
-                  {desc && <p className="issue-card-desc">{desc}</p>}
+                  <div className="issue-card-body">
+                    {(typeLabel || catLabel) && (
+                      <div className="issue-card-pills">
+                        {typeLabel && <span className="issue-pill-type">{typeLabel}</span>}
+                        {catLabel && <span className="issue-pill-cat">{catLabel}</span>}
+                      </div>
+                    )}
+                    {a.author_name && (
+                      <div className="issue-card-byline">
+                        {a.author_photo_url
+                          ? <img src={a.author_photo_url} alt={a.author_name} className="issue-card-avatar" />
+                          : <div className="issue-card-avatar" />
+                        }
+                        <span className="issue-card-author">{a.author_name}</span>
+                        {dateStr && <span className="issue-card-date">· {dateStr}</span>}
+                      </div>
+                    )}
+                    <h2 className="issue-card-title">{a.title}</h2>
+                    {desc && <p className="issue-card-desc">{desc}</p>}
+                  </div>
                 </Link>
               )
             })}
