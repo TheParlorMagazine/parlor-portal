@@ -269,31 +269,24 @@ export default function VerticalPage({ params }) {
             background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0.65) 100%)',
             pointerEvents: 'none',
           }} />
-          {/* Title fades in on scroll */}
-          {(() => {
-            const vh = typeof window !== 'undefined' ? window.innerHeight : 800
-            const prog = Math.min(1, scrollY / (vh * 0.8))
-            const titleOpacity = Math.min(1, prog * 2)
-            const titleY = 30 - prog * 30
-            return (
-              <div style={{
-                position: 'absolute', bottom: '12%', left: 0, right: 0,
-                textAlign: 'center', zIndex: 4, padding: '0 24px',
-                opacity: titleOpacity,
-                transform: `translateY(${titleY}px)`,
-                willChange: 'opacity, transform',
-              }}>
-                <h1 style={{
-                  fontFamily: "'Playfair Display', Georgia, serif",
-                  fontWeight: 700, fontSize: 'clamp(42px, 7vw, 88px)', lineHeight: 1.02,
-                  color: '#fff', margin: 0, letterSpacing: '-0.01em',
-                  textShadow: '0 2px 24px rgba(0,0,0,0.4)',
-                }}>
-                  {category}
-                </h1>
-              </div>
-            )
-          })()}
+          {/* Title — fades in on load, centered */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 4, padding: '0 24px',
+            opacity: ready ? 1 : 0,
+            transform: ready ? 'translateY(0)' : 'translateY(20px)',
+            transition: 'opacity 1s 0.2s ease, transform 1.2s 0.2s cubic-bezier(.22,1,.36,1)',
+          }}>
+            <h1 style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontWeight: 700, fontSize: 'clamp(42px, 7vw, 88px)', lineHeight: 1.02,
+              color: '#fff', margin: 0, letterSpacing: '-0.01em', textAlign: 'center',
+              textShadow: '0 2px 32px rgba(0,0,0,0.5)',
+            }}>
+              {category}
+            </h1>
+          </div>
         </div>
       ) : (
         <section className="vertical-hero">
