@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import SiteHeader from '../../_components/SiteHeader'
 import SiteFooter from '../../_components/SiteFooter'
+import IssueHero from './IssueHero'
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -42,25 +43,31 @@ export default async function IssuePage({ params }) {
     ? new Date(issue.publication_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
     : null
 
+  const isIssue02 = issue.number === 2
+
   return (
     <>
-    <SiteHeader />
+    {!isIssue02 && <SiteHeader />}
     <main style={{ background: '#fff', minHeight: '100vh' }}>
       {/* Issue header */}
-      <section style={{ background: 'var(--black, #0a0a0a)', color: '#fff', padding: 'clamp(48px,8vh,96px) 24px', textAlign: 'center' }}>
-        {issue.number ? (
-          <div style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '13px', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--pink, #f2b8c6)', marginBottom: '16px' }}>
-            Issue {String(issue.number).padStart(2, '0')}{issued ? ` · ${issued}` : ''}
-          </div>
-        ) : issued ? (
-          <div style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '13px', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--pink, #f2b8c6)', marginBottom: '16px' }}>
-            {issued}
-          </div>
-        ) : null}
-        <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(38px,6vw,76px)', fontWeight: 700, lineHeight: 1.04, margin: 0, letterSpacing: '-0.01em' }}>
-          {issue.title}
-        </h1>
-      </section>
+      {isIssue02 ? (
+        <IssueHero issue={issue} issued={issued} />
+      ) : (
+        <section style={{ background: 'var(--black, #0a0a0a)', color: '#fff', padding: 'clamp(48px,8vh,96px) 24px', textAlign: 'center' }}>
+          {issue.number ? (
+            <div style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '13px', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--pink, #f2b8c6)', marginBottom: '16px' }}>
+              Issue {String(issue.number).padStart(2, '0')}{issued ? ` · ${issued}` : ''}
+            </div>
+          ) : issued ? (
+            <div style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '13px', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--pink, #f2b8c6)', marginBottom: '16px' }}>
+              {issued}
+            </div>
+          ) : null}
+          <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(38px,6vw,76px)', fontWeight: 700, lineHeight: 1.04, margin: 0, letterSpacing: '-0.01em' }}>
+            {issue.title}
+          </h1>
+        </section>
+      )}
 
       {/* Articles */}
       <section style={{ maxWidth: '1120px', margin: '0 auto', padding: 'clamp(40px,6vh,72px) 24px 96px' }}>
