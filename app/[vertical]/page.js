@@ -65,6 +65,7 @@ export default function VerticalPage({ params }) {
       setTimeout(() => setSpotStep(1), 400),
       setTimeout(() => setSpotStep(2), 1800),
       setTimeout(() => setSpotStep(3), 3200),
+      setTimeout(() => setSpotStep(4), 4600),
     ]
     return () => timers.forEach(clearTimeout)
   }, [vertical])
@@ -275,7 +276,7 @@ export default function VerticalPage({ params }) {
                 zIndex: 1, pointerEvents: 'none',
                 clipPath: clip,
                 filter: 'blur(18px) brightness(6) saturate(0.2)',
-                opacity: spotStep === step ? 0.85 : 0,
+                opacity: spotStep === step && spotStep < 4 ? 0.85 : 0,
                 transition: 'opacity 0.7s ease',
               }}
             />
@@ -328,8 +329,8 @@ export default function VerticalPage({ params }) {
             zIndex: 5, padding: '0 24px',
             paddingTop: '8%',
             background: 'radial-gradient(ellipse 60% 40% at 50% 50%, rgba(0,0,0,0.55) 0%, transparent 100%)',
-            opacity: vertical === 'perspectives-identity' ? (spotStep >= 3 ? 1 : 0) : (ready ? 1 : 0),
-            transform: (vertical === 'perspectives-identity' ? spotStep >= 3 : ready) ? 'translateY(0)' : 'translateY(20px)',
+            opacity: vertical === 'perspectives-identity' ? (spotStep >= 4 ? 1 : 0) : (ready ? 1 : 0),
+            transform: (vertical === 'perspectives-identity' ? spotStep >= 4 : ready) ? 'translateY(0)' : 'translateY(20px)',
             transition: 'opacity 1s 0.2s ease, transform 1.2s 0.2s cubic-bezier(.22,1,.36,1)',
           }}>
             <h1 style={{
