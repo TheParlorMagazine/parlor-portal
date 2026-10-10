@@ -67,31 +67,42 @@ export default function IssueHero({ issue, issued }) {
         zIndex: 2,
       }} />
 
+      {/* Gradient behind text — fades in with title */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        height: '45%', zIndex: 3,
+        background: 'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.28) 60%, transparent 100%)',
+        opacity: titleOpacity,
+        transition: 'none',
+        willChange: 'opacity',
+        pointerEvents: 'none',
+      }} />
+
       {/* Title — fades in on scroll */}
       <div style={{
-        position: 'absolute', bottom: '12%', left: 0, right: 0,
+        position: 'absolute', bottom: '10%', left: 0, right: 0,
         textAlign: 'center', zIndex: 4, padding: '0 24px',
         opacity: titleOpacity,
         transform: `translateY(${titleY}px)`,
         transition: 'none',
         willChange: 'opacity, transform',
       }}>
+        <h1 style={{
+          fontFamily: DISPLAY, fontWeight: 700,
+          fontSize: 'clamp(42px, 7vw, 88px)', lineHeight: 1.02,
+          color: '#fff', margin: '0 0 16px', letterSpacing: '-0.01em',
+          textShadow: '0 2px 24px rgba(0,0,0,0.3)',
+        }}>
+          {issue.title}
+        </h1>
         {issue.number && (
           <div style={{
-            fontFamily: BODY, fontSize: 13, letterSpacing: '0.22em',
-            textTransform: 'uppercase', color: '#f2b8c6', marginBottom: 14,
+            fontFamily: BODY, fontSize: 12, letterSpacing: '0.22em',
+            textTransform: 'uppercase', color: 'rgba(242,184,198,0.9)',
           }}>
             Issue {String(issue.number).padStart(2, '0')}{issued ? ` · ${issued}` : ''}
           </div>
         )}
-        <h1 style={{
-          fontFamily: DISPLAY, fontWeight: 700,
-          fontSize: 'clamp(42px, 7vw, 88px)', lineHeight: 1.02,
-          color: '#fff', margin: 0, letterSpacing: '-0.01em',
-          textShadow: '0 2px 24px rgba(0,0,0,0.4)',
-        }}>
-          {issue.title}
-        </h1>
       </div>
 
       {/* Clouds — float up faster than the cover on scroll */}
@@ -109,13 +120,21 @@ export default function IssueHero({ issue, issued }) {
         }}
       />
 
+      <style>{`
+        @keyframes scrollPulse {
+          0%, 100% { opacity: 0.5; transform: translateX(-50%) translateY(0); }
+          50% { opacity: 1; transform: translateX(-50%) translateY(5px); }
+        }
+      `}</style>
+
       {/* Scroll cue */}
       <div style={{
-        position: 'absolute', bottom: 28, left: '50%', transform: 'translateX(-50%)',
+        position: 'absolute', bottom: 28, left: '50%',
         zIndex: 5, opacity: Math.max(0, 1 - prog * 3),
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-        color: 'rgba(255,255,255,0.6)', fontFamily: BODY, fontSize: 11,
+        color: 'rgba(255,255,255,0.75)', fontFamily: BODY, fontSize: 11,
         letterSpacing: '0.14em', textTransform: 'uppercase',
+        animation: 'scrollPulse 2s ease-in-out infinite',
       }}>
         Scroll
         <svg width="16" height="20" viewBox="0 0 16 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
