@@ -239,6 +239,11 @@ export default function ShopPage() {
         .shop-add:hover { background:${MAROON}; }
         .shop-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:34px 26px; }
         .shop-hero-title { font-family:${DISPLAY}; font-weight:700; font-size:60px; line-height:1.05; color:#1a1a1a; margin:0; }
+        @keyframes heroSlideIn { from { opacity:0; transform:translateX(-48px); } to { opacity:1; transform:translateX(0); } }
+        @keyframes heroSlideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        .shop-hero-title { animation: heroSlideIn 0.65s cubic-bezier(.22,1,.36,1) both; }
+        .shop-hero-btn { display:inline-block; margin-top:24px; background:${BLACK}; color:#fff; text-decoration:none; border:2px solid ${BLACK}; border-radius:26px; padding:12px 26px; font-family:${BODY}; font-size:14.5px; letter-spacing:0.04em; cursor:pointer; animation:heroSlideUp 0.55s 0.45s cubic-bezier(.22,1,.36,1) both; transition:background 0.2s, color 0.2s; }
+        .shop-hero-btn:hover { background:#fff; color:${BLACK}; }
         .shop-welcome { font-family:${DISPLAY}; font-weight:700; font-size:64px; line-height:1.03; color:#fff; margin:0; }
         .shop-back { display:inline-flex; align-items:center; gap:9px; color:rgba(255,255,255,0.78); font-family:${BODY}; font-size:13px; letter-spacing:0.08em; text-transform:uppercase; text-decoration:none; padding:26px 48px 0; transition:color 0.15s; }
         .shop-back:hover { color:#fff; }
@@ -399,9 +404,7 @@ export default function ShopPage() {
         <div className="shop-herogrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', alignItems: 'center' }}>
           <div className="shop-hero-left">
             <h2 className="shop-hero-title" style={{ whiteSpace: 'pre-line' }}>{heroHeadline}</h2>
-            <a
-              href={`/shop/${featured.id}`}
-              style={{ display: 'inline-block', marginTop: 24, background: BLACK, color: '#fff', textDecoration: 'none', border: 'none', borderRadius: 26, padding: '12px 26px', fontFamily: BODY, fontSize: 14.5, letterSpacing: '0.04em', cursor: 'pointer' }}>
+            <a href={`/shop/${featured.id}`} className="shop-hero-btn">
               Order now — {fmtPrice(priceOf(featured), symbol)} plus shipping
             </a>
           </div>
