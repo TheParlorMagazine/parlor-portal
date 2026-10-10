@@ -13,12 +13,7 @@ export default function IssueHero({ issue, issued }) {
   useEffect(() => {
     const onScroll = () => setScrollY(window.scrollY)
     window.addEventListener('scroll', onScroll, { passive: true })
-    // Trigger entrance animations after first paint
-    const t = setTimeout(() => setReady(true), 60)
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      clearTimeout(t)
-    }
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800
@@ -59,9 +54,10 @@ export default function IssueHero({ issue, issued }) {
 
       {/* Cover — static, no parallax */}
       <img
-        src="/issue-02-cover.png"
+        src="/issue-02-cover.webp"
         alt=""
-        fetchpriority="high"
+        fetchPriority="high"
+        onLoad={() => setReady(true)}
         style={{
           position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
           objectFit: 'cover', objectPosition: 'center top', display: 'block',
