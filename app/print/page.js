@@ -55,7 +55,6 @@ export default function PrintIssuePage() {
       <section className="pi-hero">
         <div className="pi-left">
           <img src={COVER} alt="The World We’re Building — Issue 02 print edition" />
-          <button className="pi-look" onClick={() => setFlipbookOpen(true)}><span>◎</span> Look inside</button>
         </div>
         <div className="pi-right">
           <div className="pi-eyebrow">Now in print</div>
