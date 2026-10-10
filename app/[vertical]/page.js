@@ -268,7 +268,7 @@ export default function VerticalPage({ params }) {
           <div style={{
             position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
             background: `
-              linear-gradient(to bottom, #0a0a0a 0%, transparent 25%, transparent 75%, #0a0a0a 100%),
+              linear-gradient(to bottom, #0a0a0a 0%, transparent 25%, transparent 65%, #0a0a0a 100%),
               linear-gradient(to right, #0a0a0a 0%, transparent 15%, transparent 85%, #0a0a0a 100%)
             `,
           }} />
