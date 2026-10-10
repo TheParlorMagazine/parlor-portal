@@ -244,11 +244,11 @@ export default function VerticalPage({ params }) {
             <a className="feat-hero-cta" href={featured.slug ? `/post/${featured.slug}` : '#'}>Read the story</a>
           </div>
         </section>
-      ) : (vertical === 'work-wealth' || vertical === 'society-culture') ? (
+      ) : (vertical === 'work-wealth' || vertical === 'society-culture' || vertical === 'world-politics') ? (
         <div style={{ position: 'relative', background: '#0a0a0a', lineHeight: 0, overflow: 'hidden' }}>
           {/* Illustration — shifted up to crop transparent top area */}
           <img
-            src={vertical === 'work-wealth' ? '/hero-work-wealth.png' : '/hero-society-culture.png'}
+            src={vertical === 'work-wealth' ? '/hero-work-wealth.png' : vertical === 'society-culture' ? '/hero-society-culture.png' : '/hero-world-politics.png'}
             alt=""
             style={{
               display: 'block', width: '100%', height: 'auto', marginTop: '-14%', marginBottom: '-14%',
