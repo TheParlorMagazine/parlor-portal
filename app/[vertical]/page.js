@@ -270,6 +270,7 @@ export default function VerticalPage({ params }) {
             position: 'absolute', inset: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 4, padding: '0 24px',
+            background: 'radial-gradient(ellipse 60% 40% at 50% 50%, rgba(0,0,0,0.55) 0%, transparent 100%)',
             opacity: ready ? 1 : 0,
             transform: ready ? 'translateY(0)' : 'translateY(20px)',
             transition: 'opacity 1s 0.2s ease, transform 1.2s 0.2s cubic-bezier(.22,1,.36,1)',
