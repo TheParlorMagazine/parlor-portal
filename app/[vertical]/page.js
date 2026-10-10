@@ -253,7 +253,7 @@ export default function VerticalPage({ params }) {
             style={{
               display: 'block', width: '100%', height: 'auto',
               marginTop: vertical === 'society-culture' ? '-8%' : '-14%',
-              marginBottom: vertical === 'society-culture' ? '-8%' : '-14%',
+              marginBottom: vertical === 'society-culture' ? '-14%' : '-14%',
               opacity: ready ? 1 : 0,
               filter: ready ? 'blur(0px)' : 'blur(12px)',
               transition: 'opacity 0.9s ease, filter 0.9s ease',
