@@ -88,6 +88,7 @@ export default function ShopPage() {
   const [imgRatios, setImgRatios] = useState({}) // productId → primary image aspect ratio (w/h)
   const [products, setProducts] = useState(PRODUCTS) // hardcoded list is the fallback until the catalogue loads
   const [bundles, setBundles] = useState([])
+  const [catalogueLoaded, setCatalogueLoaded] = useState(false)
   const [categories, setCategories] = useState(FALLBACK_CATEGORIES)
   const { symbol } = useCurrency() // same-numeral geo pricing: $7 → €7 → £7
   const searchWrapRef = useRef(null)
@@ -98,6 +99,7 @@ export default function ShopPage() {
       .then(r => r.json())
       .then(d => { if (Array.isArray(d.products) && d.products.length) setProducts(d.products) })
       .catch(() => {})
+      .finally(() => setCatalogueLoaded(true))
     fetch('/api/shop/categories')
       .then(r => r.json())
       .then(d => { if (Array.isArray(d.categories) && d.categories.length) setCategories(d.categories) })
@@ -392,7 +394,7 @@ export default function ShopPage() {
           Products). The headline is that product's hero blurb; the image is its
           primary image; the button links to its page. Hidden when nothing is
           featured. */}
-      {featured && (
+      {catalogueLoaded && featured && (
       <section style={{ background: '#f3c3d1' }}>
         <div className="shop-herogrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', alignItems: 'center' }}>
           <div className="shop-hero-left">
