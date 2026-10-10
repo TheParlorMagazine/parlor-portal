@@ -249,10 +249,10 @@ export default function VerticalPage({ params }) {
           {/* Illustration — shifted up to crop transparent top area */}
           <img
             src={
-              vertical === 'work-wealth' ? '/hero-work-wealth.png'
-              : vertical === 'society-culture' ? '/hero-society-culture.png'
-              : vertical === 'world-politics' ? '/hero-world-politics.png'
-              : '/hero-perspectives-identity.png'
+              vertical === 'work-wealth' ? '/hero-work-wealth.webp'
+              : vertical === 'society-culture' ? '/hero-society-culture.webp'
+              : vertical === 'world-politics' ? '/hero-world-politics.webp'
+              : '/hero-perspectives-identity.webp'
             }
             alt=""
             style={{

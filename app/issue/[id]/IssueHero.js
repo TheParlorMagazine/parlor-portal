@@ -13,7 +13,9 @@ export default function IssueHero({ issue, issued }) {
   useEffect(() => {
     const onScroll = () => setScrollY(window.scrollY)
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    // Fallback: show hero after 3s even if image never fires onLoad
+    const t = setTimeout(() => setReady(true), 3000)
+    return () => { window.removeEventListener('scroll', onScroll); clearTimeout(t) }
   }, [])
 
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800
@@ -58,6 +60,7 @@ export default function IssueHero({ issue, issued }) {
         alt=""
         fetchPriority="high"
         onLoad={() => setReady(true)}
+        onError={() => setReady(true)}
         style={{
           position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
           objectFit: 'cover', objectPosition: 'center top', display: 'block',
