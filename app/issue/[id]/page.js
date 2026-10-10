@@ -43,7 +43,7 @@ export default async function IssuePage({ params }) {
     ? new Date(issue.publication_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
     : null
 
-  const isIssue02 = issue.number === 2
+  const isIssue02 = Number(issue.number) === 2
 
   return (
     <>
