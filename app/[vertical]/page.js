@@ -301,20 +301,6 @@ export default function VerticalPage({ params }) {
               transition: 'opacity 0.9s ease, filter 0.9s ease',
             }}
           />
-          {/* Sequential spotlights over the illustration for Perspectives & Identity */}
-          {vertical === 'perspectives-identity' && [
-            { x: '20%', y: '48%', step: 1 },
-            { x: '50%', y: '44%', step: 2 },
-            { x: '78%', y: '48%', step: 3 },
-          ].map(({ x, y, step }) => (
-            <div key={`sp-${step}`} style={{
-              position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none',
-              background: `radial-gradient(ellipse 22% 32% at ${x} ${y}, rgba(255,252,220,0.55) 0%, rgba(255,245,180,0.2) 40%, transparent 70%)`,
-              opacity: spotStep === step ? 1 : 0,
-              transition: 'opacity 0.7s ease',
-              mixBlendMode: 'screen',
-            }} />
-          ))}
           {/* Vignette gradient — fades all four edges to black */}
           <div style={{
             position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none',
