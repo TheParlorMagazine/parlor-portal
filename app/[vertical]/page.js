@@ -260,10 +260,10 @@ export default function VerticalPage({ params }) {
         <div style={{ position: 'relative', background: '#0a0a0a', lineHeight: 0, overflow: 'hidden' }}>
           {/* Backlights — blurred duplicate images clipped to each character, creating a white shape-glow */}
           {vertical === 'perspectives-identity' && [
-            { clip: 'inset(0 65% 0 0)',      step: 1 },
-            { clip: 'inset(0 38% 0 28%)',    step: 2 },
-            { clip: 'inset(0 0 0 60%)',      step: 3 },
-          ].map(({ clip, step }) => (
+            { clip: 'inset(0 65% 0 0)',   mask: null,                                                              step: 1 },
+            { clip: 'inset(0 38% 0 28%)', mask: null,                                                              step: 2 },
+            { clip: 'inset(0 0 0 55%)',   mask: 'linear-gradient(to right, transparent 0%, black 12%, black 100%)', step: 3 },
+          ].map(({ clip, mask, step }) => (
             <img
               key={`bl-${step}`}
               src="/hero-perspectives-identity.webp"
@@ -275,6 +275,8 @@ export default function VerticalPage({ params }) {
                 marginTop: '-14%',
                 zIndex: 1, pointerEvents: 'none',
                 clipPath: clip,
+                WebkitMaskImage: mask || undefined,
+                maskImage: mask || undefined,
                 filter: 'blur(18px) brightness(6) saturate(0.2)',
                 opacity: spotStep === step && spotStep < 4 ? 0.85 : 0,
                 transition: 'opacity 0.7s ease',
