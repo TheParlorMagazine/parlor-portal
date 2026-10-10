@@ -245,14 +245,13 @@ export default function VerticalPage({ params }) {
           </div>
         </section>
       ) : vertical === 'work-wealth' ? (
-        <div style={{ position: 'relative', height: '65vh', overflow: 'hidden', background: '#0a0a0a' }}>
-          {/* Illustration — static, fade in on load */}
+        <div style={{ position: 'relative', background: '#0a0a0a', lineHeight: 0 }}>
+          {/* Illustration — natural size, no black padding */}
           <img
             src="/hero-work-wealth.png"
             alt=""
             style={{
-              position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-              objectFit: 'cover', objectPosition: 'center 30%', display: 'block',
+              display: 'block', width: '100%', height: 'auto',
               opacity: ready ? 1 : 0,
               filter: ready ? 'blur(0px)' : 'blur(12px)',
               transition: 'opacity 0.9s ease, filter 0.9s ease',
@@ -261,7 +260,7 @@ export default function VerticalPage({ params }) {
           {/* Dark overlay */}
           <div style={{
             position: 'absolute', inset: 0, zIndex: 2,
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0.65) 100%)',
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.4) 100%)',
             pointerEvents: 'none',
           }} />
           {/* Title — fades in on load, centered */}
