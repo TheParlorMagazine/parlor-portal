@@ -57,23 +57,19 @@ export default function IssueHero({ issue, issued }) {
         Home
       </a>
 
-      {/* Cover — outer: scroll parallax only; inner img: entrance fade+blur */}
-      <div style={{
-        position: 'absolute', top: '-15%', left: 0, right: 0, height: '130%',
-        transform: `translateY(${-scrollY * 0.3}px)`,
-        willChange: 'transform',
-      }}>
-        <img
-          src="/issue-02-cover.png"
-          alt=""
-          style={{
-            width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block',
-            opacity: ready ? 1 : 0,
-            filter: ready ? 'blur(0px)' : 'blur(14px)',
-            transition: 'opacity 0.9s ease, filter 0.9s ease',
-          }}
-        />
-      </div>
+      {/* Cover — static, no parallax */}
+      <img
+        src="/issue-02-cover.png"
+        alt=""
+        fetchpriority="high"
+        style={{
+          position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+          objectFit: 'cover', objectPosition: 'center top', display: 'block',
+          opacity: ready ? 1 : 0,
+          filter: ready ? 'blur(0px)' : 'blur(14px)',
+          transition: 'opacity 0.9s ease, filter 0.9s ease',
+        }}
+      />
 
       {/* Dark gradient overlay */}
       <div style={{
