@@ -257,18 +257,28 @@ export default function VerticalPage({ params }) {
         </section>
       ) : (vertical === 'work-wealth' || vertical === 'society-culture' || vertical === 'world-politics' || vertical === 'perspectives-identity') ? (
         <div style={{ position: 'relative', background: '#0a0a0a', lineHeight: 0, overflow: 'hidden' }}>
-          {/* Backlights — sit BEHIND the illustration, glow through transparent areas */}
+          {/* Backlights — blurred duplicate images clipped to each character, creating a white shape-glow */}
           {vertical === 'perspectives-identity' && [
-            { x: '20%', y: '55%', step: 1 },
-            { x: '50%', y: '50%', step: 2 },
-            { x: '78%', y: '55%', step: 3 },
-          ].map(({ x, y, step }) => (
-            <div key={`bl-${step}`} style={{
-              position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
-              background: `radial-gradient(ellipse 30% 45% at ${x} ${y}, rgba(255,230,140,0.9) 0%, rgba(255,200,80,0.5) 30%, rgba(255,160,40,0.2) 60%, transparent 80%)`,
-              opacity: spotStep === step ? 1 : 0,
-              transition: 'opacity 0.7s ease',
-            }} />
+            { clip: 'inset(0 65% 0 0)',      step: 1 },
+            { clip: 'inset(0 38% 0 28%)',    step: 2 },
+            { clip: 'inset(0 0 0 60%)',      step: 3 },
+          ].map(({ clip, step }) => (
+            <img
+              key={`bl-${step}`}
+              src="/hero-perspectives-identity.webp"
+              alt=""
+              aria-hidden="true"
+              style={{
+                position: 'absolute', top: 0, left: 0,
+                width: '100%', height: 'auto',
+                marginTop: '-14%',
+                zIndex: 1, pointerEvents: 'none',
+                clipPath: clip,
+                filter: 'blur(18px) brightness(6) saturate(0.2)',
+                opacity: spotStep === step ? 0.85 : 0,
+                transition: 'opacity 0.7s ease',
+              }}
+            />
           ))}
           {/* Illustration — shifted up to crop transparent top area */}
           <img
