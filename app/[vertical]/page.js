@@ -258,12 +258,12 @@ export default function VerticalPage({ params }) {
         </section>
       ) : (vertical === 'work-wealth' || vertical === 'society-culture' || vertical === 'world-politics' || vertical === 'perspectives-identity') ? (
         <div style={{ position: 'relative', background: '#0a0a0a', lineHeight: 0, overflow: 'hidden' }}>
-          {/* Backlights — blurred duplicate images clipped to each character, creating a white shape-glow */}
+          {/* Backlights — blurred duplicate images masked per character, edges feather to transparent */}
           {vertical === 'perspectives-identity' && [
-            { clip: 'inset(0 65% 0 0)',   mask: null,                                                              step: 1 },
-            { clip: 'inset(0 38% 0 28%)', mask: null,                                                              step: 2 },
-            { clip: 'inset(0 0 0 55%)',   mask: 'linear-gradient(to right, transparent 0%, black 12%, black 100%)', step: 3 },
-          ].map(({ clip, mask, step }) => (
+            { mask: 'linear-gradient(to right, black 0%, black 22%, transparent 42%)',                              step: 1 },
+            { mask: 'linear-gradient(to right, transparent 20%, black 34%, black 56%, transparent 72%)',            step: 2 },
+            { mask: 'linear-gradient(to right, transparent 52%, black 68%, black 100%)',                            step: 3 },
+          ].map(({ mask, step }) => (
             <img
               key={`bl-${step}`}
               src="/hero-perspectives-identity.webp"
@@ -274,9 +274,8 @@ export default function VerticalPage({ params }) {
                 width: '100%', height: 'auto',
                 marginTop: '-14%',
                 zIndex: 1, pointerEvents: 'none',
-                clipPath: clip,
-                WebkitMaskImage: mask || undefined,
-                maskImage: mask || undefined,
+                WebkitMaskImage: mask,
+                maskImage: mask,
                 filter: 'blur(18px) brightness(6) saturate(0.2)',
                 opacity: spotStep === step && spotStep < 4 ? 0.85 : 0,
                 transition: 'opacity 0.7s ease',
