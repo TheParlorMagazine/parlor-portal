@@ -48,17 +48,19 @@ export default function IssueHero({ issue, issued }) {
         Home
       </a>
 
-      {/* Full-bleed cover — entrance blur+fade, then parallax on scroll */}
+      {/* Full-bleed cover — outer handles parallax, img handles blur+fade */}
       <div style={{
         position: 'absolute', inset: 0, width: '100%', height: '115%',
-        animation: 'coverReveal 1.2s cubic-bezier(.4,0,.2,1) both',
         transform: `translateY(${scrollY * 0.3}px)`,
         willChange: 'transform',
       }}>
         <img
           src="/issue-02-cover.png"
           alt=""
-          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
+          style={{
+            width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block',
+            animation: 'coverReveal 1.2s cubic-bezier(.4,0,.2,1) both',
+          }}
         />
       </div>
 
@@ -107,11 +109,10 @@ export default function IssueHero({ issue, issued }) {
         )}
       </div>
 
-      {/* Clouds — slide up on load, then parallax on scroll */}
+      {/* Clouds — outer handles parallax, img handles slide-up on load */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         zIndex: 3, pointerEvents: 'none',
-        animation: 'cloudsSlideUp 1.4s 0.3s cubic-bezier(.22,1,.36,1) both',
         transform: `translateY(${cloudsY}px) scale(${cloudsScale})`,
         transformOrigin: 'bottom center',
         willChange: 'transform',
@@ -119,7 +120,10 @@ export default function IssueHero({ issue, issued }) {
         <img
           src="/issue-02-clouds.png"
           alt=""
-          style={{ width: '100%', height: 'auto', display: 'block' }}
+          style={{
+            width: '100%', height: 'auto', display: 'block',
+            animation: 'cloudsSlideUp 1.4s 0.3s cubic-bezier(.22,1,.36,1) both',
+          }}
         />
       </div>
 
@@ -129,8 +133,8 @@ export default function IssueHero({ issue, issued }) {
           50% { opacity: 1; transform: translateX(-50%) translateY(5px); }
         }
         @keyframes coverReveal {
-          from { opacity: 0; filter: blur(18px) brightness(0.7); transform: scale(1.04); }
-          to   { opacity: 1; filter: blur(0px) brightness(1);    transform: scale(1); }
+          from { opacity: 0; filter: blur(16px) brightness(0.75); }
+          to   { opacity: 1; filter: blur(0px) brightness(1); }
         }
         @keyframes cloudsSlideUp {
           from { opacity: 0; transform: translateY(60px); }
