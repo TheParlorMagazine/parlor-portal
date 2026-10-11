@@ -177,6 +177,7 @@ export default function VerticalPage({ params }) {
         .feat-hero-excerpt {
           font-size: 18px; line-height: 1.6; color: rgba(255,255,255,0.82);
           max-width: 62ch; margin: 0 0 20px;
+          display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
         }
         .feat-hero-byline {
           display: flex; align-items: center; gap: 10px;
