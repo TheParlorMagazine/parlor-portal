@@ -10,7 +10,10 @@ import { confirmDialog } from '../../../../lib/confirmDialog'
 const LOC = { virtual: 'Online', in_person: 'In person', hybrid: 'Hybrid' }
 function fmtWhen(iso) {
   const d = new Date(iso); if (isNaN(d.getTime())) return 'TBA'
-  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) + ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const date = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: tz })
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: tz })
+  return `${date} · ${time}`
 }
 
 function Detail() {

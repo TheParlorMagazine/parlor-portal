@@ -8,10 +8,11 @@ import { evCss } from './evCss'
 function dateParts(iso) {
   const d = new Date(iso)
   if (isNaN(d.getTime())) return { m: '', d: '', t: '' }
+  const tz = typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined
   return {
-    m: d.toLocaleDateString('en-US', { month: 'short' }),
-    d: d.getDate(),
-    t: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+    m: d.toLocaleDateString('en-US', { month: 'short', timeZone: tz }),
+    d: d.toLocaleDateString('en-US', { day: 'numeric', timeZone: tz }),
+    t: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: tz }),
   }
 }
 const LOC = { virtual: 'Online', in_person: 'In person', hybrid: 'Hybrid' }

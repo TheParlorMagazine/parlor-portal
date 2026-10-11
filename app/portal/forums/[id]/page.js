@@ -17,7 +17,13 @@ function Av({ name, src }) {
 // Sidebar list of attached events (upcoming / past).
 function EventGroup({ label, events, top }) {
   if (!events.length) return null
-  const fmt = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
+  const fmt = iso => {
+    const d = new Date(iso); if (isNaN(d)) return ''
+    const tz = typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined
+    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: tz })
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: tz })
+    return `${date} · ${time}`
+  }
   return (
     <div style={{ marginTop: top ? 16 : 0, paddingTop: top ? 14 : 0, borderTop: top ? '1px solid var(--border)' : 'none' }}>
       <div style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--muted)', marginBottom: 10 }}>{label} · {events.length}</div>
