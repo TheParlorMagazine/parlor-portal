@@ -168,8 +168,8 @@ export default function HomePageClient({ initial = {} }) {
     async function loadMember() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data } = await supabase.from('members').select('role').eq('id', user.id).single()
-      setMember({ ...user, role: data?.role ?? null })
+      const { data } = await supabase.from('members').select('role, avatar_url').eq('id', user.id).single()
+      setMember({ ...user, role: data?.role ?? null, avatar_url: data?.avatar_url || user.user_metadata?.avatar_url || null })
     }
     loadMember()
   }, [])
@@ -365,12 +365,10 @@ export default function HomePageClient({ initial = {} }) {
   useEffect(() => {
     const img = homeBannerImgRef.current
     if (!img) return
-    const fadeIn = () => { img.style.opacity = '1' }
     img.style.opacity = '0'
-    img.style.transition = 'opacity 2s ease 0.4s'
-    if (img.complete) { setTimeout(fadeIn, 100) }
-    else { img.addEventListener('load', fadeIn) }
-    return () => img.removeEventListener('load', fadeIn)
+    img.style.transition = 'opacity 1.4s ease'
+    const t = setTimeout(() => { img.style.opacity = '1' }, 120)
+    return () => clearTimeout(t)
   }, [homeBanner.image_url])
 
   const items = articles.filter(a => !a.featured).sort((a, b) => parseDateSafe(b.date) - parseDateSafe(a.date))
@@ -1277,10 +1275,13 @@ export default function HomePageClient({ initial = {} }) {
             <div className="member-wrap" ref={memberRef}>
               <button className="member-trigger" onClick={() => setMemberOpen(o => !o)}>
                 <div className="member-avatar-sm">
-                  <svg viewBox="0 0 36 36" fill="none">
-                    <circle cx="18" cy="13" r="6" fill="rgba(255,255,255,0.85)"/>
-                    <path d="M4 32c0-8 6-13 14-13s14 5 14 13" fill="rgba(255,255,255,0.85)"/>
-                  </svg>
+                  {member?.avatar_url
+                    ? <img src={member.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+                    : <svg viewBox="0 0 36 36" fill="none">
+                        <circle cx="18" cy="13" r="6" fill="rgba(255,255,255,0.85)"/>
+                        <path d="M4 32c0-8 6-13 14-13s14 5 14 13" fill="rgba(255,255,255,0.85)"/>
+                      </svg>
+                  }
                 </div>
                 <div className={`member-chevron${memberOpen ? ' open' : ''}`}></div>
               </button>
