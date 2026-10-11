@@ -364,12 +364,12 @@ export default function HomePageClient({ initial = {} }) {
 
   useEffect(() => {
     const img = homeBannerImgRef.current
-    if (!img) return
+    if (!img || !homeBanner?.image_url) return
     img.style.opacity = '0'
     img.style.transition = 'opacity 1.4s ease'
     const t = setTimeout(() => { img.style.opacity = '1' }, 120)
     return () => clearTimeout(t)
-  }, [homeBanner.image_url])
+  }, [homeBanner?.image_url])
 
   const items = articles.filter(a => !a.featured).sort((a, b) => parseDateSafe(b.date) - parseDateSafe(a.date))
   const slidesHTML = items.map(slideHTML).join('')
