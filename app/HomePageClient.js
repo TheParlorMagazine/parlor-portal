@@ -161,6 +161,7 @@ export default function HomePageClient({ initial = {} }) {
   const memberRef = useRef(null)
   const compSectionRef = useRef(null)
   const homeBannerRef = useRef(null)
+  const homeBannerImgRef = useRef(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -360,6 +361,17 @@ export default function HomePageClient({ initial = {} }) {
     obs.observe(el)
     return () => obs.disconnect()
   }, [homeBanner])
+
+  useEffect(() => {
+    const img = homeBannerImgRef.current
+    if (!img) return
+    const fadeIn = () => { img.style.opacity = '1' }
+    img.style.opacity = '0'
+    img.style.transition = 'opacity 2s ease 0.4s'
+    if (img.complete) { setTimeout(fadeIn, 100) }
+    else { img.addEventListener('load', fadeIn) }
+    return () => img.removeEventListener('load', fadeIn)
+  }, [homeBanner.image_url])
 
   const items = articles.filter(a => !a.featured).sort((a, b) => parseDateSafe(b.date) - parseDateSafe(a.date))
   const slidesHTML = items.map(slideHTML).join('')
@@ -997,7 +1009,7 @@ export default function HomePageClient({ initial = {} }) {
         .home-banner-cta { display: inline-block; background: var(--black); color: #fff; padding: 13px 26px; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; transition: background 0.15s; }
         .home-banner-cta:hover { background: #fff; color: var(--black); outline: 2px solid var(--black); }
         .home-banner-right { position: relative; overflow: hidden; background: #fdf8f5; }
-        .home-banner-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; opacity: 0; transition: opacity 1.3s ease 0.2s; }
+        .home-banner-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
         .home-banner-grad { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to right, #f2b8c6 0%, rgba(242,184,198,0.4) 25%, transparent 55%, transparent 70%, rgba(253,248,245,0.6) 88%, #fdf8f5 100%); }
         /* home banner scroll-in animations */
         .home-banner-eyebrow { opacity: 0; transform: translateX(-32px); transition: opacity 1s ease, transform 1s ease; }
@@ -1008,7 +1020,6 @@ export default function HomePageClient({ initial = {} }) {
         .hb-section--visible .home-banner-head,
         .hb-section--visible .home-banner-desc,
         .hb-section--visible .home-banner-cta { opacity: 1; transform: none; }
-        .hb-section--visible .home-banner-img { opacity: 1; }
         @media (max-width: 700px) {
           .home-banner { grid-template-columns: 1fr; }
           .home-banner-right { min-height: 260px; }
@@ -1528,7 +1539,7 @@ export default function HomePageClient({ initial = {} }) {
             </div>
           </div>
           <div className="home-banner-right">
-            {homeBanner.image_url && <img className="home-banner-img" src={homeBanner.image_url} alt="" />}
+            {homeBanner.image_url && <img ref={homeBannerImgRef} className="home-banner-img" src={homeBanner.image_url} alt="" />}
             <div className="home-banner-grad" />
           </div>
         </section>
