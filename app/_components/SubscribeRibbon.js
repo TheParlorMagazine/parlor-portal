@@ -1,10 +1,44 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createClient } from '../../lib/supabase'
+
+const FALLBACK = {
+  kicker: 'Support independent journalism',
+  headline: 'Join The Parlor',
+  message: 'Sustain the work and receive full access, early releases, and subscriber-only extras.',
+  cta_label: 'Become a paid subscriber',
+  cta_href: '/plans',
+}
 
 export default function SubscribeRibbon() {
   const [collapsed, setCollapsed] = useState(false)
   const [scrolling, setScrolling] = useState(false)
+  const [announcements, setAnnouncements] = useState([])
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    const supabase = createClient()
+    const nowISO = new Date().toISOString()
+    supabase
+      .from('announcements')
+      .select('id, kicker, headline, message, cta_label, cta_href, type, starts_at, ends_at, sort, placement')
+      .eq('active', true)
+      .order('sort', { ascending: true })
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (!data) return
+        const live = a => (!a.starts_at || a.starts_at <= nowISO) && (!a.ends_at || a.ends_at >= nowISO)
+        const ribbon = data.filter(a => (a.placement || 'ribbon') !== 'homepage' && live(a))
+        if (ribbon.length) setAnnouncements(ribbon)
+      })
+  }, [])
+
+  useEffect(() => {
+    if (announcements.length < 2) return
+    const t = setInterval(() => setIndex(i => (i + 1) % announcements.length), 6500)
+    return () => clearInterval(t)
+  }, [announcements.length])
 
   useEffect(() => {
     let timer
@@ -16,6 +50,8 @@ export default function SubscribeRibbon() {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => { window.removeEventListener('scroll', onScroll); clearTimeout(timer) }
   }, [])
+
+  const data = announcements.length ? (announcements[index] || announcements[0]) : FALLBACK
 
   return (
     <>
@@ -42,11 +78,11 @@ export default function SubscribeRibbon() {
       <div className={`sub-ribbon${scrolling ? ' scrolling' : ''}`}>
         <div className="sub-ribbon-inner">
           <div>
-            <div className="sub-ribbon-kicker">Support independent journalism</div>
-            <div className="sub-ribbon-subhead">Join The Parlor</div>
+            {data.kicker && <div className="sub-ribbon-kicker">{data.kicker}</div>}
+            {data.headline && <div className="sub-ribbon-subhead">{data.headline}</div>}
           </div>
-          <div className="sub-ribbon-message">Sustain the work and receive full access, early releases, and subscriber-only extras.</div>
-          <a href="/plans" className="sub-ribbon-cta">Become a paid subscriber</a>
+          {data.message && <div className="sub-ribbon-message">{data.message}</div>}
+          {data.cta_label && <a href={data.cta_href || '#'} className="sub-ribbon-cta">{data.cta_label}</a>}
           <button
             className={`sub-ribbon-toggle${collapsed ? ' flipped' : ''}`}
             onClick={() => setCollapsed(c => !c)}
