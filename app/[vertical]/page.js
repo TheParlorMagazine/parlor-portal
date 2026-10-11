@@ -191,7 +191,7 @@ export default function VerticalPage({ params }) {
           color: #0a0a0a; background: #f2b8c6; padding: 12px 26px; border-radius: 0;
           transition: background 0.15s;
         }
-        .feat-hero-cta:hover { background: #ffffff; }
+        .feat-hero-cta:hover { background: #fff; color: #0a0a0a; outline: 2px solid #0a0a0a; }
 
         .vertical-grid-section { padding: 48px 40px 72px; max-width: 980px; margin: 0 auto; }
         .vertical-list {

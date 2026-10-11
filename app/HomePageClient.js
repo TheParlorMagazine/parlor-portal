@@ -964,7 +964,7 @@ export default function HomePageClient({ initial = {} }) {
         .home-banner-head { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(28px,3.5vw,48px); font-weight: 700; color: var(--black); line-height: 1.08; margin: 0 0 16px; }
         .home-banner-desc { font-family: 'Source Serif 4', Georgia, serif; font-size: clamp(14px,1.2vw,17px); line-height: 1.7; color: rgba(10,10,10,0.75); margin: 0 0 28px; }
         .home-banner-cta { display: inline-block; background: var(--black); color: #fff; padding: 13px 26px; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; transition: background 0.15s; }
-        .home-banner-cta:hover { background: #7a2531; }
+        .home-banner-cta:hover { background: #fff; color: var(--black); outline: 2px solid var(--black); }
         .home-banner-right { position: relative; overflow: hidden; background: #1a1a1a; }
         .home-banner-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
         .home-banner-grad { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to right, #f2b8c6 0%, rgba(242,184,198,0.4) 25%, transparent 55%); }
@@ -1112,7 +1112,7 @@ export default function HomePageClient({ initial = {} }) {
         .ribbon-subhead { font-family: 'Alex Brush', cursive; font-size: 24px; font-weight: 400; line-height: 1.2; margin-top: 2px; }
         .ribbon-message { font-size: 16px; line-height: 1.35; font-weight: 500; opacity: 0.9; text-align: center; max-width: 52ch; margin: 0 auto; }
         .ribbon-cta { display: inline-flex; align-items: center; justify-content: center; padding: 12px 28px; background: var(--black); color: var(--white); font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-weight: 700; text-decoration: none; min-width: 240px; transition: background 0.15s; white-space: nowrap; }
-        .ribbon-cta:hover { background: #222; }
+        .ribbon-cta:hover { background: #fff; color: var(--black); outline: 2px solid var(--black); }
         .ribbon-toggle { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,0.1); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; color: var(--black); }
         @media (min-width: 760px) { .ribbon-toggle { display: none; } }
         .ribbon-toggle:hover { background: rgba(0,0,0,0.18); }
