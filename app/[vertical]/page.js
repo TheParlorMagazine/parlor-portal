@@ -241,6 +241,21 @@ export default function VerticalPage({ params }) {
           .feat-hero-inner { padding: 0 24px 0; }
           .feat-hero-excerpt { font-size: 16px; }
         }
+
+        .competition { background: #0a0a0a; padding: 72px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; border-top: 1px solid #2a2a2a; }
+        .comp-eyebrow { font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: #f2b8c6; margin-bottom: 18px; }
+        .comp-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(34px,3.5vw,46px); font-weight: 700; color: #ffffff; line-height: 1.08; margin: 0; }
+        .comp-title em { font-style: italic; color: #f2b8c6; }
+        .comp-right { border-left: 1px solid #2a2a2a; padding-left: 52px; }
+        .comp-body { font-size: 15px; line-height: 1.78; color: #9ca3af; max-width: 420px; margin-bottom: 30px; }
+        .deadline-label { font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: #6b7280; margin-bottom: 10px; }
+        .deadline-date { font-family: 'Playfair Display', Georgia, serif; font-size: 40px; font-weight: 700; color: #f2b8c6; margin-bottom: 26px; line-height: 1; }
+        .comp-cta { display: block; background: #f2b8c6; color: #0a0a0a; text-align: center; padding: 14px 32px; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; margin-top: 26px; transition: background 0.15s; text-decoration: none; }
+        .comp-cta:hover { background: #ffffff; }
+        @media (max-width: 700px) {
+          .competition { grid-template-columns: 1fr; padding: 48px 24px; gap: 32px; }
+          .comp-right { border-left: none; padding-left: 0; border-top: 1px solid #2a2a2a; padding-top: 32px; }
+        }
       `}</style>
 
       <SiteHeader activeCategory={category} />
@@ -465,6 +480,19 @@ export default function VerticalPage({ params }) {
             </div>
           </div>
         )}
+      </section>
+
+      <section className="competition">
+        <div>
+          <div className="comp-eyebrow">Essay competition — Issue 3</div>
+          <h2 className="comp-title">Submit to<br/><em>The Parlor.</em><br/>Get published<br/>in print.</h2>
+        </div>
+        <div className="comp-right">
+          <p className="comp-body">We are accepting essays and original reporting for our third issue. Selected work appears in a beautifully produced independent magazine read by a global community of thinkers, writers, and makers.</p>
+          <div className="deadline-label">Submissions close</div>
+          <div className="deadline-date">November 30</div>
+          <a href="https://www.theparlormagazine.com/open-call" className="comp-cta" target="_top">Submit your work →</a>
+        </div>
       </section>
 
       <SiteFooter />
