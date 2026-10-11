@@ -49,6 +49,10 @@ function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon',
   })
   const isHome = f.placement === 'homepage'
   const isPopup = f.placement === 'popup'
+  const isCopyable = f.placement === 'homepage' || f.placement === 'competition'
+  const copyTarget = f.placement === 'homepage' ? 'competition' : 'homepage'
+  const copyTargetLabel = f.placement === 'homepage' ? 'Footer banner' : 'Hero banner'
+  const [copyToOther, setCopyToOther] = useState(false)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null)
   const [drag, setDrag] = useState(false)
@@ -74,16 +78,24 @@ function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon',
   async function save() {
     if (!f.kicker.trim() && !f.headline.trim() && !f.message.trim()) { setMsg('Add at least a kicker, headline, or message.'); return }
     setBusy(true); setMsg(null)
-    const payload = {
+    const base = {
       ...f,
       sort: Number(f.sort) || 0,
       starts_at: f.starts_at ? new Date(f.starts_at).toISOString() : null,
       ends_at: f.ends_at ? new Date(f.ends_at).toISOString() : null,
     }
+    const payload = { ...base }
     if (item?.id) payload.id = item.id
-    const res = await fetch('/api/admin/announcements', { method: item?.id ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify(payload) })
+    const tok = await token()
+    const res = await fetch('/api/admin/announcements', { method: item?.id ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` }, body: JSON.stringify(payload) })
+    if (!res.ok) { setBusy(false); const d = await res.json().catch(() => ({})); setMsg(d.error || 'Could not save.'); return }
+    if (copyToOther) {
+      const copy = { ...base, placement: copyTarget }
+      delete copy.id
+      await fetch('/api/admin/announcements', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` }, body: JSON.stringify(copy) })
+    }
     setBusy(false)
-    if (res.ok) { onSaved(); onClose() } else { const d = await res.json().catch(() => ({})); setMsg(d.error || 'Could not save.') }
+    onSaved(); onClose()
   }
 
   return (
@@ -139,7 +151,14 @@ function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon',
           <div><div style={label}>Show until <span style={{ textTransform: 'none', letterSpacing: 0 }}>(optional)</span></div><input type="datetime-local" value={f.ends_at} onChange={e => set('ends_at', e.target.value)} style={input} /></div>
         </div>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '16px 0 4px', fontSize: 14, cursor: 'pointer' }}>
+        {isCopyable && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '16px 0 0', fontSize: 14, cursor: 'pointer', background: '#faf8f6', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '10px 14px' }}>
+            <input type="checkbox" checked={copyToOther} onChange={e => setCopyToOther(e.target.checked)} style={{ width: 15, height: 15, accentColor: '#0a0a0a', cursor: 'pointer' }} />
+            <span>Also save a copy as <strong>{copyTargetLabel}</strong></span>
+          </label>
+        )}
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '12px 0 4px', fontSize: 14, cursor: 'pointer' }}>
           <input type="checkbox" checked={!!f.active} onChange={e => set('active', e.target.checked)} style={{ width: 15, height: 15, accentColor: '#0a0a0a', cursor: 'pointer' }} />
           Active (shows on the site)
         </label>
