@@ -81,6 +81,10 @@ export default function IssueStyles() {
         animation-delay: 1.3s;
       }
       @keyframes boi-glitter { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+      @keyframes boi-scroll-pulse {
+        0%, 100% { opacity: 0.5; transform: translateX(-50%) translateY(0); }
+        50%       { opacity: 1;   transform: translateX(-50%) translateY(5px); }
+      }
       @keyframes boi-shine { 0% { background-position: 150% 0; } 100% { background-position: -150% 0; } }
       .boi-hero-inner {
         position: relative; z-index: 3;

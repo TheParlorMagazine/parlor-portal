@@ -62,6 +62,24 @@ export default function BorderlandsHubPage() {
           Home
         </a>
         <div className="boi-hero-text-gradient" aria-hidden="true" style={{ opacity: prog }} />
+        {/* Scroll cue */}
+        <div style={{
+          position: 'absolute', bottom: 28, left: '50%',
+          zIndex: 10, opacity: Math.max(0, 1 - prog * 4),
+          pointerEvents: 'none',
+        }}>
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            color: 'rgba(255,255,255,0.75)', fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 11,
+            letterSpacing: '0.14em', textTransform: 'uppercase',
+            animation: 'boi-scroll-pulse 2s ease-in-out infinite',
+          }}>
+            Scroll
+            <svg width="16" height="20" viewBox="0 0 16 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <line x1="8" y1="0" x2="8" y2="18"/><polyline points="2 12 8 18 14 12"/>
+            </svg>
+          </div>
+        </div>
         <div className="boi-hero-inner" style={{
           opacity: titleOpacity,
           transform: `translateY(${titleY}px)`,
