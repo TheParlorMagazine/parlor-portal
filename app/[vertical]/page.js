@@ -98,6 +98,19 @@ export default function VerticalPage({ params }) {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap');
+        @keyframes candleFlicker {
+          0%   { opacity: 0.85; transform: scale(1)    translateX(0px);   }
+          8%   { opacity: 0.6;  transform: scale(0.92) translateX(-1px);  }
+          18%  { opacity: 1;    transform: scale(1.06) translateX(1px);   }
+          28%  { opacity: 0.75; transform: scale(0.97) translateX(-1px);  }
+          40%  { opacity: 0.95; transform: scale(1.03) translateX(0px);   }
+          52%  { opacity: 0.55; transform: scale(0.9)  translateX(1px);   }
+          62%  { opacity: 1;    transform: scale(1.05) translateX(-1px);  }
+          74%  { opacity: 0.8;  transform: scale(0.95) translateX(0px);   }
+          85%  { opacity: 0.65; transform: scale(0.93) translateX(1px);   }
+          94%  { opacity: 1;    transform: scale(1.04) translateX(-1px);  }
+          100% { opacity: 0.85; transform: scale(1)    translateX(0px);   }
+        }
         *, *::before, *::after { box-sizing: border-box; }
         body { background: #ffffff; font-family: 'Source Serif 4', Georgia, serif; }
         a { text-decoration: none; color: inherit; }
@@ -301,6 +314,18 @@ export default function VerticalPage({ params }) {
               transition: 'opacity 0.9s ease, filter 0.9s ease',
             }}
           />
+          {/* Candle glow — persistent warm light around the candle */}
+          {vertical === 'perspectives-identity' && (
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none',
+              background: 'radial-gradient(ellipse 8% 12% at 72% 52%, rgba(255,210,80,0.7) 0%, rgba(255,160,30,0.3) 40%, transparent 70%)',
+              opacity: ready ? 1 : 0,
+              transition: 'opacity 1s 1s ease',
+              mixBlendMode: 'screen',
+              animation: ready ? 'candleFlicker 3.2s ease-in-out infinite' : 'none',
+              transformOrigin: '72% 52%',
+            }} />
+          )}
           {/* Vignette gradient — fades all four edges to black */}
           <div style={{
             position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none',
