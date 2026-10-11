@@ -318,12 +318,12 @@ export default function VerticalPage({ params }) {
           {vertical === 'perspectives-identity' && (
             <div style={{
               position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none',
-              background: 'radial-gradient(ellipse 8% 12% at 72% 52%, rgba(255,210,80,0.7) 0%, rgba(255,160,30,0.3) 40%, transparent 70%)',
+              background: 'radial-gradient(ellipse 8% 12% at 79% 52%, rgba(255,210,80,0.7) 0%, rgba(255,160,30,0.3) 40%, transparent 70%)',
               opacity: ready ? 1 : 0,
               transition: 'opacity 1s 1s ease',
               mixBlendMode: 'screen',
               animation: ready ? 'candleFlicker 3.2s ease-in-out infinite' : 'none',
-              transformOrigin: '72% 52%',
+              transformOrigin: '79% 52%',
             }} />
           )}
           {/* Vignette gradient — fades all four edges to black */}
