@@ -13,8 +13,7 @@ export default function IssueHero({ issue, issued }) {
   useEffect(() => {
     const onScroll = () => setScrollY(window.scrollY)
     window.addEventListener('scroll', onScroll, { passive: true })
-    // Fallback: show hero after 3s even if image never fires onLoad
-    const t = setTimeout(() => setReady(true), 3000)
+    const t = setTimeout(() => setReady(true), 200)
     return () => { window.removeEventListener('scroll', onScroll); clearTimeout(t) }
   }, [])
 
@@ -119,7 +118,7 @@ export default function IssueHero({ issue, issued }) {
         willChange: 'transform',
       }}>
         <img
-          src="/issue-02-clouds.png"
+          src="/issue-02-clouds.webp"
           alt=""
           style={{
             width: '100%', height: 'auto', display: 'block',
