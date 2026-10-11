@@ -54,14 +54,11 @@ export default function DonateClient({ gifts }) {
         .donate-hero-img { position: absolute; right: -2%; left: 36%; bottom: 0; height: 95%; width: auto; pointer-events: none; max-width: unset; }
         .donate-hero-img img { height: 100%; width: auto; display: block; }
 
-        @media (max-width: 900px) {
-          .donate-hero-img { max-width: 48%; height: 90%; }
-        }
-        @media (max-width: 720px) {
-          .donate-hero { min-height: unset; flex-direction: column; padding-bottom: 0; }
-          .donate-hero-text { padding-bottom: 24px; }
-          .donate-hero-img { position: relative; right: auto; top: auto; transform: none; height: auto; width: 80%; max-width: 80%; margin: 0 auto; }
-          .donate-hero-img img { width: 100%; height: auto; }
+        @media (max-width: 768px) {
+          .donate-hero { min-height: unset; flex-direction: column; }
+          .donate-hero-text { padding: 36px 24px 24px; }
+          .donate-hero-img { position: relative; left: auto; right: auto; bottom: auto; height: auto; width: 85%; max-width: 85%; margin: 0 auto; display: block; }
+          .donate-hero-img img { width: 100%; height: auto; display: block; }
         }
 
         /* ── GIFT LIST ── */
