@@ -12,11 +12,20 @@ export default function AuthCallback() {
     async function handleCallback() {
       const params = new URLSearchParams(window.location.search)
       const returnTo = params.get('returnTo') || '/'
-      const { error } = await supabase.auth.exchangeCodeForSession(window.location.href)
+      const { error, data } = await supabase.auth.exchangeCodeForSession(window.location.href)
       if (error) {
         router.push('/login?error=confirmation_failed')
         return
       }
+      // Check if member needs to set their name
+      try {
+        const res = await fetch('/api/portal/profile', { headers: { Authorization: `Bearer ${data.session.access_token}` } })
+        const d = await res.json()
+        if (!d.member?.full_name?.trim()) {
+          router.push(`/portal/setup?next=${encodeURIComponent(returnTo)}`)
+          return
+        }
+      } catch {}
       router.push(returnTo)
     }
     handleCallback()

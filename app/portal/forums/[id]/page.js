@@ -106,11 +106,18 @@ function ModPanel({ id, auth, supabase, onChanged, forumName }) {
     onChanged?.()
   }
   async function setRole(mid, role) {
+    const m = data.members.find(x => x.member_id === mid)
+    const name = m?.name || 'this member'
+    if (role === 'host') {
+      if (!(await confirmDialog(`Make ${name} a moderator of ${forumName}?\n\nModerators can manage members and create events. You can reverse this at any time.`))) return
+    } else {
+      if (!(await confirmDialog(`Remove ${name} as moderator of ${forumName}?\n\nThey will remain a regular member of the forum.`))) return
+    }
     const res = await fetch(`/api/portal/groups/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ set_role_member_id: mid, role }) })
     if (res.ok) { load(); onChanged?.() } else { const d = await res.json().catch(() => ({})); alertDialog(d.error || 'Could not update') }
   }
   async function removeMember(mid, name) {
-    if (!(await confirmDialog(`Remove ${name} from this forum?`))) return
+    if (!(await confirmDialog(`Remove ${name} from ${forumName}?\n\nThis cannot be undone — though they can always request to rejoin.`))) return
     const res = await fetch(`/api/portal/groups/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ remove_member_id: mid }) })
     if (res.ok) { load(); onChanged?.() } else { const d = await res.json().catch(() => ({})); alertDialog(d.error || 'Could not remove') }
   }

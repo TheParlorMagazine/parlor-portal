@@ -39,6 +39,11 @@ function SignupForm() {
   })
 
   if (error) {
+    // Email already exists — send them to login instead
+    if (error.message?.toLowerCase().includes('already registered') || error.message?.toLowerCase().includes('already been registered') || error.status === 422) {
+      router.push(`/login?returnTo=${encodeURIComponent(returnTo)}&email=${encodeURIComponent(email)}`)
+      return
+    }
     setError(error.message)
     setLoading(false)
     return

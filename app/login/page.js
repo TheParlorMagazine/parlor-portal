@@ -8,7 +8,7 @@ import { useSearchParams } from 'next/navigation'
 function LoginForm() {
   const searchParams = useSearchParams()
   const returnTo = searchParams.get('returnTo') || '/'
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(searchParams.get('email') || '')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -24,7 +24,7 @@ function LoginForm() {
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
@@ -35,6 +35,15 @@ function LoginForm() {
       return
     }
 
+    // Check if member needs to set their name
+    try {
+      const res = await fetch('/api/portal/profile', { headers: { Authorization: `Bearer ${data.session.access_token}` } })
+      const d = await res.json()
+      if (!d.member?.full_name?.trim()) {
+        router.push(`/portal/setup?next=${encodeURIComponent(returnTo)}`)
+        return
+      }
+    } catch {}
     router.push(returnTo)
   }
 

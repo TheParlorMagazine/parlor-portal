@@ -5,6 +5,8 @@ import { useState, useEffect, useRef } from 'react'
 export default function SubscribeWall() {
   const [visible, setVisible] = useState(false)
   const [email, setEmail]     = useState('')
+  const [loading, setLoading] = useState(false)
+  const [sent, setSent]       = useState(false)
   const scrollCount = useRef(0)
   const lastY       = useRef(0)
 
@@ -34,15 +36,26 @@ export default function SubscribeWall() {
     return () => { document.body.style.overflow = prev }
   }, [visible])
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    if (!email.trim()) return
-    const params = new URLSearchParams({
-      email: email.trim(),
-      source: 'article-wall',
-      returnTo: window.location.pathname,
+    if (!email.trim() || loading) return
+    setLoading(true)
+    const returnTo = window.location.pathname
+    const res = await fetch('/api/auth/check-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim(), returnTo }),
     })
-    window.location.href = `/signup?${params}`
+    const data = await res.json()
+    if (data.exists) {
+      // Already a member — magic link was sent
+      setSent(true)
+      setLoading(false)
+    } else {
+      // New reader — go to signup
+      const params = new URLSearchParams({ email: email.trim(), source: 'article-wall', returnTo })
+      window.location.href = `/signup?${params}`
+    }
   }
 
   if (!visible) return null
@@ -82,48 +95,60 @@ export default function SubscribeWall() {
             Join The Parlor — independent media for women who think.
           </p>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 0, maxWidth: 480, margin: '0 auto 16px' }}>
-            <input
-              type="email"
-              required
-              placeholder="Email address"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              style={{
-                flex: 1, padding: '13px 18px',
-                border: '1px solid rgba(194,100,120,0.3)',
-                borderRight: 'none',
-                borderRadius: '6px 0 0 6px',
-                fontSize: 15,
-                fontFamily: "'Source Serif 4', Georgia, serif",
-                outline: 'none',
-                background: '#fff',
-                color: '#1a1a1a',
-              }}
-            />
-            <button
-              type="submit"
-              style={{
-                padding: '13px 24px',
-                background: '#1a1a1a',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '0 6px 6px 0',
-                fontSize: 15,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: "'Source Serif 4', Georgia, serif",
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Subscribe
-            </button>
-          </form>
-
-          <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>
-            Already a subscriber?{' '}
-            <a href={`/login?returnTo=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '/')}`} style={{ color: '#c47080', textDecoration: 'underline', textUnderlineOffset: 2 }}>Sign in here</a>
-          </p>
+          {sent ? (
+            <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 24px', background: 'rgba(255,255,255,0.7)', borderRadius: 10, border: '1px solid rgba(194,100,120,0.2)' }}>
+              <p style={{ fontSize: 16, color: '#1a1a1a', margin: '0 0 6px', fontWeight: 600 }}>Check your inbox ✉️</p>
+              <p style={{ fontSize: 14, color: '#666', margin: 0, lineHeight: 1.5 }}>
+                We've sent a sign-in link to <strong>{email}</strong>. Click it to continue reading — you'll be prompted to complete your profile if needed.
+              </p>
+            </div>
+          ) : (
+            <>
+              <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 0, maxWidth: 480, margin: '0 auto 16px' }}>
+                <input
+                  type="email"
+                  required
+                  placeholder="Email address"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  style={{
+                    flex: 1, padding: '13px 18px',
+                    border: '1px solid rgba(194,100,120,0.3)',
+                    borderRight: 'none',
+                    borderRadius: '6px 0 0 6px',
+                    fontSize: 15,
+                    fontFamily: "'Source Serif 4', Georgia, serif",
+                    outline: 'none',
+                    background: '#fff',
+                    color: '#1a1a1a',
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    padding: '13px 24px',
+                    background: '#1a1a1a',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '0 6px 6px 0',
+                    fontSize: 15,
+                    fontWeight: 600,
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    opacity: loading ? 0.7 : 1,
+                    fontFamily: "'Source Serif 4', Georgia, serif",
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {loading ? '…' : 'Subscribe'}
+                </button>
+              </form>
+              <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>
+                Already a subscriber?{' '}
+                <a href={`/login?returnTo=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '/')}`} style={{ color: '#c47080', textDecoration: 'underline', textUnderlineOffset: 2 }}>Sign in here</a>
+              </p>
+            </>
+          )}
         </div>
       </div>
     </>
