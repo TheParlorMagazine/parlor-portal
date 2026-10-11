@@ -44,21 +44,21 @@ export default function DonateClient({ gifts }) {
         .donate-wrap { font-family: 'Source Serif 4', Georgia, serif; }
 
         /* ── HERO ── */
-        .donate-hero { width: 100%; min-height: 80vh; display: grid; grid-template-columns: 1fr 1fr; background: #fdf8f5; }
-        .donate-hero-text { display: flex; flex-direction: column; justify-content: center; padding: clamp(48px,8vw,100px) clamp(32px,6vw,80px); }
+        .donate-hero { position: relative; width: 100%; min-height: 80vh; background: #fdf8f5; overflow: hidden; display: flex; align-items: center; }
+        .donate-hero-text { position: relative; z-index: 2; max-width: 580px; padding: clamp(64px,8vw,110px) clamp(40px,6vw,80px); }
         .donate-home { display: inline-flex; align-items: center; gap: 7px; font-family: 'Source Serif 4', Georgia, serif; font-size: 13px; color: #888; text-decoration: none; margin-bottom: clamp(32px,4vw,56px); }
         .donate-home:hover { color: #1a1a1a; }
         .donate-eyebrow { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: #c47080; margin-bottom: 18px; }
         .donate-head { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(36px, 4.5vw, 64px); font-weight: 700; color: #1a1a1a; line-height: 1.06; margin: 0 0 24px; }
-        .donate-sub { font-size: clamp(15px, 1.3vw, 18px); color: #555; line-height: 1.8; margin: 0; max-width: 480px; }
-        .donate-hero-img { position: relative; overflow: hidden; min-height: 480px; background: #fdf4f7; }
-        .donate-hero-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
-        .donate-hero-img-placeholder { width: 100%; height: 100%; background: #f2dde3; }
+        .donate-sub { font-size: clamp(15px, 1.3vw, 18px); color: #555; line-height: 1.8; margin: 0; max-width: 460px; }
+        .donate-hero-img { position: absolute; right: -4%; top: 50%; transform: translateY(-50%); height: 110%; width: auto; pointer-events: none; max-width: 58%; }
+        .donate-hero-img img { height: 100%; width: auto; display: block; }
 
         @media (max-width: 720px) {
-          .donate-hero { grid-template-columns: 1fr; min-height: unset; }
-          .donate-hero-img { min-height: 300px; order: -1; }
-          .donate-hero-text { padding: 36px 24px 48px; }
+          .donate-hero { min-height: unset; flex-direction: column; padding-bottom: 0; }
+          .donate-hero-text { padding-bottom: 24px; }
+          .donate-hero-img { position: relative; right: auto; top: auto; transform: none; height: auto; width: 100%; }
+          .donate-hero-img img { width: 100%; height: auto; }
         }
 
         /* ── GIFT LIST ── */
