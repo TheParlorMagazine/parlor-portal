@@ -1113,7 +1113,7 @@ export default function HomePageClient({ initial = {} }) {
         .ribbon-toggle.flipped svg { transform: rotate(180deg); }
 
         /* ── FOOTER ── */
-        .site-footer { background: #ffffff; border-top: 1px solid #e5e7eb; padding: 48px 40px 32px; }
+        .site-footer { background: #ffffff; border-top: 1px solid #e5e7eb; padding: 48px 40px 96px; }
         .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 40px; }
         .footer-logo-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
         .footer-logo-mark { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
