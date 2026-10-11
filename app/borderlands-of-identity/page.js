@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import SiteHeader from '../_components/SiteHeader'
 import SiteFooter from '../_components/SiteFooter'
 import IssueStyles from './_components/IssueStyles'
 import { ISSUE, SECTIONS } from './_data'
@@ -40,11 +39,28 @@ export default function BorderlandsHubPage() {
   return (
     <div className="boi-root">
       <IssueStyles />
-      <SiteHeader />
 
       <section className="boi-hero" style={{ '--herobg': `url('${ISSUE.heroBg}')` }}>
         <div className="boi-hero-bg" aria-hidden="true" ref={heroBgRef}></div>
         <div className="boi-hero-wash" aria-hidden="true"></div>
+        {/* Back-home button — matches IssueHero style */}
+        <a
+          href="/"
+          style={{
+            position: 'absolute', top: 28, left: 36, zIndex: 20,
+            display: 'inline-flex', alignItems: 'center', gap: 9,
+            color: 'rgba(255,255,255,0.85)', fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 13,
+            letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none',
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.85)'}
+        >
+          <svg width="22" height="16" viewBox="0 0 28 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="27" y1="12" x2="3" y2="12" /><polyline points="10 19 3 12 10 5" />
+          </svg>
+          Home
+        </a>
         <div className="boi-hero-text-gradient" aria-hidden="true" style={{ opacity: prog }} />
         <div className="boi-hero-inner" style={{
           opacity: titleOpacity,
