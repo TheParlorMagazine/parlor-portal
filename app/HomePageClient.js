@@ -1347,10 +1347,6 @@ export default function HomePageClient({ initial = {} }) {
         </div>
 
         <div className="nav-drawer-section">
-          <a href="/events" className="nav-drawer-item"><span className="nav-drawer-title">Public Events</span></a>
-        </div>
-
-        <div className="nav-drawer-section">
           <div className="nav-drawer-label">Issues</div>
           {issuesList.length === 0 ? (
             <div className="nav-drawer-empty">No issues yet.</div>
