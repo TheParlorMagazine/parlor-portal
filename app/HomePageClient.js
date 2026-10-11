@@ -169,7 +169,7 @@ export default function HomePageClient({ initial = {} }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       const { data } = await supabase.from('members').select('role, avatar_url').eq('id', user.id).single()
-      setMember({ ...user, role: data?.role ?? null, avatar_url: data?.avatar_url || user.user_metadata?.avatar_url || null })
+      setMember({ ...user, role: data?.role ?? null, avatar_url: data?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null })
     }
     loadMember()
   }, [])
