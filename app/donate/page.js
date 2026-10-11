@@ -12,30 +12,24 @@ function admin() {
 async function getGifts() {
   const supabase = admin()
 
-  const [{ data: items }, { data: claims }, { data: banners }] = await Promise.all([
+  const [{ data: items }, { data: claims }] = await Promise.all([
     supabase.from('gift_items').select('*').order('display_order'),
     supabase.from('gift_claims').select('gift_slug'),
-    supabase.from('announcements').select('image_url').eq('active', true).eq('placement', 'homepage').order('sort').limit(1),
   ])
-
-  const bannerImage = banners?.[0]?.image_url || null
 
   const claimCounts = {}
   for (const c of claims || []) {
     claimCounts[c.gift_slug] = (claimCounts[c.gift_slug] || 0) + 1
   }
 
-  return {
-    gifts: (items || []).map(item => ({
-      ...item,
-      claimed: claimCounts[item.slug] || 0,
-      remaining: item.capacity !== null ? item.capacity - (claimCounts[item.slug] || 0) : null,
-    })),
-    bannerImage,
-  }
+  return (items || []).map(item => ({
+    ...item,
+    claimed: claimCounts[item.slug] || 0,
+    remaining: item.capacity !== null ? item.capacity - (claimCounts[item.slug] || 0) : null,
+  }))
 }
 
 export default async function DonatePage() {
-  const { gifts, bannerImage } = await getGifts()
-  return <DonateClient gifts={gifts} bannerImage={bannerImage} />
+  const gifts = await getGifts()
+  return <DonateClient gifts={gifts} />
 }
