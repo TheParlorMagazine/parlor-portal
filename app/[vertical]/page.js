@@ -77,7 +77,7 @@ export default function VerticalPage({ params }) {
       setLoading(true)
       const { data, error } = await supabase
         .from('articles')
-        .select('slug, title, excerpt, cover_image_url, author_name, author_photo_url, author_profile_url, category, article_category, theme, date_published, media_type, featured')
+        .select('slug, title, subtitle, excerpt, cover_image_url, author_name, author_photo_url, author_profile_url, category, article_category, theme, date_published, media_type, featured')
         .eq('published', true)
         .eq('category', category)
         .order('date_published', { ascending: false })
@@ -269,7 +269,7 @@ export default function VerticalPage({ params }) {
             <h1 className="feat-hero-title">
               <a href={featured.slug ? `/post/${featured.slug}` : '#'}>{esc(featured.title)}</a>
             </h1>
-            {featured.excerpt && <p className="feat-hero-excerpt">{esc(featured.excerpt)}</p>}
+            {(featured.subtitle || featured.excerpt) && <p className="feat-hero-excerpt">{esc(featured.subtitle || featured.excerpt)}</p>}
             <div className="feat-hero-byline">
               {featured.author_photo_url && (
                 <span className="avatarWrap">
