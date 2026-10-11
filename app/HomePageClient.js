@@ -1099,7 +1099,11 @@ export default function HomePageClient({ initial = {} }) {
         .comp-title em { font-style: italic; color: var(--pink); }
         .comp-subtitle { font-family: 'Playfair Display', Georgia, serif; font-size: 16px; font-style: italic; color: var(--muted); margin-bottom: 20px; }
         .comp-body { font-size: 15px; line-height: 1.78; color: var(--grey); max-width: 420px; }
-        .comp-right { border-left: 1px solid var(--border); padding-left: 52px; }
+        .comp-right { border-left: 1px solid var(--border); padding-left: 52px; position: relative; overflow: hidden; }
+        .comp-right--img { border-left: none; padding-left: 0; min-height: 320px; display: flex; flex-direction: column; justify-content: flex-end; }
+        .comp-right-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+        .comp-right-grad { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.75) 60%, rgba(0,0,0,0.92) 100%); z-index: 1; }
+        .comp-right-content { position: relative; z-index: 2; padding: 36px; }
         .comp-right .comp-body { margin-bottom: 30px; }
         .deadline-label { font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
         .deadline-date { font-family: 'Playfair Display', Georgia, serif; font-size: 40px; font-weight: 700; color: var(--pink); margin-bottom: 26px; line-height: 1; }
@@ -1157,6 +1161,7 @@ export default function HomePageClient({ initial = {} }) {
           .digital-hero-right { padding: 36px 24px 40px; }
           .competition { padding: 48px 24px; gap: 32px; }
           .comp-right { border-left: none; padding-left: 0; border-top: 1px solid var(--border); padding-top: 32px; }
+          .comp-right--img { border-top: none; padding-top: 0; min-height: 260px; }
           .header-top { padding: 12px 20px; }
           .header-bottom { gap: 20px; padding: 10px 20px; overflow-x: auto; }
           .header-section-link { font-size: 12px; white-space: nowrap; }
@@ -1523,15 +1528,19 @@ export default function HomePageClient({ initial = {} }) {
             {competitionData.kicker && <div className="comp-eyebrow">{competitionData.kicker}</div>}
             {competitionData.headline && <h2 className="comp-title" dangerouslySetInnerHTML={{ __html: competitionData.headline.replace(/\n/g, '<br/>') }} />}
           </div>
-          <div className="comp-right">
-            {competitionData.message && <p className="comp-body">{competitionData.message}</p>}
-            {competitionData.deadline_label && (
-              <>
-                <div className="deadline-label">Submissions close</div>
-                <div className="deadline-date">{competitionData.deadline_label}</div>
-              </>
-            )}
-            {competitionData.cta_label && <a href={competitionData.cta_href || '#'} className="comp-cta" target="_top">{competitionData.cta_label}</a>}
+          <div className={`comp-right${competitionData.image_url ? ' comp-right--img' : ''}`}>
+            {competitionData.image_url && <img className="comp-right-bg" src={competitionData.image_url} alt="" />}
+            {competitionData.image_url && <div className="comp-right-grad" />}
+            <div className={competitionData.image_url ? 'comp-right-content' : undefined}>
+              {competitionData.message && <p className="comp-body">{competitionData.message}</p>}
+              {competitionData.deadline_label && (
+                <>
+                  <div className="deadline-label">Submissions close</div>
+                  <div className="deadline-date">{competitionData.deadline_label}</div>
+                </>
+              )}
+              {competitionData.cta_label && <a href={competitionData.cta_href || '#'} className="comp-cta" target="_top">{competitionData.cta_label}</a>}
+            </div>
           </div>
         </section>
       )}

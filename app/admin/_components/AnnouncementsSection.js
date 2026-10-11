@@ -125,9 +125,9 @@ function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon',
         <div style={label}>{f.placement === 'homepage' ? 'Description' : 'Message'}</div>
         <textarea value={f.message} onChange={e => set('message', e.target.value)} rows={2} placeholder="Sustain the work and receive full access…" style={{ ...input, resize: 'vertical' }} />
 
-        {(f.placement === 'homepage' || f.placement === 'popup') && (
+        {(f.placement === 'homepage' || f.placement === 'popup' || f.placement === 'competition') && (
           <>
-            <div style={label}>Hero image</div>
+            <div style={label}>{f.placement === 'competition' ? 'Right-side background image' : 'Hero image'}</div>
             <div
               onDragOver={e => { e.preventDefault(); setDrag(true) }}
               onDragLeave={() => setDrag(false)}
