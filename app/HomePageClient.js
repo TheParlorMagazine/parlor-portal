@@ -1111,8 +1111,8 @@ export default function HomePageClient({ initial = {} }) {
         .ribbon-kicker { font-size: 14px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; line-height: 1.1; }
         .ribbon-subhead { font-family: 'Alex Brush', cursive; font-size: 24px; font-weight: 400; line-height: 1.2; margin-top: 2px; }
         .ribbon-message { font-size: 16px; line-height: 1.35; font-weight: 500; opacity: 0.9; text-align: center; max-width: 52ch; margin: 0 auto; }
-        .ribbon-cta { display: inline-flex; align-items: center; justify-content: center; padding: 12px 28px; background: var(--black); color: var(--white); font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-weight: 700; text-decoration: none; min-width: 240px; transition: background 0.15s; white-space: nowrap; }
-        .ribbon-cta:hover { background: #fff; color: var(--black); outline: 2px solid var(--black); }
+        .ribbon-cta { display: inline-flex; align-items: center; justify-content: center; padding: 12px 28px; background: var(--black); color: var(--white); font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-weight: 700; text-decoration: none; min-width: 240px; transition: background 0.15s, color 0.15s, outline 0.15s, font-size 0.15s; white-space: nowrap; }
+        .ribbon-cta:hover { background: #fff; color: var(--black); outline: 2px solid var(--black); font-size: 15px; }
         .ribbon-toggle { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,0.1); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; color: var(--black); }
         @media (min-width: 760px) { .ribbon-toggle { display: none; } }
         .ribbon-toggle:hover { background: rgba(0,0,0,0.18); }
