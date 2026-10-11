@@ -188,7 +188,7 @@ export default function VerticalPage({ params }) {
         .feat-hero-cta {
           display: inline-block; margin-top: 22px;
           font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;
-          color: #0a0a0a; background: #f2b8c6; padding: 12px 26px; border-radius: 999px;
+          color: #0a0a0a; background: #f2b8c6; padding: 12px 26px; border-radius: 0;
           transition: background 0.15s;
         }
         .feat-hero-cta:hover { background: #ffffff; }

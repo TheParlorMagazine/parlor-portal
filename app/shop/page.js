@@ -235,14 +235,14 @@ export default function ShopPage() {
         .shop-browse:hover { color:${PINK}; }
         .shop-card { background:#fff; text-align:left; }
         .shop-card-img { position:relative; border-radius:4px; aspect-ratio:4/5; display:flex; align-items:flex-end; justify-content:flex-start; padding:12px; overflow:hidden; }
-        .shop-add { margin-top:10px; background:${BLACK}; color:#fff; border:none; border-radius:24px; padding:9px 20px; font-family:${BODY}; font-size:13px; letter-spacing:0.04em; cursor:pointer; transition:background 0.15s; }
+        .shop-add { margin-top:10px; background:${BLACK}; color:#fff; border:none; border-radius:0; padding:9px 20px; font-family:${BODY}; font-size:13px; letter-spacing:0.04em; cursor:pointer; transition:background 0.15s; }
         .shop-add:hover { background:${MAROON}; }
         .shop-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:34px 26px; }
         .shop-hero-title { font-family:${DISPLAY}; font-weight:700; font-size:60px; line-height:1.05; color:#1a1a1a; margin:0; }
         @keyframes heroSlideIn { from { opacity:0; transform:translateX(-48px); } to { opacity:1; transform:translateX(0); } }
         @keyframes heroSlideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
         .shop-hero-title { animation: heroSlideIn 0.65s cubic-bezier(.22,1,.36,1) both; }
-        .shop-hero-btn { display:inline-block; margin-top:24px; background:${BLACK}; color:#fff; text-decoration:none; border:2px solid ${BLACK}; border-radius:26px; padding:12px 26px; font-family:${BODY}; font-size:14.5px; letter-spacing:0.04em; cursor:pointer; animation:heroSlideUp 0.55s 0.45s cubic-bezier(.22,1,.36,1) both; transition:background 0.2s, color 0.2s; }
+        .shop-hero-btn { display:inline-block; margin-top:24px; background:${BLACK}; color:#fff; text-decoration:none; border:2px solid ${BLACK}; border-radius:0; padding:12px 26px; font-family:${BODY}; font-size:14.5px; letter-spacing:0.04em; cursor:pointer; animation:heroSlideUp 0.55s 0.45s cubic-bezier(.22,1,.36,1) both; transition:background 0.2s, color 0.2s; }
         .shop-hero-btn:hover { background:${MAROON}; border-color:${MAROON}; }
         .shop-welcome { font-family:${DISPLAY}; font-weight:700; font-size:64px; line-height:1.03; color:#fff; margin:0; }
         .shop-back { display:inline-flex; align-items:center; gap:9px; color:rgba(255,255,255,0.78); font-family:${BODY}; font-size:13px; letter-spacing:0.08em; text-transform:uppercase; text-decoration:none; padding:26px 48px 0; transition:color 0.15s; }
@@ -259,7 +259,7 @@ export default function ShopPage() {
         .shop-ham:hover { background:rgba(255,255,255,0.1); }
         .shop-ham-label { opacity:0.92; }
         .shop-search-wrap { position:relative; flex:1 1 auto; }
-        .shop-search-input { width:100%; box-sizing:border-box; background:#fff; border:none; border-radius:30px; padding:12px 44px 12px 20px; font-family:${BODY}; font-size:15px; color:#1a1a1a; outline:none; }
+        .shop-search-input { width:100%; box-sizing:border-box; background:#fff; border:none; border-radius:0; padding:12px 44px 12px 20px; font-family:${BODY}; font-size:15px; color:#1a1a1a; outline:none; }
         .shop-search-input::placeholder { color:#9a9a9a; }
         .shop-search-ico { position:absolute; right:16px; top:50%; transform:translateY(-50%); pointer-events:none; color:#6a6a6a; }
         .shop-search-panel { position:absolute; top:calc(100% + 10px); left:0; right:0; background:#fff; border-radius:12px; box-shadow:0 18px 50px rgba(0,0,0,0.26); overflow:hidden; z-index:60; }
