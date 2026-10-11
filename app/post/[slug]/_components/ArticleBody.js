@@ -460,6 +460,21 @@ function truncateHtmlAtParagraphs(html, maxParagraphs) {
   return parts.slice(0, maxParagraphs).join('</p>') + '</p>'
 }
 
+function SubscribeBanner() {
+  return (
+    <div style={{
+      margin: '48px 0', padding: '36px 32px', background: '#fdf3f4',
+      borderTop: '2px solid #f2b8c6', borderBottom: '2px solid #f2b8c6',
+      textAlign: 'center',
+    }}>
+      <div style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#c47080', marginBottom: 12 }}>Support independent journalism</div>
+      <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(22px,3vw,30px)', fontWeight: 700, color: '#0a0a0a', marginBottom: 10, lineHeight: 1.2 }}>Enjoy reading The Parlor?</div>
+      <p style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 16, color: '#555', lineHeight: 1.7, margin: '0 auto 24px', maxWidth: 440 }}>Become a paid subscriber to get full access, early releases, and subscriber-only extras.</p>
+      <a href="/plans" style={{ display: 'inline-block', background: '#0a0a0a', color: '#fff', fontFamily: "'Playfair Display', Georgia, serif", fontSize: 15, fontWeight: 700, padding: '13px 32px', textDecoration: 'none', letterSpacing: '0.02em' }}>Become a paid subscriber</a>
+    </div>
+  )
+}
+
 export default function ArticleBody({
   segments,
   articleId,
@@ -471,6 +486,7 @@ export default function ArticleBody({
   pagePath,
   justUnlocked,
   dropCap,
+  showSubscribeBanner,
 }) {
   const isGated = (paywallType === 'paywall' || paywallType === 'members') && !articleHasAccess
   const firstHtmlIndex = segments.findIndex(s => s.kind === 'html')
@@ -488,17 +504,22 @@ export default function ArticleBody({
   // The full article renders even when gated — the membership paywall is a
   // timed pop-up (ArticlePaywallPopup) that covers the page and locks scroll,
   // so the body is never visibly cut off.
+  const midpoint = showSubscribeBanner ? Math.ceil(segments.length / 2) : -1
+
   return (
     <>
       <style>{PROSE_STYLES}</style>
       {segments.map((seg, i) => {
+        const bannerAfter = showSubscribeBanner && i === midpoint - 1
         if (seg.kind === 'html') {
           return (
-            <div
-              key={i}
-              className={`parlor-prose${dropCap && i === firstHtmlIndex ? ' parlor-dropcap' : ''}`}
-              dangerouslySetInnerHTML={{ __html: processImageCaptions(seg.content) }}
-            />
+            <div key={i}>
+              <div
+                className={`parlor-prose${dropCap && i === firstHtmlIndex ? ' parlor-dropcap' : ''}`}
+                dangerouslySetInnerHTML={{ __html: processImageCaptions(seg.content) }}
+              />
+              {bannerAfter && <SubscribeBanner />}
+            </div>
           )
         }
 

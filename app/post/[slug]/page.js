@@ -370,6 +370,7 @@ export default async function ArticlePage({ params, searchParams }) {
             pagePath={`/post/${article.slug}`}
             justUnlocked={justUnlocked}
             dropCap={isVol2}
+            showSubscribeBanner={!article.issue_id && !userId}
           />
         </div>
 
