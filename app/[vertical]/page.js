@@ -148,8 +148,8 @@ export default function VerticalPage({ params }) {
           background: linear-gradient(180deg, rgba(10,10,10,0.2) 0%, rgba(10,10,10,0.08) 40%, rgba(10,10,10,0.6) 100%);
         }
         .feat-hero-text-gradient {
-          position: absolute; bottom: 0; left: 0; right: 0; height: 50%;
-          background: linear-gradient(to top, rgba(10,10,10,0.72) 0%, rgba(10,10,10,0.32) 60%, transparent 100%);
+          position: absolute; bottom: 0; left: 0; right: 0; height: 75%;
+          background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.6) 35%, rgba(0,0,0,0.2) 70%, transparent 100%);
           pointer-events: none;
         }
         .feat-hero-inner {
@@ -253,7 +253,7 @@ export default function VerticalPage({ params }) {
           style={featured.cover_image_url ? { backgroundImage: `url(${wixCover(featured.cover_image_url, 1600, 82)})` } : undefined}
         >
           <div className="feat-hero-scrim" />
-          <div className="feat-hero-text-gradient" style={{ opacity: Math.min(1, scrollY / (typeof window !== 'undefined' ? window.innerHeight * 0.5 : 400)) }} />
+          <div className="feat-hero-text-gradient" style={{ opacity: Math.min(1, 0.4 + scrollY / (typeof window !== 'undefined' ? window.innerHeight * 0.5 : 400)) }} />
           <div className="feat-hero-inner" style={{
             opacity: Math.min(1, (scrollY / (typeof window !== 'undefined' ? window.innerHeight * 0.5 : 400)) * 2),
             transform: `translateY(${Math.max(0, 30 - (scrollY / (typeof window !== 'undefined' ? window.innerHeight * 0.5 : 400)) * 30)}px)`,
