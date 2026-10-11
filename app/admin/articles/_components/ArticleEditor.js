@@ -2180,7 +2180,7 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: form.featured ? '#f2b8c6' : '#666', fontFamily: "'Source Serif 4', Georgia, serif" }}>
                 Featured
                 <span
-                  title="Featured makes this article the full-width hero at the top of its Vertical page. Only one article per vertical can be featured — turning this on demotes the vertical's previously featured article. (Set the Vertical below for this to take effect. The homepage hero carousel is separate: it always shows the newest issue's latest articles.)"
+                  title="Marks this article as the featured piece for its Vertical. Only one article per vertical can be featured at a time — enabling this automatically demotes the previous featured article. Make sure the Vertical is set below for this to take effect."
                   style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '15px', height: '15px', borderRadius: '50%', border: '1px solid #6a6a6a', color: '#9a9a9a', fontSize: '10px', fontStyle: 'italic', fontFamily: 'Georgia, serif', cursor: 'help', flexShrink: 0 }}
                 >i</span>
               </span>
