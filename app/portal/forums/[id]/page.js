@@ -218,7 +218,7 @@ function Detail() {
   const bannerDedupeRef = useMemo(() => ({ current: null }), [])
   const avatarDedupeRef2 = useMemo(() => ({ current: null }), [])
   const [showCreateEvent, setShowCreateEvent] = useState(false)
-  const [eventForm, setEventForm] = useState({ title: '', blurb: '', starts_at: '', ends_at: '', location_type: 'virtual', location: '', join_url: '', capacity: '', cover_image_url: '', is_public: false })
+  const [eventForm, setEventForm] = useState({ title: '', blurb: '', description: '', starts_at: '', ends_at: '', location_type: 'virtual', location: '', join_url: '', capacity: '', cover_image_url: '', is_public: false })
   const [creatingEvent, setCreatingEvent] = useState(false)
   const [eventErr, setEventErr] = useState('')
   const [eventThumbUploading, setEventThumbUploading] = useState(false)
@@ -268,7 +268,7 @@ function Detail() {
       if (res.ok) {
         const d = await res.json()
         setShowCreateEvent(false)
-        setEventForm({ title: '', blurb: '', starts_at: '', ends_at: '', location_type: 'virtual', location: '', join_url: '', capacity: '', cover_image_url: '', is_public: false })
+        setEventForm({ title: '', blurb: '', description: '', starts_at: '', ends_at: '', location_type: 'virtual', location: '', join_url: '', capacity: '', cover_image_url: '', is_public: false })
         await load()
         window.location.href = `/portal/events/${d.id}`
       } else {
@@ -438,6 +438,10 @@ function Detail() {
                 <input value={eventForm[key]} onChange={e => setEventForm(f => ({ ...f, [key]: e.target.value }))} placeholder={placeholder} style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13.5, outline: 'none', boxSizing: 'border-box' }} />
               </div>
             ))}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Description <span style={{ opacity: 0.6 }}>— shown on the event detail page</span></div>
+              <textarea value={eventForm.description} onChange={e => setEventForm(f => ({ ...f, description: e.target.value }))} rows={4} placeholder="Tell people what to expect, who it's for, what you'll cover…" style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13.5, outline: 'none', boxSizing: 'border-box', resize: 'vertical' }} />
+            </div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Thumbnail</div>
               <div

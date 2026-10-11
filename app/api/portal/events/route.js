@@ -13,8 +13,10 @@ export async function POST(request) {
   function toUTC(naive) {
     if (!naive) return null
     if (naive.includes('Z') || naive.includes('+') || /T.*-\d\d:\d\d$/.test(naive)) return naive
+    // getTimezoneOffset() = local - UTC in minutes (negative for UTC+X zones)
+    // UTC = local + offset  →  subtract offset from parsed-as-UTC time
     const offsetMs = typeof tz_offset === 'number' ? tz_offset * 60 * 1000 : 0
-    return new Date(new Date(naive).getTime() - offsetMs).toISOString()
+    return new Date(new Date(naive).getTime() + offsetMs).toISOString()
   }
 
   let host_name = null
