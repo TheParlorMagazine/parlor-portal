@@ -6,12 +6,23 @@ export async function POST(request) {
   if (!user) return Response.json({ error: 'Not signed in' }, { status: 401 })
   const db = serviceClient()
   const body = await request.json()
-  const { title, blurb, description, starts_at, ends_at, location_type, location, join_url, capacity, cover_image_url, is_public, forum_id, status = 'published' } = body
+  const { title, blurb, description, starts_at, ends_at, tz_offset, location_type, location, join_url, capacity, cover_image_url, is_public, forum_id, status = 'published' } = body
   if (!title?.trim()) return Response.json({ error: 'Title required' }, { status: 400 })
 
+  // Adjust naive datetime-local strings to UTC using the browser's offset (minutes, e.g. -120 for GMT+2)
+  function toUTC(naive) {
+    if (!naive) return null
+    if (naive.includes('Z') || naive.includes('+') || /T.*-\d\d:\d\d$/.test(naive)) return naive
+    const offsetMs = typeof tz_offset === 'number' ? tz_offset * 60 * 1000 : 0
+    return new Date(new Date(naive).getTime() - offsetMs).toISOString()
+  }
+
+  let host_name = null
   // If a forum_id is given, verify the caller is a host of that forum (admins bypass).
   if (forum_id) {
     const me = await memberOf(db, user.id)
+    const { data: forum } = await db.from('forums').select('name').eq('id', forum_id).single()
+    host_name = forum?.name || null
     if (me?.role !== 'admin') {
       const { data: mem } = await db.from('forum_members').select('role').eq('forum_id', forum_id).eq('member_id', user.id).maybeSingle()
       if (!mem || mem.role !== 'host') return Response.json({ error: 'Not a moderator of this forum' }, { status: 403 })
@@ -20,10 +31,11 @@ export async function POST(request) {
 
   const { data: event, error } = await db.from('events').insert({
     title: title.trim(), blurb: blurb?.trim() || null, description: description?.trim() || null,
-    starts_at: starts_at || null, ends_at: ends_at || null,
+    starts_at: toUTC(starts_at), ends_at: toUTC(ends_at),
     location_type: location_type || 'virtual', location: location?.trim() || null,
     join_url: join_url?.trim() || null, capacity: capacity ? Number(capacity) : null,
     cover_image_url: cover_image_url?.trim() || null,
+    host_name,
     ...(is_public !== undefined ? { is_public: !!is_public } : {}),
     forum_id: forum_id || null, status, created_by: user.id,
   }).select('id').single()

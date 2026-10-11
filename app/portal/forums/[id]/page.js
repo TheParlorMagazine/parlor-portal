@@ -264,7 +264,7 @@ function Detail() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const headers = { 'Content-Type': 'application/json', ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) }
-      const res = await fetch('/api/portal/events', { method: 'POST', headers, body: JSON.stringify({ ...eventForm, forum_id: id, capacity: eventForm.capacity ? Number(eventForm.capacity) : null }) })
+      const res = await fetch('/api/portal/events', { method: 'POST', headers, body: JSON.stringify({ ...eventForm, forum_id: id, capacity: eventForm.capacity ? Number(eventForm.capacity) : null, tz_offset: new Date().getTimezoneOffset() }) })
       if (res.ok) {
         const d = await res.json()
         setShowCreateEvent(false)
