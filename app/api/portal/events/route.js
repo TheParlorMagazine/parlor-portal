@@ -1,4 +1,4 @@
-import { requireUser, serviceClient } from '../../../../lib/apiAuth'
+import { requireUser, serviceClient, memberOf } from '../../../../lib/apiAuth'
 
 // POST → create a new event (moderators only — caller must be a host of the forum_id)
 export async function POST(request) {
@@ -6,13 +6,16 @@ export async function POST(request) {
   if (!user) return Response.json({ error: 'Not signed in' }, { status: 401 })
   const db = serviceClient()
   const body = await request.json()
-  const { title, blurb, description, starts_at, ends_at, location_type, location, join_url, capacity, cover_image_url, forum_id, status = 'published' } = body
+  const { title, blurb, description, starts_at, ends_at, location_type, location, join_url, capacity, cover_image_url, is_public, forum_id, status = 'published' } = body
   if (!title?.trim()) return Response.json({ error: 'Title required' }, { status: 400 })
 
-  // If a forum_id is given, verify the caller is a host of that forum.
+  // If a forum_id is given, verify the caller is a host of that forum (admins bypass).
   if (forum_id) {
-    const { data: mem } = await db.from('forum_memberships').select('role').eq('forum_id', forum_id).eq('member_id', user.id).maybeSingle()
-    if (!mem || mem.role !== 'host') return Response.json({ error: 'Not a moderator of this forum' }, { status: 403 })
+    const me = await memberOf(db, user.id)
+    if (me?.role !== 'admin') {
+      const { data: mem } = await db.from('forum_members').select('role').eq('forum_id', forum_id).eq('member_id', user.id).maybeSingle()
+      if (!mem || mem.role !== 'host') return Response.json({ error: 'Not a moderator of this forum' }, { status: 403 })
+    }
   }
 
   const { data: event, error } = await db.from('events').insert({
@@ -21,6 +24,7 @@ export async function POST(request) {
     location_type: location_type || 'virtual', location: location?.trim() || null,
     join_url: join_url?.trim() || null, capacity: capacity ? Number(capacity) : null,
     cover_image_url: cover_image_url?.trim() || null,
+    is_public: !!is_public,
     forum_id: forum_id || null, status, created_by: user.id,
   }).select('id').single()
   if (error) return Response.json({ error: error.message }, { status: 500 })

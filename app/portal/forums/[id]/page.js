@@ -212,7 +212,7 @@ function Detail() {
   const bannerDedupeRef = useMemo(() => ({ current: null }), [])
   const avatarDedupeRef2 = useMemo(() => ({ current: null }), [])
   const [showCreateEvent, setShowCreateEvent] = useState(false)
-  const [eventForm, setEventForm] = useState({ title: '', blurb: '', starts_at: '', ends_at: '', location_type: 'virtual', location: '', join_url: '', capacity: '', cover_image_url: '' })
+  const [eventForm, setEventForm] = useState({ title: '', blurb: '', starts_at: '', ends_at: '', location_type: 'virtual', location: '', join_url: '', capacity: '', cover_image_url: '', is_public: false })
   const [creatingEvent, setCreatingEvent] = useState(false)
   const [eventErr, setEventErr] = useState('')
   const [eventThumbUploading, setEventThumbUploading] = useState(false)
@@ -262,7 +262,7 @@ function Detail() {
       if (res.ok) {
         const d = await res.json()
         setShowCreateEvent(false)
-        setEventForm({ title: '', blurb: '', starts_at: '', ends_at: '', location_type: 'virtual', location: '', join_url: '', capacity: '', cover_image_url: '' })
+        setEventForm({ title: '', blurb: '', starts_at: '', ends_at: '', location_type: 'virtual', location: '', join_url: '', capacity: '', cover_image_url: '', is_public: false })
         await load()
         window.location.href = `/portal/events/${d.id}`
       } else {
@@ -485,6 +485,13 @@ function Detail() {
                 <input value={eventForm[key]} onChange={e => setEventForm(f => ({ ...f, [key]: e.target.value }))} placeholder={placeholder} type={key === 'capacity' ? 'number' : 'text'} style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13.5, outline: 'none', boxSizing: 'border-box' }} />
               </div>
             ))}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 14, padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 9, background: eventForm.is_public ? '#f0faf4' : '#fafafa' }}>
+              <input type="checkbox" checked={eventForm.is_public} onChange={e => setEventForm(f => ({ ...f, is_public: e.target.checked }))} style={{ width: 16, height: 16, accentColor: '#2d8f5a', flexShrink: 0 }} />
+              <div>
+                <div style={{ fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13.5, fontWeight: 500, color: 'var(--ink)' }}>Make public to all Parlor members</div>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>Visible on the main Events page, not just this forum</div>
+              </div>
+            </label>
             {eventErr && <div style={{ fontSize: 12.5, color: '#c04040', marginBottom: 10 }}>{eventErr}</div>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
               <button onClick={() => setShowCreateEvent(false)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13, cursor: 'pointer' }}>Cancel</button>
