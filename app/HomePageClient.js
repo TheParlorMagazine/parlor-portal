@@ -957,15 +957,22 @@ export default function HomePageClient({ initial = {} }) {
 
         /* ── SWIPER CAROUSEL ── */
         /* ── HOMEPAGE ANNOUNCEMENT BANNER ── */
-        .home-banner { background-size: cover; background-position: center; background-color: var(--black); min-height: clamp(340px, 46vh, 520px); display: flex; border-top: 1px solid var(--border); }
-        .home-banner-scrim { flex: 1; display: flex; align-items: center; background: linear-gradient(90deg, rgba(10,10,10,0.86) 0%, rgba(10,10,10,0.58) 46%, rgba(10,10,10,0.12) 100%); }
-        .home-banner-inner { max-width: 660px; padding: clamp(40px,6vw,80px); }
-        .home-banner-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--pink); margin-bottom: 16px; }
-        .home-banner-head { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(30px,4vw,52px); font-weight: 700; color: var(--white); line-height: 1.08; margin: 0 0 16px; }
-        .home-banner-desc { font-family: 'Source Serif 4', Georgia, serif; font-size: clamp(15px,1.3vw,18px); line-height: 1.7; color: var(--grey); margin: 0 0 24px; max-width: 540px; }
-        .home-banner-cta { display: inline-block; background: var(--pink); color: var(--black); padding: 13px 26px; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; transition: background 0.15s; }
-        .home-banner-cta:hover { background: var(--white); }
-        @media (max-width: 700px) { .home-banner-scrim { background: linear-gradient(rgba(10,10,10,0.5), rgba(10,10,10,0.8)); } }
+        .home-banner { display: grid; grid-template-columns: 1fr 1.3fr; min-height: clamp(340px, 46vh, 520px); border-top: 1px solid var(--border); }
+        .home-banner-left { background: #f2b8c6; display: flex; align-items: center; padding: clamp(40px,6vw,80px); }
+        .home-banner-inner { max-width: 520px; }
+        .home-banner-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--black); opacity: 0.6; margin-bottom: 16px; }
+        .home-banner-head { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(28px,3.5vw,48px); font-weight: 700; color: var(--black); line-height: 1.08; margin: 0 0 16px; }
+        .home-banner-desc { font-family: 'Source Serif 4', Georgia, serif; font-size: clamp(14px,1.2vw,17px); line-height: 1.7; color: rgba(10,10,10,0.75); margin: 0 0 28px; }
+        .home-banner-cta { display: inline-block; background: var(--black); color: #fff; padding: 13px 26px; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; transition: background 0.15s; }
+        .home-banner-cta:hover { background: #7a2531; }
+        .home-banner-right { position: relative; overflow: hidden; background: #1a1a1a; }
+        .home-banner-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+        .home-banner-grad { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to right, #f2b8c6 0%, rgba(242,184,198,0.4) 25%, transparent 55%); }
+        @media (max-width: 700px) {
+          .home-banner { grid-template-columns: 1fr; }
+          .home-banner-right { min-height: 260px; }
+          .home-banner-grad { background: linear-gradient(to bottom, #f2b8c6 0%, rgba(242,184,198,0.2) 30%, transparent 60%); }
+        }
 
         /* ── FEATURED EVENTS ── */
         .events-section { background: var(--black); padding: 58px 40px 62px; border-top: 1px solid var(--border); }
@@ -1439,14 +1446,18 @@ export default function HomePageClient({ initial = {} }) {
 
       {/* ── HOMEPAGE ANNOUNCEMENT BANNER ── (admin-managed; hidden until set) */}
       {homeBanner && (
-        <section className="home-banner" style={homeBanner.image_url ? { backgroundImage: `url(${homeBanner.image_url})` } : undefined}>
-          <div className="home-banner-scrim">
+        <section className="home-banner">
+          <div className="home-banner-left">
             <div className="home-banner-inner">
               {homeBanner.kicker && <div className="home-banner-eyebrow">{homeBanner.kicker}</div>}
               {homeBanner.headline && <h2 className="home-banner-head">{homeBanner.headline}</h2>}
               {homeBanner.message && <p className="home-banner-desc">{homeBanner.message}</p>}
               {homeBanner.cta_label && <a href={homeBanner.cta_href || '#'} className="home-banner-cta">{homeBanner.cta_label}</a>}
             </div>
+          </div>
+          <div className="home-banner-right">
+            {homeBanner.image_url && <img className="home-banner-img" src={homeBanner.image_url} alt="" />}
+            <div className="home-banner-grad" />
           </div>
         </section>
       )}
