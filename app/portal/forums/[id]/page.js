@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
 import { prepareImageUpload, isDuplicateUpload } from '../../../../lib/uploadImage'
