@@ -28,14 +28,14 @@ const PLACEMENT_LABELS = {
   ribbon: 'ribbon announcement',
   homepage: 'homepage banner',
   top_bar: 'top bar',
-  competition: 'campaign section',
+  competition: 'footer banner',
   popup: 'popup',
 }
 const PLACEMENT_DESC = {
   ribbon: 'Shown in the floating footer ribbon. Active ones rotate in order.',
   homepage: 'A large banner on the public homepage — eyebrow + header + description + hero image.',
   top_bar: 'Slim dismissible bar above the nav. Kicker = italic prefix, message = main text.',
-  competition: 'Full-width campaign section above the footer. Headline can use \\n for line breaks. Submissions-close date is derived from "Show until".',
+  competition: 'Full-width footer banner above the site footer. Headline can use \\n for line breaks. Submissions-close date is derived from "Show until".',
   popup: 'First-load popup, shown once per session. Include an image for best impact.',
 }
 
@@ -196,19 +196,19 @@ export default function AnnouncementsSection({ supabase }) {
           <p style={{ color: '#777', fontSize: 14, margin: '4px 0 0' }}>{
             tab === 'homepage' ? 'Large hero banners on the public homepage — eyebrow, header, description, and a hero image.' :
             tab === 'top_bar' ? 'Slim bar above the nav that dismisses on click. Only the first active item shows.' :
-            tab === 'competition' ? 'Full-width black campaign section above the footer. Only the first active item shows.' :
+            tab === 'competition' ? 'Full-width footer banner above the site footer. Only the first active item shows.' :
             tab === 'popup' ? 'First-load popup shown once per session per item. Only the first active item shows.' :
             'The floating footer ribbon — issue launches, events, fundraisers, and campaigns. Active ones rotate in sort order.'
           }</p>
         </div>
         <button onClick={() => setEditing(null)} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontFamily: ff, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          + New {tab === 'homepage' ? 'banner' : tab === 'top_bar' ? 'top bar' : tab === 'competition' ? 'campaign section' : tab === 'popup' ? 'popup' : 'ribbon item'}
+          + New {tab === 'homepage' ? 'banner' : tab === 'top_bar' ? 'top bar' : tab === 'competition' ? 'footer banner' : tab === 'popup' ? 'popup' : 'ribbon item'}
         </button>
       </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 6, borderBottom: `1px solid ${BORDER}`, marginBottom: 4 }}>
-        {[['ribbon', 'Footer ribbon'], ['homepage', 'Hero banner'], ['top_bar', 'Top bar'], ['competition', 'Campaign section'], ['popup', 'Popup']].map(([v, l]) => {
+        {[['ribbon', 'Footer ribbon'], ['homepage', 'Hero banner'], ['top_bar', 'Top bar'], ['competition', 'Footer banner'], ['popup', 'Popup']].map(([v, l]) => {
           const count = items.filter(PLACEMENT_MATCH[v] || (() => false)).length
           const on = tab === v
           return (
