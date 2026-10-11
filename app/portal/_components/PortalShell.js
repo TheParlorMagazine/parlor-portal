@@ -95,7 +95,7 @@ export default function PortalShell({ active = 'dashboard', children }) {
     user?.user_metadata?.name ||
     user?.email?.split('@')[0] ||
     'Member'
-  const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null
+  const avatarUrl = member?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null
   const initial = (name || 'M').trim().charAt(0).toUpperCase()
 
   return (
