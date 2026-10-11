@@ -148,8 +148,10 @@ export default function VerticalPage({ params }) {
           background: linear-gradient(180deg, rgba(10,10,10,0.2) 0%, rgba(10,10,10,0.08) 40%, rgba(10,10,10,0.6) 100%);
         }
         .feat-hero-text-gradient {
-          position: absolute; bottom: 0; left: 0; right: 0; height: 75%;
-          background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.6) 35%, rgba(0,0,0,0.2) 70%, transparent 100%);
+          position: absolute; inset: 0;
+          background:
+            linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.6) 35%, rgba(0,0,0,0.2) 65%, transparent 100%),
+            linear-gradient(to right, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.2) 50%, transparent 75%);
           pointer-events: none;
         }
         .feat-hero-inner {
