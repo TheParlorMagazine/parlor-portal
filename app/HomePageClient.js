@@ -997,13 +997,13 @@ export default function HomePageClient({ initial = {} }) {
         .home-banner-cta { display: inline-block; background: var(--black); color: #fff; padding: 13px 26px; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; transition: background 0.15s; }
         .home-banner-cta:hover { background: #fff; color: var(--black); outline: 2px solid var(--black); }
         .home-banner-right { position: relative; overflow: hidden; background: #f2b8c6; }
-        .home-banner-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; opacity: 0; transition: opacity 0.9s ease 0.1s; }
-        .home-banner-grad { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to right, #f2b8c6 0%, rgba(242,184,198,0.4) 25%, transparent 55%); }
+        .home-banner-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; opacity: 0; transition: opacity 1.3s ease 0.2s; }
+        .home-banner-grad { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to right, #f2b8c6 0%, rgba(242,184,198,0.4) 25%, transparent 55%, transparent 60%, rgba(242,184,198,0.5) 80%, #f2b8c6 100%); }
         /* home banner scroll-in animations */
-        .home-banner-eyebrow { opacity: 0; transform: translateX(-32px); transition: opacity 0.6s ease, transform 0.6s ease; }
-        .home-banner-head { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease 0.14s, transform 0.6s ease 0.14s; }
-        .home-banner-desc { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease 0.25s, transform 0.6s ease 0.25s; }
-        .home-banner-cta { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease 0.36s, transform 0.6s ease 0.36s; }
+        .home-banner-eyebrow { opacity: 0; transform: translateX(-32px); transition: opacity 1s ease, transform 1s ease; }
+        .home-banner-head { opacity: 0; transform: translateY(22px); transition: opacity 1s ease 0.2s, transform 1s ease 0.2s; }
+        .home-banner-desc { opacity: 0; transform: translateY(22px); transition: opacity 1s ease 0.38s, transform 1s ease 0.38s; }
+        .home-banner-cta { opacity: 0; transform: translateY(22px); transition: opacity 1s ease 0.54s, transform 1s ease 0.54s; }
         .hb-section--visible .home-banner-eyebrow { opacity: 0.6; transform: none; }
         .hb-section--visible .home-banner-head,
         .hb-section--visible .home-banner-desc,
@@ -1142,11 +1142,11 @@ export default function HomePageClient({ initial = {} }) {
         .comp-right-content { position: relative; z-index: 2; padding: 40px; }
         .comp-right .comp-body { margin-bottom: 30px; }
         /* scroll-in animations */
-        .comp-eyebrow { opacity: 0; transform: translateX(-32px); transition: opacity 0.6s ease, transform 0.6s ease; }
-        .comp-title { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s; }
-        .comp-body { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease 0.26s, transform 0.6s ease 0.26s; }
-        .comp-cta { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease 0.37s, transform 0.6s ease 0.37s; }
-        .comp-right-bg { opacity: 0; transition: opacity 0.9s ease 0.1s; }
+        .comp-eyebrow { opacity: 0; transform: translateX(-32px); transition: opacity 1s ease, transform 1s ease; }
+        .comp-title { opacity: 0; transform: translateY(22px); transition: opacity 1s ease 0.2s, transform 1s ease 0.2s; }
+        .comp-body { opacity: 0; transform: translateY(22px); transition: opacity 1s ease 0.38s, transform 1s ease 0.38s; }
+        .comp-cta { opacity: 0; transform: translateY(22px); transition: opacity 1s ease 0.54s, transform 1s ease 0.54s; }
+        .comp-right-bg { opacity: 0; transition: opacity 1.2s ease 0.1s; }
         .comp-section--visible .comp-eyebrow,
         .comp-section--visible .comp-title,
         .comp-section--visible .comp-body,
@@ -1166,6 +1166,10 @@ export default function HomePageClient({ initial = {} }) {
         .ribbon { position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999; background: var(--ribbon-bg); box-shadow: 0 -18px 40px rgba(0,0,0,0.22), 0 -6px 14px rgba(0,0,0,0.12); font-family: 'Source Serif 4', Georgia, serif; color: var(--black); transition: opacity 220ms ease; }
         .ribbon.scrolling { opacity: 0.5; }
         .ribbon-inner { max-width: 1280px; margin: 0 auto; padding: 14px 64px 14px 28px; display: grid; grid-template-columns: max-content 1fr max-content; align-items: center; gap: 14px; position: relative; }
+        .ribbon-thumb-wrap { position: relative; flex-shrink: 0; width: 72px; }
+        .ribbon-thumb { position: absolute; bottom: -14px; left: 0; width: 72px; height: 90px; object-fit: cover; border-radius: 4px 4px 0 0; box-shadow: 0 -4px 16px rgba(0,0,0,0.18); pointer-events: none; }
+        .ribbon-inner.has-thumb { padding-left: 108px; }
+        .ribbon-thumb-slot { position: absolute; left: 28px; bottom: 0; width: 72px; height: 90px; }
         .ribbon-kicker { font-size: 14px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; line-height: 1.1; }
         .ribbon-subhead { font-family: 'Alex Brush', cursive; font-size: 24px; font-weight: 400; line-height: 1.2; margin-top: 2px; }
         .ribbon-message { font-size: 16px; line-height: 1.35; font-weight: 500; opacity: 0.9; text-align: center; max-width: 52ch; margin: 0 auto; }
@@ -1216,6 +1220,8 @@ export default function HomePageClient({ initial = {} }) {
           .header-section-link { font-size: 12px; white-space: nowrap; }
           .footer-grid { grid-template-columns: 1fr 1fr; gap: 28px; }
           .ribbon-inner { grid-template-columns: 1fr auto; gap: 10px; padding: 12px 56px 12px 18px; }
+          .ribbon-inner.has-thumb { padding-left: 18px; }
+          .ribbon-thumb-slot { display: none; }
           .ribbon-message { display: none; }
         }
       `}</style>
@@ -1645,7 +1651,12 @@ export default function HomePageClient({ initial = {} }) {
 
       {/* ── RIBBON ── (admin-managed announcements, rotating) */}
       <div className={`ribbon${ribbonScrolling ? ' scrolling' : ''}`}>
-        <div className="ribbon-inner">
+        <div className={`ribbon-inner${ribbonData.image_url ? ' has-thumb' : ''}`}>
+          {ribbonData.image_url && (
+            <div className="ribbon-thumb-slot">
+              <img className="ribbon-thumb" src={ribbonData.image_url} alt="" />
+            </div>
+          )}
           <div>
             {ribbonData.kicker && <div className="ribbon-kicker">{ribbonData.kicker}</div>}
             {ribbonData.headline && <div className="ribbon-subhead">{ribbonData.headline}</div>}
