@@ -504,14 +504,42 @@ export default function ArticleBody({
   // The full article renders even when gated — the membership paywall is a
   // timed pop-up (ArticlePaywallPopup) that covers the page and locks scroll,
   // so the body is never visibly cut off.
-  const midpoint = showSubscribeBanner ? Math.ceil(segments.length / 2) : -1
+  // Find which html segment is at the character-count midpoint of all html content
+  let midpointSegIdx = -1
+  if (showSubscribeBanner) {
+    const htmlSegs = segments.filter(s => s.kind === 'html')
+    const totalChars = htmlSegs.reduce((sum, s) => sum + (s.content || '').length, 0)
+    let running = 0
+    for (let i = 0; i < segments.length; i++) {
+      if (segments[i].kind !== 'html') continue
+      running += (segments[i].content || '').length
+      if (running >= totalChars / 2) { midpointSegIdx = i; break }
+    }
+  }
 
   return (
     <>
       <style>{PROSE_STYLES}</style>
       {segments.map((seg, i) => {
-        const bannerAfter = showSubscribeBanner && i === midpoint - 1
+        const bannerAfter = showSubscribeBanner && i === midpointSegIdx
         if (seg.kind === 'html') {
+          // If this is the midpoint segment AND it's the only html segment,
+          // split the raw HTML at the nearest paragraph boundary to the midpoint.
+          if (bannerAfter && segments.filter(s => s.kind === 'html').length === 1) {
+            const html = processImageCaptions(seg.content)
+            const mid = Math.floor(html.length / 2)
+            const splitAt = html.indexOf('</p>', mid)
+            const cutAt = splitAt !== -1 ? splitAt + 4 : mid
+            const firstHalf = html.slice(0, cutAt)
+            const secondHalf = html.slice(cutAt)
+            return (
+              <div key={i}>
+                <div className={`parlor-prose${dropCap && i === firstHtmlIndex ? ' parlor-dropcap' : ''}`} dangerouslySetInnerHTML={{ __html: firstHalf }} />
+                <SubscribeBanner />
+                <div className="parlor-prose" dangerouslySetInnerHTML={{ __html: secondHalf }} />
+              </div>
+            )
+          }
           return (
             <div key={i}>
               <div
