@@ -285,7 +285,7 @@ function Hub() {
             </a>
           ) : (
             <a className="hub-feed-item" key={`c-${it.id}`} href={it.article_slug ? `/post/${it.article_slug}` : '/portal'}>
-              <div className="hub-feed-avatar">{it.author_avatar ? <img src={it.author_avatar} alt="" /> : (it.author_name || 'M')[0].toUpperCase()}</div>
+              {it.article_cover ? <div className="hub-feed-thumb"><img src={it.article_cover} alt="" loading="lazy" /></div> : <div className="hub-feed-avatar">{it.author_avatar ? <img src={it.author_avatar} alt="" /> : (it.author_name || 'M')[0].toUpperCase()}</div>}
               <div className="hub-feed-body">
                 <div className="hub-feed-kind">Comment</div>
                 <div className="hub-feed-title">{it.author_name}{it.article_title ? <span style={{ fontWeight: 400, color: 'var(--muted)' }}> on {it.article_title}</span> : ''}</div>

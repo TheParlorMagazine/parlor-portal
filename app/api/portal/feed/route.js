@@ -37,7 +37,7 @@ export async function GET(request) {
       .order('reviewed_at', { ascending: false })
       .limit(12),
     db.from('article_comments')
-      .select('id, body, created_at, article_id, members!article_comments_member_id_fkey(full_name, avatar_url), articles(title, slug)')
+      .select('id, body, created_at, article_id, members!article_comments_member_id_fkey(full_name, avatar_url), articles!article_comments_article_id_fkey(title, slug, cover_image_url)')
       .eq('status', 'live')
       .order('created_at', { ascending: false })
       .limit(20),
@@ -102,6 +102,7 @@ export async function GET(request) {
     body: excerpt(c.body),
     article_title: c.articles?.title || null,
     article_slug: c.articles?.slug || null,
+    article_cover: c.articles?.cover_image_url || null,
   }))
 
   const threads = (thrRes.data || []).map(t => ({

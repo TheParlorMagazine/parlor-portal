@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { notFound } from 'next/navigation'
 import { checkItemAccess } from '../../../lib/checkAccess'
+import { hasPaidAccess } from '../../../lib/plans'
 import ArticleBody from './_components/ArticleBody'
 import ParallaxHero from './_components/ParallaxHero'
 import { createClient } from '../../../lib/supabase'
@@ -132,6 +133,14 @@ export default async function ArticlePage({ params, searchParams }) {
   )
   const { data: { user } } = await authClient.auth.getUser()
   const userId = user?.id || null
+
+  // Check if the user has a paid subscription (for the subscribe banner)
+  let isPaidSubscriber = false
+  if (userId) {
+    const supabaseAdmin = createClient()
+    const { data: memberRow } = await supabaseAdmin.from('members').select('plan, role').eq('id', userId).single()
+    isPaidSubscriber = hasPaidAccess(memberRow)
+  }
 
   // Article-level access check
   let articleHasAccess = true
@@ -370,7 +379,7 @@ export default async function ArticlePage({ params, searchParams }) {
             pagePath={`/post/${article.slug}`}
             justUnlocked={justUnlocked}
             dropCap={isVol2}
-            showSubscribeBanner={!article.issue_id && !userId}
+            showSubscribeBanner={!article.issue_id && !isPaidSubscriber}
           />
         </div>
 
