@@ -1525,10 +1525,10 @@ export default function HomePageClient({ initial = {} }) {
           </div>
           <div className="comp-right">
             {competitionData.message && <p className="comp-body">{competitionData.message}</p>}
-            {competitionData.ends_at && (
+            {competitionData.deadline_label && (
               <>
                 <div className="deadline-label">Submissions close</div>
-                <div className="deadline-date">{new Date(competitionData.ends_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' })}</div>
+                <div className="deadline-date">{competitionData.deadline_label}</div>
               </>
             )}
             {competitionData.cta_label && <a href={competitionData.cta_href || '#'} className="comp-cta" target="_top">{competitionData.cta_label}</a>}
