@@ -301,7 +301,7 @@ export default function VerticalPage({ params }) {
             </div>
           </div>
         </section>
-      ) : (vertical === 'work-wealth' || vertical === 'society-culture' || vertical === 'world-politics' || vertical === 'perspectives-identity') ? (
+      ) : false && (vertical === 'work-wealth' || vertical === 'society-culture' || vertical === 'world-politics' || vertical === 'perspectives-identity') ? (
         <div style={{ position: 'relative', background: '#0a0a0a', lineHeight: 0, overflow: 'hidden' }}>
           {/* Backlights — blurred duplicate images masked per character, edges feather to transparent */}
           {vertical === 'perspectives-identity' && [
@@ -387,11 +387,7 @@ export default function VerticalPage({ params }) {
             </h1>
           </div>
         </div>
-      ) : (
-        <section className="vertical-hero">
-          <h1 className="vertical-title">{category}</h1>
-        </section>
-      )}
+      ) : null}
 
       <section className="vertical-grid-section">
         {!loading && articles.length === 0 && (
