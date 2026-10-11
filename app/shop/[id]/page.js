@@ -208,7 +208,7 @@ export default function ProductPage({ params }) {
     .pdp-qty button { width:42px; height:44px; border:none; background:#fff; font-size:18px; color:#555; cursor:pointer; }
     .pdp-qty span { width:48px; text-align:center; font-family:${BODY}; font-size:15px; }
     .pdp-add { flex:1; background:${BLACK}; color:#fff; border:none; border-radius:2px; padding:16px 0; font-family:${BODY}; font-size:15.5px; letter-spacing:.02em; cursor:pointer; }
-    .pdp-add:hover { background:#fff; color:#0a0a0a; outline:2px solid #0a0a0a; }
+    .pdp-add:hover { background:#f2b8c6; color:#0a0a0a; }
     @media (max-width:860px){ .pdp-grid { grid-template-columns:1fr; gap:32px; padding:28px 20px 60px; } }
     .shop-fab-cart { position:fixed; bottom:26px; right:26px; z-index:100; width:60px; height:60px; border-radius:50%; background:${BLACK}; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 28px rgba(0,0,0,0.32); opacity:0; transform:translateY(14px) scale(0.9); pointer-events:none; transition:opacity 0.25s ease, transform 0.25s cubic-bezier(.34,1.56,.64,1); }
     .shop-fab-cart.show { opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
