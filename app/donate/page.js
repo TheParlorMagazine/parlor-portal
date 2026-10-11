@@ -25,7 +25,7 @@ async function getGifts() {
   }
 
   return {
-    gifts: gifts.map(item => ({
+    gifts: (items || []).map(item => ({
       ...item,
       claimed: claimCounts[item.slug] || 0,
       remaining: item.capacity !== null ? item.capacity - (claimCounts[item.slug] || 0) : null,
