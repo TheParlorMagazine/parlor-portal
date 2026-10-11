@@ -260,10 +260,10 @@ export default function VerticalPage({ params }) {
         <div style={{ position: 'relative', background: '#0a0a0a', lineHeight: 0, overflow: 'hidden' }}>
           {/* Backlights — blurred duplicate images masked per character, edges feather to transparent */}
           {vertical === 'perspectives-identity' && [
-            { mask: 'linear-gradient(to right, black 0%, black 22%, transparent 42%)',                              step: 1 },
-            { mask: 'linear-gradient(to right, transparent 20%, black 34%, black 56%, transparent 72%)',            step: 2 },
-            { mask: 'linear-gradient(to right, transparent 52%, black 68%, black 100%)',                            step: 3 },
-          ].map(({ mask, step }) => (
+            { mask: 'linear-gradient(to right, black 0%, black 30%, transparent 48%)',                           op: 1,    step: 1 },
+            { mask: 'linear-gradient(to right, transparent 32%, black 46%, black 60%, transparent 74%)',         op: 0.85, step: 2 },
+            { mask: 'linear-gradient(to right, transparent 55%, black 70%, black 100%)',                         op: 0.85, step: 3 },
+          ].map(({ mask, op, step }) => (
             <img
               key={`bl-${step}`}
               src="/hero-perspectives-identity.webp"
@@ -277,7 +277,7 @@ export default function VerticalPage({ params }) {
                 WebkitMaskImage: mask,
                 maskImage: mask,
                 filter: 'blur(18px) brightness(6) saturate(0.2)',
-                opacity: spotStep === step && spotStep < 4 ? 0.85 : 0,
+                opacity: spotStep === step && spotStep < 4 ? op : 0,
                 transition: 'opacity 0.7s ease',
               }}
             />
