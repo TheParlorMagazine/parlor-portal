@@ -130,6 +130,12 @@ export async function PATCH(request, { params }) {
     await recount(db, id)
     return Response.json({ ok: true })
   }
+  if (b.delete_forum) {
+    await db.from('forum_members').delete().eq('forum_id', id)
+    await db.from('forum_join_requests').delete().eq('forum_id', id)
+    await db.from('forums').delete().eq('id', id)
+    return Response.json({ ok: true, deleted: true })
+  }
   if (b.request_member_id && ['approve', 'decline'].includes(b.action)) {
     if (b.action === 'approve') {
       await db.from('forum_members').upsert({ forum_id: id, member_id: b.request_member_id, role: 'member' }, { onConflict: 'forum_id,member_id', ignoreDuplicates: true })

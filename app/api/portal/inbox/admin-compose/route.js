@@ -21,11 +21,25 @@ export async function GET(request) {
   if (me.role !== 'admin') return Response.json({ error: 'Admins only' }, { status: 403 })
 
   const q = (new URL(request.url).searchParams.get('q') || '').trim()
-  if (!q) return Response.json({ members: [] })
-  const { data } = await db.from('members')
-    .select('id, full_name, email').eq('deactivated', false)
-    .ilike('full_name', `%${q}%`).limit(10)
-  return Response.json({ members: data || [] })
+  const top = new URL(request.url).searchParams.get('top')
+  if (q || top) {
+    let query = db.from('members').select('id, full_name, email, avatar_url, plan').eq('deactivated', false)
+    if (q) query = query.ilike('full_name', `%${q}%`)
+    else query = query.order('full_name', { ascending: true })
+    const { data } = await query.limit(10)
+    return Response.json({ members: data || [] })
+  }
+
+  // No query — return segment counts for the composer chips
+  const { data: all } = await db.from('members').select('id, plan, role').eq('deactivated', false)
+  const eligible = (all || []).filter(m => m.id !== user.id && m.role !== 'admin')
+  const segments = [
+    { key: 'all', label: 'All members', count: eligible.length },
+    { key: 'readers_circle', label: "Reader's Circle", count: eligible.filter(m => /reader/i.test(m.plan || '')).length },
+    { key: 'printing_press', label: 'Printing Press', count: eligible.filter(m => /printing/i.test(m.plan || '')).length },
+    { key: 'free', label: 'Free subscribers', count: eligible.filter(m => !isPaidPlan(m.plan)).length },
+  ]
+  return Response.json({ segments })
 }
 
 export async function POST(request) {

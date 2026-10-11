@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../../lib/supabase'
 
 function timeAgo(s) {
@@ -28,12 +28,22 @@ export default function InboxModal({ open, onClose, onChange }) {
   const [mQuery, setMQuery] = useState('')
   const [mResults, setMResults] = useState([])
   const [sentMsg, setSentMsg] = useState('')
+  const [segments, setSegments] = useState([])
+  const [mFocused, setMFocused] = useState(false)
+  const [mHighlight, setMHighlight] = useState(-1)
+  const searchRef = useRef(null)
 
   async function token() { const { data: { session } } = await supabase.auth.getSession(); return session?.access_token }
   async function loadThreads() {
     try {
       const res = await fetch('/api/portal/inbox', { headers: { Authorization: `Bearer ${await token()}` } })
       const data = await res.json(); setThreads(data.threads || []); setIsAdmin(!!data.isAdmin)
+    } catch {}
+  }
+  async function loadSegments() {
+    try {
+      const res = await fetch('/api/portal/inbox/admin-compose', { headers: { Authorization: `Bearer ${await token()}` } })
+      const data = await res.json(); if (data.segments) setSegments(data.segments)
     } catch {}
   }
 
@@ -76,17 +86,21 @@ export default function InboxModal({ open, onClose, onChange }) {
 
   // Admin member search (for "send to an individual")
   useEffect(() => {
-    if (!isAdmin || !mQuery.trim()) { setMResults([]); return }
+    if (!isAdmin) return
     let cancelled = false
+    const url = mQuery.trim()
+      ? `/api/portal/inbox/admin-compose?q=${encodeURIComponent(mQuery.trim())}`
+      : `/api/portal/inbox/admin-compose?top=1`
+    const delay = mQuery.trim() ? 200 : 0
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/portal/inbox/admin-compose?q=${encodeURIComponent(mQuery.trim())}`, { headers: { Authorization: `Bearer ${await token()}` } })
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${await token()}` } })
         const data = await res.json()
-        if (!cancelled) setMResults(data.members || [])
+        if (!cancelled) { setMResults(data.members || []); setMHighlight(-1) }
       } catch {}
-    }, 250)
+    }, delay)
     return () => { cancelled = true; clearTimeout(t) }
-  }, [mQuery, isAdmin])
+  }, [mQuery, isAdmin, mFocused])
 
   async function sendAdminMessage() {
     const text = compose.trim(); if (!text) return
@@ -163,7 +177,7 @@ export default function InboxModal({ open, onClose, onChange }) {
             <div className="im-list-head">
               <div className="im-list-title">Inbox</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <button className="im-compose-btn" onClick={() => { setActive(null); setMode('compose') }}>+ Compose</button>
+                <button className="im-compose-btn" onClick={() => { setActive(null); setMode('compose'); if (isAdmin && !segments.length) loadSegments() }}>+ Compose</button>
                 <button className="im-close" onClick={onClose}>×</button>
               </div>
             </div>
@@ -189,19 +203,64 @@ export default function InboxModal({ open, onClose, onChange }) {
                 <div className="im-compose-desc">Compose a message to a group or individual member.</div>
                 <div className="im-seg-label">Send to group</div>
                 <div className="im-seg-chips">
-                  {[['all', 'All members'], ['readers_circle', "Reader's Circle"], ['printing_press', 'Printing Press'], ['free', 'Free subscribers']].map(([v, l]) => (
-                    <button key={v} className={`im-seg-chip${!recipient && audience === v ? ' active' : ''}`} onClick={() => { setAudience(v); setRecipient(null); setMQuery('') }}>{l}</button>
+                  {(segments.length
+                    ? segments
+                    : [{ key: 'all', label: 'All members' }, { key: 'readers_circle', label: "Reader's Circle" }, { key: 'printing_press', label: 'Printing Press' }, { key: 'free', label: 'Free subscribers' }]
+                  ).map(s => (
+                    <button key={s.key} className={`im-seg-chip${!recipient && audience === s.key ? ' active' : ''}`} onClick={() => { setAudience(s.key); setRecipient(null); setMQuery('') }}>
+                      {s.label}{s.count != null ? <span style={{ opacity: 0.6, fontSize: 11, marginLeft: 5 }}>{s.count}</span> : null}
+                    </button>
                   ))}
                 </div>
                 <div className="im-or">— or send to an individual —</div>
                 {recipient ? (
-                  <span className="im-recipient-pill">{recipient.full_name}<button onClick={() => setRecipient(null)}>×</button></span>
+                  <span className="im-recipient-pill">
+                    {recipient.avatar_url
+                      ? <img src={recipient.avatar_url} alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }} />
+                      : <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--pink)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600 }}>{(recipient.full_name || '?')[0].toUpperCase()}</span>}
+                    {recipient.full_name}
+                    <button onClick={() => { setRecipient(null); setMQuery(''); setMHighlight(-1) }}>×</button>
+                  </span>
                 ) : (
-                  <div className="im-search-wrap">
-                    <input value={mQuery} onChange={e => setMQuery(e.target.value)} placeholder="Search member by name…" />
+                  <div className="im-search-wrap" ref={searchRef}>
+                    <div style={{ position: 'relative' }}>
+                      <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.4 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+                      <input
+                        value={mQuery}
+                        onChange={e => { setMQuery(e.target.value); setRecipient(null) }}
+                        onFocus={() => setMFocused(f => !f)}
+                        onKeyDown={e => {
+                          if (!mResults.length) return
+                          if (e.key === 'ArrowDown') { e.preventDefault(); setMHighlight(h => Math.min(h + 1, mResults.length - 1)) }
+                          else if (e.key === 'ArrowUp') { e.preventDefault(); setMHighlight(h => Math.max(h - 1, 0)) }
+                          else if (e.key === 'Enter' && mHighlight >= 0) { e.preventDefault(); const m = mResults[mHighlight]; setRecipient(m); setMResults([]); setMQuery(''); setMHighlight(-1) }
+                          else if (e.key === 'Escape') { setMResults([]); setMHighlight(-1) }
+                        }}
+                        placeholder="Search member by name…"
+                        style={{ paddingLeft: 30 }}
+                        autoComplete="off"
+                      />
+                    </div>
                     {mResults.length > 0 && (
                       <div className="im-search-results">
-                        {mResults.map(m => <div key={m.id} className="im-search-result" onClick={() => { setRecipient(m); setMResults([]); setMQuery('') }}>{m.full_name} <span style={{ color: 'var(--muted)', fontSize: 11 }}>{m.email}</span></div>)}
+                        {!mQuery.trim() && <div style={{ padding: '7px 13px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)' }}>All members</div>}
+                        {mResults.map((m, i) => (
+                          <div
+                            key={m.id}
+                            className="im-search-result"
+                            style={{ background: i === mHighlight ? 'var(--cream)' : undefined, display: 'flex', alignItems: 'center', gap: 10 }}
+                            onMouseEnter={() => setMHighlight(i)}
+                            onClick={() => { setRecipient(m); setMResults([]); setMQuery(''); setMHighlight(-1) }}
+                          >
+                            {m.avatar_url
+                              ? <img src={m.avatar_url} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                              : <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--pink)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{(m.full_name || '?')[0].toUpperCase()}</span>}
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.full_name}</div>
+                              <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.email}{m.plan ? ` · ${m.plan}` : ''}</div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>

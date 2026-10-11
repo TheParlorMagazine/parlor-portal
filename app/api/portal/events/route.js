@@ -6,7 +6,7 @@ export async function POST(request) {
   if (!user) return Response.json({ error: 'Not signed in' }, { status: 401 })
   const db = serviceClient()
   const body = await request.json()
-  const { title, blurb, description, starts_at, ends_at, location_type, location, join_url, capacity, forum_id, status = 'published' } = body
+  const { title, blurb, description, starts_at, ends_at, location_type, location, join_url, capacity, cover_image_url, forum_id, status = 'published' } = body
   if (!title?.trim()) return Response.json({ error: 'Title required' }, { status: 400 })
 
   // If a forum_id is given, verify the caller is a host of that forum.
@@ -20,6 +20,7 @@ export async function POST(request) {
     starts_at: starts_at || null, ends_at: ends_at || null,
     location_type: location_type || 'virtual', location: location?.trim() || null,
     join_url: join_url?.trim() || null, capacity: capacity ? Number(capacity) : null,
+    cover_image_url: cover_image_url?.trim() || null,
     forum_id: forum_id || null, status, created_by: user.id,
   }).select('id').single()
   if (error) return Response.json({ error: error.message }, { status: 500 })

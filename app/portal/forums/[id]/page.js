@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
 import { prepareImageUpload, isDuplicateUpload } from '../../../../lib/uploadImage'
 import PortalShell from '../../_components/PortalShell'
@@ -50,7 +50,7 @@ function PeopleGroup({ label, people, empty, top }) {
 
 const miniBtn = { background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 9px', fontSize: 11.5, cursor: 'pointer', fontFamily: "'thermal-variable', Georgia, serif", color: '#555' }
 
-function ModPanel({ id, auth, supabase, onChanged }) {
+function ModPanel({ id, auth, supabase, onChanged, forumName }) {
   const [open, setOpen] = useState(false)
   const [data, setData] = useState({ requests: [], members: [], policy: 'request' })
   const [inviteEmails, setInviteEmails] = useState('')
@@ -107,6 +107,12 @@ function ModPanel({ id, auth, supabase, onChanged }) {
     if (!(await confirmDialog(`Remove ${name} from this forum?`))) return
     const res = await fetch(`/api/portal/groups/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ remove_member_id: mid }) })
     if (res.ok) { load(); onChanged?.() } else { const d = await res.json().catch(() => ({})); alertDialog(d.error || 'Could not remove') }
+  }
+  const router = useRouter()
+  async function deleteForum() {
+    if (!(await confirmDialog(`Permanently delete "${forumName}"? This cannot be undone.`))) return
+    const res = await fetch(`/api/portal/groups/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ delete_forum: true }) })
+    if (res.ok) { router.push('/portal/forums') } else { const d = await res.json().catch(() => ({})); alertDialog(d.error || 'Could not delete forum') }
   }
 
   return (
@@ -186,6 +192,9 @@ function ModPanel({ id, auth, supabase, onChanged }) {
               </span>
             </div>
           ))}
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+            <button onClick={deleteForum} style={{ background: 'none', border: '1px solid #e2b4b4', borderRadius: 8, padding: '8px 16px', fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13, color: '#c04040', cursor: 'pointer' }}>Delete forum</button>
+          </div>
         </div>
       )}
     </div>
@@ -203,9 +212,13 @@ function Detail() {
   const bannerDedupeRef = useMemo(() => ({ current: null }), [])
   const avatarDedupeRef2 = useMemo(() => ({ current: null }), [])
   const [showCreateEvent, setShowCreateEvent] = useState(false)
-  const [eventForm, setEventForm] = useState({ title: '', blurb: '', starts_at: '', ends_at: '', location_type: 'virtual', location: '', join_url: '', capacity: '' })
+  const [eventForm, setEventForm] = useState({ title: '', blurb: '', starts_at: '', ends_at: '', location_type: 'virtual', location: '', join_url: '', capacity: '', cover_image_url: '' })
   const [creatingEvent, setCreatingEvent] = useState(false)
   const [eventErr, setEventErr] = useState('')
+  const [eventThumbUploading, setEventThumbUploading] = useState(false)
+  const [eventThumbDrag, setEventThumbDrag] = useState(false)
+  const eventThumbRef = useRef(null)
+  const eventThumbDedupeRef = useRef(null)
 
   const auth = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -249,7 +262,7 @@ function Detail() {
       if (res.ok) {
         const d = await res.json()
         setShowCreateEvent(false)
-        setEventForm({ title: '', blurb: '', starts_at: '', ends_at: '', location_type: 'virtual', location: '', join_url: '', capacity: '' })
+        setEventForm({ title: '', blurb: '', starts_at: '', ends_at: '', location_type: 'virtual', location: '', join_url: '', capacity: '', cover_image_url: '' })
         await load()
         window.location.href = `/portal/events/${d.id}`
       } else {
@@ -257,6 +270,21 @@ function Detail() {
         setEventErr(d.error || 'Could not create event')
       }
     } finally { setCreatingEvent(false) }
+  }
+
+  async function uploadEventThumb(file) {
+    if (!file || !file.type.startsWith('image/')) return
+    if (isDuplicateUpload(eventThumbDedupeRef, file)) return
+    setEventThumbUploading(true)
+    try {
+      const { file: up, ext, contentType } = await prepareImageUpload(file, { maxDim: 1200 })
+      const path = `events/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error } = await supabase.storage.from('Media').upload(path, up, { cacheControl: '31536000', contentType })
+      if (!error) {
+        const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)
+        setEventForm(f => ({ ...f, cover_image_url: publicUrl }))
+      }
+    } finally { setEventThumbUploading(false) }
   }
 
   useEffect(() => { load() }, [load])
@@ -316,7 +344,7 @@ function Detail() {
         </div>
       </div>
 
-      {f.my_role === 'host' && <ModPanel id={id} auth={auth} supabase={supabase} onChanged={load} />}
+      {f.my_role === 'host' && <ModPanel id={id} auth={auth} supabase={supabase} onChanged={load} forumName={f.name} />}
 
       {f.guidelines && (
         <div className="fr-guide">
@@ -404,6 +432,33 @@ function Detail() {
                 <input value={eventForm[key]} onChange={e => setEventForm(f => ({ ...f, [key]: e.target.value }))} placeholder={placeholder} style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13.5, outline: 'none', boxSizing: 'border-box' }} />
               </div>
             ))}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Thumbnail</div>
+              <div
+                onDragOver={e => { e.preventDefault(); setEventThumbDrag(true) }}
+                onDragLeave={() => setEventThumbDrag(false)}
+                onDrop={e => { e.preventDefault(); setEventThumbDrag(false); const f = e.dataTransfer.files?.[0]; if (f) uploadEventThumb(f) }}
+                onClick={() => eventThumbRef.current?.click()}
+                style={{ border: `2px dashed ${eventThumbDrag ? '#c4364a' : 'var(--border)'}`, borderRadius: 10, background: eventThumbDrag ? '#fdf0f2' : '#fafafa', cursor: 'pointer', overflow: 'hidden', transition: 'border-color 0.15s, background 0.15s', position: 'relative' }}
+              >
+                {eventForm.cover_image_url
+                  ? <div style={{ position: 'relative' }}>
+                      <img src={eventForm.cover_image_url} alt="" style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
+                      <button onClick={e => { e.stopPropagation(); setEventForm(f => ({ ...f, cover_image_url: '' })) }} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.55)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: 14, lineHeight: 1 }}>✕</button>
+                    </div>
+                  : <div style={{ padding: '28px 16px', textAlign: 'center' }}>
+                      {eventThumbUploading
+                        ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>Uploading…</div>
+                        : <>
+                            <div style={{ fontSize: 22, marginBottom: 6 }}>🖼</div>
+                            <div style={{ fontSize: 13, color: 'var(--muted)' }}>Drag & drop or click to upload</div>
+                            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3, opacity: 0.7 }}>JPG, PNG or WebP · recommended 1200 × 675</div>
+                          </>}
+                    </div>
+                }
+                <input ref={eventThumbRef} type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; if (f) uploadEventThumb(f); e.target.value = '' }} />
+              </div>
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
               {[['Start date & time', 'starts_at'], ['End date & time', 'ends_at']].map(([label, key]) => (
                 <div key={key}>
