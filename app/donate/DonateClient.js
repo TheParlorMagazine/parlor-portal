@@ -109,7 +109,7 @@ export default function DonateClient({ gifts }) {
             </p>
           </div>
           <div className="donate-hero-img">
-            <img ref={imgRef} src="/hil (13).png" alt="" />
+            <img ref={imgRef} src="/hil-13.webp" alt="" />
           </div>
         </section>
 
