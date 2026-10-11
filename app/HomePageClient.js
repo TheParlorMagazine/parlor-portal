@@ -160,6 +160,7 @@ export default function HomePageClient({ initial = {} }) {
   const aboutRef = useRef(null)
   const memberRef = useRef(null)
   const compSectionRef = useRef(null)
+  const homeBannerRef = useRef(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -348,6 +349,17 @@ export default function HomePageClient({ initial = {} }) {
     obs.observe(el)
     return () => obs.disconnect()
   }, [competitionData])
+
+  useEffect(() => {
+    const el = homeBannerRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { el.classList.add('hb-section--visible'); obs.disconnect() } },
+      { threshold: 0.1 }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [homeBanner])
 
   const items = articles.filter(a => !a.featured).sort((a, b) => parseDateSafe(b.date) - parseDateSafe(a.date))
   const slidesHTML = items.map(slideHTML).join('')
@@ -984,9 +996,19 @@ export default function HomePageClient({ initial = {} }) {
         .home-banner-desc { font-family: 'Source Serif 4', Georgia, serif; font-size: clamp(14px,1.2vw,17px); line-height: 1.7; color: rgba(10,10,10,0.75); margin: 0 0 28px; }
         .home-banner-cta { display: inline-block; background: var(--black); color: #fff; padding: 13px 26px; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; transition: background 0.15s; }
         .home-banner-cta:hover { background: #fff; color: var(--black); outline: 2px solid var(--black); }
-        .home-banner-right { position: relative; overflow: hidden; background: #1a1a1a; }
-        .home-banner-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+        .home-banner-right { position: relative; overflow: hidden; background: #f2b8c6; }
+        .home-banner-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; opacity: 0; transition: opacity 0.9s ease 0.1s; }
         .home-banner-grad { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to right, #f2b8c6 0%, rgba(242,184,198,0.4) 25%, transparent 55%); }
+        /* home banner scroll-in animations */
+        .home-banner-eyebrow { opacity: 0; transform: translateX(-32px); transition: opacity 0.6s ease, transform 0.6s ease; }
+        .home-banner-head { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease 0.14s, transform 0.6s ease 0.14s; }
+        .home-banner-desc { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease 0.25s, transform 0.6s ease 0.25s; }
+        .home-banner-cta { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease 0.36s, transform 0.6s ease 0.36s; }
+        .hb-section--visible .home-banner-eyebrow { opacity: 0.6; transform: none; }
+        .hb-section--visible .home-banner-head,
+        .hb-section--visible .home-banner-desc,
+        .hb-section--visible .home-banner-cta { opacity: 1; transform: none; }
+        .hb-section--visible .home-banner-img { opacity: 1; }
         @media (max-width: 700px) {
           .home-banner { grid-template-columns: 1fr; }
           .home-banner-right { min-height: 260px; }
@@ -1106,13 +1128,13 @@ export default function HomePageClient({ initial = {} }) {
 
         /* ── COMPETITION ── */
         .competition { background: var(--black); padding: 72px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; border-top: 1px solid var(--border); }
-        .competition--img { padding: 72px 0 72px clamp(40px,5vw,72px); gap: 0; align-items: stretch; }
+        .competition--img { padding: 0 0 0 clamp(40px,5vw,72px); gap: 0; align-items: stretch; }
         .comp-eyebrow { font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink); margin-bottom: 18px; }
         .comp-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(34px,3.5vw,46px); font-weight: 700; color: var(--white); line-height: 1.08; margin-bottom: 8px; }
         .comp-title em { font-style: italic; color: var(--pink); }
         .comp-subtitle { font-family: 'Playfair Display', Georgia, serif; font-size: 16px; font-style: italic; color: var(--muted); margin-bottom: 20px; }
         .comp-body { font-size: 15px; line-height: 1.78; color: var(--grey); max-width: 420px; }
-        .comp-left--img { padding-right: clamp(40px,5vw,64px); border-right: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; justify-content: center; }
+        .comp-left--img { padding: clamp(48px,6vw,80px) clamp(40px,5vw,64px) clamp(48px,6vw,80px) 0; border-right: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; justify-content: center; }
         .comp-right { border-left: 1px solid var(--border); padding-left: 52px; position: relative; overflow: hidden; }
         .comp-right--img { border-left: none; padding-left: 0; display: flex; flex-direction: column; justify-content: flex-end; min-height: 400px; }
         .comp-right-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
@@ -1494,7 +1516,7 @@ export default function HomePageClient({ initial = {} }) {
 
       {/* ── HOMEPAGE ANNOUNCEMENT BANNER ── (admin-managed; hidden until set) */}
       {homeBanner && (
-        <section className="home-banner">
+        <section ref={homeBannerRef} className="home-banner">
           <div className="home-banner-left">
             <div className="home-banner-inner">
               {homeBanner.kicker && <div className="home-banner-eyebrow">{homeBanner.kicker}</div>}
