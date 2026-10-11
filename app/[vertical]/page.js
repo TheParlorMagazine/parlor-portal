@@ -245,7 +245,7 @@ export default function VerticalPage({ params }) {
 
       `}</style>
 
-      <SiteHeader activeCategory={category} />
+      <SiteHeader activeCategory={category} hideOnScroll />
 
       {featured ? (
         <section

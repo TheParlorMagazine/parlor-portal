@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../lib/supabase'
 
 const FALLBACK = {
@@ -14,8 +14,10 @@ const FALLBACK = {
 export default function SubscribeRibbon() {
   const [collapsed, setCollapsed] = useState(false)
   const [scrolling, setScrolling] = useState(false)
+  const [hidden, setHidden] = useState(false)
   const [announcements, setAnnouncements] = useState([])
   const [index, setIndex] = useState(0)
+  const lastScrollY = useRef(0)
 
   useEffect(() => {
     const supabase = createClient()
@@ -43,6 +45,9 @@ export default function SubscribeRibbon() {
   useEffect(() => {
     let timer
     const onScroll = () => {
+      const y = window.scrollY
+      setHidden(y > lastScrollY.current && y > 80)
+      lastScrollY.current = y
       setScrolling(true)
       clearTimeout(timer)
       timer = setTimeout(() => setScrolling(false), 600)
@@ -57,7 +62,8 @@ export default function SubscribeRibbon() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Alex+Brush&display=swap');
-        .sub-ribbon { position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999; background: #f8d9dc; box-shadow: 0 -18px 40px rgba(0,0,0,0.22), 0 -6px 14px rgba(0,0,0,0.12); font-family: 'Source Serif 4', Georgia, serif; color: #0a0a0a; transition: opacity 220ms ease; }
+        .sub-ribbon { position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999; background: #f8d9dc; box-shadow: 0 -18px 40px rgba(0,0,0,0.22), 0 -6px 14px rgba(0,0,0,0.12); font-family: 'Source Serif 4', Georgia, serif; color: #0a0a0a; transition: transform 300ms ease, opacity 220ms ease; }
+        .sub-ribbon.hidden { transform: translateY(100%); }
         .sub-ribbon.scrolling { opacity: 0.5; }
         .sub-ribbon-inner { max-width: 1280px; margin: 0 auto; padding: 14px 64px 14px 28px; display: grid; grid-template-columns: max-content 1fr max-content; align-items: center; gap: 14px; position: relative; }
         .sub-ribbon-kicker { font-size: 14px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; line-height: 1.1; }
@@ -75,7 +81,7 @@ export default function SubscribeRibbon() {
           .sub-ribbon-message { display: none; }
         }
       `}</style>
-      <div className={`sub-ribbon${scrolling ? ' scrolling' : ''}`}>
+      <div className={`sub-ribbon${hidden ? ' hidden' : ''}${scrolling ? ' scrolling' : ''}`}>
         <div className="sub-ribbon-inner">
           <div>
             {data.kicker && <div className="sub-ribbon-kicker">{data.kicker}</div>}
