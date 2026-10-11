@@ -504,16 +504,25 @@ export default function ArticleBody({
   // The full article renders even when gated — the membership paywall is a
   // timed pop-up (ArticlePaywallPopup) that covers the page and locks scroll,
   // so the body is never visibly cut off.
-  // Find which html segment is at the character-count midpoint of all html content
-  let midpointSegIdx = -1
+  // Find the largest html segment (by paragraph count) and split at its midpoint paragraph.
+  // Paragraph count is a better proxy for visual position than character count
+  // (images/figures can skew character count heavily).
+  let splitSegIdx = -1
+  let splitCutAt = -1
   if (showSubscribeBanner) {
-    const htmlSegs = segments.filter(s => s.kind === 'html')
-    const totalChars = htmlSegs.reduce((sum, s) => sum + (s.content || '').length, 0)
-    let running = 0
+    let mostParas = 0
     for (let i = 0; i < segments.length; i++) {
       if (segments[i].kind !== 'html') continue
-      running += (segments[i].content || '').length
-      if (running >= totalChars / 2) { midpointSegIdx = i; break }
+      const count = (segments[i].content.match(/<\/p>/gi) || []).length
+      if (count > mostParas) { mostParas = count; splitSegIdx = i }
+    }
+    if (splitSegIdx !== -1 && mostParas >= 2) {
+      const html = processImageCaptions(segments[splitSegIdx].content)
+      const paraEnds = []
+      let pos = 0
+      while ((pos = html.indexOf('</p>', pos)) !== -1) { paraEnds.push(pos + 4); pos += 4 }
+      // Split after the paragraph at the midpoint index
+      splitCutAt = paraEnds[Math.floor(paraEnds.length / 2)] ?? -1
     }
   }
 
@@ -521,17 +530,11 @@ export default function ArticleBody({
     <>
       <style>{PROSE_STYLES}</style>
       {segments.map((seg, i) => {
-        const bannerAfter = showSubscribeBanner && i === midpointSegIdx
         if (seg.kind === 'html') {
-          // If this is the midpoint segment AND it's the only html segment,
-          // split the raw HTML at the nearest paragraph boundary to the midpoint.
-          if (bannerAfter && segments.filter(s => s.kind === 'html').length === 1) {
+          if (showSubscribeBanner && i === splitSegIdx && splitCutAt !== -1) {
             const html = processImageCaptions(seg.content)
-            const mid = Math.floor(html.length / 2)
-            const splitAt = html.indexOf('</p>', mid)
-            const cutAt = splitAt !== -1 ? splitAt + 4 : mid
-            const firstHalf = html.slice(0, cutAt)
-            const secondHalf = html.slice(cutAt)
+            const firstHalf = html.slice(0, splitCutAt)
+            const secondHalf = html.slice(splitCutAt)
             return (
               <div key={i}>
                 <div className={`parlor-prose${dropCap && i === firstHtmlIndex ? ' parlor-dropcap' : ''}`} dangerouslySetInnerHTML={{ __html: firstHalf }} />
@@ -546,7 +549,6 @@ export default function ArticleBody({
                 className={`parlor-prose${dropCap && i === firstHtmlIndex ? ' parlor-dropcap' : ''}`}
                 dangerouslySetInnerHTML={{ __html: processImageCaptions(seg.content) }}
               />
-              {bannerAfter && <SubscribeBanner />}
             </div>
           )
         }
