@@ -156,8 +156,6 @@ export default function HomePageClient({ initial = {} }) {
   const [printPopupOpen, setPrintPopupOpen] = useState(false)
   const aboutRef = useRef(null)
   const memberRef = useRef(null)
-  const bannerRef = useRef(null)
-  const [bannerImgTransform, setBannerImgTransform] = useState('translateY(0) scale(1)')
   const supabase = createClient()
 
   useEffect(() => {
@@ -383,21 +381,6 @@ export default function HomePageClient({ initial = {} }) {
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
-
-  useEffect(() => {
-    function onScroll() {
-      if (!bannerRef.current) return
-      const rect = bannerRef.current.getBoundingClientRect()
-      const bannerH = bannerRef.current.offsetHeight
-      // progress 0 = banner fully visible, 1 = banner fully scrolled past
-      const progress = Math.min(1, Math.max(0, -rect.top / bannerH))
-      const translateY = progress * -60  // moves up 60px at full scroll
-      const scale = 1 - progress * 0.08  // shrinks to 0.92 at full scroll
-      setBannerImgTransform(`translateY(${translateY}px) scale(${scale})`)
-    }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   useEffect(() => {
@@ -1463,7 +1446,7 @@ export default function HomePageClient({ initial = {} }) {
 
       {/* ── HOMEPAGE ANNOUNCEMENT BANNER ── (admin-managed; hidden until set) */}
       {homeBanner && (
-        <section className="home-banner" ref={bannerRef}>
+        <section className="home-banner">
           <div className="home-banner-left">
             <div className="home-banner-inner">
               {homeBanner.kicker && <div className="home-banner-eyebrow">{homeBanner.kicker}</div>}
@@ -1473,7 +1456,7 @@ export default function HomePageClient({ initial = {} }) {
             </div>
           </div>
           <div className="home-banner-right">
-            {homeBanner.image_url && <img className="home-banner-img" src={homeBanner.image_url} alt="" style={{ transform: bannerImgTransform, willChange: 'transform' }} />}
+            {homeBanner.image_url && <img className="home-banner-img" src={homeBanner.image_url} alt="" />}
             <div className="home-banner-grad" />
           </div>
         </section>
