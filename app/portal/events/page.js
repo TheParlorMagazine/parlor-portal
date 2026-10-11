@@ -12,7 +12,7 @@ function dateParts(iso) {
   return {
     m: d.toLocaleDateString('en-US', { month: 'short', timeZone: tz }),
     d: d.toLocaleDateString('en-US', { day: 'numeric', timeZone: tz }),
-    t: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: tz }),
+    t: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'shortGeneric', timeZone: tz }),
   }
 }
 const LOC = { virtual: 'Online', in_person: 'In person', hybrid: 'Hybrid' }

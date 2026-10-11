@@ -21,7 +21,7 @@ function EventGroup({ label, events, top }) {
     const d = new Date(iso); if (isNaN(d)) return ''
     const tz = typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined
     const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: tz })
-    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: tz })
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'shortGeneric', timeZone: tz })
     return `${date} · ${time}`
   }
   return (

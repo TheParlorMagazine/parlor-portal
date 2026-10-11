@@ -24,7 +24,7 @@ export async function POST(request) {
     location_type: location_type || 'virtual', location: location?.trim() || null,
     join_url: join_url?.trim() || null, capacity: capacity ? Number(capacity) : null,
     cover_image_url: cover_image_url?.trim() || null,
-    is_public: !!is_public,
+    ...(is_public !== undefined ? { is_public: !!is_public } : {}),
     forum_id: forum_id || null, status, created_by: user.id,
   }).select('id').single()
   if (error) return Response.json({ error: error.message }, { status: 500 })

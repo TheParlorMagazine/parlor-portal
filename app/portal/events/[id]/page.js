@@ -12,7 +12,7 @@ function fmtWhen(iso) {
   const d = new Date(iso); if (isNaN(d.getTime())) return 'TBA'
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
   const date = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: tz })
-  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: tz })
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'shortGeneric', timeZone: tz })
   return `${date} · ${time}`
 }
 
