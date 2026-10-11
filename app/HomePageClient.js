@@ -996,9 +996,9 @@ export default function HomePageClient({ initial = {} }) {
         .home-banner-desc { font-family: 'Source Serif 4', Georgia, serif; font-size: clamp(14px,1.2vw,17px); line-height: 1.7; color: rgba(10,10,10,0.75); margin: 0 0 28px; }
         .home-banner-cta { display: inline-block; background: var(--black); color: #fff; padding: 13px 26px; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; transition: background 0.15s; }
         .home-banner-cta:hover { background: #fff; color: var(--black); outline: 2px solid var(--black); }
-        .home-banner-right { position: relative; overflow: hidden; background: #f2b8c6; }
+        .home-banner-right { position: relative; overflow: hidden; background: #fdf8f5; }
         .home-banner-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; opacity: 0; transition: opacity 1.3s ease 0.2s; }
-        .home-banner-grad { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to right, #f2b8c6 0%, rgba(242,184,198,0.4) 25%, transparent 55%, transparent 60%, rgba(242,184,198,0.5) 80%, #f2b8c6 100%); }
+        .home-banner-grad { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to right, #f2b8c6 0%, rgba(242,184,198,0.4) 25%, transparent 55%, transparent 70%, rgba(253,248,245,0.6) 88%, #fdf8f5 100%); }
         /* home banner scroll-in animations */
         .home-banner-eyebrow { opacity: 0; transform: translateX(-32px); transition: opacity 1s ease, transform 1s ease; }
         .home-banner-head { opacity: 0; transform: translateY(22px); transition: opacity 1s ease 0.2s, transform 1s ease 0.2s; }
