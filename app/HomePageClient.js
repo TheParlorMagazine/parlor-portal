@@ -159,6 +159,7 @@ export default function HomePageClient({ initial = {} }) {
   const [printPopupOpen, setPrintPopupOpen] = useState(false)
   const aboutRef = useRef(null)
   const memberRef = useRef(null)
+  const compSectionRef = useRef(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -336,6 +337,17 @@ export default function HomePageClient({ initial = {} }) {
     setPrintPopupOpen(false)
     try { if (popupData?.id) sessionStorage.setItem(`popupSeen_${popupData.id}`, '1') } catch {}
   }
+
+  useEffect(() => {
+    const el = compSectionRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { el.classList.add('comp-section--visible'); obs.disconnect() } },
+      { threshold: 0.12 }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [competitionData])
 
   const items = articles.filter(a => !a.featured).sort((a, b) => parseDateSafe(b.date) - parseDateSafe(a.date))
   const slidesHTML = items.map(slideHTML).join('')
@@ -1094,17 +1106,30 @@ export default function HomePageClient({ initial = {} }) {
 
         /* ── COMPETITION ── */
         .competition { background: var(--black); padding: 72px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; border-top: 1px solid var(--border); }
+        .competition--img { padding: 72px 0 72px clamp(40px,5vw,72px); gap: 0; align-items: stretch; }
         .comp-eyebrow { font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink); margin-bottom: 18px; }
         .comp-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(34px,3.5vw,46px); font-weight: 700; color: var(--white); line-height: 1.08; margin-bottom: 8px; }
         .comp-title em { font-style: italic; color: var(--pink); }
         .comp-subtitle { font-family: 'Playfair Display', Georgia, serif; font-size: 16px; font-style: italic; color: var(--muted); margin-bottom: 20px; }
         .comp-body { font-size: 15px; line-height: 1.78; color: var(--grey); max-width: 420px; }
+        .comp-left--img { padding-right: clamp(40px,5vw,64px); border-right: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; justify-content: center; }
         .comp-right { border-left: 1px solid var(--border); padding-left: 52px; position: relative; overflow: hidden; }
-        .comp-right--img { border-left: none; padding-left: 0; min-height: 320px; display: flex; flex-direction: column; justify-content: flex-end; }
+        .comp-right--img { border-left: none; padding-left: 0; display: flex; flex-direction: column; justify-content: flex-end; min-height: 400px; }
         .comp-right-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
-        .comp-right-grad { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.75) 60%, rgba(0,0,0,0.92) 100%); z-index: 1; }
-        .comp-right-content { position: relative; z-index: 2; padding: 36px; }
+        .comp-right-grad { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.65) 55%, rgba(0,0,0,0.9) 100%); z-index: 1; }
+        .comp-right-content { position: relative; z-index: 2; padding: 40px; }
         .comp-right .comp-body { margin-bottom: 30px; }
+        /* scroll-in animations */
+        .comp-eyebrow { opacity: 0; transform: translateX(-32px); transition: opacity 0.6s ease, transform 0.6s ease; }
+        .comp-title { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s; }
+        .comp-body { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease 0.26s, transform 0.6s ease 0.26s; }
+        .comp-cta { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease 0.37s, transform 0.6s ease 0.37s; }
+        .comp-right-bg { opacity: 0; transition: opacity 0.9s ease 0.1s; }
+        .comp-section--visible .comp-eyebrow,
+        .comp-section--visible .comp-title,
+        .comp-section--visible .comp-body,
+        .comp-section--visible .comp-cta { opacity: 1; transform: none; }
+        .comp-section--visible .comp-right-bg { opacity: 1; }
         .deadline-label { font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
         .deadline-date { font-family: 'Playfair Display', Georgia, serif; font-size: 40px; font-weight: 700; color: var(--pink); margin-bottom: 26px; line-height: 1; }
         .cat-row { display: grid; grid-template-columns: 1fr 1fr 80px; align-items: center; padding: 12px 0; border-bottom: 1px solid #1e1e1e; }
@@ -1160,6 +1185,8 @@ export default function HomePageClient({ initial = {} }) {
           .digital-hero-left { height: 320px; padding: 24px; }
           .digital-hero-right { padding: 36px 24px 40px; }
           .competition { padding: 48px 24px; gap: 32px; }
+          .competition--img { padding: 48px 0 0; }
+          .comp-left--img { padding: 32px 24px; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
           .comp-right { border-left: none; padding-left: 0; border-top: 1px solid var(--border); padding-top: 32px; }
           .comp-right--img { border-top: none; padding-top: 0; min-height: 260px; }
           .header-top { padding: 12px 20px; }
@@ -1523,8 +1550,8 @@ export default function HomePageClient({ initial = {} }) {
 
       {/* ── COMPETITION — admin-managed (placement: competition) ── */}
       {competitionData && (
-        <section className="competition">
-          <div>
+        <section ref={compSectionRef} className={`competition${competitionData.image_url ? ' competition--img' : ''}`}>
+          <div className={competitionData.image_url ? 'comp-left--img' : undefined}>
             {competitionData.kicker && <div className="comp-eyebrow">{competitionData.kicker}</div>}
             {competitionData.headline && <h2 className="comp-title" dangerouslySetInnerHTML={{ __html: competitionData.headline.replace(/\n/g, '<br/>') }} />}
           </div>
