@@ -51,7 +51,7 @@ export default function DonateClient({ gifts }) {
         .donate-eyebrow { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: #c47080; margin-bottom: 18px; }
         .donate-head { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(36px, 4.5vw, 64px); font-weight: 700; color: #1a1a1a; line-height: 1.06; margin: 0 0 24px; }
         .donate-sub { font-size: clamp(15px, 1.3vw, 18px); color: #555; line-height: 1.8; margin: 0; max-width: 460px; }
-        .donate-hero-img { position: absolute; right: -2%; left: 36%; bottom: 0; height: 95%; width: auto; pointer-events: none; max-width: unset; }
+        .donate-hero-img { position: absolute; right: -2%; left: 33%; bottom: 0; height: 95%; width: auto; pointer-events: none; max-width: unset; }
         .donate-hero-img img { height: 100%; width: auto; display: block; }
 
         @media (max-width: 768px) {
