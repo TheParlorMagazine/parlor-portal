@@ -24,6 +24,21 @@ const TYPE_COLOR = { issue: '#7a2531', event: '#2d6ca8', fundraiser: '#2d8f5a', 
 
 function toLocalInput(iso) { if (!iso) return ''; const d = new Date(iso); if (isNaN(d)) return ''; const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}` }
 
+const PLACEMENT_LABELS = {
+  ribbon: 'ribbon announcement',
+  homepage: 'homepage banner',
+  top_bar: 'top bar',
+  competition: 'campaign section',
+  popup: 'popup',
+}
+const PLACEMENT_DESC = {
+  ribbon: 'Shown in the floating footer ribbon. Active ones rotate in order.',
+  homepage: 'A large banner on the public homepage — eyebrow + header + description + hero image.',
+  top_bar: 'Slim dismissible bar above the nav. Kicker = italic prefix, message = main text.',
+  competition: 'Full-width campaign section above the footer. Headline can use \\n for line breaks. Submissions-close date is derived from "Show until".',
+  popup: 'First-load popup, shown once per session. Include an image for best impact.',
+}
+
 function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon', onClose, onSaved }) {
   const [f, setF] = useState({
     kicker: item?.kicker || '', headline: item?.headline || '', message: item?.message || '',
@@ -33,6 +48,7 @@ function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon',
     placement: item?.placement || defaultPlacement, image_url: item?.image_url || '',
   })
   const isHome = f.placement === 'homepage'
+  const isPopup = f.placement === 'popup'
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null)
   const [drag, setDrag] = useState(false)
@@ -74,11 +90,11 @@ function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon',
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(26,23,16,0.5)', zIndex: 200, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 20px', overflowY: 'auto' }}>
       <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 13, width: 620, maxWidth: '96vw', padding: 26, fontFamily: ff }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <div style={{ fontFamily: ffH, fontSize: 22, fontWeight: 700 }}>{item?.id ? 'Edit' : 'New'} {isHome ? 'homepage banner' : 'ribbon announcement'}</div>
+          <div style={{ fontFamily: ffH, fontSize: 22, fontWeight: 700 }}>{item?.id ? 'Edit' : 'New'} {PLACEMENT_LABELS[f.placement] || 'announcement'}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, color: '#999', cursor: 'pointer' }}>×</button>
         </div>
         <p style={{ fontSize: 12.5, color: '#888', margin: '0 0 6px' }}>
-          {isHome ? 'A large banner on the public homepage — eyebrow + header + description + hero image.' : 'Shown in the floating footer ribbon. Active ones rotate in order.'}
+          {PLACEMENT_DESC[f.placement] || ''}
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: 12 }}>
@@ -97,7 +113,7 @@ function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon',
         <div style={label}>{f.placement === 'homepage' ? 'Description' : 'Message'}</div>
         <textarea value={f.message} onChange={e => set('message', e.target.value)} rows={2} placeholder="Sustain the work and receive full access…" style={{ ...input, resize: 'vertical' }} />
 
-        {f.placement === 'homepage' && (
+        {(f.placement === 'homepage' || f.placement === 'popup') && (
           <>
             <div style={label}>Hero image</div>
             <div
@@ -145,7 +161,14 @@ export default function AnnouncementsSection({ supabase }) {
   const [editing, setEditing] = useState(undefined) // undefined=closed, null=new, obj=edit
   const [tab, setTab] = useState('ribbon') // 'ribbon' | 'homepage'
 
-  const shown = items.filter(a => (tab === 'homepage' ? a.placement === 'homepage' : (a.placement || 'ribbon') !== 'homepage'))
+  const PLACEMENT_MATCH = {
+    ribbon: a => (a.placement || 'ribbon') === 'ribbon',
+    homepage: a => a.placement === 'homepage',
+    top_bar: a => a.placement === 'top_bar',
+    competition: a => a.placement === 'competition',
+    popup: a => a.placement === 'popup',
+  }
+  const shown = items.filter(PLACEMENT_MATCH[tab] || (() => false))
 
   async function load() {
     try {
@@ -170,17 +193,23 @@ export default function AnnouncementsSection({ supabase }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 14 }}>
         <div>
           <h1 style={{ fontFamily: ffH, fontSize: 30, fontWeight: 700, margin: 0 }}>Announcements</h1>
-          <p style={{ color: '#777', fontSize: 14, margin: '4px 0 0' }}>{tab === 'homepage'
-            ? 'Large hero banners on the public homepage — eyebrow, header, description, and a hero image.'
-            : 'The floating footer ribbon — issue launches, events, fundraisers, and campaigns. Active ones rotate in sort order.'}</p>
+          <p style={{ color: '#777', fontSize: 14, margin: '4px 0 0' }}>{
+            tab === 'homepage' ? 'Large hero banners on the public homepage — eyebrow, header, description, and a hero image.' :
+            tab === 'top_bar' ? 'Slim bar above the nav that dismisses on click. Only the first active item shows.' :
+            tab === 'competition' ? 'Full-width black campaign section above the footer. Only the first active item shows.' :
+            tab === 'popup' ? 'First-load popup shown once per session per item. Only the first active item shows.' :
+            'The floating footer ribbon — issue launches, events, fundraisers, and campaigns. Active ones rotate in sort order.'
+          }</p>
         </div>
-        <button onClick={() => setEditing(null)} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontFamily: ff, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ New {tab === 'homepage' ? 'banner' : 'ribbon item'}</button>
+        <button onClick={() => setEditing(null)} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontFamily: ff, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          + New {tab === 'homepage' ? 'banner' : tab === 'top_bar' ? 'top bar' : tab === 'competition' ? 'campaign section' : tab === 'popup' ? 'popup' : 'ribbon item'}
+        </button>
       </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 6, borderBottom: `1px solid ${BORDER}`, marginBottom: 4 }}>
-        {[['ribbon', 'Footer ribbon'], ['homepage', 'Hero banner']].map(([v, l]) => {
-          const count = items.filter(a => (v === 'homepage' ? a.placement === 'homepage' : (a.placement || 'ribbon') !== 'homepage')).length
+        {[['ribbon', 'Footer ribbon'], ['homepage', 'Hero banner'], ['top_bar', 'Top bar'], ['competition', 'Campaign section'], ['popup', 'Popup']].map(([v, l]) => {
+          const count = items.filter(PLACEMENT_MATCH[v] || (() => false)).length
           const on = tab === v
           return (
             <button key={v} onClick={() => setTab(v)} style={{ background: 'none', border: 'none', borderBottom: `2px solid ${on ? '#0a0a0a' : 'transparent'}`, padding: '9px 4px', marginBottom: -1, fontFamily: ff, fontSize: 14, fontWeight: on ? 700 : 500, color: on ? '#1a1a1a' : '#999', cursor: 'pointer' }}>
@@ -191,7 +220,7 @@ export default function AnnouncementsSection({ supabase }) {
       </div>
 
       {loading ? <p style={{ color: '#888', marginTop: 24 }}>Loading…</p> : shown.length === 0 ? (
-        <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, background: '#faf8f6', padding: 30, textAlign: 'center', color: '#888', marginTop: 20 }}>{tab === 'homepage' ? 'No homepage banners yet. Add one above.' : 'No ribbon announcements yet. Add one above.'}</div>
+        <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, background: '#faf8f6', padding: 30, textAlign: 'center', color: '#888', marginTop: 20 }}>{`No ${PLACEMENT_LABELS[tab] || 'announcements'} yet. Add one above.`}</div>
       ) : (
         <div style={{ marginTop: 20, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
           {shown.map((a, i) => (

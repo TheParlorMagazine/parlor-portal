@@ -142,6 +142,9 @@ export default function HomePageClient({ initial = {} }) {
   const [ribbonIndex, setRibbonIndex] = useState(0)
   const [featuredEvents, setFeaturedEvents] = useState(initial.events || [])
   const [homeBanner, setHomeBanner] = useState(null)
+  const [topBarData, setTopBarData] = useState(initial.topBar?.[0] || null)
+  const [competitionData, setCompetitionData] = useState(initial.competition?.[0] || null)
+  const [popupData, setPopupData] = useState(initial.popup?.[0] || null)
   const [member, setMember] = useState(null)
   const [articles, setArticles] = useState(initial.articles?.length ? initial.articles : ARTICLES)
   const [heroSlides, setHeroSlides] = useState(initial.heroSlides || [])
@@ -190,6 +193,9 @@ export default function HomePageClient({ initial = {} }) {
     setAnnouncements(candidates)
     const chosen = rotorPick(candidates, 'parlorRibbonRotor')
     setRibbonIndex(chosen ? candidates.indexOf(chosen) : 0)
+    if (initial.topBar?.[0]) setTopBarData(initial.topBar[0])
+    if (initial.competition?.[0]) setCompetitionData(initial.competition[0])
+    if (initial.popup?.[0]) setPopupData(initial.popup[0])
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Which REAL hero slide is centered — stable across the seamless-loop clone
@@ -317,17 +323,18 @@ export default function HomePageClient({ initial = {} }) {
     else if (heroIndex === 0) { setHeroNoTrans(true); setHeroIndex(n) }
   }
 
-  // Show the "Now in print" popup on first load — once per browser session.
+  // Show the admin-managed popup on first load — once per browser session.
   useEffect(() => {
+    if (!popupData) return
     let seen = false
-    try { seen = sessionStorage.getItem('printPopupSeen') === '1' } catch {}
+    try { seen = sessionStorage.getItem(`popupSeen_${popupData.id}`) === '1' } catch {}
     if (seen) return
     const t = setTimeout(() => setPrintPopupOpen(true), 900)
     return () => clearTimeout(t)
-  }, [])
+  }, [popupData?.id])
   function closePrintPopup() {
     setPrintPopupOpen(false)
-    try { sessionStorage.setItem('printPopupSeen', '1') } catch {}
+    try { if (popupData?.id) sessionStorage.setItem(`popupSeen_${popupData.id}`, '1') } catch {}
   }
 
   const items = articles.filter(a => !a.featured).sort((a, b) => parseDateSafe(b.date) - parseDateSafe(a.date))
@@ -1159,11 +1166,15 @@ export default function HomePageClient({ initial = {} }) {
         }
       `}</style>
 
-      {/* Open call strip */}
-      {announceVisible && (
+      {/* Top bar — admin-managed (placement: top_bar) */}
+      {topBarData && announceVisible && (
         <div className="sticky-bar">
-          <span className="sticky-text"><em>The Parlor</em> Issue 3 Open Call — Personal Essays and Reporting &nbsp;·&nbsp; Deadline <strong>November 30</strong></span>
-          <a href="https://www.theparlormagazine.com/open-call" className="sticky-btn">Submit your work →</a>
+          <span className="sticky-text">
+            {topBarData.kicker && <em>{topBarData.kicker}</em>}
+            {topBarData.kicker && topBarData.message && ' '}
+            {topBarData.message}
+          </span>
+          {topBarData.cta_label && <a href={topBarData.cta_href || '#'} className="sticky-btn">{topBarData.cta_label}</a>}
           <button className="sticky-close" onClick={() => setAnnounceVisible(false)} title="Dismiss">✕</button>
         </div>
       )}
@@ -1505,34 +1516,41 @@ export default function HomePageClient({ initial = {} }) {
       {/* ── ARTICLE CAROUSEL ── (memoized above so hero re-renders don't touch it) */}
       {carouselSection}
 
-      {/* ── COMPETITION ── */}
-      <section className="competition">
-        <div>
-          <div className="comp-eyebrow">Essay competition — Issue 3</div>
-          <h2 className="comp-title">Submit to<br/><em>The Parlor.</em><br/>Get published<br/>in print.</h2>
-        </div>
-        <div className="comp-right">
-          <p className="comp-body">We are accepting essays and original reporting for our third issue. Selected work appears in a beautifully produced independent magazine read by a global community of thinkers, writers, and makers.</p>
-          <div className="deadline-label">Submissions close</div>
-          <div className="deadline-date">November 30</div>
-          <a href="https://www.theparlormagazine.com/open-call" className="comp-cta" target="_top">Submit your work →</a>
-        </div>
-      </section>
+      {/* ── COMPETITION — admin-managed (placement: competition) ── */}
+      {competitionData && (
+        <section className="competition">
+          <div>
+            {competitionData.kicker && <div className="comp-eyebrow">{competitionData.kicker}</div>}
+            {competitionData.headline && <h2 className="comp-title" dangerouslySetInnerHTML={{ __html: competitionData.headline.replace(/\n/g, '<br/>') }} />}
+          </div>
+          <div className="comp-right">
+            {competitionData.message && <p className="comp-body">{competitionData.message}</p>}
+            {competitionData.ends_at && (
+              <>
+                <div className="deadline-label">Submissions close</div>
+                <div className="deadline-date">{new Date(competitionData.ends_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</div>
+              </>
+            )}
+            {competitionData.cta_label && <a href={competitionData.cta_href || '#'} className="comp-cta" target="_top">{competitionData.cta_label}</a>}
+          </div>
+        </section>
+      )}
 
-      {/* ── NOW IN PRINT — FIRST-LOAD POPUP ── */}
-      {printPopupOpen && (
+      {/* ── POPUP — admin-managed (placement: popup), shown once per session per popup id ── */}
+      {printPopupOpen && popupData && (
         <div className="printpop-overlay" onClick={closePrintPopup}>
           <div className="printpop-modal" onClick={e => e.stopPropagation()}>
             <button className="printpop-close" aria-label="Close" onClick={closePrintPopup}>&times;</button>
-            <div className="printpop-img">
-              <img src="https://static.wixstatic.com/media/d449e2_fd8c48fe8b274b67be10d4773240837b~mv2.png" alt="The World We're Building — Issue 02 print edition" />
-            </div>
+            {popupData.image_url && (
+              <div className="printpop-img">
+                <img src={popupData.image_url} alt="" />
+              </div>
+            )}
             <div className="printpop-body">
-              <div className="printpop-eyebrow">Now in print</div>
-              <h2 className="printpop-headline">Hold the conversation<br/>in <em>your hands.</em></h2>
-              <div className="printpop-subhead">The World we&rsquo;re Building — Issue 02</div>
-              <p className="printpop-text">Our second issue is here — 112 pages of original essays, reporting, and art, bound in print.</p>
-              <a href="/print" className="printpop-cta" onClick={closePrintPopup}>See the print edition →</a>
+              {popupData.kicker && <div className="printpop-eyebrow">{popupData.kicker}</div>}
+              {popupData.headline && <h2 className="printpop-headline" dangerouslySetInnerHTML={{ __html: popupData.headline.replace(/\n/g, '<br/>') }} />}
+              {popupData.message && <p className="printpop-text">{popupData.message}</p>}
+              {popupData.cta_label && <a href={popupData.cta_href || '#'} className="printpop-cta" onClick={closePrintPopup}>{popupData.cta_label}</a>}
               <button className="printpop-dismiss" onClick={closePrintPopup}>Maybe later</button>
             </div>
           </div>
