@@ -1645,7 +1645,7 @@ export default function HomePageClient({ initial = {} }) {
           </div>
           <div>
             <div className="footer-col-title">Magazine</div>
-            {['About','Shop','Open Call','People of The Parlor','Archive'].map(l=><a key={l} href="#" className="footer-link">{l}</a>)}
+            {[['About','#'],['Shop','#'],['Donate','/donate'],['People of The Parlor','#'],['Archive','#']].map(([l,h])=><a key={l} href={h} className="footer-link">{l}</a>)}
           </div>
           <div>
             <div className="footer-col-title">Members</div>
