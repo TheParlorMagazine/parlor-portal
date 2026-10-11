@@ -56,7 +56,8 @@ export default function DonateClient({ gifts }) {
 
         @media (max-width: 768px) {
           .donate-hero { min-height: unset; flex-direction: column; }
-          .donate-hero-text { padding: 36px 24px 24px; }
+          .donate-hero-text { padding: 36px 24px 24px; text-align: center; }
+          .donate-sub { text-align: center; max-width: unset; }
           .donate-hero-img { position: relative; left: auto; right: auto; bottom: auto; height: auto; width: 85%; max-width: 85%; margin: 0 auto; display: block; }
           .donate-hero-img img { width: 100%; height: auto; display: block; }
         }
