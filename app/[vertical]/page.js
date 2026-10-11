@@ -98,6 +98,10 @@ export default function VerticalPage({ params }) {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&display=swap');
+        @keyframes scrollPulse {
+          0%, 100% { opacity: 0.5; transform: translateX(-50%) translateY(0); }
+          50%       { opacity: 1; transform: translateX(-50%) translateY(5px); }
+        }
         @keyframes candleFlicker {
           0%   { opacity: 0.85; transform: scale(1)    translateX(0px);   }
           8%   { opacity: 0.6;  transform: scale(0.92) translateX(-1px);  }
@@ -134,20 +138,23 @@ export default function VerticalPage({ params }) {
         /* Full-width featured hero — the vertical's featured article. */
         .feat-hero {
           position: relative;
-          min-height: 520px;
-          display: flex;
-          align-items: flex-end;
+          height: 100vh;
           background: #0a0a0a center/cover no-repeat;
           overflow: hidden;
         }
         .feat-hero-scrim {
           position: absolute; inset: 0;
-          background: linear-gradient(180deg, rgba(10,10,10,0.15) 0%, rgba(10,10,10,0.35) 45%, rgba(10,10,10,0.9) 100%);
+          background: linear-gradient(180deg, rgba(10,10,10,0.2) 0%, rgba(10,10,10,0.08) 40%, rgba(10,10,10,0.6) 100%);
+        }
+        .feat-hero-text-gradient {
+          position: absolute; bottom: 0; left: 0; right: 0; height: 50%;
+          background: linear-gradient(to top, rgba(10,10,10,0.72) 0%, rgba(10,10,10,0.32) 60%, transparent 100%);
+          pointer-events: none;
         }
         .feat-hero-inner {
-          position: relative; z-index: 1;
+          position: absolute; bottom: 10%; left: 0; right: 0; z-index: 2;
           max-width: 900px; margin: 0 auto; width: 100%;
-          padding: 0 40px 56px;
+          padding: 0 40px 0;
         }
         .feat-hero-eyebrow {
           display: inline-flex; align-items: center; gap: 10px;
@@ -230,8 +237,8 @@ export default function VerticalPage({ params }) {
           .title { font-size: 21px; }
           .vertical-hero { padding: 48px 24px 36px; }
           .vertical-grid-section { padding: 36px 20px 56px; }
-          .feat-hero { min-height: 420px; }
-          .feat-hero-inner { padding: 0 24px 40px; }
+          .feat-hero { height: 100svh; }
+          .feat-hero-inner { padding: 0 24px 0; }
           .feat-hero-excerpt { font-size: 16px; }
         }
       `}</style>
@@ -244,7 +251,12 @@ export default function VerticalPage({ params }) {
           style={featured.cover_image_url ? { backgroundImage: `url(${wixCover(featured.cover_image_url, 1600, 82)})` } : undefined}
         >
           <div className="feat-hero-scrim" />
-          <div className="feat-hero-inner">
+          <div className="feat-hero-text-gradient" style={{ opacity: Math.min(1, scrollY / (typeof window !== 'undefined' ? window.innerHeight * 0.5 : 400)) }} />
+          <div className="feat-hero-inner" style={{
+            opacity: Math.min(1, (scrollY / (typeof window !== 'undefined' ? window.innerHeight * 0.5 : 400)) * 2),
+            transform: `translateY(${Math.max(0, 30 - (scrollY / (typeof window !== 'undefined' ? window.innerHeight * 0.5 : 400)) * 30)}px)`,
+            willChange: 'opacity, transform',
+          }}>
             <div className="feat-hero-eyebrow">
               <span>{category}</span>
               <span className="feat-hero-badge">Featured</span>
@@ -267,6 +279,24 @@ export default function VerticalPage({ params }) {
               {featured.date_published && <span>· {formatDate(featured.date_published)}</span>}
             </div>
             <a className="feat-hero-cta" href={featured.slug ? `/post/${featured.slug}` : '#'}>Read the story</a>
+          </div>
+          {/* Scroll cue */}
+          <div style={{
+            position: 'absolute', bottom: 28, left: '50%',
+            zIndex: 3, opacity: Math.max(0, 1 - (scrollY / (typeof window !== 'undefined' ? window.innerHeight * 0.25 : 200)) * 4),
+            pointerEvents: 'none',
+          }}>
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+              color: 'rgba(255,255,255,0.75)', fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 11,
+              letterSpacing: '0.14em', textTransform: 'uppercase',
+              animation: 'scrollPulse 2s ease-in-out infinite',
+            }}>
+              Scroll
+              <svg width="16" height="20" viewBox="0 0 16 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <line x1="8" y1="0" x2="8" y2="18"/><polyline points="2 12 8 18 14 12"/>
+              </svg>
+            </div>
           </div>
         </section>
       ) : (vertical === 'work-wealth' || vertical === 'society-culture' || vertical === 'world-politics' || vertical === 'perspectives-identity') ? (

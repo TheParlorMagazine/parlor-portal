@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import SiteHeader from '../_components/SiteHeader'
 import SiteFooter from '../_components/SiteFooter'
 import IssueStyles from './_components/IssueStyles'
@@ -8,18 +8,21 @@ import { ISSUE, SECTIONS } from './_data'
 
 export default function BorderlandsHubPage() {
   const heroBgRef = useRef(null)
+  const [scrollY, setScrollY] = useState(0)
 
   useEffect(() => {
     const bg = heroBgRef.current
-    if (!bg) return
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
     let raf = null
     function onScroll() {
-      if (raf) return
-      raf = requestAnimationFrame(() => {
-        raf = null
-        bg.style.transform = `translate3d(0, ${(window.scrollY || 0) * 0.55}px, 0)`
-      })
+      setScrollY(window.scrollY || 0)
+      if (bg && !reduced) {
+        if (raf) return
+        raf = requestAnimationFrame(() => {
+          raf = null
+          bg.style.transform = `translate3d(0, ${(window.scrollY || 0) * 0.55}px, 0)`
+        })
+      }
     }
     window.addEventListener('scroll', onScroll, { passive: true })
     onScroll()
@@ -29,6 +32,11 @@ export default function BorderlandsHubPage() {
     }
   }, [])
 
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 800
+  const prog = Math.min(1, scrollY / (vh * 0.5))
+  const titleOpacity = Math.min(1, prog * 2)
+  const titleY = Math.max(0, 30 - prog * 30)
+
   return (
     <div className="boi-root">
       <IssueStyles />
@@ -37,7 +45,12 @@ export default function BorderlandsHubPage() {
       <section className="boi-hero" style={{ '--herobg': `url('${ISSUE.heroBg}')` }}>
         <div className="boi-hero-bg" aria-hidden="true" ref={heroBgRef}></div>
         <div className="boi-hero-wash" aria-hidden="true"></div>
-        <div className="boi-hero-inner">
+        <div className="boi-hero-text-gradient" aria-hidden="true" style={{ opacity: prog }} />
+        <div className="boi-hero-inner" style={{
+          opacity: titleOpacity,
+          transform: `translateY(${titleY}px)`,
+          willChange: 'opacity, transform',
+        }}>
           <div className="boi-title-wrap">
             <h1 className="boi-hero-title">{ISSUE.title}</h1>
             <span className="boi-title-fx shine" aria-hidden="true">{ISSUE.title}</span>

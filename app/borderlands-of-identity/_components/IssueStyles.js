@@ -11,12 +11,12 @@ export default function IssueStyles() {
       /* ── HUB HERO (full-bleed, layered) ── */
       .boi-hero {
         position: relative;
-        min-height: 80vh;
+        height: 100vh;
         display: flex; flex-direction: column;
-        align-items: center; justify-content: center;
+        align-items: center; justify-content: flex-end;
         text-align: center;
-        padding: 96px 24px;
-        background-color: #fce8ef;
+        padding: 0;
+        background-color: #0a0a0a;
         overflow: hidden;
       }
       .boi-hero-bg {
@@ -28,8 +28,12 @@ export default function IssueStyles() {
       .boi-hero-wash {
         position: absolute; inset: 0; z-index: 1;
         background:
-          radial-gradient(130% 100% at 50% 38%, rgba(252,232,239,0.28) 0%, rgba(252,232,239,0.66) 82%),
-          linear-gradient(180deg, rgba(252,232,239,0.42), rgba(252,232,239,0.52));
+          linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.06) 40%, rgba(0,0,0,0.65) 100%);
+      }
+      .boi-hero-text-gradient {
+        position: absolute; bottom: 0; left: 0; right: 0; height: 50%; z-index: 2;
+        background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.32) 60%, transparent 100%);
+        pointer-events: none;
       }
       .boi-title-wrap { position: relative; display: inline-block; }
       .boi-hero-title, .boi-title-fx {
@@ -82,21 +86,24 @@ export default function IssueStyles() {
         position: relative; z-index: 3;
         max-width: 1040px; width: 100%;
         display: flex; flex-direction: column; align-items: center;
+        padding: 0 24px 10%;
       }
       .boi-hero-title {
-        color: #2f2f2f; position: relative; z-index: 1;
-        text-shadow: 0 2px 22px rgba(252,232,239,0.95), 0 1px 4px rgba(252,232,239,0.9);
+        color: #ffffff; position: relative; z-index: 1;
+        text-shadow: 0 2px 24px rgba(0,0,0,0.4);
       }
       .boi-hero-intro {
-        margin: 34px 0 0;
+        margin: 20px 0 0;
         display: inline-block;
-        background: rgba(242,184,198,0.52);
-        padding: 16px 24px;
+        background: rgba(242,184,198,0.18);
+        border: 1px solid rgba(242,184,198,0.35);
+        padding: 14px 24px;
         font-family: 'Playfair Display', Georgia, serif;
         font-weight: 700;
-        font-size: clamp(18px, 2.3vw, 28px);
-        line-height: 1.42; color: #2b2b2b;
+        font-size: clamp(15px, 1.8vw, 22px);
+        line-height: 1.42; color: rgba(255,255,255,0.88);
         max-width: 780px;
+        backdrop-filter: blur(4px);
       }
 
       /* ── HUB CONTENTS GRID ── */
