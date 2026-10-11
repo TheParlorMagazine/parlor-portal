@@ -27,8 +27,8 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
     async function loadMember() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data } = await supabase.from('members').select('role').eq('id', user.id).single()
-      setMember({ ...user, role: data?.role ?? null })
+      const { data } = await supabase.from('members').select('role, avatar_url').eq('id', user.id).single()
+      setMember({ ...user, role: data?.role ?? null, avatar_url: data?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null })
     }
     loadMember()
   }, [])
@@ -277,10 +277,10 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
             <div className="member-wrap" ref={memberRef}>
               <button className="member-trigger" onClick={() => setMemberOpen(o => !o)}>
                 <div className="member-avatar-sm">
-                  <svg viewBox="0 0 36 36" fill="none">
-                    <circle cx="18" cy="13" r="6" fill="rgba(255,255,255,0.85)"/>
-                    <path d="M4 32c0-8 6-13 14-13s14 5 14 13" fill="rgba(255,255,255,0.85)"/>
-                  </svg>
+                  {member?.avatar_url
+                    ? <img src={member.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+                    : <svg viewBox="0 0 36 36" fill="none"><circle cx="18" cy="13" r="6" fill="rgba(255,255,255,0.85)"/><path d="M4 32c0-8 6-13 14-13s14 5 14 13" fill="rgba(255,255,255,0.85)"/></svg>
+                  }
                 </div>
                 <div className={`member-chevron${memberOpen ? ' open' : ''}`}></div>
               </button>
