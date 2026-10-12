@@ -1178,9 +1178,9 @@ export default function HomePageClient({ initial = {} }) {
         .ribbon.scrolling { opacity: 0.5; }
         .ribbon-inner { max-width: 1280px; margin: 0 auto; padding: 14px 64px 14px 28px; display: grid; grid-template-columns: max-content 1fr max-content; align-items: center; gap: 14px; position: relative; }
         .ribbon-thumb-wrap { position: relative; flex-shrink: 0; width: 72px; }
-        .ribbon-thumb { position: absolute; bottom: 0; left: 0; width: auto; height: 110px; object-fit: contain; object-position: bottom; pointer-events: none; filter: drop-shadow(0 -3px 8px rgba(0,0,0,0.18)); }
-        .ribbon-inner.has-thumb { padding-left: 108px; }
-        .ribbon-thumb-slot { position: fixed; left: 0; bottom: 0; width: 88px; height: 110px; z-index: 10000; pointer-events: none; }
+        .ribbon-thumb { position: absolute; bottom: 0; left: 0; width: auto; height: 140px; object-fit: contain; object-position: bottom; pointer-events: none; filter: drop-shadow(0 -3px 8px rgba(0,0,0,0.18)); }
+        .ribbon-inner.has-thumb { padding-left: 130px; }
+        .ribbon-thumb-slot { position: fixed; left: 0; bottom: 0; width: 118px; height: 140px; z-index: 10000; pointer-events: none; }
         .ribbon-kicker { font-size: 14px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; line-height: 1.1; }
         .ribbon-subhead { font-family: 'Alex Brush', cursive; font-size: 24px; font-weight: 400; line-height: 1.2; margin-top: 2px; }
         .ribbon-message { font-size: 16px; line-height: 1.35; font-weight: 500; opacity: 0.9; text-align: center; max-width: 52ch; margin: 0 auto; }

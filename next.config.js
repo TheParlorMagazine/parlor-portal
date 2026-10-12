@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async redirects() {
+    return [
+      { source: '/world-we-are-building', destination: '/issue/dfcbace2-9956-4669-8e63-a475aa371a80', permanent: false },
+    ]
+  },
   turbopack: {
     root: __dirname,
   },
