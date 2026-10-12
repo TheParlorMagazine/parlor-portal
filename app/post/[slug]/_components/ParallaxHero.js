@@ -26,10 +26,9 @@ export default function ParallaxHero({ src, alt, title }) {
       const progress = Math.max(0, Math.min(1, (vh - rect.top) / (vh + rect.height)))
       img.style.transform = `translateY(${(-progress * extra).toFixed(1)}px)`
 
-      // Title reveal: starts hidden when hero is fully below viewport,
-      // fully visible when bottom of hero reaches centre of viewport.
-      const heroBelowFold = rect.top / vh           // 1 = hero not yet visible, 0 = top at viewport top
-      const reveal = Math.max(0, Math.min(1, 1 - heroBelowFold * 2))
+      // Title reveal: hidden at scrollY=0, fully visible after scrolling ~30% of hero height.
+      const heroH = wrap.offsetHeight || 1
+      const reveal = Math.max(0, Math.min(1, window.scrollY / (heroH * 0.3)))
       tEl.style.opacity    = reveal
       tEl.style.transform  = `translateY(${((1 - reveal) * 32).toFixed(1)}px)`
     }
