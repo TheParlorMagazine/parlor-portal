@@ -2,79 +2,119 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-// Hero for "The World We're Building" articles. The title stays fixed while the
-// cover IMAGE drifts (true parallax). The frame shows ~80% of the image height
-// at once and the image slides as you scroll, so the whole illustration is
-// revealed over the scroll — full width, never permanently cropped.
 export default function ParallaxHero({ src, alt, title }) {
-  const wrapRef = useRef(null)
-  const imgRef = useRef(null)
-  const [frameH, setFrameH] = useState(0)
+  const wrapRef  = useRef(null)
+  const imgRef   = useRef(null)
+  const titleRef = useRef(null)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
     let raf = null
+
     const update = () => {
       raf = null
-      const wrap = wrapRef.current
-      const img = imgRef.current
-      if (!wrap || !img) return
-      const extra = Math.max(0, img.offsetHeight - wrap.offsetHeight)
+      const wrap  = wrapRef.current
+      const img   = imgRef.current
+      const tEl   = titleRef.current
+      if (!wrap || !img || !tEl) return
+
       const rect = wrap.getBoundingClientRect()
-      const vh = window.innerHeight || document.documentElement.clientHeight || 1
-      // 0 as the hero enters from the bottom, 1 as it exits the top.
+      const vh   = window.innerHeight || 1
+
+      // Parallax: image drifts upward as you scroll down
+      const extra    = Math.max(0, img.offsetHeight - wrap.offsetHeight)
       const progress = Math.max(0, Math.min(1, (vh - rect.top) / (vh + rect.height)))
       img.style.transform = `translateY(${(-progress * extra).toFixed(1)}px)`
+
+      // Title reveal: starts hidden when hero is fully below viewport,
+      // fully visible when bottom of hero reaches centre of viewport.
+      const heroBelowFold = rect.top / vh           // 1 = hero not yet visible, 0 = top at viewport top
+      const reveal = Math.max(0, Math.min(1, 1 - heroBelowFold * 2))
+      tEl.style.opacity    = reveal
+      tEl.style.transform  = `translateY(${((1 - reveal) * 32).toFixed(1)}px)`
     }
+
     const onScroll = () => { if (raf == null) raf = requestAnimationFrame(update) }
-    const measure = () => {
-      const img = imgRef.current
-      if (img && img.offsetHeight) setFrameH(Math.round(img.offsetHeight * 0.8))
-      onScroll()
+
+    const onLoad = () => { setReady(true); onScroll() }
+    const imgEl = imgRef.current
+    if (imgEl) {
+      if (imgEl.complete) onLoad()
+      else imgEl.addEventListener('load', onLoad)
     }
-    measure()
+
+    update()
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', measure)
+    window.addEventListener('resize', update)
     return () => {
       window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', measure)
+      window.removeEventListener('resize', update)
       if (raf != null) cancelAnimationFrame(raf)
+      if (imgEl) imgEl.removeEventListener('load', onLoad)
     }
-  }, [frameH])
+  }, [])
 
   return (
     <div
       ref={wrapRef}
       style={{
-        position: 'relative', width: '100%', maxWidth: '1040px', margin: '0 auto 20px',
-        height: frameH ? `${frameH}px` : 'clamp(360px, 66vh, 620px)',
-        overflow: 'hidden', background: '#f7f4ef', borderRadius: '2px',
+        position: 'relative',
+        width: '100vw',
+        marginLeft: 'calc(50% - 50vw)',
+        height: 'clamp(480px, 85vh, 820px)',
+        overflow: 'hidden',
+        background: '#111',
       }}
     >
+      {/* Parallax image */}
       <img
         ref={imgRef}
         src={src}
         alt={alt || title || ''}
-        onLoad={() => {
-          const img = imgRef.current
-          if (img && img.offsetHeight) setFrameH(Math.round(img.offsetHeight * 0.8))
-        }}
         style={{
-          position: 'absolute', top: 0, left: 0, width: '100%', height: 'auto',
-          display: 'block', willChange: 'transform',
+          position: 'absolute',
+          top: 0, left: 0,
+          width: '100%',
+          height: 'auto',
+          minHeight: '115%',
+          objectFit: 'cover',
+          display: 'block',
+          willChange: 'transform',
+          opacity: ready ? 1 : 0,
+          transition: 'opacity 0.6s ease',
         }}
       />
+
+      {/* Dark gradient overlay — heavier at bottom */}
       <div style={{
-        position: 'absolute', inset: 0, display: 'flex',
-        alignItems: 'center', justifyContent: 'center', padding: '24px', pointerEvents: 'none',
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.18) 40%, rgba(0,0,0,0.72) 80%, rgba(0,0,0,0.88) 100%)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* Scroll-reveal title pinned to the bottom */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        padding: 'clamp(24px, 4vw, 56px) clamp(24px, 6vw, 80px)',
+        pointerEvents: 'none',
       }}>
-        <h1 style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
-          background: 'rgba(250, 247, 242, 0.82)', color: '#1a1a1a',
-          padding: 'clamp(12px, 2.2vw, 24px) clamp(18px, 3.5vw, 40px)', margin: 0,
-          width: 'max-content', maxWidth: '88%', textAlign: 'center', boxSizing: 'border-box',
-          fontSize: 'clamp(22px, 3.6vw, 46px)', lineHeight: '1.12',
-          fontWeight: '700', letterSpacing: '-0.01em',
-        }}>
+        <h1
+          ref={titleRef}
+          style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            color: '#fff',
+            fontSize: 'clamp(28px, 5vw, 72px)',
+            lineHeight: '1.08',
+            fontWeight: '700',
+            letterSpacing: '-0.02em',
+            margin: 0,
+            maxWidth: '860px',
+            opacity: 0,
+            transform: 'translateY(32px)',
+            transition: 'none',
+            textShadow: '0 2px 24px rgba(0,0,0,0.4)',
+          }}
+        >
           {title}
         </h1>
       </div>
