@@ -167,7 +167,18 @@ export default async function ArticlePage({ params, searchParams }) {
 
   // Related articles — same category first, fallback to recents
   let related = []
-  if (article.category) {
+  if (isVol2 && article.issue_id) {
+    const { data } = await db
+      .from('articles')
+      .select('id, slug, title, cover_image_url, category, date_published, author_name')
+      .eq('published', true)
+      .eq('issue_id', article.issue_id)
+      .neq('id', article.id)
+      .order('date_published', { ascending: false })
+      .limit(3)
+    related = data || []
+  }
+  if (related.length === 0 && article.category) {
     const { data } = await db
       .from('articles')
       .select('id, slug, title, cover_image_url, category, date_published, author_name')
@@ -454,7 +465,7 @@ export default async function ArticlePage({ params, searchParams }) {
               fontSize: '22px', fontWeight: '700', color: '#0a0a0a',
               marginBottom: '28px', letterSpacing: '-0.01em',
             }}>
-              More from The Parlor
+              {isVol2 ? 'More from The World We\'re Building' : 'More from The Parlor'}
             </h2>
             <div style={{
               display: 'grid',
