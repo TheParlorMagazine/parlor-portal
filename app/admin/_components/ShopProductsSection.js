@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { prepareImageUpload, isDuplicateUpload } from '../../../lib/uploadImage'
+import { uploadToCloudinary, isDuplicateUpload } from '../../../lib/uploadImage'
 import { confirmDialog } from '../../../lib/confirmDialog'
 import BundlesSection from './BundlesSection'
 
@@ -46,12 +46,10 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
       const urls = []
       for (const file of files) {
         if (isDuplicateUpload(dropRef, file)) continue
-        const { file: up, contentType, ext } = await prepareImageUpload(file)
-        const path = `shop/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-        const { error } = await supabase.storage.from('Media').upload(path, up, { cacheControl: '31536000', contentType })
-        if (error) { setErr(error.message); continue }
-        const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)
-        urls.push(publicUrl)
+        try {
+          const publicUrl = await uploadToCloudinary(file, 'parlor/shop')
+          urls.push(publicUrl)
+        } catch (e) { setErr(e.message || 'Upload failed'); continue }
       }
       if (urls.length) set('images', [...f.images, ...urls])
     } catch (e) { setErr(e.message || 'Upload failed') }

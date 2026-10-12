@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { prepareImageUpload, isDuplicateUpload } from '../../../lib/uploadImage'
+import { uploadToCloudinary, isDuplicateUpload } from '../../../lib/uploadImage'
 import { confirmDialog } from '../../../lib/confirmDialog'
 
 const ff  = "'Source Serif 4', Georgia, serif"
@@ -35,11 +35,7 @@ function BookModal({ token, book, supabase, onClose, onSaved }) {
     if (isDuplicateUpload(dedupeRef, file)) return
     setUploading(true); setMsg(null)
     try {
-      const { file: up, ext, contentType } = await prepareImageUpload(file, { maxDim: 1200 })
-      const path = `book-club/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const { error } = await supabase.storage.from('Media').upload(path, up, { cacheControl: '31536000', contentType })
-      if (error) { setMsg('Upload failed — paste a URL instead.'); return }
-      const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)
+      const publicUrl = await uploadToCloudinary(file, 'parlor/book-club')
       set('cover_image_url', publicUrl)
     } finally { setUploading(false) }
   }

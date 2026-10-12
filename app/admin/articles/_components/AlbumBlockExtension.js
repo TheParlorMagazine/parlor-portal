@@ -4,7 +4,7 @@ import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../../../lib/supabase'
-import { prepareImageUpload } from '../../../../lib/uploadImage'
+import { uploadToCloudinary } from '../../../../lib/uploadImage'
 import ImageEditor from '../../_components/ImageEditor'
 import { confirmDialog } from '../../../../lib/confirmDialog'
 
@@ -187,7 +187,7 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
 
   async function deleteFile(file) {
     await supabase.storage.from('Media').remove([`${folder}/${file.name}`])
-    setSelected(prev => prev.filter(s => s.src !== getUrl(file.name)))
+    setSelected(prev => prev.filter(s => s.src !== getUrl(file)))
     loadFiles()
   }
 
@@ -204,17 +204,19 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
     const imageFiles = Array.from(fileList).filter(f => f.type.startsWith('image/'))
     if (!imageFiles.length) return
     setUploading(true)
-    await Promise.all(imageFiles.map(async file => {
-      const { file: up, ext, contentType } = await prepareImageUpload(file)
-      const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      await supabase.storage.from('Media').upload(path, up, { cacheControl: '31536000', contentType })
-    }))
+    const pairs = await Promise.all(imageFiles.map(async file => ({ name: file.name, url: await uploadToCloudinary(file, 'parlor/articles') })))
+    const validPairs = pairs.filter(p => p.url)
+    setFiles(prev => [...validPairs.map(p => ({ name: p.name, _cloudinaryUrl: p.url })), ...prev])
+    setSelected(prev => {
+      const added = validPairs.filter(p => !prev.find(s => s.src === p.url)).map(p => ({ src: p.url, alt: '', caption: '' }))
+      return [...prev, ...added]
+    })
     setUploading(false)
-    loadFiles()
   }
 
-  function getUrl(name) {
-    const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(`${folder}/${name}`)
+  function getUrl(file) {
+    if (file._cloudinaryUrl) return file._cloudinaryUrl
+    const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(`${folder}/${file.name}`)
     return publicUrl
   }
 
@@ -300,7 +302,7 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
                 {files.map(file => {
-                  const url = getUrl(file.name)
+                  const url = getUrl(file)
                   const isSelected = selected.some(img => img.src === url)
                   return (
                     <div
@@ -428,7 +430,7 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
       {/* Image editor */}
       {editingImage && (
         <ImageEditor
-          imageUrl={getUrl(editingImage.name)}
+          imageUrl={getUrl(editingImage)}
           fileName={editingImage.name}
           folder={folder}
           supabase={supabase}

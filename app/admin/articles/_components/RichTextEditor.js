@@ -19,7 +19,7 @@ import { AlbumBlock, AlbumInsertModal } from './AlbumBlockExtension'
 import { DisclaimerBlock } from './DisclaimerBlockExtension'
 import MediaLibraryModal from './MediaLibraryModal'
 import { createClient } from '../../../../lib/supabase'
-import { prepareImageUpload, isDuplicateUpload } from '../../../../lib/uploadImage'
+import { uploadToCloudinary, isDuplicateUpload } from '../../../../lib/uploadImage'
 import ImageEditor from '../../_components/ImageEditor'
 
 // Module-level ref so ImageNodeView (outside React tree) can fire editor-level callbacks
@@ -519,14 +519,9 @@ export default function RichTextEditor({ content, onChange, placeholder, slim = 
 
   async function uploadBodyImage(file) {
     if (isDuplicateUpload(dedupeRef, file)) return null
-    const { file: up, ext, contentType } = await prepareImageUpload(file)
-    const path = `body/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error } = await supabase.storage.from('Media').upload(path, up, {
-      cacheControl: '31536000', contentType,
-    })
-    if (error) return null
-    const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)
-    return publicUrl
+    try {
+      return await uploadToCloudinary(file, 'parlor/body')
+    } catch { return null }
   }
   uploadFnRef.current = uploadBodyImage
 

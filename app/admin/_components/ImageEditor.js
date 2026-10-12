@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { alertDialog } from '../../../lib/confirmDialog'
+import { uploadToCloudinary } from '../../../lib/uploadImage'
 
 const FONTS = [
   { label: 'Playfair Display',   value: 'Playfair Display' },
@@ -512,10 +513,8 @@ export default function ImageEditor({ imageUrl, fileName, folder, supabase, onSa
       fc.set('backgroundColor', prevBg); fc.renderAll()
 
       const blob = dataURLtoBlob(dataUrl)
-      const path = `${folder}/${fileName.replace(/\.[^.]+$/,'')}-edited-${Date.now()}.png`
-      const { error } = await supabase.storage.from('Media').upload(path, blob, { cacheControl:'3600', contentType:'image/png' })
-      if (error) throw error
-      const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)
+      const pngFile = new File([blob], `${fileName.replace(/\.[^.]+$/,'')}-edited-${Date.now()}.png`, { type: 'image/png' })
+      const publicUrl = await uploadToCloudinary(pngFile, `parlor/${folder}`)
       onSave(publicUrl)
     } catch(e) { alertDialog('Save failed: ' + e.message) }
     setSaving(false)

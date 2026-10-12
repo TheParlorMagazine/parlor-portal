@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { createClient } from '../../../lib/supabase'
+import { uploadToCloudinary } from '../../../lib/uploadImage'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useEditor, EditorContent } from '@tiptap/react'
@@ -264,16 +265,14 @@ function WriterFormModal({ supabase, initial, onSave, onClose }) {
   async function uploadFile(file) {
     if (!file || !file.type.startsWith('image/')) return
     setUploading(true)
-    const ext = file.name.split('.').pop()
-    const path = `authors/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error: uploadError } = await supabase.storage.from('Media').upload(path, file, { cacheControl: '3600', contentType: file.type })
-    if (uploadError) {
-      setError('Photo upload failed: ' + uploadError.message)
-    } else {
-      const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)
+    try {
+      const publicUrl = await uploadToCloudinary(file, 'parlor/authors')
       setPhotoUrl(publicUrl)
+    } catch (e) {
+      setError('Photo upload failed: ' + e.message)
+    } finally {
+      setUploading(false)
     }
-    setUploading(false)
   }
 
   async function handlePhotoUpload(e) {

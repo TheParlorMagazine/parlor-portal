@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../../../lib/supabase'
-import { prepareImageUpload, isDuplicateUpload } from '../../../../lib/uploadImage'
+import { uploadToCloudinary, isDuplicateUpload } from '../../../../lib/uploadImage'
 import ImageEditor from '../../_components/ImageEditor'
 import { confirmDialog } from '../../../../lib/confirmDialog'
 
@@ -40,8 +40,9 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
     setLoading(false)
   }
 
-  function getUrl(name) {
-    const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(`${folder}/${name}`)
+  function getUrl(file) {
+    if (file._cloudinaryUrl) return file._cloudinaryUrl
+    const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(`${folder}/${file.name}`)
     return publicUrl
   }
 
@@ -49,10 +50,10 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
     const file = e.target.files?.[0]; if (!file) return
     if (isDuplicateUpload(dedupeRef, file)) { e.target.value = ''; return }
     setUploading(true)
-    const { file: up, ext, contentType } = await prepareImageUpload(file)
-    const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    await supabase.storage.from('Media').upload(path, up, { cacheControl: '31536000', contentType })
-    await loadFiles(); setUploading(false); e.target.value = ''
+    try {
+      const url = await uploadToCloudinary(file, 'parlor/articles')
+      setFiles(prev => [{ name: file.name, _cloudinaryUrl: url }, ...prev])
+    } finally { setUploading(false); e.target.value = '' }
   }
 
   async function handleDrop(e) {
@@ -61,10 +62,10 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
     if (!file) return
     if (isDuplicateUpload(dedupeRef, file)) return
     setUploading(true)
-    const { file: up, ext, contentType } = await prepareImageUpload(file)
-    const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    await supabase.storage.from('Media').upload(path, up, { cacheControl: '31536000', contentType })
-    await loadFiles(); setUploading(false)
+    try {
+      const url = await uploadToCloudinary(file, 'parlor/articles')
+      setFiles(prev => [{ name: file.name, _cloudinaryUrl: url }, ...prev])
+    } finally { setUploading(false) }
   }
 
   async function deleteFile(file) {
@@ -131,9 +132,9 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
                 {files.map(file => (
                   <MediaThumb
                     key={file.id || file.name}
-                    url={getUrl(file.name)}
+                    url={getUrl(file)}
                     name={file.name}
-                    onSelect={() => { onSelect(getUrl(file.name)); onClose() }}
+                    onSelect={() => { onSelect(getUrl(file)); onClose() }}
                     onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, file }) }}
                   />
                 ))}
@@ -183,7 +184,7 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
       {/* Image editor */}
       {editingImage && (
         <ImageEditor
-          imageUrl={getUrl(editingImage.name)}
+          imageUrl={getUrl(editingImage)}
           fileName={editingImage.name}
           folder={folder}
           supabase={supabase}

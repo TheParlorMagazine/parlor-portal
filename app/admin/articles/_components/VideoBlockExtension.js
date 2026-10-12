@@ -4,6 +4,7 @@ import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '../../../../lib/supabase'
+import { uploadToCloudinary } from '../../../../lib/uploadImage'
 
 const PREVIEW_LIMIT = 20
 
@@ -233,13 +234,9 @@ function VideoBlockView({ node, updateAttributes, selected }) {
   const [posterEditing, setPosterEditing] = useState(false)
 
   async function uploadPoster(fileOrBlob, ext) {
-    const path = `posters/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext || 'jpg'}`
-    const { error } = await supabase.storage.from('Media').upload(path, fileOrBlob, {
-      cacheControl: '31536000', contentType: fileOrBlob.type || 'image/jpeg', upsert: false,
-    })
-    if (error) throw error
-    const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(path)
-    return publicUrl
+    const name = `poster-${Date.now()}.${ext || 'jpg'}`
+    const file = fileOrBlob instanceof File ? fileOrBlob : new File([fileOrBlob], name, { type: fileOrBlob.type || 'image/jpeg' })
+    return uploadToCloudinary(file, 'parlor/posters')
   }
 
   async function onUploadPosterFile(e) {

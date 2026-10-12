@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ImageEditor from '../_components/ImageEditor'
 import { confirmDialog } from '../../../lib/confirmDialog'
+import { uploadToCloudinary } from '../../../lib/uploadImage'
 
 const menuBtnStyle = {
   display: 'block', width: '100%', padding: '9px 14px',
@@ -90,6 +91,7 @@ export default function AdminMediaPage() {
   }, [loading, loadFiles])
 
   function getUrl(file) {
+    if (file._cloudinaryUrl) return file._cloudinaryUrl
     const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(`${file.folder}/${file.name}`)
     return publicUrl
   }
@@ -97,16 +99,15 @@ export default function AdminMediaPage() {
   async function handleUpload(files) {
     if (!files || files.length === 0) return
     setUploading(true)
-    const targetFolder = folder === 'all' ? 'body' : folder
+    const targetFolder = folder === 'all' ? 'articles' : folder
+    const uploaded = []
     for (const file of Array.from(files)) {
-      const ext = file.name.split('.').pop()
-      const path = `${targetFolder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      await supabase.storage.from('Media').upload(path, file, {
-        cacheControl: '3600',
-        contentType: file.type,
-      })
+      try {
+        const url = await uploadToCloudinary(file, `parlor/${targetFolder}`)
+        uploaded.push({ name: file.name, _cloudinaryUrl: url, folder: targetFolder })
+      } catch {}
     }
-    await loadFiles()
+    if (uploaded.length) setFiles(prev => [...uploaded, ...prev])
     setUploading(false)
   }
 
