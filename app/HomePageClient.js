@@ -191,8 +191,10 @@ export default function HomePageClient({ initial = {} }) {
     const ribbon = Array.isArray(initial.ribbon) ? initial.ribbon : []
     const banner = rotorPick(banners, 'parlorBannerRotor')
     if (banner) setHomeBanner(banner)
-    // Ribbon excludes the banner's type so they never duplicate a category.
-    const candidates = banner?.type ? ribbon.filter(a => a.type !== banner.type) : ribbon
+    // Ribbon excludes the banner's type and popup's type so they never duplicate a campaign.
+    const popup = initial.popup?.[0] || null
+    const excludeTypes = [banner?.type, popup?.type].filter(Boolean)
+    const candidates = excludeTypes.length ? ribbon.filter(a => !excludeTypes.includes(a.type)) : ribbon
     setAnnouncements(candidates)
     const chosen = rotorPick(candidates, 'parlorRibbonRotor')
     setRibbonIndex(chosen ? candidates.indexOf(chosen) : 0)
@@ -905,7 +907,7 @@ export default function HomePageClient({ initial = {} }) {
            popup and the /print landing page; its styles were removed.) */
 
         /* Now-in-print first-load popup */
-        .printpop-overlay { position: fixed; inset: 0; background: rgba(10,10,10,0.66); z-index: 400; display: flex; align-items: center; justify-content: center; padding: 24px; animation: printpop-fade 0.25s ease; }
+        .printpop-overlay { position: fixed; inset: 0; background: rgba(10,10,10,0.66); z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 24px; animation: printpop-fade 0.25s ease; }
         @keyframes printpop-fade { from { opacity: 0; } to { opacity: 1; } }
         .printpop-modal { position: relative; display: grid; grid-template-columns: 0.85fr 1fr; width: min(760px, 96vw); max-height: 92vh; background: var(--black); border: 1px solid var(--pink); border-radius: 6px; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.5); }
         .printpop-close { position: absolute; top: 8px; right: 12px; background: none; border: none; font-size: 26px; line-height: 1; color: #fff; cursor: pointer; z-index: 2; opacity: 0.8; }
