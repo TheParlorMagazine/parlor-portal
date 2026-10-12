@@ -60,7 +60,7 @@ export default function ParallaxHero({ src, alt, title }) {
         position: 'relative',
         width: '100vw',
         marginLeft: 'calc(50% - 50vw)',
-        height: 'clamp(480px, 85vh, 820px)',
+        height: 'clamp(560px, 92vh, 960px)',
         overflow: 'hidden',
         background: '#111',
       }}
