@@ -968,7 +968,8 @@ export default function HomePageClient({ initial = {} }) {
         .issue-hero-slide--split .issue-hero-imgwrap, .issue-hero-slide--tall .issue-hero-imgwrap, .issue-hero-slide--wide .issue-hero-imgwrap { position: absolute; inset: 0; height: auto; aspect-ratio: unset; max-width: none; overflow: hidden; }
         .issue-hero-slide--split .issue-hero-imgwrap img, .issue-hero-slide--tall .issue-hero-imgwrap img, .issue-hero-slide--wide .issue-hero-imgwrap img { width: 100%; height: 100%; max-height: none; object-fit: cover; }
         .issue-hero-slide--split .issue-hero-imgwrap .issue-hero-btn { display: none; }
-        /* Stars slide — inherits right/center layout; no overrides needed */
+        /* Stars slide — shift text up into the clear blue sky area */
+        .issue-hero-slide--stars .issue-hero-head { top: 28%; }
         /* Sparkling 8-pointed stars */
         .hero-star { position: absolute; z-index: 4; pointer-events: none; opacity: 0; animation: hero-twinkle var(--dur, 2.4s) ease-in-out infinite var(--delay, 0s); }
         .hero-star svg { display: block; }
