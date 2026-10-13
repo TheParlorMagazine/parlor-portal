@@ -131,14 +131,31 @@ export default function NewsletterTab({ supabase }) {
     setSavingSection('')
   }
 
-  async function setFeaturedProduct(productId) {
+  async function toggleFeaturedProduct(productId, currentlySelected) {
+    const featuredCount = shopProducts.filter(p => p.newsletter_featured).length
+    if (!currentlySelected && featuredCount >= 3) return // cap at 3
+    setSavingShopProduct(true)
+    try {
+      const res = await fetch('/api/admin/newsletter/shop-product', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` },
+        body: JSON.stringify({ productId, selected: !currentlySelected }),
+      })
+      if (res.ok) {
+        setShopProducts(ps => ps.map(p => p.id === productId ? { ...p, newsletter_featured: !currentlySelected } : p))
+        load()
+      }
+    } catch {}
+    setSavingShopProduct(false)
+  }
+
+  async function clearFeaturedProducts() {
     setSavingShopProduct(true)
     try {
       await fetch('/api/admin/newsletter/shop-product', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` },
-        body: JSON.stringify({ productId: productId || null }),
+        body: JSON.stringify({ clearAll: true }),
       })
-      setShopProducts(ps => ps.map(p => ({ ...p, newsletter_featured: p.id === productId })))
+      setShopProducts(ps => ps.map(p => ({ ...p, newsletter_featured: false })))
       load()
     } catch {}
     setSavingShopProduct(false)
@@ -154,9 +171,6 @@ export default function NewsletterTab({ supabase }) {
   const inputSt = { width: '100%', padding: '9px 12px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '13px', fontFamily: ff, outline: 'none', boxSizing: 'border-box' }
   const labelSt = { display: 'block', fontSize: '11.5px', color: '#999', marginBottom: 4 }
   const saveBtnSt = (disabled) => ({ padding: '7px 16px', background: disabled ? '#ccc' : '#0a0a0a', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12.5px', cursor: disabled ? 'default' : 'pointer', fontFamily: ff })
-
-  const currentShopProduct = data?.shopProduct
-  const featuredShopId = shopProducts.find(p => p.newsletter_featured)?.id || null
 
   return (
     <div style={{ fontFamily: ff }}>
@@ -272,33 +286,47 @@ export default function NewsletterTab({ supabase }) {
               {sec.key === 'shopAd' && isOpen && (
                 <div style={{ padding: '0 16px 14px 64px', borderTop: '1px solid #f5f5f5' }}>
                   <div style={{ paddingTop: 12 }}>
-                    {currentShopProduct && (
-                      <div style={{ marginBottom: 10, padding: '8px 12px', background: '#f5f5f5', borderRadius: 6, fontSize: '13px', color: '#555' }}>
-                        Currently featured: <strong>{currentShopProduct.name}{currentShopProduct.variant ? ` — ${currentShopProduct.variant}` : ''}</strong>
+                    {/* Header with count */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <div style={{ fontSize: '12px', color: '#888' }}>
+                        Select up to 3 products — {shopProducts.filter(p => p.newsletter_featured).length} selected
                       </div>
-                    )}
+                      {shopProducts.some(p => p.newsletter_featured) && (
+                        <button onClick={clearFeaturedProducts} disabled={savingShopProduct}
+                          style={{ padding: '4px 10px', background: 'none', border: '1px solid #e0e0e0', borderRadius: 5, fontSize: '11.5px', color: '#888', cursor: 'pointer', fontFamily: ff }}>
+                          Clear all
+                        </button>
+                      )}
+                    </div>
                     {!shopProductsLoaded ? (
                       <div style={{ color: '#999', fontSize: '13px', fontStyle: 'italic' }}>Loading products…</div>
                     ) : shopProducts.length === 0 ? (
                       <div style={{ color: '#999', fontSize: '13px' }}>No active shop products found.</div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                         {shopProducts.map(p => {
-                          const isFeatured = p.newsletter_featured
+                          const isChecked = !!p.newsletter_featured
+                          const featuredCount = shopProducts.filter(x => x.newsletter_featured).length
+                          const isDisabled = savingShopProduct || (!isChecked && featuredCount >= 3)
                           return (
-                            <div key={p.id} onClick={() => !savingShopProduct && setFeaturedProduct(isFeatured ? null : p.id)}
-                              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 6, border: `1px solid ${isFeatured ? '#0a0a0a' : '#e0e0e0'}`, background: isFeatured ? '#f0f0f0' : '#fff', cursor: 'pointer' }}>
+                            <label key={p.id}
+                              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 6, border: `1px solid ${isChecked ? '#0a0a0a' : '#e8e8e8'}`, background: isChecked ? '#f8f8f8' : '#fff', cursor: isDisabled ? 'default' : 'pointer', opacity: isDisabled && !isChecked ? 0.45 : 1 }}>
+                              {/* Checkbox */}
+                              <div onClick={() => !isDisabled && toggleFeaturedProduct(p.id, isChecked)}
+                                style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${isChecked ? '#0a0a0a' : '#ccc'}`, background: isChecked ? '#0a0a0a' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: isDisabled ? 'default' : 'pointer' }}>
+                                {isChecked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                              </div>
                               {p.images?.[0] && <img src={p.images[0]} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />}
-                              <div style={{ flex: 1, fontSize: '13px' }}>
+                              <div onClick={() => !isDisabled && toggleFeaturedProduct(p.id, isChecked)} style={{ flex: 1, fontSize: '13px', cursor: isDisabled ? 'default' : 'pointer' }}>
                                 <strong>{p.name}</strong>{p.variant ? ` — ${p.variant}` : ''}
                                 {p.price != null ? <span style={{ color: '#999', marginLeft: 6 }}>${Number(p.price).toFixed(2)}</span> : null}
                               </div>
-                              {isFeatured && <span style={{ fontSize: '11px', background: '#0a0a0a', color: '#fff', padding: '2px 7px', borderRadius: 10 }}>Featured</span>}
-                            </div>
+                            </label>
                           )
                         })}
-                        {featuredShopId && (
-                          <button onClick={() => setFeaturedProduct(null)} style={{ marginTop: 4, alignSelf: 'flex-start', padding: '5px 12px', background: 'none', border: '1px solid #e0e0e0', borderRadius: 6, fontSize: '12px', color: '#888', cursor: 'pointer', fontFamily: ff }}>Clear featured product</button>
+                        {/* placeholder: no featured yet */}
+                        {!shopProducts.some(p => p.newsletter_featured) && shopProductsLoaded && (
+                          <div style={{ marginTop: 4, fontSize: '12px', color: '#bbb', fontStyle: 'italic' }}>No products selected — the Shop Ad section will be hidden in the newsletter.</div>
                         )}
                       </div>
                     )}
