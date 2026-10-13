@@ -291,7 +291,7 @@ export default function NewsletterTab({ supabase }) {
                               {p.images?.[0] && <img src={p.images[0]} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />}
                               <div style={{ flex: 1, fontSize: '13px' }}>
                                 <strong>{p.name}</strong>{p.variant ? ` — ${p.variant}` : ''}
-                                {p.price != null ? <span style={{ color: '#999', marginLeft: 6 }}>${(p.price / 100).toFixed(2)}</span> : null}
+                                {p.price != null ? <span style={{ color: '#999', marginLeft: 6 }}>${Number(p.price).toFixed(2)}</span> : null}
                               </div>
                               {isFeatured && <span style={{ fontSize: '11px', background: '#0a0a0a', color: '#fff', padding: '2px 7px', borderRadius: 10 }}>Featured</span>}
                             </div>
