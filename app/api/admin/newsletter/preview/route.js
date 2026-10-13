@@ -13,7 +13,12 @@ export async function GET(request) {
   if (!ROLES.includes(me.role)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
-  const nl = await gatherNewsletter(db, { baseUrl })
+  const sp = new URL(request.url).searchParams
+  const sections = {}
+  for (const key of ['issuPromo', 'articles', 'featuredEvent', 'otherEvents', 'support']) {
+    if (sp.has(key)) sections[key] = sp.get(key) !== 'false'
+  }
+  const nl = await gatherNewsletter(db, { baseUrl, sections })
   const recipientCount = await countSubscribers(db)
   return Response.json({ ...nl, recipientCount })
 }
