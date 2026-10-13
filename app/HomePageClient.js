@@ -959,7 +959,7 @@ export default function HomePageClient({ initial = {} }) {
         .issue-hero-dots { display: flex; justify-content: center; gap: 9px; padding: 0; margin-top: clamp(-72px,-7vh,-44px); margin-bottom: clamp(28px,4vh,48px); position: relative; z-index: 5; }
         .issue-hero-dot { width: 8px; height: 8px; border-radius: 50%; border: none; padding: 0; background: rgba(255,255,255,0.3); cursor: pointer; transition: background 0.15s; }
         .issue-hero-dot.active { background: var(--pink); }
-        .issue-hero-btn-head { display: none; }
+        .issue-hero-btn-head { display: inline-block; }
         /* All layout variants now use full-bleed — override split/tall/wide specifics */
         .issue-hero-slide--split, .issue-hero-slide--tall, .issue-hero-slide--wide { display: block; padding: 0; gap: 0; }
         .issue-hero-slide--split .issue-hero-head, .issue-hero-slide--tall .issue-hero-head, .issue-hero-slide--wide .issue-hero-head { position: absolute; bottom: clamp(32px,5vh,64px); left: clamp(28px,6vw,90px); right: clamp(28px,6vw,90px); }
@@ -967,11 +967,9 @@ export default function HomePageClient({ initial = {} }) {
         .issue-hero-slide--split .issue-hero-figure, .issue-hero-slide--tall .issue-hero-figure, .issue-hero-slide--wide .issue-hero-figure { position: absolute; inset: 0; width: auto; max-width: none; flex: none; padding: 0; }
         .issue-hero-slide--split .issue-hero-imgwrap, .issue-hero-slide--tall .issue-hero-imgwrap, .issue-hero-slide--wide .issue-hero-imgwrap { position: absolute; inset: 0; height: auto; aspect-ratio: unset; max-width: none; overflow: hidden; }
         .issue-hero-slide--split .issue-hero-imgwrap img, .issue-hero-slide--tall .issue-hero-imgwrap img, .issue-hero-slide--wide .issue-hero-imgwrap img { width: 100%; height: 100%; max-height: none; object-fit: cover; }
-        .issue-hero-slide--split .issue-hero-btn-head { display: none; }
-        .issue-hero-slide--split .issue-hero-imgwrap .issue-hero-btn { display: inline-block; }
-        /* Stars slide — text anchored right, higher up */
-        .issue-hero-slide--stars .issue-hero-head { left: auto; right: clamp(40px,8vw,120px); bottom: clamp(60px,12vh,120px); text-align: right; max-width: 36ch; }
-        .issue-hero-slide--stars .issue-hero-sub-wrap { margin-left: auto; }
+        .issue-hero-slide--split .issue-hero-imgwrap .issue-hero-btn { display: none; }
+        /* Stars slide — default left positioning, slightly higher */
+        .issue-hero-slide--stars .issue-hero-head { bottom: clamp(60px,12vh,120px); }
         /* Sparkling stars */
         .hero-star { position: absolute; z-index: 4; pointer-events: none; color: #fff; font-style: normal; opacity: 0; animation: hero-twinkle var(--dur, 2.4s) ease-in-out infinite var(--delay, 0s); }
         @keyframes hero-twinkle {
