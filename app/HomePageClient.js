@@ -970,11 +970,12 @@ export default function HomePageClient({ initial = {} }) {
         .issue-hero-slide--split .issue-hero-imgwrap .issue-hero-btn { display: none; }
         /* Stars slide — default left positioning, slightly higher */
         .issue-hero-slide--stars .issue-hero-head { bottom: clamp(60px,12vh,120px); }
-        /* Sparkling stars */
-        .hero-star { position: absolute; z-index: 4; pointer-events: none; color: #fff; font-style: normal; opacity: 0; animation: hero-twinkle var(--dur, 2.4s) ease-in-out infinite var(--delay, 0s); }
+        /* Sparkling 8-pointed stars */
+        .hero-star { position: absolute; z-index: 4; pointer-events: none; opacity: 0; animation: hero-twinkle var(--dur, 2.4s) ease-in-out infinite var(--delay, 0s); }
+        .hero-star svg { display: block; }
         @keyframes hero-twinkle {
           0%, 100% { opacity: 0; transform: scale(0.6) rotate(0deg); }
-          50% { opacity: var(--peak, 0.85); transform: scale(1.1) rotate(20deg); }
+          50% { opacity: var(--peak, 0.85); transform: scale(1.1) rotate(22.5deg); }
         }
 
 
@@ -1424,8 +1425,12 @@ export default function HomePageClient({ initial = {} }) {
                     { top:'65%', left:'55%', size:12, dur:3.5, delay:0.1,  peak:0.7 },
                   ].map((star, si) => (
                     <span key={si} className="hero-star" aria-hidden="true"
-                      style={{ top: star.top, left: star.left, fontSize: star.size + 'px',
-                        '--dur': star.dur + 's', '--delay': star.delay + 's', '--peak': star.peak }}>✦</span>
+                      style={{ top: star.top, left: star.left,
+                        '--dur': star.dur + 's', '--delay': star.delay + 's', '--peak': star.peak }}>
+                      <svg width={star.size} height={star.size} viewBox="0 0 24 24" fill="#f0c040">
+                        <path d="M12,1 L13.7,7.8 L19.8,4.2 L16.2,10.3 L23,12 L16.2,13.7 L19.8,19.8 L13.7,16.2 L12,23 L10.3,16.2 L4.2,19.8 L7.8,13.7 L1,12 L7.8,10.3 L4.2,4.2 L10.3,7.8 Z"/>
+                      </svg>
+                    </span>
                   ))}
                 </>
               )}
