@@ -928,35 +928,28 @@ export default function HomePageClient({ initial = {} }) {
         /* ── ISSUE HERO CAROUSEL (large image; title/tagline layered over it) ── */
         .issue-hero { position: relative; background: var(--black); overflow: hidden; }
         .issue-hero-track { display: flex; transition: transform 0.6s cubic-bezier(.4,0,.2,1); will-change: transform; }
-        .issue-hero-slide { flex: 0 0 100%; min-width: 0; position: relative; align-self: stretch; }
+        .issue-hero-slide { flex: 0 0 100%; min-width: 0; position: relative; align-self: stretch; height: clamp(520px, 80vh, 860px); }
         .issue-hero-figure { display: block; width: 100%; padding: 0 clamp(32px,7vw,128px) clamp(24px,4vh,44px); }
         .issue-hero-imgwrap { position: relative; display: block; width: 100%; }
-        .issue-hero-imgwrap img { width: 100%; height: clamp(520px, 74vh, 780px); object-fit: cover; object-position: center top; display: block; }
-        /* Full-bleed photos have hard rectangular edges against the black stage.
-           A strong inset vignette (fading to the page black on all four sides)
-           dissolves those edges into the background. Disabled for the 'tall'
-           layout, whose covers are transparent PNGs shown with object-fit:
-           contain — a vignette there would darken the empty margins. */
+        /* Full-bleed image fills the entire hero */
+        .issue-hero-figure { position: absolute; inset: 0; padding: 0; display: block; }
+        .issue-hero-imgwrap { position: absolute; inset: 0; }
+        .issue-hero-imgwrap img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+        /* Dark gradient at the bottom so text is legible */
         .issue-hero-imgwrap::after {
           content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
-          box-shadow: inset 0 0 120px 48px var(--black), inset 0 0 46px 10px var(--black);
+          background: linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.72) 75%, rgba(0,0,0,0.88) 100%);
         }
-        .issue-hero-slide--tall .issue-hero-imgwrap::after { display: none; }
-        .issue-hero-head { position: absolute; top: clamp(8px,2vh,24px); left: clamp(24px,6vw,90px); right: clamp(24px,6vw,90px); z-index: 3; pointer-events: none; }
+        /* Text pinned to bottom of hero */
+        .issue-hero-head { position: absolute; bottom: clamp(32px,5vh,64px); left: clamp(28px,6vw,90px); right: clamp(28px,6vw,90px); z-index: 3; pointer-events: none; }
         .issue-hero-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--pink); margin-bottom: 14px; text-shadow: 0 2px 14px rgba(0,0,0,0.6); }
-        /* Description reveal: a blush-pink box swipes open (a flash), then the
-           dark-maroon text fades in a beat later — replays each time a slide
-           becomes active. */
-        .issue-hero-sub-wrap { position: relative; display: block; width: fit-content; max-width: 44ch; margin: clamp(16px,2.4vh,26px) 0 0; padding: 11px 16px; }
-        /* The scroll-unfurl (box wipe + text fade) is driven imperatively via the
-           Web Animations API, keyed on the REAL slide index, so it fires once per
-           genuine slide change and never re-fires on the seamless-loop clone snap
-           (which previously flashed the box open→empty→unfurl). Base = closed. */
+        .issue-hero-sub-wrap { position: relative; display: block; width: fit-content; max-width: 44ch; margin: clamp(16px,2.4vh,26px) 0 0; }
         .issue-hero-sub-fill { display: none; }
         .issue-hero-sub { margin: 0; font-family: 'Source Serif 4', Georgia, serif; font-size: clamp(15px,1.15vw,17px); line-height: 1.6; color: #fff; opacity: 0; text-shadow: 0 1px 8px rgba(0,0,0,0.4); }
-        .issue-hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(30px,3.9vw,54px); font-weight: 700; color: var(--white); line-height: 1.06; margin: 0; letter-spacing: -0.01em; text-shadow: 0 2px 20px rgba(0,0,0,0.6); max-width: 22ch; }
+        .issue-hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(30px,3.9vw,62px); font-weight: 700; color: var(--white); line-height: 1.06; margin: 0; letter-spacing: -0.01em; text-shadow: 0 2px 20px rgba(0,0,0,0.6); max-width: 22ch; }
         .issue-hero-accent { font-style: italic; color: var(--pink); }
-        .issue-hero-btn { position: absolute; right: 20px; bottom: 20px; z-index: 4; display: inline-block; border: 1px solid var(--pink); background: rgba(10,10,10,0.9); color: var(--pink); padding: 16px 64px; font-family: 'Playfair Display', Georgia, serif; font-size: 19px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; box-shadow: 0 6px 22px rgba(0,0,0,0.35); transition: all 0.15s; }
+        /* Read more button inline with text */
+        .issue-hero-btn { display: inline-block; border: 1px solid var(--pink); background: rgba(10,10,10,0.7); color: var(--pink); padding: 13px 36px; font-family: 'Playfair Display', Georgia, serif; font-size: 16px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; transition: all 0.15s; margin-top: clamp(18px,2.4vh,28px); position: static; }
         .issue-hero-btn:hover { background: var(--pink); color: var(--black); }
         .issue-hero-nav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 5; background: none; border: none; color: var(--white); font-size: 46px; line-height: 1; padding: 0 10px; cursor: pointer; opacity: 0.55; transition: opacity 0.15s; }
         .issue-hero-nav:hover { opacity: 1; }
@@ -965,29 +958,16 @@ export default function HomePageClient({ initial = {} }) {
         .issue-hero-dots { display: flex; justify-content: center; gap: 9px; padding: 0; margin-top: clamp(-72px,-7vh,-44px); margin-bottom: clamp(28px,4vh,48px); position: relative; z-index: 5; }
         .issue-hero-dot { width: 8px; height: 8px; border-radius: 50%; border: none; padding: 0; background: rgba(255,255,255,0.3); cursor: pointer; transition: background 0.15s; }
         .issue-hero-dot.active { background: var(--pink); }
-        /* Head "Read more" is only used by the split layout */
         .issue-hero-btn-head { display: none; }
-        /* Split layout — portrait cover on the left, title + button on the right */
-        .issue-hero-slide--split { display: flex; flex-direction: row-reverse; align-items: center; justify-content: center; gap: clamp(24px,4vw,64px); min-height: clamp(560px,80vh,860px); padding: clamp(30px,5vh,64px) clamp(28px,6vw,96px); }
-        .issue-hero-slide--split .issue-hero-head { position: static; flex: 0 1 auto; pointer-events: auto; }
-        .issue-hero-slide--split .issue-hero-title { line-height: 1.0; text-shadow: none; width: fit-content; }
-        .issue-hero-slide--split .issue-hero-figure { flex: 0 0 auto; padding: 0; }
-        .issue-hero-slide--split .issue-hero-imgwrap img { width: 100%; height: auto; object-fit: contain; object-position: center; }
-        /* Portrait covers: larger image, group shifted toward the right. */
-        .issue-hero-slide--tall { justify-content: flex-start; padding-right: clamp(6px,1vw,18px); }
-        .issue-hero-slide--tall .issue-hero-figure { width: clamp(340px,40vw,600px); max-width: 50%; }
-        .issue-hero-slide--tall .issue-hero-imgwrap img { max-height: 82vh; }
-        .issue-hero-slide--tall .issue-hero-title { max-width: 11ch; font-size: clamp(48px,6.5vw,104px); }
-        /* Wide/landscape covers: the imgwrap is a ~6:5 frame (the artwork's own
-           content aspect) with object-fit cover, so the empty side margins baked
-           into the illustration are cropped away and the building fills the frame. */
-        .issue-hero-slide--wide { gap: clamp(8px,1.5vw,28px); }
-        .issue-hero-slide--wide .issue-hero-figure { width: auto; max-width: 66%; flex: 0 1 auto; }
-        .issue-hero-slide--wide .issue-hero-imgwrap { height: clamp(392px,62vh,660px); aspect-ratio: 6 / 5; max-width: 100%; overflow: hidden; }
-        .issue-hero-slide--wide .issue-hero-imgwrap img { width: 100%; height: 100%; max-height: none; object-fit: cover; object-position: center; }
-        .issue-hero-slide--wide .issue-hero-title { max-width: 9ch; font-size: clamp(36px,4vw,68px); }
-        .issue-hero-slide--split .issue-hero-imgwrap .issue-hero-btn { display: none; }
-        .issue-hero-slide--split .issue-hero-btn-head { display: inline-block; position: static; margin-top: clamp(24px,3vw,44px); }
+        /* All layout variants now use full-bleed — override split/tall/wide specifics */
+        .issue-hero-slide--split, .issue-hero-slide--tall, .issue-hero-slide--wide { display: block; padding: 0; gap: 0; }
+        .issue-hero-slide--split .issue-hero-head, .issue-hero-slide--tall .issue-hero-head, .issue-hero-slide--wide .issue-hero-head { position: absolute; bottom: clamp(32px,5vh,64px); left: clamp(28px,6vw,90px); right: clamp(28px,6vw,90px); }
+        .issue-hero-slide--split .issue-hero-title, .issue-hero-slide--tall .issue-hero-title, .issue-hero-slide--wide .issue-hero-title { text-shadow: 0 2px 20px rgba(0,0,0,0.6); width: auto; max-width: 22ch; }
+        .issue-hero-slide--split .issue-hero-figure, .issue-hero-slide--tall .issue-hero-figure, .issue-hero-slide--wide .issue-hero-figure { position: absolute; inset: 0; width: auto; max-width: none; flex: none; padding: 0; }
+        .issue-hero-slide--split .issue-hero-imgwrap, .issue-hero-slide--tall .issue-hero-imgwrap, .issue-hero-slide--wide .issue-hero-imgwrap { position: absolute; inset: 0; height: auto; aspect-ratio: unset; max-width: none; overflow: hidden; }
+        .issue-hero-slide--split .issue-hero-imgwrap img, .issue-hero-slide--tall .issue-hero-imgwrap img, .issue-hero-slide--wide .issue-hero-imgwrap img { width: 100%; height: 100%; max-height: none; object-fit: cover; }
+        .issue-hero-slide--split .issue-hero-btn-head { display: none; }
+        .issue-hero-slide--split .issue-hero-imgwrap .issue-hero-btn { display: inline-block; }
 
 
         /* ── SWIPER CAROUSEL ── */
