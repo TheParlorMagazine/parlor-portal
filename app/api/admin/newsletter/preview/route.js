@@ -15,10 +15,11 @@ export async function GET(request) {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
   const sp = new URL(request.url).searchParams
   const sections = {}
-  for (const key of ['issuPromo', 'articles', 'featuredEvent', 'otherEvents', 'support']) {
+  for (const key of ['announcement', 'issuPromo', 'issueArticles', 'articles', 'featuredEvent', 'otherEvents', 'shopAd', 'support']) {
     if (sp.has(key)) sections[key] = sp.get(key) !== 'false'
   }
-  const nl = await gatherNewsletter(db, { baseUrl, sections })
+  const supportCopy = sp.get('supportCopy') || ''
+  const nl = await gatherNewsletter(db, { baseUrl, sections, supportCopy })
   const recipientCount = await countSubscribers(db)
   return Response.json({ ...nl, recipientCount })
 }

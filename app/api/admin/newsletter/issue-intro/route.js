@@ -15,6 +15,9 @@ export async function PATCH(request) {
   const patch = {}
   if ('intro' in b) patch.newsletter_intro = (b.intro || '').trim() || null
   if ('image' in b) patch.newsletter_image = (b.image || '').trim() || null
+  if ('tagline' in b) patch.newsletter_tagline = (b.tagline || '').trim() || null
+  if ('announcement' in b) patch.newsletter_announcement = (b.announcement || '').trim() || null
+  if ('announcementUrl' in b) patch.newsletter_announcement_url = (b.announcementUrl || '').trim() || null
   const { error } = await db.from('issues').update(patch).eq('id', b.issueId)
   if (error) return Response.json({ error: error.message }, { status: 500 })
   return Response.json({ ok: true })
