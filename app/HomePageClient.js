@@ -942,6 +942,7 @@ export default function HomePageClient({ initial = {} }) {
         }
         /* Text pinned to bottom of hero */
         .issue-hero-head { position: absolute; bottom: clamp(32px,5vh,64px); left: clamp(28px,6vw,90px); right: clamp(28px,6vw,90px); z-index: 3; pointer-events: none; }
+        .issue-hero-head a, .issue-hero-head button { pointer-events: auto; }
         .issue-hero-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--pink); margin-bottom: 14px; text-shadow: 0 2px 14px rgba(0,0,0,0.6); }
         .issue-hero-sub-wrap { position: relative; display: block; width: fit-content; max-width: 44ch; margin: clamp(16px,2.4vh,26px) 0 0; }
         .issue-hero-sub-fill { display: none; }
