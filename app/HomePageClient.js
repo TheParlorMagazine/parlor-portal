@@ -969,6 +969,15 @@ export default function HomePageClient({ initial = {} }) {
         .issue-hero-slide--split .issue-hero-imgwrap img, .issue-hero-slide--tall .issue-hero-imgwrap img, .issue-hero-slide--wide .issue-hero-imgwrap img { width: 100%; height: 100%; max-height: none; object-fit: cover; }
         .issue-hero-slide--split .issue-hero-btn-head { display: none; }
         .issue-hero-slide--split .issue-hero-imgwrap .issue-hero-btn { display: inline-block; }
+        /* Stars slide — text anchored right, higher up */
+        .issue-hero-slide--stars .issue-hero-head { left: auto; right: clamp(40px,8vw,120px); bottom: clamp(60px,12vh,120px); text-align: right; max-width: 36ch; }
+        .issue-hero-slide--stars .issue-hero-sub-wrap { margin-left: auto; }
+        /* Sparkling stars */
+        .hero-star { position: absolute; z-index: 4; pointer-events: none; color: #fff; font-style: normal; opacity: 0; animation: hero-twinkle var(--dur, 2.4s) ease-in-out infinite var(--delay, 0s); }
+        @keyframes hero-twinkle {
+          0%, 100% { opacity: 0; transform: scale(0.6) rotate(0deg); }
+          50% { opacity: var(--peak, 0.85); transform: scale(1.1) rotate(20deg); }
+        }
 
 
         /* ── SWIPER CAROUSEL ── */
@@ -1377,7 +1386,7 @@ export default function HomePageClient({ initial = {} }) {
           {ext.map((s, i) => {
             const orig = cloneMode ? ((i - 1) % n + n) % n : i
             return (
-            <div key={i} className={`issue-hero-slide${i === pos ? ' active' : ''}${portraitSlides[orig] ? ' issue-hero-slide--split' : ''}${portraitSlides[orig] === 'wide' ? ' issue-hero-slide--wide' : ''}${portraitSlides[orig] === 'tall' ? ' issue-hero-slide--tall' : ''}`}>
+            <div key={i} className={`issue-hero-slide${i === pos ? ' active' : ''}${portraitSlides[orig] ? ' issue-hero-slide--split' : ''}${portraitSlides[orig] === 'wide' ? ' issue-hero-slide--wide' : ''}${portraitSlides[orig] === 'tall' ? ' issue-hero-slide--tall' : ''}${/against.the.cloud/i.test(s.title) ? ' issue-hero-slide--stars' : ''}`}>
               <div className="issue-hero-head">
                 {heroIssue && <div className="issue-hero-eyebrow">Issue {heroIssue.number || 2} · {heroIssue.title || "The World We're Building"}</div>}
                 <h1 className="issue-hero-title">
@@ -1394,6 +1403,34 @@ export default function HomePageClient({ initial = {} }) {
                   </div>
                 )}
               </div>
+              {/against.the.cloud/i.test(s.title) && (
+                <>
+                  {[
+                    { top:'8%',  left:'6%',  size:18, dur:2.2, delay:0,    peak:0.9 },
+                    { top:'15%', left:'22%', size:12, dur:3.1, delay:0.4,  peak:0.7 },
+                    { top:'5%',  left:'44%', size:22, dur:2.6, delay:0.9,  peak:0.85 },
+                    { top:'12%', left:'62%', size:14, dur:1.9, delay:1.3,  peak:0.75 },
+                    { top:'22%', left:'80%', size:20, dur:2.8, delay:0.2,  peak:0.9 },
+                    { top:'35%', left:'91%', size:10, dur:3.4, delay:1.7,  peak:0.65 },
+                    { top:'48%', left:'76%', size:16, dur:2.1, delay:0.6,  peak:0.8 },
+                    { top:'60%', left:'88%', size:24, dur:2.9, delay:1.1,  peak:0.9 },
+                    { top:'28%', left:'9%',  size:13, dur:3.6, delay:0.8,  peak:0.7 },
+                    { top:'42%', left:'32%', size:19, dur:2.3, delay:1.5,  peak:0.85 },
+                    { top:'18%', left:'51%', size:11, dur:3.0, delay:0.3,  peak:0.6 },
+                    { top:'55%', left:'15%', size:21, dur:2.7, delay:2.0,  peak:0.8 },
+                    { top:'70%', left:'5%',  size:15, dur:3.2, delay:0.5,  peak:0.75 },
+                    { top:'38%', left:'56%', size:17, dur:2.5, delay:1.9,  peak:0.7 },
+                    { top:'72%', left:'42%', size:23, dur:2.0, delay:0.7,  peak:0.95 },
+                    { top:'10%', left:'36%', size:9,  dur:3.8, delay:1.2,  peak:0.6 },
+                    { top:'50%', left:'68%', size:18, dur:2.4, delay:2.3,  peak:0.8 },
+                    { top:'65%', left:'55%', size:12, dur:3.5, delay:0.1,  peak:0.7 },
+                  ].map((star, si) => (
+                    <span key={si} className="hero-star" aria-hidden="true"
+                      style={{ top: star.top, left: star.left, fontSize: star.size + 'px',
+                        '--dur': star.dur + 's', '--delay': star.delay + 's', '--peak': star.peak }}>✦</span>
+                  ))}
+                </>
+              )}
               <div className="issue-hero-figure">
                 <div className="issue-hero-imgwrap">
                   {s.cover && (
