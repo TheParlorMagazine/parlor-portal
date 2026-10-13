@@ -941,7 +941,7 @@ export default function HomePageClient({ initial = {} }) {
           background: linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.72) 75%, rgba(0,0,0,0.88) 100%);
         }
         /* Text pinned to bottom of hero */
-        .issue-hero-head { position: absolute; bottom: clamp(32px,5vh,64px); left: clamp(28px,6vw,90px); right: clamp(28px,6vw,90px); z-index: 3; pointer-events: none; }
+        .issue-hero-head { position: absolute; top: 50%; transform: translateY(-50%); left: auto; right: clamp(40px,7vw,110px); width: clamp(280px,38vw,520px); z-index: 3; pointer-events: none; }
         .issue-hero-head a, .issue-hero-head button { pointer-events: auto; }
         .issue-hero-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--pink); margin-bottom: 14px; text-shadow: 0 2px 14px rgba(0,0,0,0.6); }
         .issue-hero-sub-wrap { position: relative; display: block; width: fit-content; max-width: 44ch; margin: clamp(16px,2.4vh,26px) 0 0; }
@@ -962,14 +962,13 @@ export default function HomePageClient({ initial = {} }) {
         .issue-hero-btn-head { display: inline-block; }
         /* All layout variants now use full-bleed — override split/tall/wide specifics */
         .issue-hero-slide--split, .issue-hero-slide--tall, .issue-hero-slide--wide { display: block; padding: 0; gap: 0; }
-        .issue-hero-slide--split .issue-hero-head, .issue-hero-slide--tall .issue-hero-head, .issue-hero-slide--wide .issue-hero-head { position: absolute; bottom: clamp(32px,5vh,64px); left: clamp(28px,6vw,90px); right: clamp(28px,6vw,90px); }
+        .issue-hero-slide--split .issue-hero-head, .issue-hero-slide--tall .issue-hero-head, .issue-hero-slide--wide .issue-hero-head { position: absolute; top: 50%; transform: translateY(-50%); left: auto; right: clamp(40px,7vw,110px); width: clamp(280px,38vw,520px); }
         .issue-hero-slide--split .issue-hero-title, .issue-hero-slide--tall .issue-hero-title, .issue-hero-slide--wide .issue-hero-title { text-shadow: 0 2px 20px rgba(0,0,0,0.6); width: auto; max-width: 22ch; }
         .issue-hero-slide--split .issue-hero-figure, .issue-hero-slide--tall .issue-hero-figure, .issue-hero-slide--wide .issue-hero-figure { position: absolute; inset: 0; width: auto; max-width: none; flex: none; padding: 0; }
         .issue-hero-slide--split .issue-hero-imgwrap, .issue-hero-slide--tall .issue-hero-imgwrap, .issue-hero-slide--wide .issue-hero-imgwrap { position: absolute; inset: 0; height: auto; aspect-ratio: unset; max-width: none; overflow: hidden; }
         .issue-hero-slide--split .issue-hero-imgwrap img, .issue-hero-slide--tall .issue-hero-imgwrap img, .issue-hero-slide--wide .issue-hero-imgwrap img { width: 100%; height: 100%; max-height: none; object-fit: cover; }
         .issue-hero-slide--split .issue-hero-imgwrap .issue-hero-btn { display: none; }
-        /* Stars slide — default left positioning, slightly higher */
-        .issue-hero-slide--stars .issue-hero-head { bottom: clamp(60px,12vh,120px); }
+        /* Stars slide — inherits right/center layout; no overrides needed */
         /* Sparkling 8-pointed stars */
         .hero-star { position: absolute; z-index: 4; pointer-events: none; opacity: 0; animation: hero-twinkle var(--dur, 2.4s) ease-in-out infinite var(--delay, 0s); }
         .hero-star svg { display: block; }
