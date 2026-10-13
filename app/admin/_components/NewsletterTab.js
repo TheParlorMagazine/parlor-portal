@@ -206,9 +206,8 @@ export default function NewsletterTab({ supabase }) {
           return (
             <div key={sec.key} style={{ borderBottom: i < SECTION_DEFS.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
               {/* Row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', cursor: canExpand ? 'pointer' : 'default' }}
-                onClick={() => toggleExpand(sec.key, canExpand)}>
-                <div onClick={e => { e.stopPropagation(); toggleSection(sec.key, !isOn) }}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px' }}>
+                <div onClick={() => toggleSection(sec.key, !isOn)}
                   style={{ position: 'relative', width: 36, height: 20, borderRadius: 10, background: isOn ? '#0a0a0a' : '#d0d0d0', cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s' }}>
                   <div style={{ position: 'absolute', top: 3, left: isOn ? 19 : 3, width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left 0.18s', boxShadow: '0 1px 3px rgba(0,0,0,0.18)' }} />
                 </div>
@@ -217,7 +216,10 @@ export default function NewsletterTab({ supabase }) {
                   <div style={{ fontSize: '12px', color: '#999', marginTop: 1 }}>{sec.desc}</div>
                 </div>
                 {canExpand && (
-                  <div style={{ color: '#bbb', fontSize: 12, transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none', flexShrink: 0 }}>▾</div>
+                  <button onClick={() => toggleExpand(sec.key, true)}
+                    style={{ padding: '5px 12px', background: isOpen ? '#0a0a0a' : '#fff', color: isOpen ? '#fff' : '#555', border: '1px solid #d0d0d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontFamily: ff, flexShrink: 0, fontWeight: 500 }}>
+                    {isOpen ? 'Done' : 'Edit'}
+                  </button>
                 )}
               </div>
 
