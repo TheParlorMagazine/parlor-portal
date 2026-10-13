@@ -220,15 +220,10 @@ export default function HomePageClient({ initial = {} }) {
     document.querySelectorAll(`.issue-hero-sub-wrap[data-orig="${heroRealActive}"]`).forEach(w => {
       const fill = w.querySelector('.issue-hero-sub-fill')
       const text = w.querySelector('.issue-hero-sub')
-      if (fill) {
-        fill.getAnimations().forEach(a => a.cancel())
-        if (reduce) fill.style.transform = 'scaleX(1)'
-        else fill.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(0)', offset: 0.22 }, { transform: 'scaleX(1)' }], { duration: 600, easing: 'cubic-bezier(.62,0,.2,1)', fill: 'forwards' })
-      }
       if (text) {
         text.getAnimations().forEach(a => a.cancel())
-        if (reduce) text.style.opacity = '1'
-        else text.animate([{ opacity: 0, transform: 'translateY(5px)' }, { opacity: 0, transform: 'translateY(5px)', offset: 0.58 }, { opacity: 1, transform: 'translateY(0)' }], { duration: 950, easing: 'ease', fill: 'forwards' })
+        if (reduce) { text.style.opacity = '1'; text.style.transform = 'translateY(0)' }
+        else text.animate([{ opacity: 0, transform: 'translateY(18px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 700, delay: 200, easing: 'cubic-bezier(.25,0,.2,1)', fill: 'forwards' })
       }
     })
   }, [heroRealActive, heroSlides.length])
@@ -957,11 +952,8 @@ export default function HomePageClient({ initial = {} }) {
            Web Animations API, keyed on the REAL slide index, so it fires once per
            genuine slide change and never re-fires on the seamless-loop clone snap
            (which previously flashed the box open→empty→unfurl). Base = closed. */
-        .issue-hero-sub-fill { position: absolute; inset: 0; transform: scaleX(0); transform-origin: left center; z-index: 0; box-shadow: 0 6px 22px rgba(0,0,0,0.28);
-          /* Dusty-pink paper with a darker band at the leading (right) edge, so as
-             the box wipes open that shadow travels rightward like a scroll unfurling. */
-          background: linear-gradient(90deg, rgba(233,202,210,0.82) 0%, rgba(236,207,214,0.82) 55%, rgba(220,178,188,0.85) 88%, rgba(201,154,166,0.88) 100%); }
-        .issue-hero-sub { position: relative; z-index: 1; margin: 0; font-family: 'Source Serif 4', Georgia, serif; font-size: clamp(15px,1.15vw,17px); line-height: 1.6; color: #111111; opacity: 0; }
+        .issue-hero-sub-fill { display: none; }
+        .issue-hero-sub { margin: 0; font-family: 'Source Serif 4', Georgia, serif; font-size: clamp(15px,1.15vw,17px); line-height: 1.6; color: #fff; opacity: 0; text-shadow: 0 1px 8px rgba(0,0,0,0.4); }
         .issue-hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(30px,3.9vw,54px); font-weight: 700; color: var(--white); line-height: 1.06; margin: 0; letter-spacing: -0.01em; text-shadow: 0 2px 20px rgba(0,0,0,0.6); max-width: 22ch; }
         .issue-hero-accent { font-style: italic; color: var(--pink); }
         .issue-hero-btn { position: absolute; right: 20px; bottom: 20px; z-index: 4; display: inline-block; border: 1px solid var(--pink); background: rgba(10,10,10,0.9); color: var(--pink); padding: 16px 64px; font-family: 'Playfair Display', Georgia, serif; font-size: 19px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; box-shadow: 0 6px 22px rgba(0,0,0,0.35); transition: all 0.15s; }
