@@ -935,13 +935,13 @@ export default function HomePageClient({ initial = {} }) {
         .issue-hero-figure { position: absolute; inset: 0; padding: 0; display: block; }
         .issue-hero-imgwrap { position: absolute; inset: 0; }
         .issue-hero-imgwrap img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
-        /* Dark gradient at the bottom so text is legible */
-        .issue-hero-imgwrap::after {
-          content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
-          background: linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.72) 75%, rgba(0,0,0,0.88) 100%);
+        /* Localized gradient behind the text block only */
+        .issue-hero-head::before {
+          content: ''; position: absolute; inset: -32px -48px; z-index: -1; pointer-events: none; border-radius: 4px;
+          background: radial-gradient(ellipse at center, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.38) 55%, rgba(0,0,0,0) 100%);
         }
         /* Text pinned to bottom of hero */
-        .issue-hero-head { position: absolute; top: 50%; transform: translateY(-50%); left: auto; right: clamp(40px,7vw,110px); width: clamp(280px,38vw,520px); z-index: 3; pointer-events: none; }
+        .issue-hero-head { position: absolute; top: 50%; transform: translateY(-50%); left: auto; right: clamp(40px,7vw,110px); width: clamp(280px,38vw,520px); z-index: 3; pointer-events: none; isolation: isolate; }
         .issue-hero-head a, .issue-hero-head button { pointer-events: auto; }
         .issue-hero-eyebrow { font-family: 'Source Serif 4', Georgia, serif; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--pink); margin-bottom: 14px; text-shadow: 0 2px 14px rgba(0,0,0,0.6); }
         .issue-hero-sub-wrap { position: relative; display: block; width: fit-content; max-width: 44ch; margin: clamp(16px,2.4vh,26px) 0 0; }
