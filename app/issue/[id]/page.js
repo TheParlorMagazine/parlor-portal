@@ -76,8 +76,8 @@ export default async function IssuePage({ params }) {
         .issue-card:first-child { border-top: 1px solid #e8e3dd; }
         .issue-card:hover .issue-card-title { text-decoration: underline; text-decoration-color: #ccc; }
         .issue-card-img { width: 100%; aspect-ratio: 4/3; overflow: hidden; border-radius: 4px; background: #f2ece4; flex-shrink: 0; }
-        .issue-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s ease; }
-        .issue-card:hover .issue-card-img img { transform: scale(1.03); }
+        .issue-card-img img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; transform: scale(1.15); transform-origin: center; transition: transform 0.3s ease; }
+        .issue-card:hover .issue-card-img img { transform: scale(1.19); }
         .issue-card-body { display: flex; flex-direction: column; justify-content: center; }
         .issue-card-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
         .issue-pill-type { font-family: 'Source Serif 4', Georgia, serif; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #0a0a0a; color: #fff; border-radius: 999px; padding: 3px 10px; }
@@ -108,7 +108,11 @@ export default async function IssuePage({ params }) {
                 <Link key={a.slug} href={`/post/${a.slug}`} className="issue-card">
                   {a.cover_image_url && (
                     <div className="issue-card-img">
-                      <img src={a.cover_image_url} alt={a.title || ''} />
+                      <img
+                        src={a.cover_image_url}
+                        alt={a.title || ''}
+                        style={a.slug === 'against-the-cloud' ? { objectPosition: '5% 65%' } : undefined}
+                      />
                     </div>
                   )}
                   <div className="issue-card-body">

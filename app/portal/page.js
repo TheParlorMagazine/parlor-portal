@@ -103,7 +103,7 @@ function Hub() {
         .hub-lib-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
         .hub-lib-item { display:block; }
         .hub-lib-thumb { width:100%; aspect-ratio:3/2; border-radius:8px; overflow:hidden; background:#f2ece4; margin-bottom:8px; }
-        .hub-lib-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+        .hub-lib-thumb img { width:100%; height:100%; object-fit:cover; display:block; transform:scale(1.15); transform-origin:center; transition:transform 0.3s ease; }
         .hub-lib-title { font-family:'thermal-variable', Georgia, serif; font-size:13.5px; font-weight:500; line-height:1.3; color:var(--ink); margin-bottom:3px; }
         a.hub-lib-item:hover .hub-lib-title { text-decoration:underline; text-underline-offset:2px; }
         .hub-lib-meta { font-size:11.5px; color:var(--muted); }
@@ -170,7 +170,7 @@ function Hub() {
             <div className="hub-lib-grid">
               {newest.map(a => (
                 <a className="hub-lib-item" key={a.slug} href={a.slug ? `/portal/library/${a.slug}` : '/portal/library'}>
-                  <div className="hub-lib-thumb">{a.cover_image_url && <img src={a.cover_image_url} alt="" loading="lazy" />}</div>
+                  <div className="hub-lib-thumb">{a.cover_image_url && <img src={a.cover_image_url} alt="" loading="lazy" style={a.slug === 'against-the-cloud' ? { objectPosition: '5% 65%' } : undefined} />}</div>
                   <div className="hub-lib-title">{a.title}</div>
                   <div className="hub-lib-meta">{a.theme || a.category}{a.date_published ? ` · ${newestDate(a.date_published)}` : ''}</div>
                 </a>

@@ -14,6 +14,7 @@ function CheckoutRelayInner() {
 
   useEffect(() => {
     const planId = searchParams.get('planId')
+    const coupon = searchParams.get('coupon') || undefined
     const returnTo = searchParams.get('returnTo') || '/dashboard'
     if (!PLAN_IDS.includes(planId)) {
       window.location.href = '/plans'
@@ -28,7 +29,7 @@ function CheckoutRelayInner() {
         // Must be logged in so the webhook can attribute the subscription to a
         // real member — send them to create an account (signup-first; the signup
         // page links to sign-in for returning members), then back through here.
-        const here = `/checkout-relay?planId=${planId}&returnTo=${encodeURIComponent(returnTo)}`
+        const here = `/checkout-relay?planId=${planId}${coupon ? `&coupon=${coupon}` : ''}&returnTo=${encodeURIComponent(returnTo)}`
         window.location.href = `/signup?returnTo=${encodeURIComponent(here)}`
         return
       }
@@ -46,6 +47,7 @@ function CheckoutRelayInner() {
             userId: user.id,
             successUrl: window.location.origin + successUrl,
             cancelUrl: window.location.origin + returnTo,
+            ...(coupon ? { coupon } : {}),
           }),
         })
         const data = await res.json()

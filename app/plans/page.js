@@ -94,14 +94,14 @@ function PlansPageInner() {
                 ))}
               </ul>
               <a
-                href={`/checkout-relay?planId=${plan.id}${returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ''}`}
+                href={`/checkout-relay?planId=${plan.id}${plan.id === 'c666f321-47e5-40c1-bc2a-565a2f52f64d' ? '&coupon=SHNlkLos' : ''}${returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ''}`}
                 style={{
                   display: 'block', textAlign: 'center', padding: '13px', borderRadius: '8px',
                   background: '#0a0a0a', color: '#fff', textDecoration: 'none',
                   fontFamily: ff, fontSize: '14px', fontWeight: '600', letterSpacing: '0.02em',
                 }}
               >
-                Subscribe to {plan.label}
+                {plan.id === 'c666f321-47e5-40c1-bc2a-565a2f52f64d' ? 'Get 20% off your first issue' : `Subscribe to ${plan.label}`}
               </a>
               </div>
             </div>

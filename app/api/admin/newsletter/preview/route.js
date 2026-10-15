@@ -19,7 +19,15 @@ export async function GET(request) {
     if (sp.has(key)) sections[key] = sp.get(key) !== 'false'
   }
   const supportCopy = sp.get('supportCopy') || ''
-  const nl = await gatherNewsletter(db, { baseUrl, sections, supportCopy })
+  const announcementOverride = {
+    title: sp.get('annTitle') ?? null,
+    text:  sp.get('annText')  ?? null,
+    url:   sp.get('annUrl')   ?? null,
+    img:   sp.get('annImg')   ?? null,
+    btn:   sp.get('annBtn')   ?? null,
+  }
+  const hasAnnOverride = Object.values(announcementOverride).some(v => v !== null)
+  const nl = await gatherNewsletter(db, { baseUrl, sections, supportCopy, announcementOverride: hasAnnOverride ? announcementOverride : null })
   const recipientCount = await countSubscribers(db)
   return Response.json({ ...nl, recipientCount })
 }

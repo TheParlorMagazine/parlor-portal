@@ -2,10 +2,56 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { confirmDialog } from '../../../lib/confirmDialog'
+import { uploadToCloudinary } from '../../../lib/uploadImage'
 
 const ff   = "'Source Serif 4', Georgia, serif"
 const PINK = '#f2b8c6'
 const DP   = '#c4364a'
+const inputSt = { width: '100%', padding: '9px 12px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '13px', fontFamily: ff, outline: 'none', boxSizing: 'border-box' }
+
+function ImageZone({ value, onChange, onUpload, uploading, dragOver, onDragOver, onDragLeave, onDrop, inputId, pickerKey, onOpenMedia }) {
+  return (
+    <div>
+      <div
+        onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
+        onClick={() => document.getElementById(inputId).click()}
+        style={{
+          border: `2px dashed ${dragOver ? '#0a0a0a' : '#d0d0d0'}`, borderRadius: 8,
+          padding: '14px 12px', cursor: 'pointer', background: dragOver ? '#f8f8f8' : '#fff',
+          display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.15s', marginBottom: 6,
+        }}
+      >
+        <input id={inputId} type="file" accept="image/*" style={{ display: 'none' }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = '' }} />
+        {value
+          ? <img src={value} alt="" style={{ width: 60, height: 44, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
+          : <div style={{ width: 60, height: 44, background: '#f0f0f0', borderRadius: 4, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M4 16l4-4 4 4 4-6 4 6" stroke="#bbb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="#bbb" strokeWidth="1.5"/></svg>
+            </div>
+        }
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '12.5px', color: '#555' }}>{uploading ? 'Uploading…' : 'Drop an image here, or click to choose'}</div>
+          {value && <div style={{ fontSize: '11px', color: '#aaa', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>}
+        </div>
+        {value && !uploading && (
+          <button onClick={e => { e.stopPropagation(); onChange('') }}
+            style={{ padding: '3px 8px', background: 'none', border: '1px solid #e0e0e0', borderRadius: 4, fontSize: '11px', color: '#999', cursor: 'pointer', flexShrink: 0, fontFamily: ff }}>
+            Remove
+          </button>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <input value={value} onChange={e => onChange(e.target.value)}
+          placeholder="…or paste an image URL"
+          style={{ ...inputSt, fontSize: '12px', color: '#888', flex: 1 }} />
+        <button onClick={() => onOpenMedia(pickerKey)}
+          style={{ padding: '7px 12px', background: '#fff', border: '1px solid #d0d0d0', borderRadius: 6, fontSize: '12px', color: '#555', cursor: 'pointer', fontFamily: ff, flexShrink: 0, whiteSpace: 'nowrap' }}>
+          Media library
+        </button>
+      </div>
+    </div>
+  )
+}
 
 const DEFAULT_SUPPORT = 'The Parlor is still a startup, run by a small team with a lot of conviction. Everything you see here — the reporting, the platform, the print issues — is built scrappily and with care. If this work means something to you, the most direct way to support it is to become a subscriber or make a donation. It keeps the lights on.'
 
@@ -31,9 +77,26 @@ export default function NewsletterTab({ supabase }) {
   const [intro, setIntro]             = useState('')
   const [issueImg, setIssueImg]       = useState('')
   const [tagline, setTagline]         = useState('')
+  const [sectionTitle, setSectionTitle]   = useState('')
+  const [buttonCopy, setButtonCopy]       = useState('')
+  const [buttonUrl, setButtonUrl]         = useState('')
+  const [button2Copy, setButton2Copy]     = useState('')
+  const [button2Url, setButton2Url]       = useState('')
+  const [imgUploading, setImgUploading] = useState(false)
+  const [imgDragOver, setImgDragOver]   = useState(false)
   // Announcement fields (saved to DB)
-  const [announcement, setAnnouncement]       = useState('')
-  const [announcementUrl, setAnnouncementUrl] = useState('')
+  const [announcementTitle, setAnnouncementTitle] = useState('')
+  const [announcement, setAnnouncement]           = useState('')
+  const [announcementUrl, setAnnouncementUrl]     = useState('')
+  const [announcementImg, setAnnouncementImg]     = useState('')
+  const [announcementBtn, setAnnouncementBtn]     = useState('')
+  const [annImgUploading, setAnnImgUploading]   = useState(false)
+  const [annImgDragOver, setAnnImgDragOver]     = useState(false)
+  // Shared media picker
+  const [mediaPicker, setMediaPicker]   = useState(null) // null | 'promo' | 'announcement'
+  const [mediaFiles, setMediaFiles]     = useState([])
+  const [mediaFolder, setMediaFolder]   = useState('body')
+  const [mediaLoading, setMediaLoading] = useState(false)
   // Support copy (not persisted, sent per-send)
   const [supportCopy, setSupportCopy] = useState('')
   // Shop ad
@@ -42,25 +105,32 @@ export default function NewsletterTab({ supabase }) {
   const [savingShopProduct, setSavingShopProduct]   = useState(false)
 
   const [savingSection, setSavingSection] = useState('')
-  const [sections, setSections] = useState({
-    announcement: true, issuPromo: true, issueArticles: true,
-    articles: true, featuredEvent: true, otherEvents: true, shopAd: true, support: true,
-  })
+  const defaultSections = { announcement: true, issuPromo: true, issueArticles: true, articles: true, featuredEvent: true, otherEvents: true, shopAd: true, support: true }
+  const [sections, setSections] = useState(defaultSections)
   const [expanded, setExpanded] = useState({})
   const previewTimer = useRef(null)
+  const annTimer = useRef(null)
+  const loadRef = useRef(null)
 
   const token = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
     return session?.access_token
   }, [supabase])
 
-  const load = useCallback(async (secs, supCopy) => {
+  const load = useCallback(async (secs, supCopy, annOverride) => {
     setMsg('')
     const activeSections  = secs     ?? sections
     const activeSupportCopy = supCopy ?? supportCopy
     const params = new URLSearchParams()
     for (const [k, v] of Object.entries(activeSections)) params.set(k, String(v))
     if (activeSupportCopy) params.set('supportCopy', activeSupportCopy)
+    if (annOverride) {
+      if (annOverride.title) params.set('annTitle', annOverride.title)
+      if (annOverride.text)  params.set('annText',  annOverride.text)
+      if (annOverride.url)   params.set('annUrl',   annOverride.url)
+      if (annOverride.img)   params.set('annImg',   annOverride.img)
+      if (annOverride.btn)   params.set('annBtn',   annOverride.btn)
+    }
     try {
       const res = await fetch(`/api/admin/newsletter/preview?${params}`, { headers: { Authorization: `Bearer ${await token()}` } })
       const d = await res.json()
@@ -69,14 +139,58 @@ export default function NewsletterTab({ supabase }) {
         setIntro(d.issueIntro || '')
         setIssueImg(d.issueImage || '')
         setTagline(d.issueTagline || '')
-        setAnnouncement(d.issueAnnouncement || '')
-        setAnnouncementUrl(d.issueAnnouncementUrl || '')
+        // Pre-populate section title with DB value or computed default
+        const issueLabel = d.issueTitle ? d.issueTitle.replace(/ — .*$/, '') : ''
+        setSectionTitle(d.issueSectionTitle || (issueLabel ? `${issueLabel} is finally here!` : ''))
+        setButtonCopy(d.issueButtonCopy || '')
+        setButtonUrl(d.issueButtonUrl || '')
+        setButton2Copy(d.issueButton2Copy || '')
+        setButton2Url(d.issueButton2Url || '')
+        if (!annOverride) {
+          setAnnouncementTitle(d.issueAnnouncementTitle || '')
+          setAnnouncement(d.issueAnnouncement || '')
+          setAnnouncementUrl(d.issueAnnouncementUrl || '')
+          setAnnouncementImg(d.issueAnnouncementImg || '')
+          setAnnouncementBtn(d.issueAnnouncementBtn || '')
+        }
       }
     } catch { setData({ error: 'Could not load the preview.' }) }
     setLoading(false)
   }, [token, sections, supportCopy])
 
-  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Keep loadRef current so the announcement debounce always uses the latest load (with current sections)
+  useEffect(() => { loadRef.current = load }, [load])
+
+  // Debounce-refresh preview when announcement fields are edited (before saving)
+  const announcementRef = useRef({ title: announcementTitle, text: announcement, url: announcementUrl, img: announcementImg, btn: announcementBtn })
+  useEffect(() => {
+    announcementRef.current = { title: announcementTitle, text: announcement, url: announcementUrl, img: announcementImg, btn: announcementBtn }
+    if (annTimer.current) clearTimeout(annTimer.current)
+    annTimer.current = setTimeout(() => {
+      const ann = announcementRef.current
+      if (ann.title || ann.text) {
+        setLoading(true)
+        loadRef.current?.(undefined, undefined, ann)
+      }
+    }, 600)
+  }, [announcementTitle, announcement, announcementUrl, announcementImg, announcementBtn]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    // Load saved section toggles from DB, then load the preview with those sections
+    token().then(async tok => {
+      try {
+        const res = await fetch('/api/admin/newsletter/settings', { headers: { Authorization: `Bearer ${tok}` } })
+        if (res.ok) {
+          const d = await res.json()
+          const saved = { ...defaultSections, ...d.sections }
+          setSections(saved)
+          load(saved)
+          return
+        }
+      } catch {}
+      load()
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadShopProducts() {
     if (shopProductsLoaded) return
@@ -90,9 +204,16 @@ export default function NewsletterTab({ supabase }) {
   function toggleSection(key, val) {
     const next = { ...sections, [key]: val }
     setSections(next)
+    token().then(tok => fetch('/api/admin/newsletter/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
+      body: JSON.stringify({ sections: next }),
+    })).catch(() => {})
     if (previewTimer.current) clearTimeout(previewTimer.current)
     setLoading(true)
-    previewTimer.current = setTimeout(() => load(next), 400)
+    const ann = announcementRef.current
+    const annOverride = (ann.title || ann.text) ? ann : null
+    previewTimer.current = setTimeout(() => load(next, undefined, annOverride), 400)
   }
 
   function toggleExpand(key, isEditable) {
@@ -124,7 +245,7 @@ export default function NewsletterTab({ supabase }) {
     try {
       const res = await fetch('/api/admin/newsletter/issue-intro', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` },
-        body: JSON.stringify({ issueId: data.issueId, intro, image: issueImg, tagline, announcement, announcementUrl }),
+        body: JSON.stringify({ issueId: data.issueId, intro, image: issueImg, tagline, announcement, announcementTitle, announcementUrl, announcementImg, announcementBtn, sectionTitle, buttonCopy, buttonUrl, button2Copy, button2Url }),
       })
       if (res.ok) { setMsg('Saved ✓'); load() } else setMsg('Could not save.')
     } catch { setMsg('Could not save.') }
@@ -161,6 +282,53 @@ export default function NewsletterTab({ supabase }) {
     setSavingShopProduct(false)
   }
 
+  async function uploadPromoImage(file) {
+    if (!file) return
+    setImgUploading(true)
+    try { setIssueImg(await uploadToCloudinary(file, 'parlor/newsletter')) }
+    catch { setMsg('Image upload failed.') }
+    setImgUploading(false)
+  }
+
+  async function uploadAnnImg(file) {
+    if (!file) return
+    setAnnImgUploading(true)
+    try { setAnnouncementImg(await uploadToCloudinary(file, 'parlor/newsletter')) }
+    catch { setMsg('Image upload failed.') }
+    setAnnImgUploading(false)
+  }
+
+  async function openMediaPicker(target) {
+    setMediaPicker(target)
+    setMediaLoading(true)
+    const { data } = await supabase.storage.from('Media').list(mediaFolder, {
+      limit: 200, sortBy: { column: 'created_at', order: 'desc' }
+    })
+    setMediaFiles((data || []).filter(x => x.name !== '.emptyFolderPlaceholder'))
+    setMediaLoading(false)
+  }
+
+  async function loadMediaFolder(folder) {
+    setMediaFolder(folder)
+    setMediaLoading(true)
+    const { data } = await supabase.storage.from('Media').list(folder, {
+      limit: 200, sortBy: { column: 'created_at', order: 'desc' }
+    })
+    setMediaFiles((data || []).filter(x => x.name !== '.emptyFolderPlaceholder'))
+    setMediaLoading(false)
+  }
+
+  function getMediaUrl(name) {
+    const { data: { publicUrl } } = supabase.storage.from('Media').getPublicUrl(`${mediaFolder}/${name}`)
+    return publicUrl
+  }
+
+  function pickMediaUrl(url) {
+    if (mediaPicker === 'promo') setIssueImg(url)
+    if (mediaPicker === 'announcement') setAnnouncementImg(url)
+    setMediaPicker(null)
+  }
+
   function debouncePreview(newSupportCopy) {
     if (previewTimer.current) clearTimeout(previewTimer.current)
     setLoading(true)
@@ -168,7 +336,6 @@ export default function NewsletterTab({ supabase }) {
   }
 
   const card = { background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px' }
-  const inputSt = { width: '100%', padding: '9px 12px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '13px', fontFamily: ff, outline: 'none', boxSizing: 'border-box' }
   const labelSt = { display: 'block', fontSize: '11.5px', color: '#999', marginBottom: 4 }
   const saveBtnSt = (disabled) => ({ padding: '7px 16px', background: disabled ? '#ccc' : '#0a0a0a', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12.5px', cursor: disabled ? 'default' : 'pointer', fontFamily: ff })
 
@@ -241,13 +408,29 @@ export default function NewsletterTab({ supabase }) {
               {sec.key === 'announcement' && canExpand && isOpen && (
                 <div style={{ padding: '0 16px 14px 64px', borderTop: '1px solid #f5f5f5' }}>
                   <div style={{ paddingTop: 12 }}>
-                    <label style={labelSt}>Announcement text</label>
+                    <label style={labelSt}>Title (optional)</label>
+                    <input value={announcementTitle} onChange={e => setAnnouncementTitle(e.target.value)}
+                      placeholder="e.g. We're turning one 🎉"
+                      style={{ ...inputSt, marginBottom: 8 }} />
+                    <label style={labelSt}>Image (optional)</label>
+                    <ImageZone
+                      value={announcementImg} onChange={setAnnouncementImg} onUpload={uploadAnnImg}
+                      uploading={annImgUploading} dragOver={annImgDragOver}
+                      onDragOver={e => { e.preventDefault(); setAnnImgDragOver(true) }}
+                      onDragLeave={() => setAnnImgDragOver(false)}
+                      onDrop={e => { e.preventDefault(); setAnnImgDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) uploadAnnImg(f) }}
+                      inputId="nl-ann-img-input" pickerKey="announcement" onOpenMedia={openMediaPicker}
+                    />
+                    <label style={{ ...labelSt, marginTop: 8 }}>Announcement text</label>
                     <textarea value={announcement} onChange={e => setAnnouncement(e.target.value)} rows={3}
                       placeholder="e.g. Our spring fundraiser is live — help us reach $5k by April 30."
                       style={{ ...inputSt, fontSize: '14px', resize: 'vertical' }} />
                     <label style={{ ...labelSt, marginTop: 8 }}>CTA link URL (optional)</label>
                     <input value={announcementUrl} onChange={e => setAnnouncementUrl(e.target.value)}
                       placeholder="https://…" style={inputSt} />
+                    <label style={{ ...labelSt, marginTop: 8 }}>Button copy (optional)</label>
+                    <input value={announcementBtn} onChange={e => setAnnouncementBtn(e.target.value)}
+                      placeholder="Learn more" style={inputSt} />
                     <div style={{ marginTop: 10 }}>
                       <button onClick={saveIssueSection} disabled={!!savingSection || !data?.issueId} style={saveBtnSt(!!savingSection || !data?.issueId)}>
                         {savingSection === 'issue' ? 'Saving…' : 'Save announcement'}
@@ -261,7 +444,10 @@ export default function NewsletterTab({ supabase }) {
               {sec.key === 'issuPromo' && canExpand && isOpen && (
                 <div style={{ padding: '0 16px 14px 64px', borderTop: '1px solid #f5f5f5' }}>
                   <div style={{ paddingTop: 12 }}>
-                    <label style={labelSt}>Intro copy</label>
+                    <label style={labelSt}>Section title</label>
+                    <input value={sectionTitle} onChange={e => setSectionTitle(e.target.value)}
+                      style={inputSt} />
+                    <label style={{ ...labelSt, marginTop: 8 }}>Intro copy</label>
                     <textarea value={intro} onChange={e => setIntro(e.target.value)} rows={4}
                       placeholder="A short intro to the current issue shown in the promo…"
                       style={{ ...inputSt, fontSize: '14px', resize: 'vertical' }} />
@@ -269,12 +455,45 @@ export default function NewsletterTab({ supabase }) {
                     <input value={tagline} onChange={e => setTagline(e.target.value)}
                       placeholder="Original essays, reporting, and art — bound in print."
                       style={inputSt} />
-                    <label style={{ ...labelSt, marginTop: 8 }}>Promo image URL</label>
-                    <input value={issueImg} onChange={e => setIssueImg(e.target.value)}
-                      placeholder="https://… (a styled photo of the print issue)"
-                      style={inputSt} />
+                    {/* Button 1 */}
+                    <div style={{ marginTop: 8, padding: '12px', background: '#f9f9f9', borderRadius: 8, border: '1px solid #ececec' }}>
+                      <div style={{ fontSize: '11.5px', fontWeight: 600, color: '#666', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Button 1 (primary)</div>
+                      <label style={labelSt}>Label</label>
+                      <input value={buttonCopy} onChange={e => setButtonCopy(e.target.value)}
+                        placeholder="Buy the issue" style={inputSt} />
+                      <label style={{ ...labelSt, marginTop: 6 }}>Link</label>
+                      <div style={{ position: 'relative' }}>
+                        <input value={buttonUrl} onChange={e => setButtonUrl(e.target.value)}
+                          placeholder={data?.issueId ? `/issue/${data.issueId}` : '/issue/…'}
+                          style={{ ...inputSt, paddingRight: 60 }} />
+                        {!buttonUrl && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#bbb', pointerEvents: 'none' }}>default</span>}
+                      </div>
+                    </div>
+                    {/* Button 2 */}
+                    <div style={{ marginTop: 8, padding: '12px', background: '#f9f9f9', borderRadius: 8, border: '1px solid #ececec' }}>
+                      <div style={{ fontSize: '11.5px', fontWeight: 600, color: '#666', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Button 2 (secondary)</div>
+                      <label style={labelSt}>Label</label>
+                      <input value={button2Copy} onChange={e => setButton2Copy(e.target.value)}
+                        placeholder="Subscribe" style={inputSt} />
+                      <label style={{ ...labelSt, marginTop: 6 }}>Link</label>
+                      <div style={{ position: 'relative' }}>
+                        <input value={button2Url} onChange={e => setButton2Url(e.target.value)}
+                          placeholder="/plans"
+                          style={{ ...inputSt, paddingRight: 60 }} />
+                        {!button2Url && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#bbb', pointerEvents: 'none' }}>default</span>}
+                      </div>
+                    </div>
+                    <label style={{ ...labelSt, marginTop: 8 }}>Promo image</label>
+                    <ImageZone
+                      value={issueImg} onChange={setIssueImg} onUpload={uploadPromoImage}
+                      uploading={imgUploading} dragOver={imgDragOver}
+                      onDragOver={e => { e.preventDefault(); setImgDragOver(true) }}
+                      onDragLeave={() => setImgDragOver(false)}
+                      onDrop={e => { e.preventDefault(); setImgDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) uploadPromoImage(f) }}
+                      inputId="nl-promo-img-input" pickerKey="promo" onOpenMedia={openMediaPicker}
+                    />
                     <div style={{ marginTop: 10 }}>
-                      <button onClick={saveIssueSection} disabled={!!savingSection || !data?.issueId} style={saveBtnSt(!!savingSection || !data?.issueId)}>
+                      <button onClick={saveIssueSection} disabled={!!savingSection || !data?.issueId || imgUploading} style={saveBtnSt(!!savingSection || !data?.issueId || imgUploading)}>
                         {savingSection === 'issue' ? 'Saving…' : 'Save issue promo'}
                       </button>
                     </div>
@@ -368,6 +587,40 @@ export default function NewsletterTab({ supabase }) {
             : <iframe title="Newsletter preview" srcDoc={data?.html || ''} style={{ width: mode === 'mobile' ? '375px' : '640px', maxWidth: '100%', height: '640px', border: 'none', background: '#fff', borderRadius: '6px' }} />}
         </div>
       </div>
+      {/* ── Media picker modal ── */}
+      {mediaPicker && (
+        <div onClick={() => setMediaPicker(null)} style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: 640, maxHeight: '80vh', background: '#fff', borderRadius: 12, border: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.18)' }}>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, fontFamily: ff }}>Choose from media library</span>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                {['body', 'covers', 'authors', 'announcements'].map(f => (
+                  <button key={f} onClick={() => loadMediaFolder(f)}
+                    style={{ padding: '4px 10px', background: mediaFolder === f ? '#0a0a0a' : '#f5f5f5', color: mediaFolder === f ? '#fff' : '#555', border: 'none', borderRadius: 5, fontSize: '11.5px', cursor: 'pointer', fontFamily: ff }}>
+                    {f}
+                  </button>
+                ))}
+                <button onClick={() => setMediaPicker(null)} style={{ background: 'none', border: 'none', color: '#aaa', fontSize: 20, cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}>×</button>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
+              {mediaLoading
+                ? <div style={{ textAlign: 'center', padding: 40, color: '#999', fontStyle: 'italic', fontFamily: ff }}>Loading…</div>
+                : mediaFiles.length === 0
+                  ? <div style={{ textAlign: 'center', padding: 40, color: '#bbb', fontFamily: ff }}>No images in this folder.</div>
+                  : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+                      {mediaFiles.map(file => (
+                        <div key={file.name} onClick={() => pickMediaUrl(getMediaUrl(file.name))}
+                          style={{ aspectRatio: '1', borderRadius: 6, overflow: 'hidden', cursor: 'pointer', border: '2px solid #f0f0f0', background: '#f8f8f8' }}>
+                          <img src={getMediaUrl(file.name)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        </div>
+                      ))}
+                    </div>
+              }
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

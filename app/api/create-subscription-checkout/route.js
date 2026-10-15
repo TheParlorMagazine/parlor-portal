@@ -18,7 +18,7 @@ const PLAN_PRICE_IDS = {
 const SHIP_COUNTRIES = ['US', 'CA', 'GB', 'IE', 'AU', 'NZ', 'FR', 'DE', 'ES', 'IT', 'NL', 'SE', 'NO', 'DK', 'FI', 'BE', 'AT', 'CH', 'PT', 'MX', 'BR', 'JP']
 
 export async function POST(request) {
-  const { planId, userId, successUrl, cancelUrl } = await request.json()
+  const { planId, userId, successUrl, cancelUrl, coupon } = await request.json()
 
   const priceId = PLAN_PRICE_IDS[planId]
   if (!priceId || !userId || !successUrl || !cancelUrl) {
@@ -43,6 +43,10 @@ export async function POST(request) {
     // at checkout. The webhook saves it back to members.mailing_address.
     if (planId === PRINTING_PRESS_ID) {
       params.shipping_address_collection = { allowed_countries: SHIP_COUNTRIES }
+    }
+    // Apply coupon programmatically (mutually exclusive with allow_promotion_codes).
+    if (coupon) {
+      params.discounts = [{ coupon }]
     }
     // Same-numeral geo pricing: charge €7/£7 (not FX-converted) via the price's
     // currency_options. A returning customer whose Stripe currency is already

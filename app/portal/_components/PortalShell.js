@@ -62,6 +62,7 @@ export default function PortalShell({ active = 'dashboard', children }) {
   const [forumCount, setForumCount] = useState(0)
   const [notifOpen, setNotifOpen] = useState(false)
   const [inboxOpen, setInboxOpen] = useState(false)
+  const [navOpen, setNavOpen] = useState(false)
   const bump = (key, delta) => setCounts(c => ({ ...c, [key]: Math.max(0, (c[key] || 0) + delta) }))
 
   useEffect(() => {
@@ -150,12 +151,31 @@ export default function PortalShell({ active = 'dashboard', children }) {
 
         @media (max-width: 820px) {
           .portal-shell { flex-direction:column; height:auto; overflow:visible; }
-          .portal-sidebar { width:100%; height:auto; position:static; }
-          .psb-nav { display:flex; flex-wrap:wrap; gap:2px 0; padding:6px 8px 12px; }
-          .psb-section { width:100%; padding:8px 12px 2px; }
-          .psb-item { margin-right:0; border-radius:7px; border-left:none; }
-          .psb-item.active { border-left:none; }
+          .portal-sidebar { width:100%; height:auto; position:static; overflow:visible; }
+          /* Hamburger */
+          .psb-hamburger { display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:7px; background:rgba(255,255,255,0.08); border:none; cursor:pointer; flex-shrink:0; transition:background 0.15s; margin-top:1px; }
+          .psb-hamburger:hover { background:rgba(255,255,255,0.18); }
+          .psb-hamburger svg { width:16px; height:16px; color:#fff; }
+          /* Backdrop */
+          .psb-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:199; }
+          .psb-backdrop.open { display:block; }
+          /* Collapsible — tablet: side drawer */
+          .psb-collapsible { position:fixed; top:0; left:0; bottom:0; width:280px; background:#000; z-index:200; overflow-y:auto; transform:translateX(-100%); transition:transform 0.28s cubic-bezier(.4,0,.2,1); display:block; }
+          .psb-collapsible.open { transform:translateX(0); }
+          /* Inside the drawer, restack items vertically */
+          .psb-nav { display:flex; flex-direction:column; gap:0; padding:6px 0 20px; }
+          .psb-section { width:100%; padding:13px 20px 4px; }
+          .psb-item { margin-right:10px; border-radius:0 7px 7px 0; border-left:2px solid transparent; }
+          .psb-item.active { border-left:2px solid var(--pink); }
           .portal-main { height:auto; padding:24px 18px 60px; }
+        }
+        /* Mobile — full viewport menu */
+        @media (max-width: 599px) {
+          .psb-collapsible { width:100%; }
+        }
+        @media (min-width: 821px) {
+          .psb-hamburger { display:none; }
+          .psb-backdrop { display:none !important; }
         }
       `}</style>
 
@@ -165,36 +185,51 @@ export default function PortalShell({ active = 'dashboard', children }) {
         </div>
       ) : (
         <div className="portal-shell">
+          <div className={`psb-backdrop${navOpen ? ' open' : ''}`} onClick={() => setNavOpen(false)} aria-hidden="true" />
           <aside className="portal-sidebar">
             <div className="psb-logo">
               <div>The Parlor<small>Member portal</small></div>
-              <a href="/" title="Parlor home" className="psb-home">{I.home}</a>
+              <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                <button
+                  className="psb-hamburger"
+                  aria-label={navOpen ? 'Close menu' : 'Open menu'}
+                  onClick={() => setNavOpen(o => !o)}
+                >
+                  {navOpen
+                    ? <svg viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                    : <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                  }
+                </button>
+                <a href="/" title="Parlor home" className="psb-home">{I.home}</a>
+              </div>
             </div>
-            <div className="psb-profile">
-              <div className="psb-av">{avatarUrl ? <img src={avatarUrl} alt="" /> : initial}</div>
-              <div className="psb-name">{name}</div>
-              {(ROLE_LABELS[member?.role] || member?.plan) && <div className="psb-plan">{ROLE_LABELS[member?.role] || member?.plan}</div>}
+            <div className={`psb-collapsible${navOpen ? ' open' : ''}`}>
+              <div className="psb-profile">
+                <div className="psb-av">{avatarUrl ? <img src={avatarUrl} alt="" /> : initial}</div>
+                <div className="psb-name">{name}</div>
+                {(ROLE_LABELS[member?.role] || member?.plan) && <div className="psb-plan">{ROLE_LABELS[member?.role] || member?.plan}</div>}
+              </div>
+              <nav className="psb-nav">
+                {NAV.map((grp, gi) => (
+                  <div key={gi}>
+                    {grp.section && <div className="psb-section">{grp.section}</div>}
+                    {grp.items.map(it => {
+                      if (it.requiresForums && forumCount === 0) return null
+                      const cls = `psb-item${it.key === active ? ' active' : ''}${it.soon ? ' soon' : ''}`
+                      const badge = it.badgeKey ? (counts[it.badgeKey] || 0) : 0
+                      const inner = <>
+                        {I[it.icon]}<span>{it.label}</span>
+                        {!it.soon && badge > 0 && <span className="psb-notif">{badge}</span>}
+                        {it.soon && <span className="psb-soon">soon</span>}
+                      </>
+                      if (it.soon) return <div key={it.key} className={cls}>{inner}</div>
+                      if (it.action) return <button key={it.key} type="button" className={cls} style={{ width: '100%', background: 'none', textAlign: 'left', fontFamily: 'inherit', fontSize: '13px', border: 'none', borderLeft: '2px solid transparent', cursor: 'pointer' }} onClick={() => it.action === 'notif' ? setNotifOpen(true) : setInboxOpen(true)}>{inner}</button>
+                      return <a key={it.key} href={it.href} className={cls} data-nav={it.key}>{inner}</a>
+                    })}
+                  </div>
+                ))}
+              </nav>
             </div>
-            <nav className="psb-nav">
-              {NAV.map((grp, gi) => (
-                <div key={gi}>
-                  {grp.section && <div className="psb-section">{grp.section}</div>}
-                  {grp.items.map(it => {
-                    if (it.requiresForums && forumCount === 0) return null
-                    const cls = `psb-item${it.key === active ? ' active' : ''}${it.soon ? ' soon' : ''}`
-                    const badge = it.badgeKey ? (counts[it.badgeKey] || 0) : 0
-                    const inner = <>
-                      {I[it.icon]}<span>{it.label}</span>
-                      {!it.soon && badge > 0 && <span className="psb-notif">{badge}</span>}
-                      {it.soon && <span className="psb-soon">soon</span>}
-                    </>
-                    if (it.soon) return <div key={it.key} className={cls}>{inner}</div>
-                    if (it.action) return <button key={it.key} type="button" className={cls} style={{ width: '100%', background: 'none', textAlign: 'left', fontFamily: 'inherit', fontSize: '13px', border: 'none', borderLeft: '2px solid transparent', cursor: 'pointer' }} onClick={() => it.action === 'notif' ? setNotifOpen(true) : setInboxOpen(true)}>{inner}</button>
-                    return <a key={it.key} href={it.href} className={cls} data-nav={it.key}>{inner}</a>
-                  })}
-                </div>
-              ))}
-            </nav>
           </aside>
           <main className="portal-main">{children}</main>
           <NotifPanel open={notifOpen} onClose={() => setNotifOpen(false)} onChange={d => bump('notifications', d)} />

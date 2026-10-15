@@ -83,6 +83,7 @@ function wixAvatar(url, size = 96, q = 80) {
 const COVER_FOCUS = {
   'not-a-patient-woman': 'center',
   'grief-glitter-and-the-business-of-staying-alive': 'center',
+  'against-the-cloud': '5% 65%',
 }
 // Route remote images through Next's optimizer (resize + webp) so we don't ship
 // multi-MB originals. Local/relative URLs pass through untouched.
@@ -160,6 +161,9 @@ export default function HomePageClient({ initial = {} }) {
   const aboutRef = useRef(null)
   const memberRef = useRef(null)
   const compSectionRef = useRef(null)
+  const navScrollRef = useRef(null)
+  const [navCanLeft, setNavCanLeft] = useState(false)
+  const [navCanRight, setNavCanRight] = useState(false)
   const homeBannerRef = useRef(null)
   const homeBannerImgRef = useRef(null)
   const supabase = createClient()
@@ -202,6 +206,20 @@ export default function HomePageClient({ initial = {} }) {
     if (initial.competition?.[0]) setCompetitionData(initial.competition[0])
     if (initial.popup?.[0]) setPopupData(initial.popup[0])
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function updateNavArrows() {
+    const el = navScrollRef.current
+    if (!el) return
+    const hasOverflow = el.scrollWidth > el.clientWidth + 1
+    setNavCanLeft(hasOverflow && el.scrollLeft > 0)
+    setNavCanRight(hasOverflow && el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
+  }
+
+  useEffect(() => {
+    updateNavArrows()
+    window.addEventListener('resize', updateNavArrows)
+    return () => window.removeEventListener('resize', updateNavArrows)
+  }, [])
 
   // Which REAL hero slide is centered — stable across the seamless-loop clone
   // snap (the clone and its real twin share this index).
@@ -595,31 +613,56 @@ export default function HomePageClient({ initial = {} }) {
         .sticky-bar {
           background: #0a0a0a;
           border-bottom: 2px solid #f2b8c6;
-          padding: 10px 24px;
+          padding: 0;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 20px;
+          gap: 0;
           width: 100%;
           position: relative;
+          overflow: hidden;
         }
-        .sticky-text {
+        /* Desktop: static centered text */
+        .sticky-desktop-text {
+          flex: none; text-align: center; padding: 10px 16px;
           font-family: 'Source Serif 4', Georgia, serif;
-          font-size: 13px;
-          color: #ffffff;
-          letter-spacing: .04em;
+          font-size: 13px; color: #ffffff; letter-spacing: .04em;
         }
-        .sticky-text em {
+        .sticky-desktop-text em {
           font-family: 'Playfair Display', Georgia, serif;
-          font-style: italic;
-          color: #f2b8c6;
+          font-style: italic; color: #f2b8c6;
         }
-        .sticky-text strong { color: #f2b8c6; font-weight: 600; }
+        /* Mobile: marquee (hidden on desktop) */
+        .sticky-marquee-wrap {
+          display: none;
+          flex: 1; overflow: hidden; min-width: 0;
+          mask-image: linear-gradient(to right, transparent 0%, black 4%, black 92%, transparent 100%);
+          -webkit-mask-image: linear-gradient(to right, transparent 0%, black 4%, black 92%, transparent 100%);
+        }
+        @media (max-width: 900px) {
+          .sticky-desktop-text { display: none; }
+          .sticky-marquee-wrap { display: block; }
+        }
+        .sticky-marquee {
+          display: flex; width: max-content;
+          animation: sticky-marquee 32s linear infinite;
+        }
+        .sticky-marquee:hover { animation-play-state: paused; }
+        .sticky-marquee-copy {
+          font-family: 'Source Serif 4', Georgia, serif;
+          font-size: 13px; color: #ffffff; letter-spacing: .04em;
+          white-space: nowrap; padding: 10px 36px 10px 8px;
+        }
+        .sticky-marquee-copy em {
+          font-family: 'Playfair Display', Georgia, serif;
+          font-style: italic; color: #f2b8c6;
+        }
+        @keyframes sticky-marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         .sticky-btn {
           background: #f2b8c6;
           color: #0a0a0a;
           border: none;
-          padding: 7px 18px;
+          padding: 9px 18px;
           font-family: 'Playfair Display', Georgia, serif;
           font-size: 12px;
           font-weight: 700;
@@ -628,9 +671,22 @@ export default function HomePageClient({ initial = {} }) {
           text-decoration: none;
           display: inline-block;
           letter-spacing: .04em;
+          flex-shrink: 0;
+          margin-right: 2px;
         }
         .sticky-btn:hover { background: #ffffff; }
-        .sticky-close { display: none; }
+        .sticky-close {
+          position: absolute; right: 0; top: 0; bottom: 0;
+          background: none; border: none;
+          color: rgba(255,255,255,0.45); font-size: 15px;
+          cursor: pointer; padding: 0 14px; line-height: 1;
+          display: flex; align-items: center;
+        }
+        .sticky-close:hover { color: #fff; }
+        @media (max-width: 900px) {
+          .sticky-bar { justify-content: flex-start; }
+          .sticky-close { position: static; }
+        }
 
         /* ── HEADER ── */
         .site-header { background: var(--white); position: sticky; top: 0; z-index: 100; }
@@ -753,7 +809,7 @@ export default function HomePageClient({ initial = {} }) {
         }
 
         /* Nav bottom */
-        .header-bottom { position: relative; background: var(--black); display: flex; align-items: center; justify-content: center; gap: 48px; padding: 11px 40px; border-bottom: 1px solid rgba(255,255,255,0.18); }
+        .header-bottom { position: relative; background: var(--black); display: flex; align-items: center; justify-content: center; gap: 48px; padding: 11px 40px; }
         /* Hamburger — pinned to the far left of the section nav */
         .hamburger-btn { display: inline-flex; flex-direction: column; justify-content: center; gap: 5px; width: 30px; height: 26px; padding: 0; background: none; border: none; cursor: pointer; }
         .hamburger-btn span { display: block; height: 2px; width: 100%; background: #1a1a1a; border-radius: 2px; transition: background 0.15s; }
@@ -928,17 +984,14 @@ export default function HomePageClient({ initial = {} }) {
         /* ── ISSUE HERO CAROUSEL (large image; title/tagline layered over it) ── */
         .issue-hero { position: relative; background: var(--black); overflow: hidden; }
         .issue-hero-track { display: flex; transition: transform 0.6s cubic-bezier(.4,0,.2,1); will-change: transform; }
-        .issue-hero-slide { flex: 0 0 100%; min-width: 0; position: relative; align-self: stretch; height: clamp(520px, 80vh, 860px); }
-        .issue-hero-figure { display: block; width: 100%; padding: 0 clamp(32px,7vw,128px) clamp(24px,4vh,44px); }
-        .issue-hero-imgwrap { position: relative; display: block; width: 100%; }
-        /* Full-bleed image fills the entire hero */
-        .issue-hero-figure { position: absolute; inset: 0; padding: 0; display: block; }
-        .issue-hero-imgwrap { position: absolute; inset: 0; }
-        .issue-hero-imgwrap img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+        .issue-hero-slide { flex: 0 0 100%; min-width: 0; position: relative; aspect-ratio: 16/9; align-self: auto; overflow: hidden; }
+        .issue-hero-figure { position: relative; padding: 0; display: block; width: 100%; height: 100%; }
+        .issue-hero-imgwrap { position: relative; display: block; width: 100%; height: 100%; }
+        .issue-hero-imgwrap img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; transform: scale(1.12); transform-origin: center; }
         /* Localized gradient behind the text block only */
         .issue-hero-head::before {
           content: ''; position: absolute; inset: -32px -48px; z-index: -1; pointer-events: none; border-radius: 4px;
-          background: radial-gradient(ellipse at center, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.38) 55%, rgba(0,0,0,0) 100%);
+          background: radial-gradient(ellipse at center, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.60) 50%, rgba(0,0,0,0.15) 80%, rgba(0,0,0,0) 100%);
         }
         /* Text pinned to bottom of hero */
         .issue-hero-head { position: absolute; top: 50%; transform: translateY(-50%); left: auto; right: clamp(40px,7vw,110px); width: clamp(280px,38vw,520px); z-index: 3; pointer-events: none; isolation: isolate; }
@@ -956,7 +1009,7 @@ export default function HomePageClient({ initial = {} }) {
         .issue-hero-nav:hover { opacity: 1; }
         .issue-hero-nav.prev { left: 14px; }
         .issue-hero-nav.next { right: 14px; }
-        .issue-hero-dots { display: flex; justify-content: center; gap: 9px; padding: 0; margin-top: clamp(-72px,-7vh,-44px); margin-bottom: clamp(28px,4vh,48px); position: relative; z-index: 5; }
+        .issue-hero-dots { display: flex; justify-content: center; gap: 9px; padding: 0; position: absolute; bottom: 16px; left: 0; right: 0; z-index: 5; margin: 0; }
         .issue-hero-dot { width: 8px; height: 8px; border-radius: 50%; border: none; padding: 0; background: rgba(255,255,255,0.3); cursor: pointer; transition: background 0.15s; }
         .issue-hero-dot.active { background: var(--pink); }
         .issue-hero-btn-head { display: inline-block; }
@@ -964,12 +1017,11 @@ export default function HomePageClient({ initial = {} }) {
         .issue-hero-slide--split, .issue-hero-slide--tall, .issue-hero-slide--wide { display: block; padding: 0; gap: 0; }
         .issue-hero-slide--split .issue-hero-head, .issue-hero-slide--tall .issue-hero-head, .issue-hero-slide--wide .issue-hero-head { position: absolute; top: 50%; transform: translateY(-50%); left: auto; right: clamp(40px,7vw,110px); width: clamp(280px,38vw,520px); }
         .issue-hero-slide--split .issue-hero-title, .issue-hero-slide--tall .issue-hero-title, .issue-hero-slide--wide .issue-hero-title { text-shadow: 0 2px 20px rgba(0,0,0,0.6); width: auto; max-width: 22ch; }
-        .issue-hero-slide--split .issue-hero-figure, .issue-hero-slide--tall .issue-hero-figure, .issue-hero-slide--wide .issue-hero-figure { position: absolute; inset: 0; width: auto; max-width: none; flex: none; padding: 0; }
-        .issue-hero-slide--split .issue-hero-imgwrap, .issue-hero-slide--tall .issue-hero-imgwrap, .issue-hero-slide--wide .issue-hero-imgwrap { position: absolute; inset: 0; height: auto; aspect-ratio: unset; max-width: none; overflow: hidden; }
-        .issue-hero-slide--split .issue-hero-imgwrap img, .issue-hero-slide--tall .issue-hero-imgwrap img, .issue-hero-slide--wide .issue-hero-imgwrap img { width: 100%; height: 100%; max-height: none; object-fit: cover; }
         .issue-hero-slide--split .issue-hero-imgwrap .issue-hero-btn { display: none; }
-        /* Stars slide — shift text up into the clear blue sky area */
-        .issue-hero-slide--stars .issue-hero-head { top: 28%; }
+        /* Stars slide — shift text up into the clear blue sky area (desktop only) */
+        @media (min-width: 901px) {
+          .issue-hero-slide--stars .issue-hero-head { top: 28%; }
+        }
         /* Sparkling 8-pointed stars */
         .hero-star { position: absolute; z-index: 4; pointer-events: none; opacity: 0; animation: hero-twinkle var(--dur, 2.4s) ease-in-out infinite var(--delay, 0s); }
         .hero-star svg { display: block; }
@@ -1103,8 +1155,8 @@ export default function HomePageClient({ initial = {} }) {
           overflow: hidden;
           box-shadow: 0 12px 32px rgba(17,24,39,.12), 0 2px 8px rgba(17,24,39,.06);
         }
-        .media { position: relative; }
-        .cover { width: 100%; aspect-ratio: 16/9; object-fit: cover; object-position: top; display: block; }
+        .media { position: relative; overflow: hidden; }
+        .cover { width: 100%; aspect-ratio: 16/9; object-fit: cover; object-position: top; display: block; transform: scale(1.15); transform-origin: center; transition: transform 0.3s ease; }
         .meta { padding: 10px 14px 12px; display: grid; gap: 6px; grid-template-rows: 32px auto auto 1fr; }
         .byline { display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.2; min-height: 32px; color: #6b7280; }
         .avatarWrap { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex: 0 0 32px; }
@@ -1157,6 +1209,7 @@ export default function HomePageClient({ initial = {} }) {
         /* ── RIBBON ── */
         .ribbon { position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999; background: var(--ribbon-bg); box-shadow: 0 -18px 40px rgba(0,0,0,0.22), 0 -6px 14px rgba(0,0,0,0.12); font-family: 'Source Serif 4', Georgia, serif; color: var(--black); transition: opacity 220ms ease; }
         .ribbon.scrolling { opacity: 0.5; }
+        /* Desktop layout */
         .ribbon-inner { max-width: 1280px; margin: 0 auto; padding: 14px 64px 14px 28px; display: grid; grid-template-columns: max-content 1fr max-content; align-items: center; gap: 14px; position: relative; }
         .ribbon-thumb-wrap { position: relative; flex-shrink: 0; width: 72px; }
         .ribbon-thumb { position: absolute; bottom: 0; left: 0; width: auto; height: 140px; object-fit: contain; object-position: bottom; pointer-events: none; filter: drop-shadow(0 -3px 8px rgba(0,0,0,0.18)); }
@@ -1167,11 +1220,14 @@ export default function HomePageClient({ initial = {} }) {
         .ribbon-message { font-size: 16px; line-height: 1.35; font-weight: 500; opacity: 0.9; text-align: center; max-width: 52ch; margin: 0 auto; }
         .ribbon-cta { display: inline-flex; align-items: center; justify-content: center; padding: 12px 28px; background: var(--black); color: var(--white); font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-weight: 700; text-decoration: none; min-width: 240px; transition: background 0.15s, color 0.15s, outline 0.15s, font-size 0.15s; white-space: nowrap; }
         .ribbon-cta:hover { background: #fff; color: var(--black); outline: 2px solid var(--black); font-size: 15px; }
-        .ribbon-toggle { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,0.1); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; color: var(--black); }
-        @media (min-width: 760px) { .ribbon-toggle { display: none; } }
-        .ribbon-toggle:hover { background: rgba(0,0,0,0.18); }
-        .ribbon-toggle svg { transition: transform 0.25s ease; }
-        .ribbon-toggle.flipped svg { transform: rotate(180deg); }
+        /* Mobile layout — hidden on desktop */
+        .ribbon-mobile { display: none; }
+        /* Nav arrow wrap (shared style, desktop hides arrows) */
+        .header-bottom-wrap { position: relative; background: #0a0a0a; border-bottom: 1px solid rgba(255,255,255,0.18); }
+        .nav-arrow-btn { display: none; position: absolute; top: 0; bottom: 0; width: 44px; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; z-index: 5; padding: 0; color: rgba(255,255,255,0.85); font-size: 26px; line-height: 1; user-select: none; }
+        .nav-arrow-btn:hover { color: #fff; }
+        .nav-arrow-btn--left { left: 0; background: linear-gradient(to right, #0a0a0a 55%, transparent); }
+        .nav-arrow-btn--right { right: 0; background: linear-gradient(to left, #0a0a0a 55%, transparent); }
 
         /* ── FOOTER ── */
         .site-footer { background: #ffffff; border-top: 1px solid #e5e7eb; padding: 48px 40px 96px; }
@@ -1188,18 +1244,47 @@ export default function HomePageClient({ initial = {} }) {
         /* ── RESPONSIVE ── */
         @media (max-width: 900px) {
           .digital-hero, .competition { grid-template-columns: 1fr; }
-          .issue-hero-head { top: 16px; left: 20px; right: 20px; }
-          .issue-hero-title { font-size: clamp(28px,7vw,40px); max-width: none; }
-          .issue-hero-imgwrap img { height: 74vh; }
-          .issue-hero-btn { right: 10px; bottom: 10px; padding: 9px 20px; font-size: 13px; }
+          .issue-hero-head {
+            top: auto; bottom: 44px; left: 14px; right: 14px; width: auto;
+            transform: none; text-align: right;
+          }
+          .issue-hero-eyebrow { font-size: 10px; letter-spacing: 0.16em; margin-bottom: 8px; }
+          .issue-hero-title { font-size: clamp(18px, 5.5vw, 28px); max-width: none; }
+          .issue-hero-sub { font-size: 13px; line-height: 1.5; }
+          .issue-hero-sub-wrap { width: 100%; max-width: 28ch; margin-left: auto; }
+          .issue-hero-btn { padding: 8px 16px; font-size: 12px; margin-top: 10px; }
           .issue-hero-nav { font-size: 30px; padding: 0 4px; }
-          .issue-hero-dots { padding: 0; margin-top: -30px; }
-          .issue-hero-slide--split { flex-direction: column; gap: 20px; min-height: 0; padding: 26px 20px 30px; }
+          /* All variants stay full-bleed on mobile — reset split-specific overrides */
+          .issue-hero-slide--split { flex-direction: row; gap: 0; min-height: 0; padding: 0; }
           .issue-hero-slide--split .issue-hero-figure { flex: none; max-width: 100%; }
-          .issue-hero-slide--split .issue-hero-imgwrap img { max-height: 52vh; }
-          .issue-hero-slide--split .issue-hero-title { font-size: clamp(40px,12vw,60px); max-width: none; text-align: center; }
-          .issue-hero-slide--split .issue-hero-head { text-align: center; }
-          .issue-hero-slide--split .issue-hero-btn-head { margin-top: 18px; }
+          .issue-hero-slide--split .issue-hero-imgwrap img { max-height: none; }
+          .issue-hero-slide--split .issue-hero-title,
+          .issue-hero-slide--tall .issue-hero-title,
+          .issue-hero-slide--wide .issue-hero-title { font-size: clamp(18px, 5.5vw, 28px); text-align: right; max-width: none; width: 100%; }
+          .issue-hero-slide--split .issue-hero-head,
+          .issue-hero-slide--tall .issue-hero-head,
+          .issue-hero-slide--wide .issue-hero-head { top: auto; bottom: 44px; left: 14px; right: 14px; width: auto; transform: none; text-align: right; }
+        }
+        /* ── TABLET: constrain hero text block width ── */
+        @media (min-width: 600px) and (max-width: 900px) {
+          .issue-hero-head {
+            left: auto; right: clamp(20px, 4vw, 56px);
+            width: clamp(240px, 46vw, 440px);
+            text-align: left;
+          }
+          .issue-hero-sub-wrap { max-width: 32ch; margin-left: 0; }
+          .issue-hero-slide--split .issue-hero-head,
+          .issue-hero-slide--tall .issue-hero-head,
+          .issue-hero-slide--wide .issue-hero-head {
+            left: auto; right: clamp(20px, 4vw, 56px);
+            width: clamp(240px, 46vw, 440px);
+            text-align: left;
+          }
+          .issue-hero-slide--split .issue-hero-title,
+          .issue-hero-slide--tall .issue-hero-title,
+          .issue-hero-slide--wide .issue-hero-title { text-align: left; }
+        }
+        @media (max-width: 900px) {
           .digital-hero-left { height: 320px; padding: 24px; }
           .digital-hero-right { padding: 36px 24px 40px; }
           .competition { padding: 48px 24px; gap: 32px; }
@@ -1207,25 +1292,109 @@ export default function HomePageClient({ initial = {} }) {
           .comp-left--img { padding: 32px 24px; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
           .comp-right { border-left: none; padding-left: 0; border-top: 1px solid var(--border); padding-top: 32px; }
           .comp-right--img { border-top: none; padding-top: 0; min-height: 260px; }
-          .header-top { padding: 12px 20px; }
-          .header-bottom { gap: 20px; padding: 10px 20px; overflow-x: auto; }
-          .header-section-link { font-size: 12px; white-space: nowrap; }
+          .header-top { padding: 10px 20px; align-items: flex-start; }
+          /* Reorder: cart → left, stacked logo → center, hamburger → right */
+          .header-side { order: 1; justify-content: flex-start; padding-top: 8px; }
+          .logo-wrap { order: 2; flex-direction: column; align-items: center; gap: 4px; }
+          .logo-mark { width: 90px; height: 90px; }
+          .logo-text-img { height: auto; width: clamp(180px, 54vw, 260px); margin-top: 0; }
+          .header-side.right { order: 3; justify-content: flex-end; padding-top: 8px; gap: 14px; }
+          .header-bottom { gap: 28px; padding: 14px 56px; overflow-x: auto; justify-content: flex-start; scrollbar-width: none; border-bottom: none; }
+          .header-bottom::-webkit-scrollbar { display: none; }
+          .header-section-link { font-size: 14px; white-space: nowrap; }
+          .nav-arrow-btn { display: flex; }
           .footer-grid { grid-template-columns: 1fr 1fr; gap: 28px; }
-          .ribbon-inner { grid-template-columns: 1fr auto; gap: 10px; padding: 12px 56px 12px 18px; }
-          .ribbon-inner.has-thumb { padding-left: 18px; }
-          .ribbon-thumb-slot { display: none; }
-          .ribbon-message { display: none; }
+          /* Mobile ribbon */
+          .ribbon-inner { display: none; }
+          .ribbon-mobile { display: block; }
+          .ribbon-mobile { position: relative; }
+          /* Compact bar — shown when collapsed */
+          .ribbon-mob-bar {
+            display: flex; align-items: center;
+            padding: 11px 50px 11px 18px;
+            gap: 10px;
+          }
+          .ribbon-mob-bar-text {
+            flex: 1; min-width: 0; overflow: hidden;
+            white-space: nowrap; text-overflow: ellipsis;
+            font-family: 'Source Serif 4', Georgia, serif;
+            font-size: 13px; font-weight: 600; color: var(--black);
+          }
+          .ribbon-mob-bar-kicker {
+            font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase;
+            font-size: 11px; margin-right: 6px;
+          }
+          .ribbon-mob-bar-headline {
+            font-family: 'Alex Brush', cursive; font-size: 17px;
+            font-weight: 400; color: #7a2531;
+          }
+          .ribbon-mob-bar-cta {
+            flex-shrink: 0; padding: 8px 14px;
+            background: var(--black); color: var(--white);
+            font-family: 'Playfair Display', Georgia, serif; font-size: 12px;
+            font-weight: 700; text-decoration: none; white-space: nowrap;
+          }
+          .ribbon-mob-chevron {
+            position: absolute; top: 8px; right: 10px; z-index: 5;
+            width: 30px; height: 30px; border-radius: 50%;
+            background: rgba(0,0,0,0.14); border: 1px solid rgba(0,0,0,0.18); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--black); transition: background 0.15s;
+          }
+          .ribbon-mob-chevron:hover { background: rgba(0,0,0,0.24); }
+          .ribbon-mob-chevron svg { transform: rotate(180deg); transition: transform 0.25s ease; }
+          .ribbon-mob-chevron.is-open svg { transform: rotate(0deg); }
+          /* Full card — collapses above the bar */
+          .ribbon-mob-card {
+            overflow: hidden;
+            max-height: 400px;
+            transition: max-height 0.34s ease, opacity 0.24s ease;
+            opacity: 1;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+          }
+          .ribbon-mob-card.closed {
+            max-height: 0;
+            opacity: 0;
+            pointer-events: none;
+          }
+          .ribbon-mob-card-inner { padding: 20px 18px 18px; }
+          .ribbon-mob-kicker { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.55; margin-bottom: 4px; }
+          .ribbon-mob-headline { font-family: 'Alex Brush', cursive; font-size: 36px; font-weight: 400; line-height: 1.15; color: #7a2531; margin-bottom: 10px; }
+          .ribbon-mob-message { font-size: 13px; line-height: 1.6; opacity: 0.85; margin-bottom: 18px; }
+          .ribbon-mob-cta { display: block; text-align: center; padding: 13px 20px; background: var(--black); color: var(--white); font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-weight: 700; text-decoration: none; }
+        }
+        /* Tablet: larger nav font */
+        @media (min-width: 600px) and (max-width: 900px) {
+          .header-section-link { font-size: 16px; }
+          .header-bottom { gap: 32px; padding: 16px 60px; }
+          .ribbon-mob-bar-kicker { font-size: 13px; }
+          .ribbon-mob-bar-headline { font-size: 21px; }
+          .ribbon-mob-bar-cta { font-size: 14px; padding: 10px 18px; }
         }
       `}</style>
 
       {/* Top bar — admin-managed (placement: top_bar) */}
       {topBarData && announceVisible && (
         <div className="sticky-bar">
-          <span className="sticky-text">
+          {/* Desktop: static text */}
+          <span className="sticky-desktop-text">
             {topBarData.kicker && <em>{topBarData.kicker}</em>}
             {topBarData.kicker && topBarData.message && ' '}
             {topBarData.message}
           </span>
+          {/* Mobile: scrolling marquee */}
+          <div className="sticky-marquee-wrap">
+            <div className="sticky-marquee">
+              {[0, 1].map(i => (
+                <span key={i} className="sticky-marquee-copy">
+                  {topBarData.kicker && <em>{topBarData.kicker}</em>}
+                  {topBarData.kicker && topBarData.message && ' '}
+                  {topBarData.message}
+                  &nbsp;&nbsp;·&nbsp;&nbsp;
+                </span>
+              ))}
+            </div>
+          </div>
           {topBarData.cta_label && <a href={topBarData.cta_href || '#'} className="sticky-btn">{topBarData.cta_label}</a>}
           <button className="sticky-close" onClick={() => setAnnounceVisible(false)} title="Dismiss">✕</button>
         </div>
@@ -1323,12 +1492,26 @@ export default function HomePageClient({ initial = {} }) {
         </div>
 
         {/* Section nav */}
-        <nav className="header-bottom">
-          <a href="/" className="header-section-link">Home</a>
-          {NAV_LINKS.map(link => (
-            <a key={link} href={`/${link.toLowerCase().replace(/ & /g,'-').replace(/ /g,'-')}`} className="header-section-link">{link}</a>
-          ))}
-        </nav>
+        <div className="header-bottom-wrap">
+          {navCanLeft && (
+            <button className="nav-arrow-btn nav-arrow-btn--left" aria-hidden="true"
+              onClick={() => { navScrollRef.current?.scrollBy({ left: -180, behavior: 'smooth' }); setTimeout(updateNavArrows, 350) }}>
+              ‹
+            </button>
+          )}
+          <nav className="header-bottom" ref={navScrollRef} onScroll={updateNavArrows}>
+            <a href="/" className="header-section-link">Home</a>
+            {NAV_LINKS.map(link => (
+              <a key={link} href={`/${link.toLowerCase().replace(/ & /g,'-').replace(/ /g,'-')}`} className="header-section-link">{link}</a>
+            ))}
+          </nav>
+          {navCanRight && (
+            <button className="nav-arrow-btn nav-arrow-btn--right" aria-hidden="true"
+              onClick={() => { navScrollRef.current?.scrollBy({ left: 180, behavior: 'smooth' }); setTimeout(updateNavArrows, 350) }}>
+              ›
+            </button>
+          )}
+        </div>
       </header>
 
       {/* ── Issues / Collections side drawer ── */}
@@ -1444,6 +1627,7 @@ export default function HomePageClient({ initial = {} }) {
                       loading={i === pos ? 'eager' : 'lazy'}
                       fetchPriority={i === pos ? 'high' : 'low'}
                       decoding="async"
+                      style={COVER_FOCUS[s.slug] ? { objectPosition: COVER_FOCUS[s.slug] } : undefined}
                       onError={e => { if (s.cover && e.currentTarget.src !== s.cover) e.currentTarget.src = s.cover }}
                       onLoad={e => { const k = heroKind(e.currentTarget); if (k) setPortraitSlides(p => (p[orig] ? p : { ...p, [orig]: k })) }}
                     />
@@ -1677,30 +1861,66 @@ export default function HomePageClient({ initial = {} }) {
       </footer>
 
       {/* ── RIBBON ── (admin-managed announcements, rotating) */}
-      <div className={`ribbon${ribbonScrolling ? ' scrolling' : ''}`}>
-        <div className={`ribbon-inner${ribbonData.image_url ? ' has-thumb' : ''}`}>
-          {ribbonData.image_url && (
-            <div className="ribbon-thumb-slot">
-              <img className="ribbon-thumb" src={ribbonData.image_url} alt="" />
+      {(() => {
+        const marqueeText = [ribbonData.kicker, ribbonData.headline, ribbonData.message].filter(Boolean).join(' · ')
+        return (
+          <div className={`ribbon${ribbonScrolling ? ' scrolling' : ''}`}>
+            {/* Desktop: 3-column grid */}
+            <div className={`ribbon-inner${ribbonData.image_url ? ' has-thumb' : ''}`}>
+              {ribbonData.image_url && (
+                <div className="ribbon-thumb-slot">
+                  <img className="ribbon-thumb" src={ribbonData.image_url} alt="" />
+                </div>
+              )}
+              <div>
+                {ribbonData.kicker && <div className="ribbon-kicker">{ribbonData.kicker}</div>}
+                {ribbonData.headline && <div className="ribbon-subhead">{ribbonData.headline}</div>}
+              </div>
+              {ribbonData.message && <div className="ribbon-message">{ribbonData.message}</div>}
+              {ribbonData.cta_label && <a href={ribbonData.cta_href || '#'} className="ribbon-cta">{ribbonData.cta_label}</a>}
             </div>
-          )}
-          <div>
-            {ribbonData.kicker && <div className="ribbon-kicker">{ribbonData.kicker}</div>}
-            {ribbonData.headline && <div className="ribbon-subhead">{ribbonData.headline}</div>}
+
+            {/* Mobile: full card (default open) + compact bar when collapsed */}
+            <div className="ribbon-mobile">
+              {/* Chevron — always pinned to upper-right corner */}
+              <button
+                className={`ribbon-mob-chevron${!ribbonCollapsed ? ' is-open' : ''}`}
+                onClick={() => setRibbonCollapsed(c => !c)}
+                aria-label={ribbonCollapsed ? 'Expand' : 'Collapse'}
+              >
+                <svg viewBox="0 0 24 14" width="13" height="8" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 2L12 12L22 2"/>
+                </svg>
+              </button>
+
+              {/* Collapsible full card */}
+              <div className={`ribbon-mob-card${ribbonCollapsed ? ' closed' : ''}`}>
+                <div className="ribbon-mob-card-inner">
+                  {ribbonData.kicker && <div className="ribbon-mob-kicker">{ribbonData.kicker}</div>}
+                  {ribbonData.headline && <div className="ribbon-mob-headline">{ribbonData.headline}</div>}
+                  {ribbonData.message && <div className="ribbon-mob-message">{ribbonData.message}</div>}
+                  {ribbonData.cta_label && (
+                    <a href={ribbonData.cta_href || '#'} className="ribbon-mob-cta">{ribbonData.cta_label}</a>
+                  )}
+                </div>
+              </div>
+
+              {/* Compact bar — shown when collapsed */}
+              {ribbonCollapsed && (
+                <div className="ribbon-mob-bar">
+                  <div className="ribbon-mob-bar-text">
+                    {ribbonData.kicker && <span className="ribbon-mob-bar-kicker">{ribbonData.kicker}</span>}
+                    {ribbonData.headline && <span className="ribbon-mob-bar-headline">{ribbonData.headline}</span>}
+                  </div>
+                  {ribbonData.cta_label && (
+                    <a href={ribbonData.cta_href || '#'} className="ribbon-mob-bar-cta">{ribbonData.cta_label}</a>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-          {ribbonData.message && <div className="ribbon-message">{ribbonData.message}</div>}
-          {ribbonData.cta_label && <a href={ribbonData.cta_href || '#'} className="ribbon-cta">{ribbonData.cta_label}</a>}
-          <button
-            className={`ribbon-toggle${ribbonCollapsed ? ' flipped' : ''}`}
-            onClick={() => setRibbonCollapsed(c => !c)}
-            aria-label={ribbonCollapsed ? 'Expand' : 'Collapse'}
-          >
-            <svg viewBox="0 0 24 14" width="18" height="11" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M2 2L12 12L22 2"/>
-            </svg>
-          </button>
-        </div>
-      </div>
+        )
+      })()}
       <div style={{height:'72px'}}/>
     </>
   )

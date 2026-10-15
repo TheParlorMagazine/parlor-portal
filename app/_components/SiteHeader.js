@@ -21,6 +21,9 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
   const [issuesList, setIssuesList] = useState([])
   const memberRef = useRef(null)
   const lastScrollY = useRef(0)
+  const navScrollRef = useRef(null)
+  const [navCanLeft, setNavCanLeft] = useState(false)
+  const [navCanRight, setNavCanRight] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -78,6 +81,20 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [hideOnScroll])
+
+  function updateNavArrows() {
+    const el = navScrollRef.current
+    if (!el) return
+    const hasOverflow = el.scrollWidth > el.clientWidth + 1
+    setNavCanLeft(hasOverflow && el.scrollLeft > 0)
+    setNavCanRight(hasOverflow && el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
+  }
+
+  useEffect(() => {
+    updateNavArrows()
+    window.addEventListener('resize', updateNavArrows)
+    return () => window.removeEventListener('resize', updateNavArrows)
+  }, [])
 
   return (
     <>
@@ -205,12 +222,25 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
           display: flex; align-items: center; justify-content: center;
           font-family: 'Source Serif 4', Georgia, serif;
         }
-        .header-bottom {
+        .header-bottom-wrap {
+          position: relative;
           background: var(--sh-black);
-          display: flex; align-items: center; justify-content: center;
-          gap: 48px; padding: 11px 40px;
           border-bottom: 1px solid rgba(255,255,255,0.18);
         }
+        .header-bottom {
+          display: flex; align-items: center; justify-content: center;
+          gap: 48px; padding: 11px 40px;
+        }
+        .nav-arrow-btn {
+          display: none; position: absolute; top: 0; bottom: 0; width: 44px;
+          align-items: center; justify-content: center;
+          background: transparent; border: none; cursor: pointer;
+          z-index: 5; padding: 0; color: rgba(255,255,255,0.85);
+          font-size: 26px; line-height: 1; user-select: none;
+        }
+        .nav-arrow-btn:hover { color: #fff; }
+        .nav-arrow-btn--left { left: 0; background: linear-gradient(to right, var(--sh-black) 55%, transparent); }
+        .nav-arrow-btn--right { right: 0; background: linear-gradient(to left, var(--sh-black) 55%, transparent); }
         .header-section-link {
           font-family: 'Playfair Display', Georgia, serif;
           font-size: 20px; color: rgba(255,255,255,0.65);
@@ -229,9 +259,24 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
         .header-section-link.active { color: var(--sh-white); }
         .header-section-link.active::after { transform: scaleX(1); background: var(--sh-pink); }
         @media (max-width: 900px) {
-          .header-top { padding: 12px 20px; }
-          .header-bottom { gap: 20px; padding: 10px 20px; overflow-x: auto; }
-          .header-section-link { font-size: 12px; white-space: nowrap; }
+          .header-top { padding: 10px 20px; align-items: flex-start; }
+          /* Reorder: cart → left, stacked logo → center, hamburger → right */
+          .header-side { order: 1; justify-content: flex-start; padding-top: 8px; }
+          .logo-wrap { order: 2; flex-direction: column; align-items: center; gap: 4px; }
+          .logo-mark { width: 90px; height: 90px; }
+          .logo-text-img { height: auto; width: clamp(180px, 54vw, 260px); margin-top: 0; }
+          .header-side.right { order: 3; justify-content: flex-end; padding-top: 8px; gap: 14px; }
+          .header-bottom {
+            gap: 28px; padding: 14px 56px; overflow-x: auto;
+            justify-content: flex-start; scrollbar-width: none;
+          }
+          .header-bottom::-webkit-scrollbar { display: none; }
+          .header-section-link { font-size: 14px; white-space: nowrap; }
+          .nav-arrow-btn { display: flex; }
+        }
+        @media (min-width: 600px) and (max-width: 900px) {
+          .header-section-link { font-size: 16px; }
+          .header-bottom { gap: 32px; padding: 16px 60px; }
         }
         /* Hamburger + slide-out drawer (matches the homepage) */
         .hamburger-btn { display: inline-flex; flex-direction: column; justify-content: center; gap: 5px; width: 30px; height: 26px; padding: 0; background: none; border: none; cursor: pointer; }
@@ -338,23 +383,37 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
           </div>
         </div>
 
-        <nav className="header-bottom">
-          <a href="/" className="header-section-link">Home</a>
-          {NAV_LINKS.map(link => {
-            const isActive = activeCategory &&
-              activeCategory.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-') ===
-              link.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')
-            return (
-              <a
-                key={link}
-                href={`/${link.toLowerCase().replace(/ & /g,'-').replace(/ /g,'-')}`}
-                className={`header-section-link${isActive ? ' active' : ''}`}
-              >
-                {link}
-              </a>
-            )
-          })}
-        </nav>
+        <div className="header-bottom-wrap">
+          {navCanLeft && (
+            <button className="nav-arrow-btn nav-arrow-btn--left" aria-hidden="true"
+              onClick={() => { navScrollRef.current?.scrollBy({ left: -180, behavior: 'smooth' }); setTimeout(updateNavArrows, 350) }}>
+              ‹
+            </button>
+          )}
+          <nav className="header-bottom" ref={navScrollRef} onScroll={updateNavArrows}>
+            <a href="/" className="header-section-link">Home</a>
+            {NAV_LINKS.map(link => {
+              const isActive = activeCategory &&
+                activeCategory.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-') ===
+                link.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')
+              return (
+                <a
+                  key={link}
+                  href={`/${link.toLowerCase().replace(/ & /g,'-').replace(/ /g,'-')}`}
+                  className={`header-section-link${isActive ? ' active' : ''}`}
+                >
+                  {link}
+                </a>
+              )
+            })}
+          </nav>
+          {navCanRight && (
+            <button className="nav-arrow-btn nav-arrow-btn--right" aria-hidden="true"
+              onClick={() => { navScrollRef.current?.scrollBy({ left: 180, behavior: 'smooth' }); setTimeout(updateNavArrows, 350) }}>
+              ›
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Slide-out drawer */}
