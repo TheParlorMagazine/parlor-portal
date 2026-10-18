@@ -61,6 +61,7 @@ export default function PortalLibraryPage() {
   const [query, setQuery] = useState('')
   const [openAcc, setOpenAcc] = useState('month') // only one section open at a time
   const toggleAcc = k => setOpenAcc(cur => (cur === k ? null : k))
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Deep-link: /portal/library?theme=<name> pre-selects that theme filter.
   useEffect(() => {
@@ -112,36 +113,73 @@ export default function PortalLibraryPage() {
 
   return (
     <>
-      <style>{libCss}</style>
+      <style>{libCss + `
+        .lib-mobile-topbar { display:none; }
+        @media (max-width:820px){
+          .lib-mobile-topbar { display:flex; align-items:center; justify-content:space-between; padding:0 16px; height:56px; background:#000; position:fixed; top:0; left:0; right:0; z-index:600; flex-shrink:0; width:100%; }
+          .lib-mobile-logo { font-family:'thermal-variable',Georgia,serif; font-size:15px; font-weight:600; color:#fff; letter-spacing:0.02em; line-height:1.1; }
+          .lib-mobile-logo small { display:block; font-size:10px; color:rgba(255,255,255,0.45); font-weight:400; letter-spacing:0.05em; }
+          .lib-mobile-btns { display:flex; align-items:center; gap:8px; }
+          .lib-mobile-btn { display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:7px; background:rgba(255,255,255,0.08); border:none; cursor:pointer; }
+          .lib-mobile-btn svg { width:16px; height:16px; color:#fff; }
+          .lib-shell { padding-top:56px; }
+          .sidebar { display:none; }
+          .sidebar.open { display:flex; position:fixed; top:56px; left:0; right:0; bottom:0; z-index:500; width:100%; overflow-y:auto; }
+          .sidebar .sb-logo { display:none; }
+          .lib-topbar { display:none; }
+        }
+        @media (min-width:821px){ .lib-hamburger { display:none; } }
+        .lib-hamburger { align-items:center; justify-content:center; width:36px; height:36px; border-radius:8px; background:none; border:1px solid var(--border); cursor:pointer; flex-shrink:0; }
+        .lib-hamburger svg { width:16px; height:16px; color:var(--ink); }
+        .lib-sb-close { display:none; }
+        @media (max-width:820px){ .lib-sb-close { display:flex; align-items:center; gap:8px; padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.12); background:none; border-top:none; border-left:none; border-right:none; color:rgba(255,255,255,0.6); font-size:13px; font-family:'thermal-variable',Georgia,serif; cursor:pointer; width:100%; } }
+      `}</style>
+      <div className="lib-mobile-topbar">
+        <div className="lib-mobile-logo">The Parlor<small>The Archive</small></div>
+        <div className="lib-mobile-btns">
+          <button className="lib-mobile-btn" onClick={() => setSidebarOpen(o => !o)} aria-label={sidebarOpen ? 'Close menu' : 'Browse filters'}>
+            {sidebarOpen
+              ? <svg viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+              : <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+            }
+          </button>
+          <a href="/" className="lib-mobile-btn" title="Parlor home">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M8 2L2 7v7h4v-4h4v4h4V7L8 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </a>
+        </div>
+      </div>
       <div className="lib-shell">
-        <aside className="sidebar">
+        <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
           <div className="sb-logo"><div>The Parlor<small>The Archive</small></div>
             <a href="/" title="Parlor home" className="sb-home-btn"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2L2 7v7h4v-4h4v4h4V7L8 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></a>
           </div>
           <a href="/portal" className="sb-item sb-slim"><svg viewBox="0 0 16 16" fill="none"><path d="M6 3L1 8l5 5M1 8h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>Back to dashboard</a>
           <div className="sb-section">Browse</div>
-          {sbItem('all', 'All items', filter.kind === 'all', () => setFilter({ kind: 'all' }), ICON.book)}
+          {sbItem('all', 'All items', filter.kind === 'all', () => { setFilter({ kind: 'all' }); setSidebarOpen(false) }, ICON.book)}
 
           <div className={`sb-section sb-accordion-header${openAcc === 'type' ? ' open' : ''}`} onClick={() => toggleAcc('type')}>By content type</div>
           <div className={`sb-accordion-content${openAcc === 'type' ? ' open' : ''}`}>
-            {types.map(t => sbItem(`type-${t}`, t, filter.kind === 'type' && filter.value === t, () => setFilter({ kind: 'type', value: t }), ICON.lines))}
+            {types.map(t => sbItem(`type-${t}`, t, filter.kind === 'type' && filter.value === t, () => { setFilter({ kind: 'type', value: t }); setSidebarOpen(false) }, ICON.lines))}
           </div>
 
           <div className={`sb-section sb-accordion-header${openAcc === 'month' ? ' open' : ''}`} onClick={() => toggleAcc('month')}>By month</div>
           <div className={`sb-accordion-content${openAcc === 'month' ? ' open' : ''}`}>
-            {months.map(m => sbItem(`month-${m}`, monthLabel(m), filter.kind === 'month' && filter.value === m, () => setFilter({ kind: 'month', value: m })))}
+            {months.map(m => sbItem(`month-${m}`, monthLabel(m), filter.kind === 'month' && filter.value === m, () => { setFilter({ kind: 'month', value: m }); setSidebarOpen(false) }))}
           </div>
 
           <div className={`sb-section sb-accordion-header${openAcc === 'theme' ? ' open' : ''}`} onClick={() => toggleAcc('theme')}>By theme</div>
           <div className={`sb-accordion-content${openAcc === 'theme' ? ' open' : ''}`}>
-            {themes.map(t => sbItem(`theme-${t.name}`, t.name, filter.kind === 'theme' && filter.value === t.name, () => setFilter({ kind: 'theme', value: t.name }),
+            {themes.map(t => sbItem(`theme-${t.name}`, t.name, filter.kind === 'theme' && filter.value === t.name, () => { setFilter({ kind: 'theme', value: t.name }); setSidebarOpen(false) },
               <svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.8 3.9 4.2.5-3.1 2.9.8 4.2L8 11.9 4.3 13.4l.8-4.2L2 6.4l4.2-.5L8 2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>
             ))}
           </div>
         </aside>
 
         <div className="library-content">
-          <div className="lib-topbar">
+          <div className="lib-topbar" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button className="lib-hamburger" onClick={() => setSidebarOpen(true)} aria-label="Browse filters">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            </button>
             <div className="lib-page-title">The Archive</div>
           </div>
 

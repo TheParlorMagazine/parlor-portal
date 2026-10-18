@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { uploadToCloudinary, isDuplicateUpload } from '../../../lib/uploadImage'
 import { confirmDialog } from '../../../lib/confirmDialog'
 import BundlesSection from './BundlesSection'
+import CuratedCollectionsSection from './CuratedCollectionsSection'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -421,7 +422,7 @@ function PrintifyImportModal({ token, onClose, onDone }) {
 
 // ── Section ───────────────────────────────────────────────────
 export default function ShopProductsSection({ supabase }) {
-  const [shopTab, setShopTab] = useState('products') // 'products' | 'bundles'
+  const [shopTab, setShopTab] = useState('products') // 'products' | 'bundles' | 'curated'
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([]) // [{ id, name }]
   const [loading, setLoading] = useState(true)
@@ -495,27 +496,41 @@ export default function ShopProductsSection({ supabase }) {
   const uncategorized = products.filter(p => !p.category).length
   const shown = filter === 'all' ? products : filter === '__uncat__' ? products.filter(p => !p.category) : products.filter(p => p.category === filter)
 
+  const TABS = [
+    { key: 'products', label: 'Products' },
+    { key: 'bundles', label: 'Bundles' },
+    { key: 'curated', label: 'Curated Collections' },
+  ]
+  const tabBar = (
+    <div style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${BORDER}`, marginBottom: 24 }}>
+      {TABS.map(t => (
+        <button key={t.key} onClick={() => setShopTab(t.key)} style={{ background: 'none', border: 'none', borderBottom: shopTab === t.key ? `2px solid ${BLACK}` : '2px solid transparent', padding: '10px 22px', fontFamily: ff, fontSize: 14, color: shopTab === t.key ? BLACK : '#888', cursor: 'pointer' }}>{t.label}</button>
+      ))}
+    </div>
+  )
+
   if (shopTab === 'bundles') {
     const token = async () => { const { data: { session } } = await supabase.auth.getSession(); return session?.access_token }
     return (
       <div style={{ fontFamily: ff }}>
-        <div style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${BORDER}`, marginBottom: 24 }}>
-          {['products', 'bundles'].map(t => (
-            <button key={t} onClick={() => setShopTab(t)} style={{ background: 'none', border: 'none', borderBottom: shopTab === t ? `2px solid ${BLACK}` : '2px solid transparent', padding: '10px 22px', fontFamily: ff, fontSize: 14, color: shopTab === t ? BLACK : '#888', cursor: 'pointer', textTransform: 'capitalize' }}>{t}</button>
-          ))}
-        </div>
+        {tabBar}
         <BundlesSection token={token} />
+      </div>
+    )
+  }
+
+  if (shopTab === 'curated') {
+    return (
+      <div style={{ fontFamily: ff }}>
+        {tabBar}
+        <CuratedCollectionsSection supabase={supabase} />
       </div>
     )
   }
 
   return (
     <div style={{ fontFamily: ff }}>
-      <div style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${BORDER}`, marginBottom: 24 }}>
-        {['products', 'bundles'].map(t => (
-          <button key={t} onClick={() => setShopTab(t)} style={{ background: 'none', border: 'none', borderBottom: shopTab === t ? `2px solid ${BLACK}` : '2px solid transparent', padding: '10px 22px', fontFamily: ff, fontSize: 14, color: shopTab === t ? BLACK : '#888', cursor: 'pointer', textTransform: 'capitalize' }}>{t}</button>
-        ))}
-      </div>
+      {tabBar}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <h2 style={{ fontFamily: ffH, fontSize: 26, margin: 0, color: BLACK }}>Shop Products</h2>
         <div style={{ display: 'flex', gap: 10 }}>

@@ -77,6 +77,117 @@ async function handleSavedPaymentMethod(session) {
   } catch (e) { console.error('handleSavedPaymentMethod failed:', e.message) }
 }
 
+// Trick-or-Treat bundle purchase: decrement treat stock, record an order.
+async function handleTotBundle(session) {
+  const supabase = getSupabase()
+
+  // Dedupe webhook retries
+  const { data: dupe } = await supabase.from('orders').select('id').eq('stripe_session_id', session.id).maybeSingle()
+  if (dupe) return
+
+  const treatIds = (session.metadata?.treat_ids || '').split(',').map(s => s.trim()).filter(Boolean)
+  const collectionId = session.metadata?.collection_id || null
+
+  // Decrement stock for each chosen treat
+  if (treatIds.length) {
+    for (const tid of treatIds) {
+      await supabase.rpc('decrement_tot_treat_stock', { treat_id: tid }).catch(() => {
+        // Fallback: manual decrement if RPC doesn't exist yet
+        supabase.from('tot_treats').select('stock').eq('id', tid).single().then(({ data: t }) => {
+          if (t) supabase.from('tot_treats').update({ stock: Math.max(0, (t.stock || 1) - 1) }).eq('id', tid)
+        })
+      })
+    }
+  }
+
+  // Resolve member
+  let memberId = session.metadata?.userId || session.client_reference_id || null
+  if (!memberId && session.customer) {
+    const { data: m } = await supabase.from('members').select('id').eq('stripe_customer_id', session.customer).single()
+    memberId = m?.id || null
+  }
+
+  // Shipping address
+  let ship = session.collected_information?.shipping_details || session.shipping_details || null
+  if (!ship?.address?.line1 && typeof session.payment_intent === 'string') {
+    try {
+      const pi = await stripe.paymentIntents.retrieve(session.payment_intent)
+      if (pi?.shipping?.address?.line1) ship = pi.shipping
+    } catch {}
+  }
+  const a = ship?.address || {}
+  const shipName = ship?.name || session.customer_details?.name || ''
+
+  // Resolve treat names for order_items (look up tot_treats + linked product names)
+  let treatRows = []
+  if (treatIds.length) {
+    const { data: treats } = await supabase
+      .from('tot_treats')
+      .select('id, name, product_id, shop_products(name, images)')
+      .in('id', treatIds)
+    treatRows = (treats || []).map(t => ({
+      product_name: t.shop_products?.name || t.name,
+      quantity: 1,
+      unit_price_cents: 0,
+      image_url: t.shop_products?.images?.[0] || null,
+    }))
+  }
+
+  // Standalone product names (tote etc.)
+  const standaloneIds = (session.metadata?.standalone_product_ids || '').split(',').filter(Boolean)
+  if (standaloneIds.length) {
+    const { data: prods } = await supabase
+      .from('shop_products')
+      .select('id, name, images')
+      .in('id', standaloneIds)
+    for (const p of prods || []) {
+      treatRows.push({ product_name: p.name, quantity: 1, unit_price_cents: 0, image_url: p.images?.[0] || null })
+    }
+  }
+
+  let orderNumber = null
+  try { const { data: n } = await supabase.rpc('next_order_number'); if (n) orderNumber = n } catch {}
+
+  const totalCents = session.amount_total || 0
+
+  const { data: order, error } = await supabase.from('orders').insert({
+    member_id: memberId || null,
+    stripe_session_id: session.id,
+    email: session.customer_details?.email || '',
+    shipping_name: shipName,
+    shipping_address: ship ? formatAddress(shipName, a) : null,
+    subtotal_cents: totalCents,
+    shipping_cents: 0,
+    total_cents: totalCents,
+    currency: session.currency || 'usd',
+    status: 'paid',
+    order_number: orderNumber,
+    metadata: {
+      kind: 'tot_bundle',
+      collection_id: collectionId,
+      treat_ids: treatIds,
+      standalone_product_ids: standaloneIds,
+    },
+  }).select().single()
+
+  if (error) { console.error('tot_bundle order insert error:', error); return }
+
+  // Insert order_items so the admin Orders page shows the treat names
+  if (treatRows.length) {
+    await supabase.from('order_items').insert(
+      treatRows.map(r => ({ ...r, order_id: order.id }))
+    )
+  }
+
+  // Send the standard shop order confirmation email with the treat list
+  try {
+    const buyerEmail = session.customer_details?.email || order.email
+    if (buyerEmail) {
+      await sendOrderConfirmationEmail({ to: buyerEmail, name: shipName || 'there', order, items: treatRows })
+    }
+  } catch (e) { console.error('tot_bundle confirmation email error:', e.message) }
+}
+
 // Shop purchases (physical merch/print) → create an order the member can track
 // in the portal. Triggered by a mode=payment checkout carrying shipping (or a
 // metadata.kind of 'shop_order'), as opposed to digital item unlocks above.
@@ -393,6 +504,8 @@ export async function POST(request) {
       // shop checkout (has shipping, or is tagged shop_order) becomes an order.
       if (session.metadata?.articleId) {
         await handleOneTimePurchase(session)
+      } else if (session.metadata?.kind === 'tot_bundle') {
+        await handleTotBundle(session)
       } else if (session.metadata?.kind === 'shop_order' || session.shipping_details?.address || session.collected_information?.shipping_details?.address) {
         await handleShopOrder(session)
       }

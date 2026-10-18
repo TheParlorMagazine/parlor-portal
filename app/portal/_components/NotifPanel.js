@@ -63,9 +63,16 @@ export default function NotifPanel({ open, onClose, onChange }) {
 
   async function markAll() {
     const unread = items.filter(n => !n.read).length
-    setItems(list => list.map(x => ({ ...x, read: true })))
+    setItems([])
     onChange && onChange(-unread)
     fetch('/api/portal/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ all: true }) }).catch(() => {})
+  }
+
+  async function dismiss(e, n) {
+    e.stopPropagation()
+    setItems(list => list.filter(x => x.id !== n.id))
+    if (!n.read) onChange && onChange(-1)
+    fetch('/api/portal/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ id: n.id }) }).catch(() => {})
   }
 
   if (!open) return null
@@ -89,6 +96,9 @@ export default function NotifPanel({ open, onClose, onChange }) {
         .notif-msg{font-size:12.5px;color:var(--ink);line-height:1.45;margin-bottom:2px}
         .notif-time{font-size:10.5px;color:var(--muted)}
         .notif-unread-dot{width:6px;height:6px;border-radius:50%;background:var(--pink);flex-shrink:0;margin-top:5px}
+        .notif-dismiss{opacity:0;background:none;border:none;cursor:pointer;color:var(--muted);font-size:15px;line-height:1;padding:0 2px;flex-shrink:0;transition:opacity 0.15s,color 0.15s;margin-top:1px}
+        .notif-dismiss:hover{color:var(--ink)}
+        .notif-item:hover .notif-dismiss{opacity:1}
         .np-foot{padding:12px 18px;border-top:1px solid var(--border);text-align:center;margin-top:auto}
         .np-foot a{font-size:12px;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
         .np-empty{padding:40px 18px;text-align:center;color:var(--muted);font-style:italic;font-size:13px}
@@ -98,7 +108,10 @@ export default function NotifPanel({ open, onClose, onChange }) {
       <div className="notif-panel">
         <div className="np-head">
           <div className="np-title">Notifications</div>
-          <button className="np-mark" onClick={markAll}>Mark all read</button>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <button className="np-mark" onClick={markAll}>Mark all read</button>
+            <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:'var(--muted)',fontSize:20,lineHeight:1,padding:'0 2px',display:'flex',alignItems:'center'}} aria-label="Close">×</button>
+          </div>
         </div>
         {loaded && items.length === 0 && <div className="np-empty">You’re all caught up.</div>}
         {items.map(n => (
@@ -110,7 +123,10 @@ export default function NotifPanel({ open, onClose, onChange }) {
               <span className="notif-msg">{n.message}</span>
               <span className="notif-time">{timeAgo(n.created_at)}</span>
             </span>
-            {!n.read && <span className="notif-unread-dot" />}
+            <span style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,flexShrink:0}}>
+              {!n.read && <span className="notif-unread-dot" />}
+              <button className="notif-dismiss" onClick={e => dismiss(e, n)} title="Dismiss">×</button>
+            </span>
           </button>
         ))}
         <div className="np-foot"><a href="/portal/notifications">See all notifications →</a></div>

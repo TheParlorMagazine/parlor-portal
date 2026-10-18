@@ -139,6 +139,7 @@ export default function HomePageClient({ initial = {} }) {
   const [issuesList, setIssuesList] = useState([])
   const [ribbonCollapsed, setRibbonCollapsed] = useState(false)
   const [ribbonScrolling, setRibbonScrolling] = useState(false)
+  const [uiHidden, setUiHidden] = useState(false)
   const [announcements, setAnnouncements] = useState([])
   const [ribbonIndex, setRibbonIndex] = useState(0)
   const [featuredEvents, setFeaturedEvents] = useState(initial.events || [])
@@ -158,6 +159,7 @@ export default function HomePageClient({ initial = {} }) {
   const [portraitSlides, setPortraitSlides] = useState({})
   const [heroClassified, setHeroClassified] = useState(false)
   const [printPopupOpen, setPrintPopupOpen] = useState(false)
+  const lastScrollY = useRef(0)
   const aboutRef = useRef(null)
   const memberRef = useRef(null)
   const compSectionRef = useRef(null)
@@ -217,8 +219,11 @@ export default function HomePageClient({ initial = {} }) {
 
   useEffect(() => {
     updateNavArrows()
+    // Re-check after fonts load — on iOS Safari scrollWidth reads too small before fonts paint
+    const t = setTimeout(updateNavArrows, 400)
+    document.fonts?.ready?.then(updateNavArrows)
     window.addEventListener('resize', updateNavArrows)
-    return () => window.removeEventListener('resize', updateNavArrows)
+    return () => { clearTimeout(t); window.removeEventListener('resize', updateNavArrows) }
   }, [])
 
   // Which REAL hero slide is centered — stable across the seamless-loop clone
@@ -422,6 +427,9 @@ export default function HomePageClient({ initial = {} }) {
   useEffect(() => {
     let scrollTimer = null
     function handleScroll() {
+      const y = window.scrollY
+      setUiHidden(y > lastScrollY.current && y > 80)
+      lastScrollY.current = y
       setRibbonScrolling(true)
       clearTimeout(scrollTimer)
       scrollTimer = setTimeout(() => setRibbonScrolling(false), 160)
@@ -689,7 +697,8 @@ export default function HomePageClient({ initial = {} }) {
         }
 
         /* ── HEADER ── */
-        .site-header { background: var(--white); position: sticky; top: 0; z-index: 100; }
+        .site-header { background: var(--white); position: sticky; top: 0; z-index: 100; transition: transform 0.3s ease; }
+        .site-header.ui-hidden { transform: translateY(-100%); }
         .header-top { display: flex; align-items: center; justify-content: space-between; padding: 10px 40px; }
         .header-side { display: flex; align-items: center; gap: 40px; flex: 1; }
         .header-text-link {
@@ -976,9 +985,10 @@ export default function HomePageClient({ initial = {} }) {
         .printpop-dismiss { margin-top: 12px; background: none; border: none; color: var(--muted); font-family: 'Source Serif 4', Georgia, serif; font-size: 13px; cursor: pointer; text-align: center; transition: color 0.15s; }
         .printpop-dismiss:hover { color: var(--pink); }
         @media (max-width: 640px) {
-          .printpop-modal { grid-template-columns: 1fr; max-height: 94vh; overflow-y: auto; }
-          .printpop-img { max-height: 200px; }
-          .printpop-body { padding: 26px 22px 30px; }
+          .printpop-overlay { padding: 16px; }
+          .printpop-modal { grid-template-columns: 1fr; width: min(340px, calc(100vw - 32px)); max-height: 90vh; overflow-y: auto; }
+          .printpop-img { max-height: 260px; }
+          .printpop-body { padding: 22px 20px 28px; }
         }
 
         /* ── ISSUE HERO CAROUSEL (large image; title/tagline layered over it) ── */
@@ -1056,7 +1066,7 @@ export default function HomePageClient({ initial = {} }) {
         @media (max-width: 700px) {
           .home-banner { grid-template-columns: 1fr; }
           .home-banner-right { min-height: 260px; }
-          .home-banner-grad { background: linear-gradient(to bottom, #f2b8c6 0%, rgba(242,184,198,0.2) 30%, transparent 60%); }
+          .home-banner-grad { background: linear-gradient(to bottom, #f2b8c6 0%, rgba(242,184,198,0.2) 20%, transparent 40%); }
         }
 
         /* ── FEATURED EVENTS ── */
@@ -1207,14 +1217,16 @@ export default function HomePageClient({ initial = {} }) {
         .comp-cta:hover { background: var(--white); }
 
         /* ── RIBBON ── */
-        .ribbon { position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999; background: var(--ribbon-bg); box-shadow: 0 -18px 40px rgba(0,0,0,0.22), 0 -6px 14px rgba(0,0,0,0.12); font-family: 'Source Serif 4', Georgia, serif; color: var(--black); transition: opacity 220ms ease; }
+        .ribbon { position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999; background: var(--ribbon-bg); box-shadow: 0 -18px 40px rgba(0,0,0,0.22), 0 -6px 14px rgba(0,0,0,0.12); font-family: 'Source Serif 4', Georgia, serif; color: var(--black); transition: opacity 220ms ease, transform 0.3s ease; padding-bottom: env(safe-area-inset-bottom, 0px); }
+        .ribbon.ui-hidden { transform: translateY(100%); }
         .ribbon.scrolling { opacity: 0.5; }
         /* Desktop layout */
         .ribbon-inner { max-width: 1280px; margin: 0 auto; padding: 14px 64px 14px 28px; display: grid; grid-template-columns: max-content 1fr max-content; align-items: center; gap: 14px; position: relative; }
         .ribbon-thumb-wrap { position: relative; flex-shrink: 0; width: 72px; }
         .ribbon-thumb { position: absolute; bottom: 0; left: 0; width: auto; height: 140px; object-fit: contain; object-position: bottom; pointer-events: none; filter: drop-shadow(0 -3px 8px rgba(0,0,0,0.18)); }
         .ribbon-inner.has-thumb { padding-left: 110px; }
-        .ribbon-thumb-slot { position: fixed; left: 8px; bottom: 0; width: 118px; height: 140px; z-index: 10000; pointer-events: none; }
+        .ribbon-thumb-slot { position: fixed; left: 8px; bottom: 0; width: 118px; height: 140px; z-index: 10000; pointer-events: none; transition: transform 0.3s ease; }
+        .ribbon.ui-hidden ~ * .ribbon-thumb-slot, .ribbon-thumb-slot.ui-hidden { transform: translateY(100%); }
         .ribbon-kicker { font-size: 14px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; line-height: 1.1; }
         .ribbon-subhead { font-family: 'Alex Brush', cursive; font-size: 24px; font-weight: 400; line-height: 1.2; margin-top: 2px; }
         .ribbon-message { font-size: 16px; line-height: 1.35; font-weight: 500; opacity: 0.9; text-align: center; max-width: 52ch; margin: 0 auto; }
@@ -1401,7 +1413,7 @@ export default function HomePageClient({ initial = {} }) {
       )}
 
       {/* ── HEADER ── */}
-      <header className="site-header">
+      <header className={`site-header${uiHidden ? ' ui-hidden' : ''}`}>
         <div className="header-top">
 
           {/* Left: hamburger menu (opens the drawer with About, Shop, Issues…) */}
@@ -1864,7 +1876,7 @@ export default function HomePageClient({ initial = {} }) {
       {(() => {
         const marqueeText = [ribbonData.kicker, ribbonData.headline, ribbonData.message].filter(Boolean).join(' · ')
         return (
-          <div className={`ribbon${ribbonScrolling ? ' scrolling' : ''}`}>
+          <div className={`ribbon${ribbonScrolling ? ' scrolling' : ''}${uiHidden ? ' ui-hidden' : ''}`}>
             {/* Desktop: 3-column grid */}
             <div className={`ribbon-inner${ribbonData.image_url ? ' has-thumb' : ''}`}>
               {ribbonData.image_url && (

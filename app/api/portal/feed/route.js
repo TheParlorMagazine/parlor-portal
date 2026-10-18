@@ -20,10 +20,10 @@ export async function GET(request) {
   const db = serviceClient()
 
   // The forums this member is in — feed forum activity is scoped to these.
-  const { data: memberships } = await db.from('forum_members').select('forum_id').eq('member_id', user.id)
-  const forumIds = (memberships || []).map(m => m.forum_id)
   const me = await memberOf(db, user.id)
   const paid = hasPaidAccess(me)
+  const { data: memberships } = await db.from('forum_members').select('forum_id').eq('member_id', user.id)
+  const forumIds = (memberships || []).map(m => m.forum_id)
 
   const [postRes, blogRes, comRes, thrRes, promptRes] = await Promise.all([
     db.from('member_posts')
@@ -37,10 +37,10 @@ export async function GET(request) {
       .order('reviewed_at', { ascending: false })
       .limit(12),
     db.from('article_comments')
-      .select('id, body, created_at, article_id, members!article_comments_member_id_fkey(full_name, avatar_url), articles!article_comments_article_id_fkey(title, slug, cover_image_url)')
+      .select('id, body, created_at, article_id, member_id, members!article_comments_member_id_fkey(full_name, avatar_url), articles!article_comments_article_id_fkey(title, slug, cover_image_url, theme, date_published, author_name, author_photo_url), article_comment_likes(member_id)')
       .eq('status', 'live')
       .order('created_at', { ascending: false })
-      .limit(20),
+      .limit(60),
     forumIds.length
       ? db.from('forum_threads')
           .select('id, title, body, forum_id, last_activity_at, created_at, member_id, members!forum_threads_member_id_fkey(full_name, avatar_url), forums(name)')
@@ -93,17 +93,42 @@ export async function GET(request) {
     }
   })
 
-  const comments = (comRes.data || []).map(c => ({
-    kind: 'comment',
-    id: c.id,
-    ts: c.created_at,
-    author_name: c.members?.full_name || 'Member',
-    author_avatar: c.members?.avatar_url || null,
-    body: excerpt(c.body),
-    article_title: c.articles?.title || null,
-    article_slug: c.articles?.slug || null,
-    article_cover: c.articles?.cover_image_url || null,
-  }))
+  // Group comments by article, sorted within each article oldest→newest.
+  // The group's timestamp = most recent comment (for feed ordering).
+  const articleGroups = new Map()
+  for (const c of (comRes.data || [])) {
+    const aid = c.article_id
+    if (!articleGroups.has(aid)) {
+      articleGroups.set(aid, {
+        kind: 'article_comments',
+        id: `ac-${aid}`,
+        ts: c.created_at,
+        article_id: aid,
+        article_title: c.articles?.title || null,
+        article_slug: c.articles?.slug || null,
+        article_cover: c.articles?.cover_image_url || null,
+        article_theme: c.articles?.theme || null,
+        article_date: c.articles?.date_published || null,
+        article_author_name: c.articles?.author_name || null,
+        article_author_photo: c.articles?.author_photo_url || null,
+        comments: [],
+      })
+    }
+    const grp = articleGroups.get(aid)
+    if (c.created_at > grp.ts) grp.ts = c.created_at
+    grp.comments.push({
+      id: c.id,
+      body: c.body,
+      ts: c.created_at,
+      author_name: c.members?.full_name || 'Member',
+      author_avatar: c.members?.avatar_url || null,
+      like_count: (c.article_comment_likes || []).length,
+      liked_by_me: (c.article_comment_likes || []).some(l => l.member_id === (me?.id || '')),
+    })
+  }
+  // Sort each group's comments oldest first
+  for (const grp of articleGroups.values()) grp.comments.sort((a, b) => new Date(a.ts) - new Date(b.ts))
+  const comments = [...articleGroups.values()]
 
   const threads = (thrRes.data || []).map(t => ({
     kind: 'forum',

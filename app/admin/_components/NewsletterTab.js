@@ -98,7 +98,10 @@ export default function NewsletterTab({ supabase }) {
   const [mediaFolder, setMediaFolder]   = useState('body')
   const [mediaLoading, setMediaLoading] = useState(false)
   // Support copy (not persisted, sent per-send)
-  const [supportCopy, setSupportCopy] = useState('')
+  const [supportCopy, setSupportCopy]   = useState('')
+  const [supportTitle, setSupportTitle] = useState('')
+  const [supportBtn1, setSupportBtn1]   = useState('')
+  const [supportBtn2, setSupportBtn2]   = useState('')
   // Shop ad
   const [shopProducts, setShopProducts]       = useState([])
   const [shopProductsLoaded, setShopProductsLoaded] = useState(false)
@@ -117,13 +120,19 @@ export default function NewsletterTab({ supabase }) {
     return session?.access_token
   }, [supabase])
 
-  const load = useCallback(async (secs, supCopy, annOverride) => {
+  const load = useCallback(async (secs, supCopy, annOverride, supTitle, supBtn1, supBtn2) => {
     setMsg('')
-    const activeSections  = secs     ?? sections
-    const activeSupportCopy = supCopy ?? supportCopy
+    const activeSections     = secs     ?? sections
+    const activeSupportCopy  = supCopy  ?? supportCopy
+    const activeSupportTitle = supTitle ?? supportTitle
+    const activeSupportBtn1  = supBtn1  ?? supportBtn1
+    const activeSupportBtn2  = supBtn2  ?? supportBtn2
     const params = new URLSearchParams()
     for (const [k, v] of Object.entries(activeSections)) params.set(k, String(v))
-    if (activeSupportCopy) params.set('supportCopy', activeSupportCopy)
+    if (activeSupportCopy)  params.set('supportCopy',  activeSupportCopy)
+    if (activeSupportTitle) params.set('supportTitle', activeSupportTitle)
+    if (activeSupportBtn1)  params.set('supportBtn1',  activeSupportBtn1)
+    if (activeSupportBtn2)  params.set('supportBtn2',  activeSupportBtn2)
     if (annOverride) {
       if (annOverride.title) params.set('annTitle', annOverride.title)
       if (annOverride.text)  params.set('annText',  annOverride.text)
@@ -156,7 +165,7 @@ export default function NewsletterTab({ supabase }) {
       }
     } catch { setData({ error: 'Could not load the preview.' }) }
     setLoading(false)
-  }, [token, sections, supportCopy])
+  }, [token, sections, supportCopy, supportTitle, supportBtn1, supportBtn2])
 
   // Keep loadRef current so the announcement debounce always uses the latest load (with current sections)
   useEffect(() => { loadRef.current = load }, [load])
@@ -184,7 +193,10 @@ export default function NewsletterTab({ supabase }) {
           const d = await res.json()
           const saved = { ...defaultSections, ...d.sections }
           setSections(saved)
-          load(saved)
+          if (d.supportTitle) setSupportTitle(d.supportTitle)
+          if (d.supportBtn1)  setSupportBtn1(d.supportBtn1)
+          if (d.supportBtn2)  setSupportBtn2(d.supportBtn2)
+          load(saved, undefined, undefined, d.supportTitle || '', d.supportBtn1 || '', d.supportBtn2 || '')
           return
         }
       } catch {}
@@ -207,13 +219,13 @@ export default function NewsletterTab({ supabase }) {
     token().then(tok => fetch('/api/admin/newsletter/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
-      body: JSON.stringify({ sections: next }),
+      body: JSON.stringify({ sections: next, supportTitle, supportBtn1, supportBtn2 }),
     })).catch(() => {})
     if (previewTimer.current) clearTimeout(previewTimer.current)
     setLoading(true)
     const ann = announcementRef.current
     const annOverride = (ann.title || ann.text) ? ann : null
-    previewTimer.current = setTimeout(() => load(next, undefined, annOverride), 400)
+    previewTimer.current = setTimeout(() => load(next, undefined, annOverride, supportTitle, supportBtn1, supportBtn2), 400)
   }
 
   function toggleExpand(key, isEditable) {
@@ -230,7 +242,7 @@ export default function NewsletterTab({ supabase }) {
       const res = await fetch('/api/admin/newsletter/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` },
-        body: JSON.stringify({ sections, supportCopy }),
+        body: JSON.stringify({ sections, supportCopy, supportTitle, supportBtn1, supportBtn2 }),
       })
       const d = await res.json()
       setMsg(res.ok ? `Sent to ${d.sent} subscriber${d.sent === 1 ? '' : 's'} ✓` : (d.error || 'Could not send.'))
@@ -329,10 +341,17 @@ export default function NewsletterTab({ supabase }) {
     setMediaPicker(null)
   }
 
-  function debouncePreview(newSupportCopy) {
+  function debouncePreview(newSupportCopy, newTitle, newBtn1, newBtn2) {
     if (previewTimer.current) clearTimeout(previewTimer.current)
     setLoading(true)
-    previewTimer.current = setTimeout(() => load(undefined, newSupportCopy), 600)
+    previewTimer.current = setTimeout(() => {
+      load(undefined, newSupportCopy, undefined, newTitle, newBtn1, newBtn2)
+      token().then(tok => fetch('/api/admin/newsletter/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ sections, supportTitle: newTitle, supportBtn1: newBtn1, supportBtn2: newBtn2 }),
+      })).catch(() => {})
+    }, 600)
   }
 
   const card = { background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px' }
@@ -557,10 +576,22 @@ export default function NewsletterTab({ supabase }) {
               {sec.key === 'support' && isOpen && (
                 <div style={{ padding: '0 16px 14px 64px', borderTop: '1px solid #f5f5f5' }}>
                   <div style={{ paddingTop: 12 }}>
+                    <label style={labelSt}>Title (leave blank to use default)</label>
+                    <input value={supportTitle} onChange={e => { setSupportTitle(e.target.value); debouncePreview(supportCopy, e.target.value, supportBtn1, supportBtn2) }}
+                      placeholder="💛 A note on where we are."
+                      style={{ ...inputSt, marginBottom: 8 }} />
                     <label style={labelSt}>Body copy (leave blank to use default)</label>
-                    <textarea value={supportCopy} onChange={e => { setSupportCopy(e.target.value); debouncePreview(e.target.value) }} rows={4}
+                    <textarea value={supportCopy} onChange={e => { setSupportCopy(e.target.value); debouncePreview(e.target.value, supportTitle, supportBtn1, supportBtn2) }} rows={4}
                       placeholder={DEFAULT_SUPPORT}
-                      style={{ ...inputSt, fontSize: '13.5px', resize: 'vertical', lineHeight: 1.6 }} />
+                      style={{ ...inputSt, fontSize: '13.5px', resize: 'vertical', lineHeight: 1.6, marginBottom: 8 }} />
+                    <label style={labelSt}>Primary button copy (leave blank to use default)</label>
+                    <input value={supportBtn1} onChange={e => { setSupportBtn1(e.target.value); debouncePreview(supportCopy, supportTitle, e.target.value, supportBtn2) }}
+                      placeholder="Become a subscriber"
+                      style={{ ...inputSt, marginBottom: 8 }} />
+                    <label style={labelSt}>Secondary button copy (leave blank to use default)</label>
+                    <input value={supportBtn2} onChange={e => { setSupportBtn2(e.target.value); debouncePreview(supportCopy, supportTitle, supportBtn1, e.target.value) }}
+                      placeholder="Make a donation"
+                      style={{ ...inputSt, marginBottom: 8 }} />
                     <div style={{ marginTop: 5, fontSize: '11.5px', color: '#bbb' }}>Reflects in the preview automatically. Sent with the newsletter — not saved to the database.</div>
                   </div>
                 </div>

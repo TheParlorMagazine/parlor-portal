@@ -40,11 +40,9 @@ function Room() {
     <div className="rr-wrap">
       <style>{rrCss}</style>
       <h1 className="rr-h1">Reading Room</h1>
-      <p className="rr-sub">The Parlor book club — what we’re reading together, and the conversation around it.</p>
+      <p className="rr-sub">The Parlor book club — what we're reading together, and the conversation around it.</p>
 
-      {state.books.length === 0 ? (
-        <div className="rr-empty"><strong style={{ color: ‘var(--ink)’ }}>No selections yet.</strong><br />The first book club pick is on its way.</div>
-      ) : (
+      {state.books.length === 0 ? null : (
         <>
           {featured && (
             <>
@@ -62,7 +60,7 @@ function Room() {
                     : (
                       <div className="rr-teaser" style={{ marginTop: 16 }}>
                         <h3>Join the conversation</h3>
-                        <p>The Reading Room — discussions, prompts, and the live meeting — is open to Reader’s Circle and Printing Press members.</p>
+                        <p>The Reading Room — discussions, prompts, and the live meeting — is open to Reader's Circle and Printing Press members.</p>
                         <a className="rr-btn primary" href="/plans">Become a member</a>
                       </div>
                     )}
@@ -86,10 +84,10 @@ function Room() {
                   ))}
                 </div>
               ) : (
-                <div className="rr-shelf" style={{ position: ‘relative’ }}>
-                  <div style={{ display: ‘flex’, gap: 16, flexWrap: ‘wrap’, filter: ‘blur(3px)’, pointerEvents: ‘none’, userSelect: ‘none’ }}>
+                <div className="rr-shelf" style={{ position: 'relative' }}>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', filter: 'blur(3px)', pointerEvents: 'none', userSelect: 'none' }}>
                     {shelf.map(b => (
-                      <div className="rr-book" key={b.id} style={{ cursor: ‘default’ }}>
+                      <div className="rr-book" key={b.id} style={{ cursor: 'default' }}>
                         <span className={`rr-status ${b.status}`}>{b.status}</span>
                         <Cover src={b.cover_image_url} title={b.title} />
                         <div className="rr-book-title">{b.title}</div>
@@ -97,8 +95,8 @@ function Room() {
                       </div>
                     ))}
                   </div>
-                  <div style={{ position: ‘absolute’, inset: 0, display: ‘flex’, alignItems: ‘center’, justifyContent: ‘center’ }}>
-                    <a href="/plans" style={{ background: ‘var(--ink)’, color: ‘#fff’, padding: ‘10px 22px’, borderRadius: 6, fontFamily: ‘inherit’, fontSize: 13.5, fontWeight: 600, textDecoration: ‘none’ }}>Unlock the full shelf →</a>
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <a href="/plans" style={{ background: 'var(--ink)', color: '#fff', padding: '10px 22px', borderRadius: 6, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, textDecoration: 'none' }}>Unlock the full shelf →</a>
                   </div>
                 </div>
               )}

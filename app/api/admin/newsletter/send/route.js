@@ -15,9 +15,9 @@ export async function POST(request) {
   if (!ROLES.includes(me.role)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
-  let sections = {}, supportCopy = ''
-  try { const body = await request.json(); sections = body?.sections || {}; supportCopy = body?.supportCopy || '' } catch {}
-  const nl = await gatherNewsletter(db, { baseUrl, sections, supportCopy })
+  let sections = {}, supportCopy = '', supportTitle = '', supportBtn1 = '', supportBtn2 = ''
+  try { const body = await request.json(); sections = body?.sections || {}; supportCopy = body?.supportCopy || ''; supportTitle = body?.supportTitle || ''; supportBtn1 = body?.supportBtn1 || ''; supportBtn2 = body?.supportBtn2 || '' } catch {}
+  const nl = await gatherNewsletter(db, { baseUrl, sections, supportCopy, supportTitle, supportBtn1, supportBtn2 })
   if (nl.empty) return Response.json({ error: 'Nothing to send yet — no articles or events.' }, { status: 400 })
 
   const name = `Newsletter — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`

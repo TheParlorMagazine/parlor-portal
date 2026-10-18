@@ -202,6 +202,19 @@ export default function VerticalPage({ params }) {
           text-align: center; padding: 80px 20px;
           color: #6b7280; font-size: 16px; font-style: italic;
         }
+        .vertical-loading {
+          display: flex; align-items: center; justify-content: center;
+          padding: 80px 20px; gap: 10px;
+          color: #9ca3af; font-family: 'Source Serif 4', Georgia, serif;
+          font-size: 15px; font-style: italic;
+        }
+        .vertical-loading-dot {
+          width: 6px; height: 6px; border-radius: 50%; background: #d1d5db;
+          animation: vldot 1.2s ease-in-out infinite;
+        }
+        .vertical-loading-dot:nth-child(2) { animation-delay: 0.2s; }
+        .vertical-loading-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes vldot { 0%,80%,100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
 
         .strip {
           display: grid;
@@ -393,6 +406,13 @@ export default function VerticalPage({ params }) {
       ) : null}
 
       <section className="vertical-grid-section">
+        {loading && (
+          <div className="vertical-loading">
+            <div className="vertical-loading-dot" />
+            <div className="vertical-loading-dot" />
+            <div className="vertical-loading-dot" />
+          </div>
+        )}
         {!loading && articles.length === 0 && (
           <div className="vertical-empty">No articles published in this section yet.</div>
         )}

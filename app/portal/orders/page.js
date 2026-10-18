@@ -56,6 +56,13 @@ const ordersCss = `
 
   .ord-cancel-note { margin:12px 20px 0; font-size:13px; color:#a23b3b; }
 
+  @media (max-width:600px) {
+    .ord-track { flex-direction:column; align-items:flex-start; gap:0; padding:18px 20px 10px; }
+    .ord-step { flex-direction:row; width:auto; text-align:left; align-items:center; gap:12px; padding:6px 0; }
+    .ord-step-label { margin-top:0; font-size:13px; }
+    .ord-bar { width:2px; height:28px; min-width:unset; flex:none; margin:0 0 0 10px; align-self:auto; }
+  }
+
   .ord-items { padding:16px 20px 4px; display:flex; flex-direction:column; gap:12px; }
   .ord-item { display:flex; gap:12px; align-items:center; }
   .ord-item-thumb { width:48px; height:48px; border-radius:8px; background:#f2eef0; flex:0 0 48px; overflow:hidden; }

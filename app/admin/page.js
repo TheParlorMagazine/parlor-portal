@@ -869,7 +869,7 @@ function MainContent({ section, supabase, setActiveSection, role }) {
     case 'plan-circle':  return <PlansSection supabase={supabase} plan="circle" />
     case 'plan-press':   return <PlansSection supabase={supabase} plan="press" />
     case 'orders':       return <OrdersSection supabase={supabase} />
-    case 'shop-products': return <ShopProductsSection supabase={supabase} />
+    case 'shop-products':       return <ShopProductsSection supabase={supabase} />
     case 'print-mailings': return <PrintMailingsSection supabase={supabase} />
     case 'pitches':      return <ComingSoon title="Submissions" />
     case 'invoices':     return <ComingSoon title="Invoices" />
@@ -895,7 +895,7 @@ export default function AdminPage() {
       if (userError || !user) { router.push('/login'); return }
       const { data: member, error } = await supabase.from('members').select('role').eq('id', user.id).single()
       if (cancelled) return
-      if (error || !TEAM_ROLES.includes(member?.role)) { router.push('/dashboard'); return }
+      if (error || !TEAM_ROLES.includes(member?.role)) { router.push('/portal'); return }
       setRole(member.role)
       setLoading(false)
     }

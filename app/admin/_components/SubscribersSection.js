@@ -298,6 +298,10 @@ export default function SubscribersSection({ supabase }) {
   const [filterStatus, setFilterStatus] = useState('all')
   const [selected, setSelected] = useState(new Set())
   const [profileId, setProfileId] = useState(null)
+  const [addOpen, setAddOpen] = useState(false)
+  const [addForm, setAddForm] = useState({ name: '', email: '', plan: 'free' })
+  const [addSaving, setAddSaving] = useState(false)
+  const [addError, setAddError] = useState('')
 
   const TEAM_ROLES = ['admin', 'editor', 'writer', 'finance_admin', 'social_admin']
 
@@ -352,6 +356,30 @@ export default function SubscribersSection({ supabase }) {
     URL.revokeObjectURL(url)
   }
 
+  async function addSubscriber(e) {
+    e.preventDefault()
+    setAddSaving(true); setAddError('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/admin/import-members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ records: [{ email: addForm.email.trim(), full_name: addForm.name.trim(), plan: addForm.plan }] }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || 'Failed')
+      if (d.errors?.length) throw new Error(d.errors[0]?.error || 'Import error')
+      // refresh list
+      const { data } = await supabase.from('members').select('*').order('joined_at', { ascending: false })
+      setAll((data || []).filter(m => m.role !== 'admin' && !(m.email || '').toLowerCase().endsWith('@theparlormagazine.com')))
+      setAddOpen(false); setAddForm({ name: '', email: '', plan: 'free' })
+    } catch (err) {
+      setAddError(err.message)
+    } finally {
+      setAddSaving(false)
+    }
+  }
+
   const profileMember = profileId ? all.find(m => m.id === profileId) : null
   const thStyle = { fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#aaa', fontFamily: ff, padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid #f0f0f0', background: '#fafafa', fontWeight: '500' }
   const tdStyle = { padding: '12px 12px', fontSize: '13px', color: '#444', fontFamily: ff, verticalAlign: 'middle' }
@@ -365,10 +393,49 @@ export default function SubscribersSection({ supabase }) {
             {loading ? '…' : `${all.length} total · ${all.filter(m => isPaidPlan(m.plan)).length} paid`}
           </div>
         </div>
-        <button onClick={exportCSV} style={{ padding: '9px 18px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '7px', color: '#444', fontSize: '13px', cursor: 'pointer', fontFamily: ff }}>
-          {selected.size > 0 ? `Export ${selected.size} selected` : 'Export CSV'}
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={() => { setAddForm({ name: '', email: '', plan: 'free' }); setAddError(''); setAddOpen(true) }} style={{ padding: '9px 18px', background: darkPink, border: 'none', borderRadius: '7px', color: '#fff', fontSize: '13px', cursor: 'pointer', fontFamily: ff, fontWeight: '500' }}>
+            + Add subscriber
+          </button>
+          <button onClick={exportCSV} style={{ padding: '9px 18px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '7px', color: '#444', fontSize: '13px', cursor: 'pointer', fontFamily: ff }}>
+            {selected.size > 0 ? `Export ${selected.size} selected` : 'Export CSV'}
+          </button>
+        </div>
       </div>
+
+      {/* Add subscriber modal */}
+      {addOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => { if (e.target === e.currentTarget) setAddOpen(false) }}>
+          <div style={{ background: '#fff', borderRadius: '12px', padding: '28px 32px', width: '100%', maxWidth: '420px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', fontFamily: ff }}>
+            <h2 style={{ fontFamily: ffH, fontSize: '20px', fontWeight: '700', margin: '0 0 20px', color: '#0a0a0a' }}>Add subscriber</h2>
+            <form onSubmit={addSubscriber}>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: '#666', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Full name</label>
+                <input type="text" value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} placeholder="Jane Smith" style={{ ...inputStyle, width: '100%' }} />
+              </div>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: '#666', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Email <span style={{ color: darkPink }}>*</span></label>
+                <input type="email" required value={addForm.email} onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} placeholder="jane@example.com" style={{ ...inputStyle, width: '100%' }} />
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: '#666', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Plan</label>
+                <select value={addForm.plan} onChange={e => setAddForm(f => ({ ...f, plan: e.target.value }))} style={{ ...inputStyle, width: '100%', cursor: 'pointer' }}>
+                  <option value="free">Free</option>
+                  <option value="Reader's Circle">Reader's Circle (paid)</option>
+                  <option value="Printing Press">Printing Press (print)</option>
+                </select>
+              </div>
+              {addError && <div style={{ color: '#c04040', fontSize: '13px', marginBottom: '14px' }}>{addError}</div>}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setAddOpen(false)} style={{ padding: '9px 20px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '7px', color: '#444', fontSize: '13px', cursor: 'pointer', fontFamily: ff }}>Cancel</button>
+                <button type="submit" disabled={addSaving} style={{ padding: '9px 20px', background: darkPink, border: 'none', borderRadius: '7px', color: '#fff', fontSize: '13px', cursor: addSaving ? 'default' : 'pointer', fontFamily: ff, fontWeight: '500', opacity: addSaving ? 0.7 : 1 }}>
+                  {addSaving ? 'Adding…' : 'Add subscriber'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center' }}>

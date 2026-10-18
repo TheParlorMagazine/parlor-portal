@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
-import Link from 'next/link'
 import SiteHeader from '../../_components/SiteHeader'
 import SiteFooter from '../../_components/SiteFooter'
 import IssueHero from './IssueHero'
+import IssueArticleFilter from './IssueArticleFilter'
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -32,12 +32,18 @@ export default async function IssuePage({ params }) {
     )
   }
 
-  const { data: articles } = await db
-    .from('articles')
-    .select('slug, title, subtitle, excerpt, cover_image_url, category, article_category, theme, media_type, author_name, author_photo_url, date_published, sections(title)')
-    .eq('published', true)
-    .eq('issue_id', id)
-    .order('date_published', { ascending: false })
+  const [{ data: articles }, { data: shopProducts }] = await Promise.all([
+    db.from('articles')
+      .select('slug, title, subtitle, excerpt, cover_image_url, category, article_category, theme, media_type, author_name, author_photo_url, date_published, sections(title)')
+      .eq('published', true)
+      .eq('issue_id', id)
+      .order('date_published', { ascending: false }),
+    db.from('shop_products')
+      .select('id, name, variant, price, images, external_url, category')
+      .eq('active', true)
+      .eq('category', 'Limited Edition')
+      .order('sort'),
+  ])
 
   const issued = issue.publication_date
     ? new Date(issue.publication_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
@@ -69,78 +75,54 @@ export default async function IssuePage({ params }) {
         </section>
       )}
 
-      {/* Articles */}
-      <style>{`
-        .issue-grid { display: flex; flex-direction: column; gap: 0; }
-        .issue-card { text-decoration: none; color: inherit; display: grid; grid-template-columns: 320px 1fr; gap: 36px; align-items: start; padding: 40px 0; border-bottom: 1px solid #e8e3dd; }
-        .issue-card:first-child { border-top: 1px solid #e8e3dd; }
-        .issue-card:hover .issue-card-title { text-decoration: underline; text-decoration-color: #ccc; }
-        .issue-card-img { width: 100%; aspect-ratio: 4/3; overflow: hidden; border-radius: 4px; background: #f2ece4; flex-shrink: 0; }
-        .issue-card-img img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; transform: scale(1.15); transform-origin: center; transition: transform 0.3s ease; }
-        .issue-card:hover .issue-card-img img { transform: scale(1.19); }
-        .issue-card-body { display: flex; flex-direction: column; justify-content: center; }
-        .issue-card-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-        .issue-pill-type { font-family: 'Source Serif 4', Georgia, serif; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #0a0a0a; color: #fff; border-radius: 999px; padding: 3px 10px; }
-        .issue-pill-cat { font-family: 'Source Serif 4', Georgia, serif; font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; border: 1px solid #c89aa5; color: #7a2531; border-radius: 999px; padding: 3px 10px; }
-        .issue-card-byline { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-        .issue-card-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #e8e2db; }
-        .issue-card-author { font-family: 'Source Serif 4', Georgia, serif; font-size: 13px; color: #555; }
-        .issue-card-date { font-family: 'Source Serif 4', Georgia, serif; font-size: 13px; color: #999; }
-        .issue-card-title { font-family: 'Playfair Display', Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1.15; margin: 0 0 12px; color: #0a0a0a; }
-        .issue-card-desc { font-family: 'Source Serif 4', Georgia, serif; font-size: 16px; line-height: 1.7; color: #555; margin: 0; font-weight: 300; max-width: 60ch; }
-        @media (max-width: 700px) { .issue-card { grid-template-columns: 1fr; gap: 16px; } }
-      `}</style>
-      <section style={{ maxWidth: '1120px', margin: '0 auto', padding: 'clamp(40px,6vh,72px) 24px 96px' }}>
-        {(!articles || articles.length === 0) ? (
+      {/* Sticky section filter + article grid */}
+      {(!articles || articles.length === 0) ? (
+        <section style={{ maxWidth: '1120px', margin: '0 auto', padding: 'clamp(40px,6vh,72px) 24px 96px' }}>
           <p style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '17px', color: '#888', textAlign: 'center', fontStyle: 'italic' }}>
             Articles from this issue are coming soon.
           </p>
-        ) : (
-          <div className="issue-grid">
-            {articles.map(a => {
-              const typeLabel = a.sections?.title || null
-              const catLabel = a.article_category || a.theme || a.category || null
-              const desc = a.excerpt || a.subtitle || null
-              const dateStr = a.date_published
-                ? new Date(a.date_published).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-                : null
-              return (
-                <Link key={a.slug} href={`/post/${a.slug}`} className="issue-card">
-                  {a.cover_image_url && (
-                    <div className="issue-card-img">
-                      <img
-                        src={a.cover_image_url}
-                        alt={a.title || ''}
-                        style={a.slug === 'against-the-cloud' ? { objectPosition: '5% 65%' } : undefined}
-                      />
+        </section>
+      ) : (
+        <IssueArticleFilter
+          articles={articles}
+          sections={[...new Set((articles || []).map(a => a.sections?.title).filter(Boolean))]}
+        />
+      )}
+      {/* Limited edition shop block */}
+      {shopProducts?.length > 0 && (
+        <section style={{ background: '#fdf0f3', padding: 'clamp(56px,8vh,96px) 24px' }}>
+          <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
+            <div style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '11px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#c4364a', marginBottom: '12px' }}>
+              From The Shop
+            </div>
+            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(26px,3.5vw,42px)', fontWeight: 700, color: '#0a0a0a', margin: '0 0 40px', lineHeight: 1.15 }}>
+              Limited Edition — Issue {issue.number ? String(issue.number).padStart(2, '0') : issue.title}
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(shopProducts.length, 3)}, 1fr)`, gap: '28px' }}>
+              {shopProducts.map(p => {
+                const url = p.external_url || `/shop/${p.id}`
+                const price = p.price != null ? `$${Number(p.price).toFixed(2)}` : null
+                return (
+                  <a key={p.id} href={url} style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ aspectRatio: '1', background: '#f5ece9', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px' }}>
+                      {p.images?.[0] && (
+                        <img src={p.images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      )}
                     </div>
-                  )}
-                  <div className="issue-card-body">
-                    {(typeLabel || catLabel) && (
-                      <div className="issue-card-pills">
-                        {typeLabel && <span className="issue-pill-type">{typeLabel}</span>}
-                        {catLabel && <span className="issue-pill-cat">{catLabel}</span>}
-                      </div>
-                    )}
-                    {a.author_name && (
-                      <div className="issue-card-byline">
-                        {a.author_photo_url
-                          ? <img src={a.author_photo_url} alt={a.author_name} className="issue-card-avatar" />
-                          : <div className="issue-card-avatar" />
-                        }
-                        <span className="issue-card-author">{a.author_name}</span>
-                        {dateStr && <span className="issue-card-date">· {dateStr}</span>}
-                      </div>
-                    )}
-                    <h2 className="issue-card-title">{a.title}</h2>
-                    {desc && <p className="issue-card-desc">{desc}</p>}
-                  </div>
-                </Link>
-              )
-            })}
+                    <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 700, color: '#0a0a0a', marginBottom: '4px', lineHeight: 1.2 }}>
+                      {p.name}{p.variant ? ` — ${p.variant}` : ''}
+                    </div>
+                    {price && <div style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '14px', color: '#888', marginBottom: '14px' }}>{price}</div>}
+                    <div style={{ marginTop: 'auto', display: 'inline-block', background: '#0a0a0a', color: '#fff', fontFamily: "'Source Serif 4', Georgia, serif", fontSize: '13px', fontWeight: 700, padding: '10px 20px', borderRadius: '4px', alignSelf: 'flex-start' }}>
+                      Shop now →
+                    </div>
+                  </a>
+                )
+              })}
+            </div>
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </main>
     <SiteFooter />
     </>

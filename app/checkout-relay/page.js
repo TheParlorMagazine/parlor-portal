@@ -15,7 +15,7 @@ function CheckoutRelayInner() {
   useEffect(() => {
     const planId = searchParams.get('planId')
     const coupon = searchParams.get('coupon') || undefined
-    const returnTo = searchParams.get('returnTo') || '/dashboard'
+    const returnTo = searchParams.get('returnTo') || '/portal'
     if (!PLAN_IDS.includes(planId)) {
       window.location.href = '/plans'
       return

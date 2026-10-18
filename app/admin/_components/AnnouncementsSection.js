@@ -30,6 +30,7 @@ const PLACEMENT_LABELS = {
   top_bar: 'top bar',
   competition: 'footer banner',
   popup: 'popup',
+  article_sidebar: 'article sidebar',
 }
 const PLACEMENT_DESC = {
   ribbon: 'Shown in the floating footer ribbon. Active ones rotate in order.',
@@ -37,6 +38,7 @@ const PLACEMENT_DESC = {
   top_bar: 'Slim dismissible bar above the nav. Kicker = italic prefix, message = main text.',
   competition: 'Full-width footer banner above the site footer. Headline can use \\n for line breaks. Submissions-close date is derived from "Show until".',
   popup: 'First-load popup, shown once per session. Include an image for best impact.',
+  article_sidebar: 'Fixed left strip shown on article pages on wide screens. Used for seasonal campaigns like Trick or Treat.',
 }
 
 function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon', onClose, onSaved }) {
@@ -182,6 +184,7 @@ export default function AnnouncementsSection({ supabase }) {
     top_bar: a => a.placement === 'top_bar',
     competition: a => a.placement === 'competition',
     popup: a => a.placement === 'popup',
+    article_sidebar: a => a.placement === 'article_sidebar',
   }
   const shown = items.filter(PLACEMENT_MATCH[tab] || (() => false))
 
@@ -213,17 +216,18 @@ export default function AnnouncementsSection({ supabase }) {
             tab === 'top_bar' ? 'Slim bar above the nav that dismisses on click. Only the first active item shows.' :
             tab === 'competition' ? 'Full-width footer banner above the site footer. Only the first active item shows.' :
             tab === 'popup' ? 'First-load popup shown once per session per item. Only the first active item shows.' :
+            tab === 'article_sidebar' ? 'Fixed left strip shown on article pages (wide screens only). Used for seasonal campaigns.' :
             'The floating footer ribbon — issue launches, events, fundraisers, and campaigns. Active ones rotate in sort order.'
           }</p>
         </div>
         <button onClick={() => setEditing(null)} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontFamily: ff, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          + New {tab === 'homepage' ? 'banner' : tab === 'top_bar' ? 'top bar' : tab === 'competition' ? 'footer banner' : tab === 'popup' ? 'popup' : 'ribbon item'}
+          + New {tab === 'homepage' ? 'banner' : tab === 'top_bar' ? 'top bar' : tab === 'competition' ? 'footer banner' : tab === 'popup' ? 'popup' : tab === 'article_sidebar' ? 'sidebar strip' : 'ribbon item'}
         </button>
       </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 6, borderBottom: `1px solid ${BORDER}`, marginBottom: 4 }}>
-        {[['ribbon', 'Footer ribbon'], ['homepage', 'Hero banner'], ['top_bar', 'Top bar'], ['competition', 'Footer banner'], ['popup', 'Popup']].map(([v, l]) => {
+        {[['ribbon', 'Footer ribbon'], ['homepage', 'Hero banner'], ['top_bar', 'Top bar'], ['competition', 'Footer banner'], ['popup', 'Popup'], ['article_sidebar', 'Article sidebar']].map(([v, l]) => {
           const count = items.filter(PLACEMENT_MATCH[v] || (() => false)).length
           const on = tab === v
           return (

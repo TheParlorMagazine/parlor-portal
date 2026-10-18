@@ -46,8 +46,8 @@ export default function AdminMediaPage() {
         .from('members').select('role').eq('id', user.id).single()
       if (cancelled) return
 
-      if (memberError) { console.error('Admin check — member query error:', memberError); router.push('/dashboard'); return }
-      if (member?.role !== 'admin') { router.push('/dashboard'); return }
+      if (memberError) { console.error('Admin check — member query error:', memberError); router.push('/portal'); return }
+      if (member?.role !== 'admin') { router.push('/portal'); return }
 
       setLoading(false)
     }

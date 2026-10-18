@@ -31,14 +31,14 @@ export default function EditArticlePage() {
 
       if (memberError) {
         console.error('Admin check — member query error:', memberError)
-        router.push('/dashboard')
+        router.push('/portal')
         return
       }
 
       const isAdmin = member?.role === 'admin'
       if (!isAdmin) {
         console.error('Admin check — role is not admin:', member?.role)
-        router.push('/dashboard')
+        router.push('/portal')
         return
       }
 

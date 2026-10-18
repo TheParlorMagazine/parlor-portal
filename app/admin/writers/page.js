@@ -45,8 +45,8 @@ export default function AdminWritersPage() {
       const { data: member, error: memberError } = await supabase
         .from('members').select('role').eq('id', user.id).single()
       if (cancelled) return
-      if (memberError) { router.push('/dashboard'); return }
-      if (member?.role !== 'admin') { router.push('/dashboard'); return }
+      if (memberError) { router.push('/portal'); return }
+      if (member?.role !== 'admin') { router.push('/portal'); return }
 
       const { data } = await supabase.from('writers').select('*').order('name')
       if (cancelled) return

@@ -48,7 +48,8 @@ const profileCss = `
   .pg-group-name { font-family: 'thermal-variable', Georgia, serif; font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.3; }
   .pg-group-count { font-size: 11.5px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
   .pg-groups-empty { font-size: 13px; color: var(--muted); line-height: 1.5; padding: 4px 0 14px; }
-  @media (max-width: 900px) { .prof-layout { grid-template-columns: 1fr; } }
+  .pg-groups-inline { display: none; }
+  @media (max-width: 900px) { .prof-layout { grid-template-columns: 1fr; } .prof-rail { display: none; } .pg-groups-inline { display: block; margin-top: 20px; } }
 `
 
 const ROLE_LABELS = { admin: 'Master Admin', editor: 'Editor', writer: 'Writer', finance_admin: 'Finance Admin', social_admin: 'Social Admin' }
@@ -181,6 +182,21 @@ function ProfileView() {
             {status === 'saved' && <div className="prof-ok" style={{ marginTop: 12 }}>Saved ✓</div>}
           </>
         )}
+      </div>
+
+      {/* Mobile-only: forums shown between profile card and posts */}
+      <div className="pg-groups pg-groups-inline">
+        <div className="pg-groups-h">My forums</div>
+        <div className="pg-groups-sub">Forums you're part of</div>
+        {groups.loading ? <div className="pg-groups-empty">Loading…</div>
+          : groups.items.length === 0 ? <div className="pg-groups-empty">You're not in any groups yet.</div>
+          : groups.items.map(g => (
+            <a key={g.id} className="pg-group" href={`/portal/forums/${g.id}`}>
+              <span className="pg-group-name">{g.name}{g.my_role === 'host' ? ' · host' : ''}</span>
+              <span className="pg-group-count">{g.member_count || 0} member{g.member_count === 1 ? '' : 's'}</span>
+            </a>
+          ))}
+        <a href="/portal/groups" style={{ display: 'block', textAlign: 'center', marginTop: 14, padding: '9px', border: '1px solid var(--border)', borderRadius: 8, fontFamily: "'thermal-variable', Georgia, serif", fontSize: 13, color: 'var(--ink)', textDecoration: 'none' }}>Browse forums</a>
       </div>
 
       {articles.length > 0 && (

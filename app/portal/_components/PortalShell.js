@@ -63,6 +63,7 @@ export default function PortalShell({ active = 'dashboard', children }) {
   const [notifOpen, setNotifOpen] = useState(false)
   const [inboxOpen, setInboxOpen] = useState(false)
   const [navOpen, setNavOpen] = useState(false)
+  const [hiddenNav, setHiddenNav] = useState(new Set(['readingroom']))
   const bump = (key, delta) => setCounts(c => ({ ...c, [key]: Math.max(0, (c[key] || 0) + delta) }))
 
   useEffect(() => {
@@ -82,6 +83,10 @@ export default function PortalShell({ active = 'dashboard', children }) {
       try {
         const res = await fetch('/api/portal/forums', { headers: { Authorization: `Bearer ${session.access_token}` } })
         if (res.ok) { const d = await res.json(); if (!cancelled) setForumCount((d.forums || []).length) }
+      } catch {}
+      try {
+        const res = await fetch('/api/portal/book-club', { headers: { Authorization: `Bearer ${session.access_token}` } })
+        if (res.ok) { const d = await res.json(); if (!cancelled && (d.books || []).length > 0) setHiddenNav(new Set()) }
       } catch {}
     }
     load()
@@ -135,7 +140,7 @@ export default function PortalShell({ active = 'dashboard', children }) {
 
         .psb-nav { padding:8px 0 20px; flex:1; }
         .psb-section { font-size:9.5px; font-weight:500; text-transform:uppercase; letter-spacing:0.13em; color:rgba(255,255,255,0.35); padding:13px 20px 4px; }
-        .psb-item { display:flex; align-items:center; gap:9px; padding:7px 14px 7px 20px; margin-right:10px; border-radius:0 7px 7px 0; font-size:13px; color:rgba(255,255,255,0.55); cursor:pointer; transition:all 0.15s; border-left:2px solid transparent; }
+        .psb-item { display:flex; align-items:center; gap:9px; padding:7px 14px 7px 20px; margin-right:10px; border-radius:0 7px 7px 0; font-size:14.5px; color:rgba(255,255,255,0.55); cursor:pointer; transition:all 0.15s; border-left:2px solid transparent; }
         .psb-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
         .psb-item.active { background:rgba(241,183,192,0.15); color:#fff; font-weight:500; border-left:2px solid var(--pink); }
         .psb-item svg { width:13px; height:13px; flex-shrink:0; opacity:0.55; }
@@ -151,7 +156,9 @@ export default function PortalShell({ active = 'dashboard', children }) {
 
         @media (max-width: 820px) {
           .portal-shell { flex-direction:column; height:auto; overflow:visible; }
-          .portal-sidebar { width:100%; height:auto; position:static; overflow:visible; }
+          .portal-sidebar { width:100%; height:auto; position:fixed; top:0; left:0; right:0; z-index:290; overflow:visible; }
+          .psb-logo { padding:12px 16px; }
+          .portal-main { padding-top:72px !important; }
           /* Hamburger */
           .psb-hamburger { display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:7px; background:rgba(255,255,255,0.08); border:none; cursor:pointer; flex-shrink:0; transition:background 0.15s; margin-top:1px; }
           .psb-hamburger:hover { background:rgba(255,255,255,0.18); }
@@ -167,11 +174,16 @@ export default function PortalShell({ active = 'dashboard', children }) {
           .psb-section { width:100%; padding:13px 20px 4px; }
           .psb-item { margin-right:10px; border-radius:0 7px 7px 0; border-left:2px solid transparent; }
           .psb-item.active { border-left:2px solid var(--pink); }
-          .portal-main { height:auto; padding:24px 18px 60px; }
+          .portal-main { height:auto; padding:24px 18px 60px; position:relative; z-index:0; }
         }
         /* Mobile — full viewport menu */
         @media (max-width: 599px) {
           .psb-collapsible { width:100%; }
+        }
+        @media (max-width: 820px) {
+          .psb-backdrop { display:none !important; }
+          .psb-collapsible { z-index:300; pointer-events:auto; }
+          .psb-collapsible * { pointer-events:auto; }
         }
         @media (min-width: 821px) {
           .psb-hamburger { display:none; }
@@ -215,6 +227,7 @@ export default function PortalShell({ active = 'dashboard', children }) {
                     {grp.section && <div className="psb-section">{grp.section}</div>}
                     {grp.items.map(it => {
                       if (it.requiresForums && forumCount === 0) return null
+                      if (hiddenNav.has(it.key)) return null
                       const cls = `psb-item${it.key === active ? ' active' : ''}${it.soon ? ' soon' : ''}`
                       const badge = it.badgeKey ? (counts[it.badgeKey] || 0) : 0
                       const inner = <>
@@ -224,7 +237,7 @@ export default function PortalShell({ active = 'dashboard', children }) {
                       </>
                       if (it.soon) return <div key={it.key} className={cls}>{inner}</div>
                       if (it.action) return <button key={it.key} type="button" className={cls} style={{ width: '100%', background: 'none', textAlign: 'left', fontFamily: 'inherit', fontSize: '13px', border: 'none', borderLeft: '2px solid transparent', cursor: 'pointer' }} onClick={() => it.action === 'notif' ? setNotifOpen(true) : setInboxOpen(true)}>{inner}</button>
-                      return <a key={it.key} href={it.href} className={cls} data-nav={it.key}>{inner}</a>
+                      return <a key={it.key} href={it.href} className={cls} data-nav={it.key} onClick={() => setNavOpen(false)}>{inner}</a>
                     })}
                   </div>
                 ))}

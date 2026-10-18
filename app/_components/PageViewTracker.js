@@ -74,7 +74,7 @@ export default function PageViewTracker() {
   }
 
   useEffect(() => {
-    if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard')) return
+    if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard') || pathname.startsWith('/portal')) return
 
     async function init() {
       try {

@@ -18,7 +18,10 @@ export async function GET(request) {
   for (const key of ['announcement', 'issuPromo', 'issueArticles', 'articles', 'featuredEvent', 'otherEvents', 'shopAd', 'support']) {
     if (sp.has(key)) sections[key] = sp.get(key) !== 'false'
   }
-  const supportCopy = sp.get('supportCopy') || ''
+  const supportCopy  = sp.get('supportCopy')  || ''
+  const supportTitle = sp.get('supportTitle') || ''
+  const supportBtn1  = sp.get('supportBtn1')  || ''
+  const supportBtn2  = sp.get('supportBtn2')  || ''
   const announcementOverride = {
     title: sp.get('annTitle') ?? null,
     text:  sp.get('annText')  ?? null,
@@ -27,7 +30,7 @@ export async function GET(request) {
     btn:   sp.get('annBtn')   ?? null,
   }
   const hasAnnOverride = Object.values(announcementOverride).some(v => v !== null)
-  const nl = await gatherNewsletter(db, { baseUrl, sections, supportCopy, announcementOverride: hasAnnOverride ? announcementOverride : null })
+  const nl = await gatherNewsletter(db, { baseUrl, sections, supportCopy, supportTitle, supportBtn1, supportBtn2, announcementOverride: hasAnnOverride ? announcementOverride : null })
   const recipientCount = await countSubscribers(db)
   return Response.json({ ...nl, recipientCount })
 }
