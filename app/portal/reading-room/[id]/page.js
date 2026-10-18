@@ -42,10 +42,11 @@ function BookDetail() {
     if (res.ok) { const j = await res.json(); setD(s => ({ ...s, prompts: s.prompts.map(x => x.id === p.id ? { ...x, upvoted: j.upvoted, upvote_count: j.upvote_count } : x) })) }
   }
 
+  const mutedStyle = { color: ‘var(--muted)’ }
   if (d.loading) return (
     <div className="rr-wrap">
       <style>{rrCss}</style>
-      <p style={{ color: ‘var(--muted)’ }}>Loading…</p>
+      <p style={mutedStyle}>Loading…</p>
     </div>
   )
   if (!d.book) return (

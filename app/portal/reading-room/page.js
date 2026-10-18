@@ -15,6 +15,8 @@ function fmtMeet(iso) {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) + ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
+const mutedStyle = { color: 'var(--muted)' }
+
 function Room() {
   const supabase = useMemo(() => createClient(), [])
   const [state, setState] = useState({ loading: true, paid: false, books: [] })
@@ -34,7 +36,7 @@ function Room() {
   if (state.loading) return (
     <div className="rr-wrap">
       <style>{rrCss}</style>
-      <p style={{ color: 'var(--muted)' }}>Loading…</p>
+      <p style={mutedStyle}>Loading…</p>
     </div>
   )
 
