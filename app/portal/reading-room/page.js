@@ -31,7 +31,12 @@ function Room() {
     })()
   }, [supabase])
 
-  if (state.loading) return <div className="rr-wrap"><style>{rrCss}</style><p style={{ color: 'var(--muted)' }}>Loading…</p></div>
+  if (state.loading) return (
+    <div className="rr-wrap">
+      <style>{rrCss}</style>
+      <p style={{ color: 'var(--muted)' }}>Loading…</p>
+    </div>
+  )
 
   const featured = state.books.find(b => b.status === 'current') || null
   const shelf = state.books.filter(b => b.id !== featured?.id)
