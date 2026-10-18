@@ -487,7 +487,7 @@ function Hub() {
           {forums.length > 0 && (
             <div className="hub-fsb-card">
               {forums.slice(0, 6).map(f => (
-                <a key={f.id} className="hub-fsb-forum" href={`/portal/forums/${f.id}`}>
+                <a key={f.id} className="hub-fsb-forum" href={`/portal/forums/${f.slug || f.id}`}>
                   {(f.avatar_url || f.cover_image_url)
                     ? <img className="hub-fsb-thumb" src={f.avatar_url || f.cover_image_url} alt="" loading="lazy" style={undefined} />
                     : <div className="hub-fsb-thumb-ph" />}

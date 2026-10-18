@@ -11,3 +11,4 @@ node_modules/
 vercel-prod.env
 netlify-import.env
 netlify-import.txt
+public/totebag.gif

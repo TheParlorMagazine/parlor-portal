@@ -112,8 +112,9 @@ export default async function ArticlePage({ params, searchParams }) {
     article.author_profile_url = article.writers.profile_url  || article.author_profile_url
   }
 
-  // "The World We're Building" (Vol 2) articles get a special template:
-  // title over a parallax hero image + a maroon drop cap.
+  // All issue articles get the parallax hero template.
+  // isVol2 kept for drop-cap styling (Vol 2 only).
+  const hasIssueHero = !!(article.issue_id && article.cover_image_url)
   let isVol2 = false
   if (article.issue_id) {
     const { data: issue } = await db
@@ -251,17 +252,23 @@ export default async function ArticlePage({ params, searchParams }) {
 
       <main style={{ background: '#fff', minHeight: '100vh' }}>
 
-        {/* Vol 2 parallax hero — title overlaid on the cover image */}
-        {isVol2 && article.cover_image_url && (
+        {/* Issue article parallax hero — title + deck + byline overlaid on the cover image */}
+        {hasIssueHero && (
           <ParallaxHero
             src={article.cover_image_url}
             alt={article.cover_image_alt || article.title}
             title={article.title}
+            subtitle={article.subtitle}
+            authorName={article.author_name}
+            authorPhotoUrl={article.author_photo_url}
+            authorProfileUrl={article.author_profile_url}
+            publishedDate={publishedDate}
+            objectPosition={article.cover_image_position || 'center center'}
           />
         )}
 
         {/* Article header */}
-        <div style={{ maxWidth: '720px', margin: '0 auto', padding: isVol2 ? '8px 24px 0' : '56px 24px 0' }}>
+        <div style={{ maxWidth: '720px', margin: '0 auto', padding: hasIssueHero ? '8px 24px 0' : '56px 24px 0' }}>
           {(article.is_community || article.media_type === 'member_post') && (
             <div style={{
               display: 'inline-block', fontFamily: "'Source Serif 4', Georgia, serif",
@@ -271,7 +278,7 @@ export default async function ArticlePage({ params, searchParams }) {
               {article.media_type === 'member_post' ? 'Member post' : 'From the community'}
             </div>
           )}
-          {!isVol2 && (
+          {!hasIssueHero && (
             <h1 style={{
               fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: 'clamp(30px, 5vw, 52px)', lineHeight: '1.15',
@@ -282,7 +289,8 @@ export default async function ArticlePage({ params, searchParams }) {
             </h1>
           )}
 
-          {article.subtitle && (
+          {/* Subtitle + byline are in the hero for issue articles; show here for standalone only */}
+          {!hasIssueHero && article.subtitle && (
             <p style={{
               fontFamily: "'Source Serif 4', Georgia, serif",
               fontSize: '20px', lineHeight: '1.5', color: '#555',
@@ -293,19 +301,19 @@ export default async function ArticlePage({ params, searchParams }) {
           )}
 
           {/* Byline */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: isVol2 ? '14px' : '12px', marginBottom: '40px' }}>
+          {!hasIssueHero && <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px' }}>
             {article.author_photo_url ? (
               <img
                 src={article.author_photo_url}
                 alt={article.author_name || ''}
-                style={{ width: isVol2 ? '52px' : '36px', height: isVol2 ? '52px' : '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
               />
             ) : article.author_name ? (
               <div style={{
-                width: isVol2 ? '52px' : '36px', height: isVol2 ? '52px' : '36px', borderRadius: '50%',
+                width: '36px', height: '36px', borderRadius: '50%',
                 background: '#f2b8c6', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: "'Playfair Display', serif", fontSize: isVol2 ? '20px' : '14px',
+                fontFamily: "'Playfair Display', serif", fontSize: '14px',
                 fontWeight: '600', color: '#c4364a',
               }}>
                 {article.author_name[0]}
@@ -316,7 +324,7 @@ export default async function ArticlePage({ params, searchParams }) {
               {article.author_name && (
                 <div style={{
                   fontFamily: "'Source Serif 4', Georgia, serif",
-                  fontSize: isVol2 ? '18px' : '14px', color: '#0a0a0a',
+                  fontSize: '14px', color: '#0a0a0a',
                 }}>
                   {article.author_profile_url ? (
                     <a href={article.author_profile_url} style={{ color: '#0a0a0a', textDecoration: 'none' }}>
@@ -336,11 +344,11 @@ export default async function ArticlePage({ params, searchParams }) {
                 </div>
               )}
             </div>
-          </div>
+          </div>}
         </div>
 
-        {/* Cover image (standard template only — Vol 2 shows it in the hero) */}
-        {!isVol2 && article.cover_image_url && (
+        {/* Cover image (standalone articles only — issue articles show it in the hero) */}
+        {!hasIssueHero && article.cover_image_url && (
           <div style={{ maxWidth: '900px', margin: '0 auto 48px', padding: '0 24px' }}>
             <img
               src={article.cover_image_url}

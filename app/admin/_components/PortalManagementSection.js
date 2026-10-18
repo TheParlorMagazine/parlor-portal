@@ -485,7 +485,7 @@ function ForumsTab({ token }) {
                         </>
                       ) : (
                         <>
-                          {f.status === 'active' && <a href={`/portal/forums/${f.id}`} target="_blank" style={{ display: 'inline-block', border: `1px solid ${BORDER}`, borderRadius: 6, padding: '5px 12px', fontSize: 12, fontFamily: ff, color: '#333', textDecoration: 'none', marginRight: 6 }}>Open ↗</a>}
+                          {f.status === 'active' && <a href={`/portal/forums/${f.slug || f.id}`} target="_blank" style={{ display: 'inline-block', border: `1px solid ${BORDER}`, borderRadius: 6, padding: '5px 12px', fontSize: 12, fontFamily: ff, color: '#333', textDecoration: 'none', marginRight: 6 }}>Open ↗</a>}
                           <button onClick={() => toggleStatus(f)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontFamily: ff, color: '#333' }}>{f.status === 'active' ? 'Archive' : 'Reactivate'}</button>
                         </>
                       )}

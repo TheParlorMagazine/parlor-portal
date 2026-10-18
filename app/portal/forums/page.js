@@ -37,7 +37,7 @@ function List() {
       ) : (
         <div className="fr-list">
           {state.forums.map(f => (
-            <a className="fr-card" key={f.id} href={`/portal/forums/${f.id}`}>
+            <a className="fr-card" key={f.id} href={`/portal/forums/${f.slug || f.id}`}>
               <div className="fr-card-name">
                 {f.name}
                 {f.my_role === 'host' && <span className="fr-badge-host">Host</span>}

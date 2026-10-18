@@ -34,9 +34,21 @@ export async function POST(request) {
   try { b = await request.json() } catch {}
   const name = (b.name || '').trim()
   if (!name) return Response.json({ error: 'Name required' }, { status: 400 })
+  const baseSlug = name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+
+  // Ensure slug uniqueness by appending a counter if needed
+  let slug = baseSlug
+  let attempt = 0
+  while (true) {
+    const { data: exists } = await db.from('forums').select('id').eq('slug', slug).maybeSingle()
+    if (!exists) break
+    attempt++
+    slug = `${baseSlug}-${attempt}`
+  }
 
   const { data: forum, error } = await db.from('forums').insert({
     name,
+    slug,
     description: (b.description || '').trim() || null,
     guidelines: (b.guidelines || '').trim() || null,
     tied_to_type: b.tied_to_type || (b.segment_id ? 'segment' : 'standalone'),

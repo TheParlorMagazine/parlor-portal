@@ -9,7 +9,7 @@ export async function GET(request) {
 
   const [{ data: forumsData }, { data: myMemberships }] = await Promise.all([
     db.from('forums')
-      .select('id, name, description, member_count, thread_count, avatar_url, cover_image_url')
+      .select('id, slug, name, description, member_count, thread_count, avatar_url, cover_image_url')
       .eq('status', 'active')
       .order('member_count', { ascending: false })
       .limit(10),

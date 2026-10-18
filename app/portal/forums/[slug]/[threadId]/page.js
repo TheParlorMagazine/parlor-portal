@@ -21,7 +21,7 @@ function Av({ name, src, sm }) {
 }
 
 function Thread() {
-  const { id, threadId } = useParams()
+  const { slug: id, threadId } = useParams()
   const supabase = useMemo(() => createClient(), [])
   const [d, setD] = useState({ loading: true, forum: null, thread: null, replies: [] })
   const [reply, setReply] = useState('')

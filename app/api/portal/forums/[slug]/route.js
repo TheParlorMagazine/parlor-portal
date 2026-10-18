@@ -2,26 +2,35 @@ import { requireUser, serviceClient } from '../../../../../lib/apiAuth'
 import { effectiveForumRole, excerpt } from '../../../../../lib/forums'
 import { notifyMember } from '../../../../../lib/notify'
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+async function forumBySlugOrId(db, slugOrId) {
+  const col = UUID_RE.test(slugOrId) ? 'id' : 'slug'
+  let { data: forum, error: fErr } = await db.from('forums').select('id, slug, name, description, guidelines, status, cover_image_url, avatar_url').eq(col, slugOrId).single()
+  if (fErr) {
+    const r = await db.from('forums').select('id, slug, name, description, guidelines, status, cover_image_url').eq(col, slugOrId).single()
+    forum = r.data; fErr = r.error
+  }
+  if (fErr) {
+    const r = await db.from('forums').select('id, slug, name, description, guidelines, status').eq(col, slugOrId).single()
+    forum = r.data
+  }
+  return forum
+}
+
 // GET → forum meta + its threads (members only)
 export async function GET(request, { params }) {
   const user = await requireUser(request)
   if (!user) return Response.json({ error: 'Not signed in' }, { status: 401 })
   const db = serviceClient()
-  const { id } = await params
+  const { slug: slugOrId } = await params
+
+  const forum = await forumBySlugOrId(db, slugOrId)
+  if (!forum || forum.status !== 'active') return Response.json({ error: 'Forum not found' }, { status: 404 })
+  const id = forum.id
 
   const role = await effectiveForumRole(db, id, user.id)
   if (!role) return Response.json({ error: 'Not a member of this forum' }, { status: 403 })
-
-  let { data: forum, error: fErr } = await db.from('forums').select('id, name, description, guidelines, status, cover_image_url, avatar_url').eq('id', id).single()
-  if (fErr) { // avatar_url column not added yet — keep the banner, drop only avatar_url
-    const r = await db.from('forums').select('id, name, description, guidelines, status, cover_image_url').eq('id', id).single()
-    forum = r.data; fErr = r.error
-  }
-  if (fErr) { // cover_image_url also missing — drop both image columns
-    const r = await db.from('forums').select('id, name, description, guidelines, status').eq('id', id).single()
-    forum = r.data
-  }
-  if (!forum || forum.status !== 'active') return Response.json({ error: 'Forum not found' }, { status: 404 })
 
   const { data: threads } = await db
     .from('forum_threads')

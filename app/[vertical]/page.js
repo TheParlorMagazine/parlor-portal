@@ -5,7 +5,6 @@ import { notFound } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 import SiteHeader from '../_components/SiteHeader'
 import SiteFooter from '../_components/SiteFooter'
-import SubscribeRibbon from '../_components/SubscribeRibbon'
 
 const VERTICALS = {
   'work-wealth': 'Work & Wealth',
@@ -488,7 +487,6 @@ export default function VerticalPage({ params }) {
         )}
       </section>
 
-      <SubscribeRibbon />
       <SiteFooter />
     </>
   )

@@ -215,7 +215,7 @@ function ModPanel({ id, auth, supabase, onChanged, forumName }) {
 }
 
 function Detail() {
-  const { id } = useParams()
+  const { slug: id } = useParams()
   const supabase = useMemo(() => createClient(), [])
   const [data, setData] = useState({ loading: true, forum: null, members: [], events: { upcoming: [], past: [] } })
   const [uid, setUid] = useState(null)
