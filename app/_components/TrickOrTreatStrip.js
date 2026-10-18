@@ -8,10 +8,12 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
   const [heroGone, setHeroGone] = useState(false)
   const [everHidden, setEverHidden] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const [bagFrame, setBagFrame] = useState(0)
+  const [houseIdx, setHouseIdx] = useState(0)       // which house the witch is passing (0–3, cycles)
+  const [filledSlots, setFilledSlots] = useState([]) // slots permanently filled after fly lands
+  const [flyItem, setFlyItem] = useState(null)       // { src, slot } while animating
   const [itemImgs, setItemImgs] = useState([null, null, null, null])
-  const [flyItem, setFlyItem] = useState(null)
   const slotsRef = useRef([])
+  const streetRef = useRef(null)
 
   // Once hidden, stays hidden
   const visible = heroGone && !everHidden
@@ -47,20 +49,24 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
     return () => obs.disconnect()
   }, [mounted, bottomSelector])
 
-  // Advance bag frame every 2.5s, trigger fly animation on each advance
+  // Each tick: witch passes a house → fly that house's item into its slot
   const intervalRef = useRef(null)
   useEffect(() => {
     if (!mounted) return
     const timeout = setTimeout(() => {
       intervalRef.current = setInterval(() => {
-        setBagFrame(f => {
-          const next = (f + 1) % 4
-          const src = itemImgs[f] // item for the house we just passed
+        setHouseIdx(h => {
+          const slot = h % 4
+          const src = itemImgs[slot]
           if (src) {
-            setFlyItem({ src, slot: f })
-            setTimeout(() => setFlyItem(null), 800)
+            setFlyItem({ src, slot })
+            // After fly lands (~750ms), permanently fill the slot
+            setTimeout(() => {
+              setFilledSlots(prev => prev.includes(slot) ? prev : [...prev, slot])
+              setFlyItem(null)
+            }, 750)
           }
-          return next
+          return h + 1
         })
       }, 2500)
     }, 1250)
@@ -105,7 +111,7 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 14px;
+          gap: 18px;
           cursor: pointer;
           transition: background 0.2s;
           text-decoration: none;
@@ -164,8 +170,8 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
           position: fixed;
           z-index: 200;
           pointer-events: none;
-          width: 80px;
-          height: 80px;
+          width: 110px;
+          height: 110px;
           border-radius: .75rem;
           overflow: hidden;
           animation: tot-fly 0.75s cubic-bezier(.3,.7,.3,1) forwards;
@@ -178,7 +184,7 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
         .tot-street {
           position: relative;
           width: 100%;
-          height: 180px;
+          height: 240px;
           overflow: hidden;
           border-radius: 10px;
           background: #1a0a28;
@@ -204,7 +210,7 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
           will-change: transform;
         }
         .tot-house-img {
-          height: 130px;
+          height: 190px;
           width: auto;
           object-fit: contain;
           display: block;
@@ -252,11 +258,11 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
         .tot-cta:hover { background: #e8a0b4; }
       `}</style>
 
-      {/* Fly animation element — rendered at document level so it can animate across the full viewport */}
       {flyItem && (
         <FlyElement
           src={flyItem.src}
           slotEl={slotsRef.current[flyItem.slot]}
+          streetEl={streetRef.current}
         />
       )}
 
@@ -265,15 +271,15 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
 
           <div className="tot-label">Trick or Treat<br/>at The Parlor</div>
 
-          {/* Collected item slots */}
+          {/* Collected item slots — only show image after fly animation lands */}
           <div className="tot-slots">
             {[0, 1, 2, 3].map(i => (
               <div
                 key={i}
                 ref={el => slotsRef.current[i] = el}
-                className={`tot-slot${bagFrame > i && itemImgs[i] ? ' filled' : ''}`}
+                className={`tot-slot${filledSlots.includes(i) ? ' filled' : ''}`}
               >
-                {bagFrame > i && itemImgs[i] && (
+                {filledSlots.includes(i) && itemImgs[i] && (
                   <img src={itemImgs[i]} alt="" />
                 )}
               </div>
@@ -281,7 +287,7 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
           </div>
 
           {/* Scrolling street with witch */}
-          <div className="tot-street">
+          <div className="tot-street" ref={streetRef}>
             <div className="tot-house-track">
               {[...HOUSES, ...HOUSES].map((src, i) => (
                 <img key={i} src={src} alt="" className="tot-house-img" />
@@ -302,38 +308,35 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
   )
 }
 
-// Separate component so it can read its own start/end rects after mount
-function FlyElement({ src, slotEl }) {
+// Starts from behind the right-side houses, arcs up and lands in the target slot
+function FlyElement({ src, slotEl, streetEl }) {
   const ref = useRef(null)
+
+  // Start position: right edge of the street scene (behind houses)
+  const streetRect = streetEl?.getBoundingClientRect()
+  const FLYER = 110
+  const startLeft = streetRect ? streetRect.right - FLYER - 4 : 80
+  const startTop  = streetRect ? streetRect.top + streetRect.height * 0.15 : 200
 
   useEffect(() => {
     if (!ref.current || !slotEl) return
-    const a = ref.current.getBoundingClientRect()
     const b = slotEl.getBoundingClientRect()
-    const FLYER = 80
-    const dx = (b.left + b.width / 2) - (a.left + FLYER / 2)
-    const dy = (b.top + b.height / 2) - (a.top + FLYER / 2)
+    const dx = (b.left + b.width / 2) - (startLeft + FLYER / 2)
+    const dy = (b.top + b.height / 2) - (startTop + FLYER / 2)
     const scale = b.width / FLYER
     ref.current.style.setProperty('--fly-dx', `${dx}px`)
     ref.current.style.setProperty('--fly-dy', `${dy}px`)
-    ref.current.style.setProperty('--fly-dx-mid', `${dx * 0.45}px`)
-    ref.current.style.setProperty('--fly-dy-mid', `${dy * 0.45 - 50}px`)
+    // Arc: go up and left before landing
+    ref.current.style.setProperty('--fly-dx-mid', `${dx * 0.4}px`)
+    ref.current.style.setProperty('--fly-dy-mid', `${dy * 0.3 - 60}px`)
     ref.current.style.setProperty('--fly-scale', scale)
-  }, [slotEl])
-
-  // Position above the strip's witch area — center of strip horizontally, roughly street level vertically
-  const stripEl = typeof document !== 'undefined'
-    ? document.querySelector('.tot-street')
-    : null
-  const rect = stripEl?.getBoundingClientRect()
-  const left = rect ? rect.left + rect.width / 2 - 40 : 40
-  const top = rect ? rect.top - 90 : 200
+  }, [slotEl, startLeft, startTop])
 
   return (
     <div
       ref={ref}
       className="tot-flyer"
-      style={{ left, top }}
+      style={{ left: startLeft, top: startTop }}
     >
       <img src={src} alt="" />
     </div>
