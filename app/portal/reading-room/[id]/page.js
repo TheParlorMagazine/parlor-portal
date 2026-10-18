@@ -42,18 +42,18 @@ function BookDetail() {
     if (res.ok) { const j = await res.json(); setD(s => ({ ...s, prompts: s.prompts.map(x => x.id === p.id ? { ...x, upvoted: j.upvoted, upvote_count: j.upvote_count } : x) })) }
   }
 
-  const mutedStyle = { color: ‘var(--muted)’ }
+  const mutedStyle = { color: 'var(--muted)' }
   if (d.loading) return (
     <div className="rr-wrap">
       <style>{rrCss}</style>
-      <p style={mutedStyle}>Loading…</p>
+      <p style={mutedStyle}>Loading...</p>
     </div>
   )
   if (!d.book) return (
     <div className="rr-wrap">
       <style>{rrCss}</style>
       <a className="rr-back" href="/portal/reading-room">← Reading Room</a>
-      <div className="rr-empty">This selection isn’t available.</div>
+      <div className="rr-empty">This selection isn't available.</div>
     </div>
   )
   if (!d.paid) return (
@@ -61,8 +61,8 @@ function BookDetail() {
       <style>{rrCss}</style>
       <a className="rr-back" href="/portal/reading-room">← Reading Room</a>
       <div className="rr-teaser" style={{ marginTop: 32 }}>
-        <h3>Reader’s Circle members only</h3>
-        <p>Book club discussions are open to Reader’s Circle and Printing Press members.</p>
+        <h3>Reader's Circle members only</h3>
+        <p>Book club discussions are open to Reader's Circle and Printing Press members.</p>
         <a className="rr-btn primary" href="/plans">Become a member</a>
       </div>
     </div>
@@ -90,7 +90,7 @@ function BookDetail() {
       {!d.paid ? (
         <div className="rr-teaser">
           <h3>Join the conversation</h3>
-          <p>Book club discussions are open to Reader’s Circle and Printing Press members.</p>
+          <p>Book club discussions are open to Reader's Circle and Printing Press members.</p>
           <a className="rr-btn primary" href="/portal/subscriptions">Upgrade to join</a>
         </div>
       ) : d.prompts.length === 0 ? (

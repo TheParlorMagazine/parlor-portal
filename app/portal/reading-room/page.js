@@ -36,7 +36,7 @@ function Room() {
   if (state.loading) return (
     <div className="rr-wrap">
       <style>{rrCss}</style>
-      <p style={mutedStyle}>Loading…</p>
+      <p style={mutedStyle}>Loading...</p>
     </div>
   )
 
