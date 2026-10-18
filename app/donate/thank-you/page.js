@@ -1,8 +1,6 @@
 'use client'
 
-export const dynamic = 'force-dynamic'
-
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 const LABELS = {
@@ -13,7 +11,7 @@ const LABELS = {
   'coffee': 'Buy Us a Coffee',
 }
 
-export default function ThankYouPage() {
+function ThankYouInner() {
   const params = useSearchParams()
   const gift = params.get('gift')
   const claimed = useRef(false)
@@ -60,4 +58,8 @@ export default function ThankYouPage() {
       </main>
     </>
   )
+}
+
+export default function ThankYouPage() {
+  return <Suspense><ThankYouInner /></Suspense>
 }
