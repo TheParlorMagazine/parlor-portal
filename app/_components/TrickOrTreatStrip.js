@@ -4,31 +4,26 @@ import { useState, useEffect, useRef } from 'react'
 
 const HOUSES = ['/house-h1.webp', '/house-h2.webp', '/house-h3.webp', '/house-h4.webp']
 
-// Product name substrings to match (in order: house 1-4)
-const ITEM_NAMES = ['Unicorn Snot', 'Tea with Tae', 'Badgerface', 'Village']
-
 export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelector = 'main > *:nth-child(2)', bottomSelector = 'main > *:nth-child(4)' }) {
   const [heroGone, setHeroGone] = useState(false)
-  const [bottomVisible, setBottomVisible] = useState(false)
+  const [everHidden, setEverHidden] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [bagFrame, setBagFrame] = useState(0)
   const [itemImgs, setItemImgs] = useState([null, null, null, null])
-  const [flyItem, setFlyItem] = useState(null) // { src, slot } while animating
-  const bagIconRef = useRef(null)
+  const [flyItem, setFlyItem] = useState(null)
   const slotsRef = useRef([])
 
-  const visible = heroGone && !bottomVisible
+  // Once hidden, stays hidden
+  const visible = heroGone && !everHidden
 
   useEffect(() => { setMounted(true) }, [])
 
-  // Fetch product images once
+  // Fetch treat images from trick-or-treat houses (each house's first treat has product_image)
   useEffect(() => {
-    fetch('/api/shop/products')
+    fetch('/api/trick-or-treat')
       .then(r => r.json())
-      .then(({ products = [] }) => {
-        const imgs = ITEM_NAMES.map(name =>
-          products.find(p => p.name?.toLowerCase().includes(name.toLowerCase()))?.images?.[0] || null
-        )
+      .then(({ houses = [] }) => {
+        const imgs = houses.slice(0, 4).map(h => h.treats?.[0]?.product_image || null)
         setItemImgs(imgs)
       })
       .catch(() => {})
@@ -47,7 +42,7 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
     if (!mounted) return
     const bottom = document.querySelector(bottomSelector)
     if (!bottom) return
-    const obs = new IntersectionObserver(([e]) => setBottomVisible(e.isIntersecting), { threshold: 0 })
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setEverHidden(true) }, { threshold: 0 })
     obs.observe(bottom)
     return () => obs.disconnect()
   }, [mounted, bottomSelector])
@@ -85,9 +80,9 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
           left: 0;
           top: 0;
           bottom: 0;
-          width: calc((100vw - 720px) / 2 - 16px);
-          min-width: 80px;
-          max-width: 260px;
+          width: calc((100vw - 720px) / 2 - 12px);
+          min-width: 120px;
+          max-width: 340px;
           z-index: 90;
           display: flex;
           flex-direction: column;
@@ -102,22 +97,22 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
 
         .tot-inner {
           margin: 0 8px;
-          background: rgba(12, 6, 28, 0.92);
+          background: #000;
           border-radius: 14px;
           border: 1px solid rgba(242, 184, 198, 0.35);
-          padding: 14px 10px 18px;
+          padding: 18px 12px 22px;
           backdrop-filter: blur(6px);
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 10px;
+          gap: 14px;
           cursor: pointer;
           transition: background 0.2s;
           text-decoration: none;
           overflow: hidden;
           position: relative;
         }
-        .tot-inner:hover { background: rgba(20, 8, 40, 0.96); }
+        .tot-inner:hover { background: #111; }
 
         .tot-label {
           font-family: 'Source Serif 4', Georgia, serif;
@@ -139,9 +134,9 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
           width: 100%;
         }
         .tot-slot {
-          width: 36px;
-          height: 36px;
-          border-radius: 6px;
+          width: 52px;
+          height: 52px;
+          border-radius: 8px;
           border: 1.5px dashed rgba(242,184,198,0.3);
           background: rgba(255,255,255,0.04);
           overflow: hidden;
@@ -183,9 +178,9 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
         .tot-street {
           position: relative;
           width: 100%;
-          height: 76px;
+          height: 180px;
           overflow: hidden;
-          border-radius: 8px;
+          border-radius: 10px;
           background: #1a0a28;
         }
 
@@ -193,23 +188,23 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
           position: absolute;
           bottom: 0;
           left: 0; right: 0;
-          height: 10px;
+          height: 14px;
           background: #3a1f10;
           border-top: 1px solid #5a3020;
         }
 
         .tot-house-track {
           position: absolute;
-          bottom: 8px;
+          bottom: 14px;
           left: 0;
           display: flex;
-          gap: 36px;
+          gap: 24px;
           align-items: flex-end;
           animation: tot-scroll 10s linear infinite;
           will-change: transform;
         }
         .tot-house-img {
-          height: 52px;
+          height: 130px;
           width: auto;
           object-fit: contain;
           display: block;
@@ -223,11 +218,11 @@ export default function TrickOrTreatStrip({ href = '/trick-or-treat', heroSelect
 
         .tot-witch-img {
           position: absolute;
-          bottom: 9px;
+          bottom: 12px;
           left: 50%;
           transform: translateX(-50%);
-          width: 42px;
-          height: 42px;
+          width: 80px;
+          height: 80px;
           object-fit: contain;
           z-index: 2;
           animation: tot-bob 0.5s ease-in-out infinite alternate;
