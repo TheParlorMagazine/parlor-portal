@@ -86,7 +86,7 @@ export default function ShopPage() {
   const [scrolled, setScrolled] = useState(false)
   const [variantSel, setVariantSel] = useState({}) // productId → chosen printify_variant_id
   const [imgRatios, setImgRatios] = useState({}) // productId → primary image aspect ratio (w/h)
-  const [products, setProducts] = useState(PRODUCTS) // hardcoded list is the fallback until the catalogue loads
+  const [products, setProducts] = useState([]) // hardcoded list is the fallback until the catalogue loads
   const [bundles, setBundles] = useState([])
   const [catalogueLoaded, setCatalogueLoaded] = useState(false)
   const [categories, setCategories] = useState(FALLBACK_CATEGORIES)
@@ -438,7 +438,9 @@ export default function ShopPage() {
           </div>
           <span style={{ fontFamily: BODY, fontSize: 13, color: '#777' }}>{shown.length} item{shown.length === 1 ? '' : 's'}</span>
         </div>
-        {shown.length === 0 ? (
+        {!catalogueLoaded ? (
+          <div style={{ fontFamily: BODY, fontSize: 16, color: '#777', padding: '40px 0' }}>Loading collection…</div>
+        ) : shown.length === 0 ? (
           <div style={{ fontFamily: BODY, fontSize: 16, color: '#777', padding: '40px 0' }}>Nothing here yet. <button onClick={() => { setCat('all'); setQuery('') }} style={{ background: 'none', border: 'none', color: MAROON, textDecoration: 'underline', cursor: 'pointer', fontFamily: BODY, fontSize: 16 }}>View all products</button>.</div>
         ) : (
         <div className="shop-grid">

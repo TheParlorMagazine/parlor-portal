@@ -148,7 +148,7 @@ export default function HomePageClient({ initial = {} }) {
   const [competitionData, setCompetitionData] = useState(initial.competition?.[0] || null)
   const [popupData, setPopupData] = useState(initial.popup?.[0] || null)
   const [member, setMember] = useState(null)
-  const [articles, setArticles] = useState(initial.articles?.length ? initial.articles : ARTICLES)
+  const [articles, setArticles] = useState(initial.articles || [])
   const [heroSlides, setHeroSlides] = useState(initial.heroSlides || [])
   const [heroIssue, setHeroIssue] = useState(initial.heroIssue || null) // the issue the hero slides belong to (for the eyebrow)
   const [heroLoaded, setHeroLoaded] = useState(true)
@@ -1667,75 +1667,6 @@ export default function HomePageClient({ initial = {} }) {
         </section>
         )
       })()}
-
-      {/* ── DIGITAL ISSUE HERO — fallback only when Issue 02 has no published articles ── */}
-      {heroLoaded && heroSlides.length === 0 && (
-      <section className="digital-hero">
-        <div className="digital-hero-left">
-          <img
-            src="https://res.cloudinary.com/dwytmbczs/image/upload/v1779376889/The_Parlor_Magazine_2__edited_edited_2_h2pwhq.png"
-            alt="Borderlands of Identity — Issue 01"
-          />
-        </div>
-        <div className="digital-hero-right">
-          <div className={`digital-issue-label fi fi-d1${visible ? ' in' : ''}`}>Our inaugural digital issue</div>
-          <h1 className={`digital-hero-title fi fi-d2${visible ? ' in' : ''}`}>Borderlands<br/>of Identity</h1>
-
-          <div className={`read-issue-wrap fi fi-d4${visible ? ' in' : ''}`}>
-            <a href="/borderlands-of-identity" className="read-issue-btn">
-              Read the Full Issue
-            </a>
-          </div>
-
-          <div className={`chips-outer fi fi-d5${visible ? ' in' : ''}`}>
-            <div className="or-label">or browse by section</div>
-            <div>
-              <div className="chips-row top">
-                <a className="chip" href="/borderlands-of-identity/homecoming">
-                  <div className="chip-top">
-                    <span className="chip-title">Homecoming</span>
-                    <span className="chip-subtitle">On language, culture, diaspora, and colonial memory</span>
-                  </div>
-                  <div className="chip-bottom"><span className="chip-arrow">→</span></div>
-                </a>
-                <a className="chip" href="/borderlands-of-identity/the-borders-of-the-body">
-                  <div className="chip-top">
-                    <span className="chip-title">The Borders of the Body</span>
-                    <span className="chip-subtitle">Autonomy, intimacy, and the politics of embodiment</span>
-                  </div>
-                  <div className="chip-bottom"><span className="chip-arrow">→</span></div>
-                </a>
-              </div>
-              <div className="chips-row bottom">
-                <a className="chip" href="/borderlands-of-identity/beyond-binaries">
-                  <div className="chip-top">
-                    <span className="chip-title">Beyond Binaries</span>
-                    <span className="chip-subtitle">Gender, care, and control in the politics of visibility</span>
-                  </div>
-                  <div className="chip-bottom"><span className="chip-arrow">→</span></div>
-                </a>
-                <a className="chip" href="/borderlands-of-identity/the-places-power-keeps">
-                  <div className="chip-top">
-                    <span className="chip-title">The Places Power Keeps</span>
-                    <span className="chip-subtitle">On displacement and the memory of war</span>
-                  </div>
-                  <div className="chip-bottom"><span className="chip-arrow">→</span></div>
-                </a>
-              </div>
-              <div className="chips-row center bottom">
-                <a className="chip" href="/borderlands-of-identity/on-holding-and-letting-go">
-                  <div className="chip-top">
-                    <span className="chip-title">On Holding and Letting Go</span>
-                    <span className="chip-subtitle">On grief, rupture, and repair</span>
-                  </div>
-                  <div className="chip-bottom"><span className="chip-arrow">→</span></div>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-      )}
 
       {/* PRINT HERO now lives as a first-load popup (below) → /print landing page. */}
 
