@@ -57,7 +57,7 @@ function blockToEmailHtml(b) {
     out += `<img src="${esc(b.image)}" alt="" style="width:100%;max-width:600px;display:block;border-radius:6px;margin:0 auto 20px">`
   }
   if (b.eyebrow) {
-    out += `<p style="font-family:'Source Serif 4',Georgia,serif;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:${dark ? '#f2b8c6' : '#c4364a'};margin:0 0 8px;font-weight:700">${esc(b.eyebrow)}</p>`
+    out += `<p style="font-family:'Source Serif 4',Georgia,serif;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:${dark ? '#f2b8c6' : '#7A263A'};margin:0 0 8px;font-weight:700">${esc(b.eyebrow)}</p>`
   }
   if (b.title) {
     out += `<h2 style="font-family:'Playfair Display',Georgia,serif;font-size:26px;font-weight:700;color:${textColor};margin:0 0 12px;line-height:1.2">${esc(b.title)}</h2>`
@@ -115,7 +115,7 @@ function fullEmailHtml(subject, intro, blocks, introBg) {
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Source+Serif+4:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0;padding:0;background:#f5f4f0;font-family:Georgia,serif">
-<style>a:not([style*="background"]){color:#c4364a!important;text-decoration:underline}</style>
+<style>a:not([style*="background"]){color:#7A263A!important;text-decoration:underline}</style>
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f0">
 <tr><td align="center" style="padding:32px 16px 0">
   <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
@@ -131,6 +131,7 @@ function fullEmailHtml(subject, intro, blocks, introBg) {
     <!-- Footer -->
     <tr><td align="center" style="background:#faf9f7;padding:24px 40px 32px;border-top:1px solid #f0ece6;border-radius:0 0 10px 10px">
       <p style="font-family:'Source Serif 4',Georgia,serif;font-size:11px;color:#aaa;margin:0 0 6px;letter-spacing:0.06em">The Parlor Magazine · theparlormagazine.com</p>
+      <p style="font-family:'Source Serif 4',Georgia,serif;font-size:11px;color:#999;margin:0 0 6px">© 2026 The Parlor Magazine, Inc. All Rights Reserved.</p>
       <p style="font-family:'Source Serif 4',Georgia,serif;font-size:11px;color:#bbb;margin:0"><a href="{{unsubscribe_url}}" style="color:#bbb">Unsubscribe</a></p>
     </td></tr>
   </table>
@@ -169,7 +170,9 @@ function EmailPreviewModal({ subject, intro, blocks, introBg, onClose }) {
 
 // ── Image picker modal ───────────────────────────────────────────
 function ImagePickerModal({ onPick, onClose, supabase, onUpload }) {
-  const [tab, setTab]         = useState('upload') // 'upload' | 'library'
+  const [tab, setTab]         = useState('upload')
+  const [imageUrl, setImageUrl] = useState('')
+  const [urlError, setUrlError] = useState('') // 'upload' | 'library'
   const [dragging, setDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [library, setLibrary]   = useState([])
@@ -226,6 +229,7 @@ function ImagePickerModal({ onPick, onClose, supabase, onUpload }) {
         <div style={{ display: 'flex', borderBottom: '1px solid #f0f0f0', padding: '0 20px' }}>
           {tabBtn('upload', 'Upload')}
           {tabBtn('library', 'Library')}
+          {tabBtn('url', 'Image URL')}
         </div>
         {/* Content */}
         <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
@@ -250,6 +254,56 @@ function ImagePickerModal({ onPick, onClose, supabase, onUpload }) {
                   </>
                 )}
               </div>
+            </div>
+          )}
+          {tab === 'url' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <label style={{ fontFamily: ff, fontSize: '13px', fontWeight: '600' }}>
+                Paste an image URL
+              </label>
+              <input
+                type="url"
+                value={imageUrl}
+                onChange={e => { setImageUrl(e.target.value); setUrlError('') }}
+                placeholder="https://res.cloudinary.com/..."
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  fontFamily: ff,
+                  fontSize: '13px'
+                }}
+              />
+              {urlError && (
+                <p style={{ color: '#c4364a', fontSize: '12px', margin: 0 }}>
+                  {urlError}
+                </p>
+              )}
+              <button
+                onClick={() => {
+                  try {
+                    const parsed = new URL(imageUrl.trim())
+                    if (parsed.protocol !== 'https:') throw new Error()
+                    onPick(parsed.href)
+                  } catch {
+                    setUrlError('Please enter a valid HTTPS image URL.')
+                  }
+                }}
+                style={{
+                  background: DP,
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '12px 18px',
+                  cursor: 'pointer',
+                  fontFamily: ff,
+                  fontWeight: '600'
+                }}
+              >
+                Insert Image
+              </button>
             </div>
           )}
           {tab === 'library' && (
@@ -306,7 +360,7 @@ const editorCSS = `
 .cp{outline:none;min-height:140px;font-family:Georgia,serif;font-size:15px;line-height:1.75;color:#1a1a1a;caret-color:#c4364a}
 .cp>*+*{margin-top:.8em}.cp p{margin:0 0 .85em}.cp h1{font-family:'Playfair Display',Georgia,serif;font-size:22px;font-weight:700;color:#0a0a0a;margin:1.4em 0 .4em}
 .cp h2{font-family:'Playfair Display',Georgia,serif;font-size:17px;font-weight:700;color:#0a0a0a;margin:1.2em 0 .35em}
-.cp a{color:#c4364a;text-decoration:underline}.cp ul,.cp ol{padding-left:1.6em;margin:.7em 0}.cp strong{font-weight:600}
+.cp a{color:#7A263A;text-decoration:underline}.cp ul,.cp ol{padding-left:1.6em;margin:.7em 0}.cp strong{font-weight:600}
 .cp img { max-width:100%; height:auto; border-radius:5px; vertical-align:bottom; }
 .cp img[data-align="left"]   { float:left;  margin:4px 18px 12px 0; width:45%; }
 .cp img[data-align="right"]  { float:right; margin:4px 0 12px 18px; width:45%; }
@@ -652,7 +706,7 @@ function BlockCard({ block, index, total, onChange, onDelete, onMove, supabase, 
         const bg = block.bg_color || '#fafafa'
         const tc = dark ? '#fff' : '#0a0a0a'
         const bc = dark ? 'rgba(255,255,255,0.7)' : '#555'
-        const ec = dark ? '#f2b8c6' : DP
+        const ec = dark ? '#f2b8c6' : '#7A263A'
         return (
           <div style={{ padding: '14px 16px', background: bg, borderRadius: '6px', borderTop: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
             {block.eyebrow && <p style={{ fontFamily: ff, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.12em', color: ec, margin: '0 0 5px', fontWeight: '700' }}>{block.eyebrow}</p>}
