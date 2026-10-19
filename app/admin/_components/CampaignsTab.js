@@ -9,6 +9,9 @@ import Image from '@tiptap/extension-image'
 import TextAlign from '@tiptap/extension-text-align'
 import { confirmDialog, alertDialog } from '../../../lib/confirmDialog'
 import ImageEditor from './ImageEditor'
+import { campaignEmailHtml } from '../../../lib/campaignTemplate'
+import { blocksToEmailHtml } from '../../../lib/campaignRenderer'
+import { footer } from '../../../lib/sendCampaign'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -44,100 +47,13 @@ function decodeBodyHtml(html) {
   }
 }
 
-function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
-
-function blockToEmailHtml(b) {
-  const bg = b.bg_color && b.bg_color !== '#ffffff' ? `background:${b.bg_color};` : ''
-  const dark = b.bg_color && ['#0a0a0a','#1a1a2e','#c4364a'].includes(b.bg_color)
-  const textColor = dark ? '#fff' : '#0a0a0a'
-  const bodyColor = dark ? 'rgba(255,255,255,0.8)' : '#444'
-  const pad = bg ? 'padding:28px 24px;' : 'padding:28px 0;'
-  let out = `<div style="${pad}${bg}border-top:1px solid #f0f0f0;text-align:center">`
-  if (b.image) {
-    out += `<img src="${esc(b.image)}" alt="" style="width:100%;max-width:600px;display:block;border-radius:6px;margin:0 auto 20px">`
-  }
-  if (b.eyebrow) {
-    out += `<p style="font-family:'Source Serif 4',Georgia,serif;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:${dark ? '#f2b8c6' : '#7A263A'};margin:0 0 8px;font-weight:700">${esc(b.eyebrow)}</p>`
-  }
-  if (b.title) {
-    out += `<h2 style="font-family:'Playfair Display',Georgia,serif;font-size:26px;font-weight:700;color:${textColor};margin:0 0 12px;line-height:1.2">${esc(b.title)}</h2>`
-  }
-  if (b.body) {
-    out += `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.75;color:${bodyColor};margin:0 0 20px">${b.body}</div>`
-  }
-  if (b.cta_label && b.cta_href) {
-    out += `<a href="${esc(b.cta_href)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:11px 28px;background:#f2b8c6;color:#0a0a0a;font-family:'Source Serif 4',Georgia,serif;font-size:12px;font-weight:700;text-decoration:none;letter-spacing:0.08em;text-transform:uppercase">${esc(b.cta_label)}</a>`
-  }
-  out += `</div>`
-  return out
-}
-
-// Convert data-align attrs to email-safe inline styles before sending
-function processIntroForEmail(html) {
-  return (html || '').replace(/<img([^>]*?)>/g, (match, attrs) => {
-    const alignMatch = attrs.match(/data-align="([^"]+)"/)
-    if (!alignMatch) return match
-    const align = alignMatch[1]
-    const widthMatch = attrs.match(/data-width="(\d+)"/)
-    const w = widthMatch ? `${widthMatch[1]}%` : null
-    const clean = attrs
-      .replace(/\s*data-align="[^"]*"/, '')
-      .replace(/\s*data-width="[^"]*"/, '')
-      .replace(/\s*style="[^"]*"/, '')
-    if (align === 'left')   return `<img${clean} style="float:left;margin:4px 18px 12px 0;width:${w || '45%'};border-radius:5px">`
-    if (align === 'right')  return `<img${clean} style="float:right;margin:4px 0 12px 18px;width:${w || '45%'};border-radius:5px">`
-    if (align === 'full')   return `<img${clean} style="display:block;width:100%;border-radius:5px;clear:both">`
-    return `<img${clean} style="display:block;margin:12px auto;width:${w || '60%'};border-radius:5px;clear:both">`
-  })
-}
-
-function blocksToEmailHtml(intro, blocks, introBg) {
-  const bg = introBg && introBg !== '#ffffff' ? `background:${introBg};padding:20px 24px;` : ''
-  let out = bg ? `<div style="${bg}">` : ''
-  out += processIntroForEmail(intro)
-  if (bg) out += `</div>`
-  if (blocks.length) {
-    out += `<div style="margin-top:24px">`
-    for (const b of blocks) out += blockToEmailHtml(b)
-    out += `</div>`
-  }
-  return out
-}
-
 const LOGO_MARK = 'https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png'
 const LOGO_TEXT = 'https://res.cloudinary.com/dwytmbczs/image/upload/v1779376345/Heading_2560_x_1000_px_2600_x_1000_px_2650_x_1000_px_3_1_lxgvp5.png'
 
 function fullEmailHtml(subject, intro, blocks, introBg) {
   const body = blocksToEmailHtml(intro, blocks, introBg)
-  return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(subject)}</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Source+Serif+4:wght@300;400;600;700&display=swap" rel="stylesheet">
-</head>
-<body style="margin:0;padding:0;background:#f5f4f0;font-family:Georgia,serif">
-<style>a:not([style*="background"]){color:#7A263A!important;text-decoration:underline}</style>
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f0">
-<tr><td align="center" style="padding:32px 16px 0">
-  <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
-    <!-- Logo header -->
-    <tr><td align="center" style="background:#fff;padding:28px 40px 20px;border-radius:10px 10px 0 0;border-bottom:1px solid #f0ece6">
-      <img src="${LOGO_MARK}" alt="" width="90" height="90" style="border-radius:50%;display:block;margin:0 auto 12px">
-      <img src="${LOGO_TEXT}" alt="The Parlor" height="52" style="display:block;margin:0 auto;max-width:320px">
-    </td></tr>
-    <!-- Body -->
-    <tr><td style="background:#fff;padding:36px 48px 40px">
-      ${body}
-    </td></tr>
-    <!-- Footer -->
-    <tr><td align="center" style="background:#faf9f7;padding:24px 40px 32px;border-top:1px solid #f0ece6;border-radius:0 0 10px 10px">
-      <p style="font-family:'Source Serif 4',Georgia,serif;font-size:11px;color:#aaa;margin:0 0 6px;letter-spacing:0.06em">The Parlor Magazine · theparlormagazine.com</p>
-      <p style="font-family:'Source Serif 4',Georgia,serif;font-size:11px;color:#999;margin:0 0 6px">© 2026 The Parlor Magazine, Inc. All Rights Reserved.</p>
-      <p style="font-family:'Source Serif 4',Georgia,serif;font-size:11px;color:#bbb;margin:0"><a href="{{unsubscribe_url}}" style="color:#bbb">Unsubscribe</a></p>
-    </td></tr>
-  </table>
-</td></tr>
-</table>
-</body></html>`
+  const baseUrl = window.location.origin
+  return campaignEmailHtml(subject, body, footer(null, baseUrl))
 }
 
 function EmailPreviewModal({ subject, intro, blocks, introBg, onClose }) {
@@ -566,6 +482,7 @@ function BlockBodyEditor({ content, onChange }) {
         .bbe [data-text-align="center"]{text-align:center}
         .bbe [data-text-align="right"]{text-align:right}
         .bbe [data-text-align="justify"]{text-align:justify}
+	.bbe a, .bbe a:visited{color:#7A263A;text-decoration:underline}
         .bbe .ProseMirror:focus{outline:none}
       `}</style>
       <div style={{ display: 'flex', gap: '1px', padding: '4px 8px', background: '#f8f8f8', borderBottom: '1px solid #eee', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -763,9 +680,13 @@ function CampaignBuilder({ campaign, segments, onSave, onSend, onClose, supabase
   const [sendMode,    setSendMode]    = useState(campaign?.scheduled_at ? 'scheduled' : 'now')
   const [scheduledAt, setScheduledAt] = useState(campaign?.scheduled_at ? toLocalInput(campaign.scheduled_at) : '')
   const [saving,      setSaving]      = useState(false)
+const [savedAt, setSavedAt] = useState(campaign?.updated_at || null)
+const [savedSnapshot, setSavedSnapshot] = useState(null)
   const [sending,     setSending]     = useState(false)
   const [previewing,  setPreviewing]  = useState(false)
-
+const [testOpen, setTestOpen] = useState(false)
+const [testEmail, setTestEmail] = useState('')
+const [testSending, setTestSending] = useState(false)
   function toLocalInput(iso) {
     if (!iso) return ''
     const d = new Date(iso)
@@ -774,6 +695,24 @@ function CampaignBuilder({ campaign, segments, onSave, onSend, onClose, supabase
   }
 
   const [savedCampaign, setSavedCampaign] = useState(campaign || null)
+const currentSnapshot = JSON.stringify({
+  name, subject, preview, introHtml, introBg, blocks,
+  sendTo, sendMode, scheduledAt
+})
+
+const hasUnsavedChanges = savedSnapshot !== null
+  ? currentSnapshot !== savedSnapshot
+  : !campaign || currentSnapshot !== JSON.stringify({
+      name: campaign.name || '',
+      subject: campaign.subject || '',
+      preview: campaign.preview_text || '',
+      introHtml: decoded.intro,
+      introBg: decoded.introBg || '#ffffff',
+      blocks: decoded.blocks,
+      sendTo: campaign.segment_id || 'all',
+      sendMode: campaign.scheduled_at ? 'scheduled' : 'now',
+      scheduledAt: campaign.scheduled_at ? toLocalInput(campaign.scheduled_at) : ''
+    })
 
   async function handleSave(statusOverride) {
     setSaving(true)
@@ -785,10 +724,52 @@ function CampaignBuilder({ campaign, segments, onSave, onSend, onClose, supabase
       scheduled_at: sendMode === 'scheduled' && scheduledAt ? new Date(scheduledAt).toISOString() : null,
       status: statusOverride || savedCampaign?.status || 'draft',
     })
-    if (result) setSavedCampaign(result)
+    if (result) {
+  setSavedCampaign(result)
+  setSavedSnapshot(currentSnapshot)
+  setSavedAt(result.updated_at || new Date().toISOString())
+}
     setSaving(false)
   }
+async function handleSendTest() {
+  if (!testEmail.trim() || testSending) return
 
+  setTestSending(true)
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session?.access_token) {
+      throw new Error('Please sign in again.')
+    }
+
+    const res = await fetch('/api/admin/campaigns/send-test', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        to: testEmail.trim(),
+        subject,
+        html: fullEmailHtml(subject, introHtml, blocks, introBg),
+      }),
+    })
+
+    const result = await res.json()
+
+    if (!res.ok) {
+      throw new Error(result.error || 'Test email failed')
+    }
+
+    setTestOpen(false)
+    alertDialog('Test email submitted to Resend!')
+  } catch (error) {
+    alertDialog(error.message || 'Unable to send test email')
+  } finally {
+    setTestSending(false)
+  }
+}
   async function handleSend() {
     if (!(await confirmDialog(`Send "${name || subject}" now to ${sendTo === 'all' ? 'all subscribers' : 'selected segment'}?`))) return
     setSending(true)
@@ -809,18 +790,98 @@ function CampaignBuilder({ campaign, segments, onSave, onSend, onClose, supabase
     <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: '#f5f5f5', display: 'flex', flexDirection: 'column', fontFamily: ff }}>
       {previewing && <EmailPreviewModal subject={subject} intro={introHtml} blocks={blocks} introBg={introBg} onClose={() => setPreviewing(false)} />}
       {/* Header */}
+{testOpen && (
+  <div style={{
+    position: 'fixed',
+    inset: 0,
+    zIndex: 600,
+    background: 'rgba(0,0,0,0.55)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  }}>
+    <div style={{
+      background: '#fff',
+      borderRadius: '12px',
+      padding: '28px',
+      width: 'min(400px,90vw)',
+      fontFamily: ff
+    }}>
+      <h3>Send Test Email</h3>
+      <p style={{ fontSize: '13px', color: '#777' }}>
+        Only the email address below will receive this test.
+      </p>
+      <input
+        type="email"
+        value={testEmail}
+        onChange={e => setTestEmail(e.target.value)}
+        placeholder="you@example.com"
+        style={{ ...inp, marginBottom: '16px' }}
+      />
+      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+        <button onClick={() => setTestOpen(false)} disabled={testSending}>
+          Cancel
+        </button>
+        <button
+          onClick={handleSendTest}
+          disabled={testSending || !testEmail.trim() || !subject.trim()}
+          style={{
+            background: PINK,
+            border: 'none',
+            borderRadius: '6px',
+            padding: '9px 18px',
+            cursor: 'pointer'
+          }}
+        >
+          {testSending ? 'Sending…' : 'Send Test'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
       <div style={{ height: '52px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', background: '#fff', borderBottom: '1px solid #e8e8e8', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '12px', fontFamily: ff }}>← Back</button>
           <span style={{ fontSize: '13px', color: '#333', fontWeight: '500' }}>{name || 'New Campaign'}</span>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => setPreviewing(true)} style={{ padding: '7px 16px', background: 'none', border: '1px solid #e0e0e0', borderRadius: '6px', color: '#555', fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>
-            Preview
-          </button>
+         
+
+<span style={{
+  fontSize: '12px',
+  fontFamily: ff,
+  color: saving ? '#888' : hasUnsavedChanges ? '#b45309' : '#38805a',
+  whiteSpace: 'nowrap'
+}}>
+  {saving
+    ? '◌ Saving…'
+    : hasUnsavedChanges
+      ? '● Unsaved changes'
+      : `✓ Saved${savedAt ? ` at ${new Date(savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}`
+  }
+</span>
           <button onClick={() => handleSave()} disabled={saving} style={{ padding: '7px 16px', background: 'none', border: '1px solid #e0e0e0', borderRadius: '6px', color: '#555', fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>
             {saving ? 'Saving…' : 'Save Draft'}
           </button>
+ <button onClick={() => setPreviewing(true)} style={{ padding: '7px 16px', background: 'none', border: '1px solid #e0e0e0', borderRadius: '6px', color: '#555', fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>
+            Preview
+          </button>
+<button
+  onClick={() => setTestOpen(true)}
+  disabled={!subject.trim()}
+  style={{
+    padding: '7px 16px',
+    background: 'none',
+    border: '1px solid #e0e0e0',
+    borderRadius: '6px',
+    color: '#7A263A',
+    fontSize: '12px',
+    cursor: 'pointer',
+    fontFamily: ff
+  }}
+>
+  Send Test
+</button>
           {sendMode === 'scheduled' && scheduledAt && (
             <button onClick={() => handleSave('scheduled')} disabled={saving} style={{ padding: '7px 16px', background: 'none', border: `1px solid rgba(160,180,242,0.4)`, borderRadius: '6px', color: '#4a6fd4', fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>
               Schedule
@@ -943,10 +1004,22 @@ export default function CampaignsTab({ supabase }) {
 
   async function sendCampaign(id) {
     setSending(prev => ({ ...prev, [id]: true }))
-    const res = await fetch('/api/emails/send-campaign', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ campaignId: id }),
-    })
+    const { data: { session } } = await supabase.auth.getSession()
+
+if (!session?.access_token) {
+  alertDialog('Please sign in again.')
+  setSending(prev => ({ ...prev, [id]: false }))
+  return
+}
+
+const res = await fetch('/api/emails/send-campaign', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${session.access_token}`,
+  },
+  body: JSON.stringify({ campaignId: id }),
+})
     const json = await res.json()
     if (res.ok) {
       setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: 'sent', sent_at: new Date().toISOString(), recipient_count: json.sent } : c))

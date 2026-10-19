@@ -242,7 +242,7 @@ export default function NewsletterTab({ supabase }) {
       const res = await fetch('/api/admin/newsletter/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` },
-        body: JSON.stringify({ sections, supportCopy, supportTitle, supportBtn1, supportBtn2 }),
+        body: JSON.stringify({ sections, supportCopy, supportTitle, supportBtn1, supportBtn2, announcementOverride: { title: announcementTitle, text: announcement, url: announcementUrl, img: announcementImg, btn: announcementBtn } }),
       })
       const d = await res.json()
       setMsg(res.ok ? `Sent to ${d.sent} subscriber${d.sent === 1 ? '' : 's'} ✓` : (d.error || 'Could not send.'))

@@ -1,6 +1,6 @@
 import { requireUser, serviceClient, memberOf } from '../../../../../lib/apiAuth'
 import { gatherNewsletter } from '../../../../../lib/composeNewsletter'
-import { countSubscribers } from '../../../../../lib/sendCampaign'
+import { countSubscribers, emailWithFooter } from '../../../../../lib/sendCampaign'
 
 const ROLES = ['admin', 'editor', 'social_admin']
 
@@ -32,5 +32,9 @@ export async function GET(request) {
   const hasAnnOverride = Object.values(announcementOverride).some(v => v !== null)
   const nl = await gatherNewsletter(db, { baseUrl, sections, supportCopy, supportTitle, supportBtn1, supportBtn2, announcementOverride: hasAnnOverride ? announcementOverride : null })
   const recipientCount = await countSubscribers(db)
-  return Response.json({ ...nl, recipientCount })
+  return Response.json({
+  ...nl,
+  html: emailWithFooter(nl.html, null, baseUrl),
+  recipientCount
+})
 }

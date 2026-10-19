@@ -1,11 +1,20 @@
-import { createClient } from '@supabase/supabase-js'
+import { requireUser, serviceClient, memberOf } from '../../../../lib/apiAuth'
 import { sendCampaignRow } from '../../../../lib/sendCampaign'
 
 export async function POST(request) {
+  const user = await requireUser(request)
+  if (!user) {
+    return Response.json({ error: 'Sign in required' }, { status: 401 })
+  }
+
+  const supabase = serviceClient()
+  const me = await memberOf(supabase, user.id)
+
+  if (!me || !['admin', 'editor', 'social_admin'].includes(me.role)) {
+    return Response.json({ error: 'Forbidden' }, { status: 403 })
+  }
   const { campaignId } = await request.json()
   if (!campaignId) return Response.json({ error: 'Missing campaignId' }, { status: 400 })
-
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
   const { data: campaign, error: cErr } = await supabase
     .from('email_campaigns').select('*').eq('id', campaignId).single()
