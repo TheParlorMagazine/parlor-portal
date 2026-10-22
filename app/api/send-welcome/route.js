@@ -6,8 +6,8 @@ export async function POST(req) {
   if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 })
 
   const resend  = new Resend(process.env.RESEND_API_KEY)
-  const FROM    = process.env.RESEND_FROM    || 'The Parlor <onboarding@resend.dev>'
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://theparlormag.com'
+  const FROM    = process.env.RESEND_FROM    || 'The Parlor <welcome@theparlormagazine.com>'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://theparlormagazine.com"
   const firstName = (name || '').split(' ')[0] || 'there'
 
   const html = `
@@ -75,7 +75,7 @@ export async function POST(req) {
             The Parlor · Independent media for women
           </p>
           <p style="margin:0;font-size:12px;color:#ccc;">
-            You're receiving this because you created an account at theparlormag.com.
+            You're receiving this because you created an account at theparlormagazine.com.
           </p>
         </td>
       </tr>

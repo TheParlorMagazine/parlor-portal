@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
+import FundraisingSection from './_components/FundraisingSection'
 import Link from 'next/link'
 import SubscribersSection from './_components/SubscribersSection'
 import PlansSection from './_components/PlansSection'
@@ -47,6 +48,7 @@ const ITEM_ROLES = {
   'shop-products': ['admin', 'editor'],
   social: ['admin', 'social_admin'],
   roles: ['admin'], analytics: ['admin'], publication: ['admin'],
+  fundraising: ['admin'],
 }
 function canSee(role, key) { return role === 'admin' || (ITEM_ROLES[key] || ['admin']).includes(role) }
 
@@ -107,6 +109,9 @@ const NAV = [
   { section: 'Shop', items: [
     { key: 'shop-products', label: 'Products' },
   ] },
+  { section: 'Fundraising', items: [
+    { key: 'fundraising', label: 'Campaigns' },
+  ]},
   { section: 'Finance', items: [
     { key: 'orders',    label: 'Orders' },
     { key: 'invoices',  label: 'Invoices' },
@@ -273,11 +278,19 @@ function DashboardHome({ supabase, setActiveSection }) {
       }
     })
 
-    // Newsletter count from Resend
-    fetch('/api/admin/newsletter-count')
-      .then(r => r.json())
-      .then(({ count }) => { if (!cancelled && count != null) setNewsletterCount(count) })
-      .catch(() => {})
+    // Newsletter count from Supabase, using the admin's session
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (!session?.access_token || cancelled) return null
+        return fetch('/api/admin/newsletter-count', {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        })
+      })
+      .then(r => r?.ok ? r.json() : null)
+      .then(result => {
+        if (!cancelled && result?.count != null) setNewsletterCount(result.count)
+      })
+      .catch(error => console.error('Newsletter count:', error))
 
     return () => { cancelled = true }
   }, [])
@@ -567,30 +580,60 @@ function RolesSection({ supabase }) {
     })
   }, [])
 
-  // Live search for add panel — queries members table by email/name
+  // Search subscribers through the protected admin API
   useEffect(() => {
     if (!addSearch.trim()) { setAddResults([]); return }
+    let cancelled = false
     const timeout = setTimeout(async () => {
       setAddSearching(true)
-      const q = addSearch.trim()
-      const { data } = await supabase.from('members')
-        .select('id,name,full_name,email,role,joined_at')
-        .or(`email.ilike.%${q}%,name.ilike.%${q}%`)
-        .limit(10)
-      setAddResults((data || []).filter(m => !m.role || !TEAM_ROLES.includes(m.role)))
-      setAddSearching(false)
-    }, 220)
-    return () => clearTimeout(timeout)
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) throw new Error("Please sign in again.")
+        const res = await fetch(`/api/admin/roles?q=${encodeURIComponent(addSearch.trim())}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        })
+        const result = await res.json()
+        if (!res.ok) throw new Error(result.error || "Search failed.")
+        if (!cancelled) setAddResults(result.members || [])
+      } catch (error) {
+        if (!cancelled) { setAddResults([]); alert(error.message) }
+      } finally {
+        if (!cancelled) setAddSearching(false)
+      }
+    }, 300)
+    return () => { cancelled = true; clearTimeout(timeout) }
   }, [addSearch])
 
   async function saveRole(id, role) {
     setSaving(prev => ({ ...prev, [id]: true }))
-    const newRole = role || null
-    await supabase.from('members').update({ role: newRole }).eq('id', id)
-    setMembers(prev => prev.map(m => m.id === id ? { ...m, role: newRole } : m))
-    setSaving(prev => ({ ...prev, [id]: false }))
-    setSaved(prev => ({ ...prev, [id]: true }))
-    setTimeout(() => setSaved(prev => ({ ...prev, [id]: false })), 2000)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error("Please sign in again.")
+
+      const res = await fetch("/api/admin/roles", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ id, role: role || null })
+      })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || "Could not save role.")
+
+      setMembers(prev => prev.map(m =>
+        m.id === id ? { ...m, role: result.member.role } : m
+      ))
+      setSaved(prev => ({ ...prev, [id]: true }))
+      setTimeout(() => setSaved(prev => ({ ...prev, [id]: false })), 2000)
+      return true
+    } catch (error) {
+      alert(`Could not save role: ${error.message}`)
+      return false
+    } finally {
+      setSaving(prev => ({ ...prev, [id]: false }))
+    }
   }
 
   async function toggleDeactivate(id) {
@@ -683,9 +726,10 @@ function RolesSection({ supabase }) {
                   {ROLE_OPTIONS.filter(r => r.value).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (!pending) return
-                    saveRole(m.id, pending)
+                    const success = await saveRole(m.id, pending)
+                    if (!success) return
                     setAddRoleState(prev => ({ ...prev, [m.id]: '' }))
                     setAddResults(prev => prev.filter(r => r.id !== m.id))
                     if (addResults.length <= 1) { setShowAdd(false); setAddSearch('') }
@@ -874,6 +918,7 @@ function MainContent({ section, supabase, setActiveSection, role }) {
     case 'pitches':      return <ComingSoon title="Submissions" />
     case 'invoices':     return <ComingSoon title="Invoices" />
     case 'social':       return <ComingSoon title="Scheduled Posts" />
+    case 'fundraising': return <FundraisingSection supabase={supabase} />
     case 'publication':  return <ComingSoon title="Publication Settings" />
     default:             return <DashboardHome supabase={supabase} setActiveSection={setActiveSection} />
   }

@@ -34,7 +34,7 @@ function SignupForm() {
     password,
     options: {
       data: { full_name: name },
-      emailRedirectTo: `${window.location.origin}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`
+      emailRedirectTo: `${window.location.origin}/auth/callback?flow=signup&returnTo=${encodeURIComponent(returnTo)}`
     }
   })
 
@@ -48,19 +48,6 @@ function SignupForm() {
     setLoading(false)
     return
   }
-
-  await fetch('/api/send-welcome', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, name })
-  })
-
-  // Add to newsletter mailing list
-  await fetch('/api/newsletter/subscribe', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, name })
-  })
 
   setSuccess(true)
   setLoading(false)
@@ -101,6 +88,25 @@ function SignupForm() {
         <a href="/" style={styles.logo}>The Parlor</a>
         <div style={styles.heading}>Create your account</div>
         <p style={styles.sub}>Join The Parlor community</p>
+
+        <div style={{
+          background: '#fcf7f8',
+          border: '1px solid #e8d4d8',
+          borderRadius: '8px',
+          padding: '13px 15px',
+          marginBottom: '24px',
+          fontSize: '12px',
+          lineHeight: '1.7',
+          color: '#65565a'
+        }}>
+          <strong style={{ color: '#8b465a' }}>
+            A little note from The Parlor.
+          </strong>
+          {' '}Your free membership includes our newsletter, with the latest
+          stories, editorial updates, and occasional notes from The Parlor.
+          You can unsubscribe from emails at any time without losing your
+          membership.
+        </div>
 
         <button
           type="button"

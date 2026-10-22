@@ -138,8 +138,13 @@ button:focus-visible{outline:3px solid var(--glow);outline-offset:3px}
 
 dialog{
   border:0;padding:0;border-radius:1.25rem;background:var(--panel);color:var(--ink);
-  width:min(30rem,calc(100% - 2rem));max-height:calc(100% - 2rem);overflow:auto;
-  position:relative;
+  width:min(30rem,calc(100% - 2rem));
+  max-height:calc(100dvh - 2rem);
+  overflow-y:auto;
+  position:fixed;
+  inset:0;
+  margin:auto;
+  box-sizing:border-box;
 }
 dialog::backdrop{background:rgba(23,18,31,.6)}
 .haul{padding:1.75rem 1.5rem}
@@ -282,15 +287,176 @@ dialog::backdrop{background:rgba(23,18,31,.6)}
 .walker img.left{position:absolute;top:0;left:0;width:100%;opacity:1;}
 .walker.walking-right img.right{opacity:1;}
 .walker.walking-right img.left{opacity:0;}
+
+/* Mobile bundle: three stacked rows */
+@media (max-width:40rem) {
+  .tote-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: .6rem;
+  }
+  .tote-label {
+    width: 100%;
+  }
+  .slots {
+    width: 100%;
+    flex: none;
+    min-width: 0;
+    justify-content: center;
+    gap: .5rem;
+  }
+  .checkout-btn {
+    display: block;
+    width: 100%;
+    flex: none;
+    box-sizing: border-box;
+    margin: 0;
+  }
+  .street {
+    padding-bottom: 19rem;
+  }
+}
+
+
+/* Halloween navigation strip */
+.halloween-header {
+  height: 7.5rem;
+  padding: env(safe-area-inset-top, 0px) 1.5rem 0;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 6;
+  background: var(--bg);
+}
+
+.halloween-header .home-back {
+  position: absolute;
+  top: calc(1.25rem + env(safe-area-inset-top, 0px));
+  left: 1.5rem;
+}
+
+/* Keep the witch's original document-relative animation origin */
+.walker {
+  top: calc(1.5rem + env(safe-area-inset-top, 0px));
+  right: 2.5rem;
+}
+
+@media (max-width: 40rem) {
+  .halloween-header {
+    height: 7rem;
+  }
+
+  .walker {
+    width: 90px;
+    right: 1rem;
+  }
+
+  .intro {
+    padding-top: 1rem;
+  }
+}
+
+
+/* Hide navigation while scrolling down */
+.halloween-header {
+  position: sticky;
+  top: 0;
+  transition: transform .3s ease;
+}
+
+.halloween-header.header-hidden {
+  transform: translateY(-110%);
+}
+
+
+/* Visible Halloween header and witch spacing */
+.halloween-header {
+  height: 10rem;
+  background: #f3d9df;
+  border-bottom: 1px solid rgba(118,36,52,.18);
+}
+
+.halloween-header .home-back {
+  z-index: 10;
+}
+
+@media (max-width:40rem) {
+  .halloween-header {
+    height: 10rem;
+  }
+
+  .walker {
+    top: 1.25rem;
+    right: 1.25rem;
+    width: 90px;
+  }
+
+  .intro {
+    padding-top: 1.5rem;
+  }
+}
+
+
+/* Desktop: restore the original Halloween layout */
+@media (min-width: 40.001rem) {
+  .halloween-header {
+    height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    position: static;
+    transform: none !important;
+  }
+
+  .halloween-header .home-back {
+    position: fixed;
+    top: 1.25rem;
+    left: 1.5rem;
+  }
+}
+
+
+/* Keep the witch visible above the mobile header */
+@media (max-width:40rem) {
+  .walker {
+    z-index: 7;
+    top: calc(1.25rem + env(safe-area-inset-top, 0px));
+    right: 1.25rem;
+    width: 90px;
+  }
+}
+
+
+/* Keep the mobile checkout strip above the flying witch */
+@media (max-width: 40rem) {
+  .bottom-bar {
+    z-index: 100;
+  }
+}
+
+
+/* Shrink the mobile header once the witch leaves */
+@media (max-width: 40rem) {
+  .halloween-header {
+    transition: height .35s ease, transform .3s ease;
+  }
+
+  .halloween-header.witch-departed {
+    height: 4.25rem;
+  }
+}
+
 </style>
 </head>
 <body>
+<div class="halloween-header" id="halloweenHeader">
+  <a href="/" class="home-back">← Home</a>
+</div>
 <div class="walker" id="walker" aria-hidden="true">
   <img class="right" src="/witch-walk-right.png" alt="" />
   <img class="left" src="/witch-walk-left.png" alt="" />
 </div>
 <header class="intro">
-  <a href="/" class="home-back">← Home</a>
   <h1>Trick or Treat at<br>The Parlor</h1>
   <p>Knock on each house and choose one treat from its curated collection. Your Parlor tote is the first of five pieces, and one treat from every house completes your bundle.</p>
 </header>
@@ -1072,8 +1238,12 @@ function walkerWalkTo(houseEl, onArrival) {
   const init = _initDoc();
   const h    = _docRect(houseEl);
 
-  const doorstepY = h.top + h.height * 0.78;
-  const targetY   = doorstepY - (init.top + init.height);
+  const isFirstMobileHouse =
+    window.innerWidth <= 640 &&
+    houseEl === document.querySelector("#street .house");
+
+  const doorstepY = h.top + h.height * (isFirstMobileHouse ? 0.55 : 0.78);
+  const targetY   = doorstepY - (init.top + init.height) - (isFirstMobileHouse ? 35 : 0);
   const targetX   = (h.left + h.width / 2) - (init.left + init.width / 2);
 
   // On single-column mobile layout the walker moves straight down — no horizontal step
@@ -1183,6 +1353,38 @@ loadFromDB().then(() => {
   renderStreet();
   renderTote();
 });
+</script>
+<script>
+
+/* Halloween header scroll behavior */
+(() => {
+  const header = document.getElementById("halloweenHeader");
+  if (!header) return;
+
+  let lastY = window.scrollY;
+
+  window.addEventListener("scroll", () => {
+    const currentY = window.scrollY;
+    const difference = currentY - lastY;
+
+    if (Math.abs(difference) > 5) {
+      header.classList.toggle("header-hidden", difference > 0 && currentY > 100);
+      lastY = currentY;
+    }
+  }, { passive: true });
+})();
+
+</script>
+<script>
+
+/* Compact the header when the witch first visits a house */
+document.addEventListener("click", (event) => {
+  if (event.target.closest(".house")) {
+    document.getElementById("halloweenHeader")
+      ?.classList.add("witch-departed");
+  }
+});
+
 </script>
 </body>
 </html>

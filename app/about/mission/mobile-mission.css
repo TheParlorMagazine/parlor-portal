@@ -1,0 +1,918 @@
+.mobile-mission { display: none; }
+
+        @media (max-width: 767px) {
+          .mobile-mission {
+            display: block;
+            background: #e9c9cf;
+            color: #fff8f3;
+            overflow-x: clip;
+          }
+
+          .mobile-mission-hero {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100svh;
+            padding: 76px 0 52px;
+            box-sizing: border-box;
+            background: #e9c9cf;
+            isolation: isolate;
+          }
+
+          .mobile-mission-image {
+            display: block;
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+          }
+
+          .mobile-mission-hero::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background: linear-gradient(
+              180deg,
+              rgba(28,13,25,.13),
+              rgba(28,13,25,.55) 40%,
+              rgba(28,13,25,.72) 65%,
+              rgba(28,13,25,.13)
+            );
+          }
+
+          .mobile-mission-intro {
+            position: absolute;
+            z-index: 1;
+            top: 50%;
+            left: 6%;
+            right: 6%;
+            transform: translateY(-50%);
+            text-align: center;
+            color: #fff8f3;
+            text-shadow: 0 2px 16px rgba(20,10,18,.85);
+          }
+
+          .mobile-mission-eyebrow {
+            display: block;
+            margin-bottom: 1rem;
+            font: 700 .76rem Georgia, serif;
+            letter-spacing: .24em;
+            color: #f3b4c8;
+          }
+
+          .mobile-mission-intro h1 {
+            margin: 0 0 1.1rem;
+            font-family: 'Alex Brush', cursive;
+            font-size: clamp(3rem, 11vw, 5rem);
+            font-weight: 400;
+            line-height: .98;
+            color: #fff8f3;
+            text-shadow: 0 0 22px rgba(255,240,245,.55);
+          }
+
+          .mobile-mission-intro p {
+            margin: 0;
+            font: 1rem/1.55 Georgia, serif;
+          }
+
+          .mobile-mission-intro > * {
+            opacity: 0;
+            animation: mobileMissionCaptionIn 1.4s ease forwards;
+          }
+
+          .mobile-mission-intro h1 {
+            animation-delay: .35s;
+          }
+
+          .mobile-mission-intro p {
+            animation-delay: 1s;
+          }
+
+          .mobile-mission-scroll {
+            position: absolute;
+            bottom: 22px;
+            z-index: 1;
+            color: #452532;
+            font: 700 .65rem Georgia, serif;
+            letter-spacing: .2em;
+          }
+
+          .mobile-mission-content {
+            background: #452532;
+          }
+
+          .mobile-mission-content > section:not(.mobile-mission-join) {
+            box-sizing: border-box;
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding: 5rem 7%;
+            border-bottom: 1px solid rgba(243,180,200,.24);
+            color: #fff8f3;
+            font-family: Georgia, serif;
+            font-size: 1rem;
+            line-height: 1.7;
+            text-shadow: 0 2px 12px rgba(20,10,18,.3);
+          }
+
+          .mobile-mission-content > section:nth-child(even):not(.mobile-mission-join) {
+            background: #542f3e;
+          }
+
+          .mobile-mission-content h2 {
+            margin: 0 0 1.7rem;
+            font-family: 'Alex Brush', cursive;
+            font-size: clamp(3.2rem, 12vw, 5rem);
+            font-weight: 400;
+            line-height: 1;
+            color: #f3b4c8;
+            text-shadow: 0 0 20px rgba(255,175,210,.4);
+          }
+
+          .mobile-mission-content p {
+            margin: 0 0 1.3rem;
+            font: inherit;
+          }
+
+          .mobile-mission-content p:last-child {
+            margin-bottom: 0;
+          }
+
+          .mobile-mission-emphasis {
+            margin: 1.3rem 0 1.5rem !important;
+            font-family: 'Alex Brush', cursive !important;
+            font-size: clamp(4.5rem, 17vw, 7rem) !important;
+            line-height: 1.1 !important;
+            color: #ffb8d2;
+            text-shadow: 0 0 16px rgba(255,175,210,.55);
+          }
+
+          .mobile-mission-closing {
+            margin-top: 2rem !important;
+            font-family: 'Alex Brush', cursive !important;
+            font-size: clamp(2.4rem, 9vw, 3.7rem) !important;
+            line-height: 1.15 !important;
+            color: #f3b4c8;
+          }
+
+          .mobile-reveal {
+            opacity: 0;
+            transform: translateY(25px);
+            transition: opacity .8s ease, transform .8s ease;
+          }
+
+          .mobile-reveal.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+          }
+
+          .mobile-mission-content > .mobile-mission-join {
+            box-sizing: border-box;
+            padding: 4rem 6%;
+            background: #e9c9cf;
+            border: none;
+          }
+
+          .mobile-mission .parlor-join-card {
+            width: 100%;
+            max-height: none;
+            overflow: visible;
+            padding: 2.5rem 1.25rem;
+            transform: none;
+            opacity: 1;
+            visibility: visible;
+          }
+
+          .mobile-mission .parlor-join-card h2 {
+            font-family: 'Alex Brush', cursive;
+            font-size: clamp(3.2rem, 12vw, 4.5rem);
+            color: #f3b4c8;
+          }
+
+          .mobile-mission .parlor-join-fields {
+            flex-direction: column;
+          }
+
+          .mobile-mission .parlor-join-fields input,
+          .mobile-mission .parlor-join-fields button {
+            width: 100%;
+          }
+
+          @keyframes mobileMissionCaptionIn {
+            from { opacity: 0; filter: blur(10px); }
+            to { opacity: 1; filter: blur(0); }
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .mobile-reveal,
+          .mobile-mission-intro > * {
+            opacity: 1;
+            transform: none;
+            animation: none;
+            transition: none;
+            filter: none;
+          }
+        }
+
+/* Keep mobile editorial content readable even if scroll animations do not initialize. */
+@media (max-width: 767px) {
+  .mobile-mission-content {
+    background: #fbf5ef;
+  }
+
+  .mobile-mission-content > section:not(.mobile-mission-join),
+  .mobile-mission-content > section:nth-child(even):not(.mobile-mission-join) {
+    background: #fbf5ef;
+    color: #34272b;
+    text-shadow: none;
+  }
+
+  .mobile-mission .mobile-reveal {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+
+  .mobile-mission-content h2,
+  .mobile-mission-emphasis,
+  .mobile-mission-closing {
+    color: #9d526c;
+  }
+}
+
+/* Keep mobile editorial content readable even if scroll animations do not initialize. */
+@media (max-width: 767px) {
+  .mobile-mission-content {
+    background: #fbf5ef;
+  }
+
+  .mobile-mission-content > section:not(.mobile-mission-join),
+  .mobile-mission-content > section:nth-child(even):not(.mobile-mission-join) {
+    background: #fbf5ef;
+    color: #34272b;
+    text-shadow: none;
+  }
+
+  .mobile-mission .mobile-reveal {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+
+  .mobile-mission-content h2,
+  .mobile-mission-emphasis,
+  .mobile-mission-closing {
+    color: #9d526c;
+  }
+}
+
+/* Mobile hero: preserve the original desktop illustration composition */
+@media (max-width: 767px) {
+  .mobile-mission-hero {
+    display: block;
+    position: relative;
+    width: 100%;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    background: #e9c9cf;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .mobile-mission-artwork {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+  }
+
+  .mobile-mission-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    object-fit: fill;
+  }
+
+  .mobile-mission-layer {
+    position: absolute;
+    display: block;
+    object-fit: fill;
+    pointer-events: none;
+  }
+
+  .mobile-mission-hero::after {
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(28, 13, 25, .04) 10%,
+      rgba(28, 13, 25, .48) 45%,
+      rgba(28, 13, 25, .88) 100%
+    );
+  }
+
+  .mobile-mission-intro {
+    position: absolute;
+    top: 50%;
+    left: 48%;
+    right: 3%;
+    width: auto;
+    transform: translateY(-50%);
+    text-align: left;
+    z-index: 2;
+  }
+
+  .mobile-mission-eyebrow {
+    font-size: clamp(.45rem, 1.8vw, .7rem);
+    letter-spacing: .16em;
+    margin-bottom: .45rem;
+  }
+
+  .mobile-mission-intro h1 {
+    font-size: clamp(1.35rem, 5.6vw, 2.6rem);
+    line-height: .95;
+    margin-bottom: .6rem;
+  }
+
+  .mobile-mission-intro p {
+    font-size: clamp(.55rem, 2vw, .85rem);
+    line-height: 1.35;
+  }
+
+  .mobile-mission-scroll {
+    position: absolute;
+    bottom: 9px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: #fff8f3;
+    font-size: .5rem;
+    text-shadow: 0 2px 8px rgba(20,10,18,.8);
+    z-index: 2;
+  }
+}
+
+/* Mobile hero: portrait editorial crop */
+@media (max-width: 767px) {
+  .mobile-mission-hero {
+    height: min(78svh, 720px);
+    min-height: 520px;
+    overflow: hidden;
+  }
+
+  .mobile-mission-artwork {
+    position: absolute;
+    width: auto;
+    height: 100%;
+    aspect-ratio: 3 / 2;
+    left: 0;
+    top: 0;
+    transform: translateX(-24%);
+  }
+
+  .mobile-mission-hero::after {
+    background: linear-gradient(
+      90deg,
+      rgba(28,13,25,.04) 0%,
+      rgba(28,13,25,.22) 30%,
+      rgba(28,13,25,.65) 70%,
+      rgba(28,13,25,.8) 100%
+    );
+  }
+
+  .mobile-mission-intro {
+    left: 38%;
+    right: 5%;
+    top: 44%;
+    transform: translateY(-50%);
+  }
+
+  .mobile-mission-intro h1 {
+    font-size: clamp(2.5rem, 9vw, 4rem);
+    line-height: .95;
+  }
+
+  .mobile-mission-intro p {
+    font-size: clamp(.85rem, 3vw, 1rem);
+    line-height: 1.45;
+  }
+
+  .mobile-mission-eyebrow {
+    font-size: .7rem;
+  }
+
+  .mobile-mission-scroll {
+    bottom: 22px;
+    font-size: .6rem;
+  }
+}
+
+/* Refine mobile artwork framing */
+@media (max-width: 767px) {
+  .mobile-mission-artwork {
+    transform: translateX(-15%);
+  }
+
+  /* Mobile navigation header */
+  .mission-page > a[href="/"] {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100%;
+    height: 64px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    padding: 0 24px !important;
+    margin: 0;
+    border: none !important;
+    border-radius: 0 !important;
+    background: #452532 !important;
+    color: #fff8f3 !important;
+    box-shadow: 0 4px 18px rgba(28, 13, 25, .18);
+    font-family: Georgia, serif;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .2em;
+    text-decoration: none;
+    z-index: 1000;
+    transition: transform .35s ease;
+  }
+
+  .mission-page > a[href="/"].mobile-header-hidden {
+    transform: translateY(-110%);
+  }
+}
+
+/* Balance the mobile portrait crop around the woman and furniture */
+@media (max-width: 767px) {
+  .mobile-mission-artwork {
+    height: 90%;
+    top: 5%;
+    left: 0;
+    transform: translateX(-12%);
+  }
+}
+
+/* Keep foreground illustration layers proportional to the original artwork */
+@media (max-width: 767px) {
+  .mobile-mission-layer {
+    height: auto !important;
+    object-fit: contain;
+    object-position: left top;
+  }
+}
+
+/* Full-viewport mobile hero, focused on the newspaper reader */
+@media (max-width: 767px) {
+  .mobile-mission-hero {
+    width: 100%;
+    height: 100svh;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .mobile-mission-artwork {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: auto;
+    height: 100%;
+    aspect-ratio: 3 / 2;
+    transform: translateX(-42%);
+  }
+
+  .mobile-mission-intro {
+    top: 34%;
+    left: 37%;
+    right: 4%;
+    transform: translateY(-50%);
+    text-align: left;
+  }
+
+  .mobile-mission-intro h1 {
+    font-size: clamp(2.4rem, 9vw, 3.8rem);
+    line-height: .95;
+  }
+
+  .mobile-mission-intro p {
+    font-size: clamp(.85rem, 3vw, 1rem);
+  }
+
+  .mobile-mission-hero::after {
+    background: linear-gradient(
+      90deg,
+      rgba(28,13,25,.04) 0%,
+      rgba(28,13,25,.22) 35%,
+      rgba(28,13,25,.72) 100%
+    );
+  }
+
+  .mission-page > a[href="/"] {
+    padding-top: env(safe-area-inset-top) !important;
+    height: calc(64px + env(safe-area-inset-top));
+    transition: transform .35s ease !important;
+  }
+
+  .mission-page > a[href="/"].mobile-header-hidden {
+    transform: translateY(-110%) !important;
+  }
+}
+
+/* Final mobile hero framing */
+@media (max-width: 767px) {
+  .mobile-mission-hero {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    height: 100svh;
+  }
+
+  .mobile-mission-artwork {
+    height: 100%;
+    min-width: 100%;
+    left: 50%;
+    transform: translateX(-42%);
+  }
+
+  .mobile-mission-intro {
+    top: 30%;
+  }
+
+  .mission-page > a[href="/"] {
+    height: calc(48px + env(safe-area-inset-top));
+    min-height: 48px;
+    padding-left: 20px !important;
+    font-size: .72rem;
+  }
+}
+
+/* Shift the illustrated room right to reveal the newspaper reader */
+@media (max-width: 767px) {
+  .mobile-mission-artwork {
+    transform: translateX(-34%);
+  }
+}
+
+/* Mobile hero finishing details */
+@media (max-width: 767px) {
+  /* Remove inherited page gutters without changing the artwork's crop */
+  .mission-page {
+    margin: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .mobile-mission,
+  .mobile-mission-hero {
+    width: 100vw !important;
+    max-width: none !important;
+    margin-left: calc(50% - 50vw) !important;
+    margin-right: 0 !important;
+  }
+
+  /* Apply the same muted editorial treatment to all illustration layers */
+  .mobile-mission-image,
+  .mobile-mission-layer {
+    filter: saturate(.76) sepia(.06);
+  }
+
+  /* Localized shading for the title and bottom scroll cue */
+  .mobile-mission-hero::after {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(28,13,25,.12) 0%,
+        rgba(28,13,25,.42) 25%,
+        rgba(28,13,25,.32) 48%,
+        rgba(28,13,25,.08) 72%,
+        rgba(28,13,25,.68) 100%
+      ),
+      linear-gradient(
+        90deg,
+        rgba(28,13,25,.02) 0%,
+        rgba(28,13,25,.12) 34%,
+        rgba(28,13,25,.62) 100%
+      );
+  }
+
+  .mobile-mission-scroll {
+    animation: mobileScrollPulse 2.2s ease-in-out infinite;
+    transform-origin: center;
+    text-shadow: 0 2px 14px rgba(10,4,9,.95);
+  }
+
+  @keyframes mobileScrollPulse {
+    0%, 100% {
+      opacity: .65;
+      transform: translateY(0);
+    }
+    50% {
+      opacity: 1;
+      transform: translateY(7px);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-mission-scroll {
+    animation: none !important;
+  }
+}
+
+/* Editorial spotlight: darker room, brighter newspaper reader */
+@media (max-width: 767px) {
+  /* Darken and desaturate the room itself */
+  .mobile-mission-image {
+    filter: brightness(.68) saturate(.62) sepia(.08);
+  }
+
+  /* Keep the foreground figures and furniture more visible */
+  .mobile-mission-layer {
+    filter: brightness(.88) saturate(.78) sepia(.04);
+  }
+
+  /* Give the newspaper reader the strongest visual presence */
+  .mobile-mission-layer:nth-of-type(3) {
+    filter:
+      brightness(1.08)
+      saturate(.88)
+      drop-shadow(12px 6px 24px rgba(20, 8, 15, .5));
+  }
+
+  /* Subtle vignette around the illustrated scene */
+  .mobile-mission-hero::after {
+    background:
+      radial-gradient(
+        ellipse at 22% 73%,
+        transparent 0%,
+        rgba(28,13,25,.08) 30%,
+        rgba(28,13,25,.48) 100%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(28,13,25,.28) 0%,
+        rgba(28,13,25,.4) 32%,
+        rgba(28,13,25,.08) 65%,
+        rgba(28,13,25,.65) 100%
+      ),
+      linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(28,13,25,.08) 30%,
+        rgba(28,13,25,.58) 100%
+      );
+  }
+}
+
+/* Lower the hero caption toward the settee and gramophone */
+@media (max-width: 767px) {
+  .mobile-mission-intro {
+    top: 38%;
+  }
+}
+
+/* Cinematic opening: room sharpens before the text appears */
+@media (max-width: 767px) {
+  .mobile-mission-artwork {
+    animation: mobileRoomFocus 1.8s ease-out both;
+  }
+
+  .mobile-mission-intro > * {
+    animation: mobileMissionCaptionIn 1.4s ease forwards;
+    animation-delay: 1.45s;
+  }
+
+  .mobile-mission-intro h1 {
+    animation-delay: 1.7s;
+  }
+
+  .mobile-mission-intro p {
+    animation-delay: 2.15s;
+  }
+
+  @keyframes mobileRoomFocus {
+    0% {
+      filter: blur(9px) brightness(.75);
+      opacity: .7;
+    }
+    100% {
+      filter: blur(0) brightness(1);
+      opacity: 1;
+    }
+  }
+}
+
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .mobile-mission-artwork {
+    animation: none !important;
+    filter: none !important;
+  }
+
+  .mobile-mission-intro > * {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+  }
+}
+
+/* Reveal more of the newspaper reader's side table */
+@media (max-width: 767px) {
+  .mobile-mission-artwork {
+    transform: translateX(-30%);
+  }
+}
+
+/* Restore preferred framing with a subtle additional zoom */
+@media (max-width: 767px) {
+  .mobile-mission-artwork {
+    transform: translateX(-34%) scale(1.03);
+    transform-origin: 34% 65%;
+  }
+}
+
+@media (max-width: 767px) {
+  .mobile-mission-artwork {
+    transform: translateX(-34%) scale(1);
+    transform-origin: center center;
+  }
+}
+
+/* Larger mobile hero typography, positioned higher */
+@media (max-width: 767px) {
+  .mobile-mission-intro {
+    top: 34%;
+  }
+
+  .mobile-mission-intro h1 {
+    font-size: clamp(2.8rem, 10.5vw, 4.4rem);
+    line-height: .94;
+  }
+
+  .mobile-mission-intro p {
+    font-size: clamp(.95rem, 3.3vw, 1.1rem);
+    line-height: 1.4;
+  }
+}
+
+/* Full-width mobile headline with right-aligned subtitle */
+@media (max-width: 767px) {
+  .mobile-mission-intro {
+    left: 5%;
+    right: 5%;
+    width: 90%;
+    top: 34%;
+    text-align: left;
+  }
+
+  .mobile-mission-intro h1 {
+    width: 100%;
+    font-size: clamp(3rem, 10.5vw, 4.5rem);
+    line-height: .95;
+    text-align: center;
+  }
+
+  .mobile-mission-intro p {
+    width: 60%;
+    margin-left: auto;
+    margin-right: 0;
+    text-align: right;
+    font-size: clamp(.9rem, 3.2vw, 1.1rem);
+    line-height: 1.45;
+  }
+}
+
+/* Restore original mobile hero typography and positioning */
+@media (max-width: 767px) {
+  .mobile-mission-intro {
+    top: 38%;
+    left: 37%;
+    right: 4%;
+    width: auto;
+    text-align: left;
+  }
+
+  .mobile-mission-intro h1 {
+    width: auto;
+    font-size: clamp(2.4rem, 9vw, 3.8rem);
+    line-height: .95;
+    text-align: left;
+  }
+
+  .mobile-mission-intro p {
+    width: auto;
+    margin: 0;
+    font-size: clamp(.85rem, 3vw, 1rem);
+    line-height: 1.45;
+    text-align: left;
+  }
+}
+
+/* Raise mobile hero text without changing typography */
+@media (max-width: 767px) {
+  .mobile-mission-intro {
+    top: calc(38% - 30px);
+  }
+}
+
+/* Soft, feathered blur behind mobile hero typography */
+@media (max-width: 767px) {
+  .mobile-mission-intro::before {
+    content: "";
+    position: absolute;
+    inset: -18px -22px;
+    z-index: -1;
+    pointer-events: none;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    mask-image: radial-gradient(ellipse 75% 70% at center, black 35%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 75% 70% at center, black 35%, transparent 100%);
+  }
+}
+
+/* Remove blur behind mobile hero text */
+@media (max-width: 767px) {
+  .mobile-mission-intro::before {
+    content: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* Hide mobile HOME header on downward scroll */
+@media (max-width: 767px) {
+  .mission-page > a[href="/"] {
+    transition: transform 0.35s ease !important;
+    will-change: transform;
+  }
+
+  .mission-page > a[href="/"].mobile-header-hidden {
+    transform: translateY(-110%) !important;
+  }
+}
+
+/* Hide mobile HOME header on downward scroll */
+@media (max-width: 767px) {
+  .mission-page > a[href="/"] {
+    transition: transform 0.35s ease !important;
+    will-change: transform;
+  }
+
+  .mission-page > a[href="/"].mobile-header-hidden {
+    transform: translateY(-110%) !important;
+  }
+}
+
+
+/* Mobile body: reveal each section once as it enters view */
+@media (max-width: 767px) {
+  .mobile-mission .mobile-reveal {
+    opacity: 0;
+    visibility: visible;
+    transform: translateY(24px);
+    transition:
+      opacity 0.9s ease,
+      transform 0.9s cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .mobile-mission .mobile-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .mobile-mission .mobile-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Refine mobile newsletter form typography and spacing */
+@media (max-width: 767px) {
+  .mobile-mission-join input[type="email"],
+  .mobile-mission-join input[type="email"]::placeholder {
+    font-family: Georgia, 'Times New Roman', serif !important;
+  }
+
+  .mobile-mission-join input[type="email"]::placeholder {
+    font-style: italic;
+    font-size: 0.95em;
+    opacity: 0.65;
+  }
+
+  .mobile-mission-join button {
+    font-family: Georgia, 'Times New Roman', serif !important;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+    margin-bottom: 14px;
+  }
+}

@@ -1,4 +1,5 @@
 import Stripe from 'stripe'
+import { sendStripeEmailOnce } from '../../../../lib/stripeEmail'
 import { createClient } from '@supabase/supabase-js'
 import { sendPaymentConfirmedEmail, sendPaymentFailedEmail, sendCancellationEmail, sendOrderConfirmationEmail } from '../../../../lib/emails'
 
@@ -78,7 +79,7 @@ async function handleSavedPaymentMethod(session) {
 }
 
 // Trick-or-Treat bundle purchase: decrement treat stock, record an order.
-async function handleTotBundle(session) {
+async function handleTotBundle(session, eventId) {
   const supabase = getSupabase()
 
   // Dedupe webhook retries
@@ -183,7 +184,17 @@ async function handleTotBundle(session) {
   try {
     const buyerEmail = session.customer_details?.email || order.email
     if (buyerEmail) {
-      await sendOrderConfirmationEmail({ to: buyerEmail, name: shipName || 'there', order, items: treatRows })
+      await sendStripeEmailOnce({
+        eventId,
+        type: 'tot_bundle_confirmation',
+        to: buyerEmail,
+        send: () => sendOrderConfirmationEmail({
+          to: buyerEmail,
+          name: shipName || 'there',
+          order,
+          items: treatRows,
+        }),
+      })
     }
   } catch (e) { console.error('tot_bundle confirmation email error:', e.message) }
 }
@@ -191,7 +202,7 @@ async function handleTotBundle(session) {
 // Shop purchases (physical merch/print) → create an order the member can track
 // in the portal. Triggered by a mode=payment checkout carrying shipping (or a
 // metadata.kind of 'shop_order'), as opposed to digital item unlocks above.
-async function handleShopOrder(session) {
+async function handleShopOrder(session, eventId) {
   const supabase = getSupabase()
 
   // Dedupe webhook retries on the checkout session.
@@ -304,7 +315,17 @@ async function handleShopOrder(session) {
     // Order confirmation email (the "thank you" receipt).
     const buyerEmail = session.customer_details?.email || order.email
     if (buyerEmail) {
-      try { await sendOrderConfirmationEmail({ to: buyerEmail, name: order.shipping_name || session.customer_details?.name, order, items: rows }) }
+      try { await sendStripeEmailOnce({
+          eventId,
+          type: 'shop_order_confirmation',
+          to: buyerEmail,
+          send: () => sendOrderConfirmationEmail({
+            to: buyerEmail,
+            name: order.shipping_name || session.customer_details?.name,
+            order,
+            items: rows,
+          }),
+        }) }
       catch (e) { console.error('order confirmation email error:', e.message) }
     }
   } catch (e) { console.error('shop order line items error:', e.message) }
@@ -367,7 +388,7 @@ function formatAddress(name, a) {
   ].filter(Boolean).join('\n')
 }
 
-async function handleSubscriptionCheckout(session) {
+async function handleSubscriptionCheckout(session, eventId) {
   const memberId = session.client_reference_id
   if (!memberId || !session.subscription) return
 
@@ -411,12 +432,21 @@ async function handleSubscriptionCheckout(session) {
 
   const customer = await stripe.customers.retrieve(session.customer)
   if (customer.email) {
-    await sendPaymentConfirmedEmail({
-      to: customer.email,
-      name: member.full_name || 'there',
-      planName: planInfo.plan,
-      amount: planInfo.amount,
-    })
+    try {
+      await sendStripeEmailOnce({
+        eventId,
+        type: 'payment_confirmed',
+        to: customer.email,
+        send: () => sendPaymentConfirmedEmail({
+          to: customer.email,
+          name: member.full_name || 'there',
+          planName: planInfo.plan,
+          amount: planInfo.amount,
+        }),
+      })
+    } catch (emailError) {
+      console.error('Payment confirmation email tracking failed:', emailError)
+    }
   }
 }
 
@@ -438,7 +468,7 @@ async function handleInvoicePaymentSucceeded(invoice) {
   if (error) console.error('members renewal update error:', error)
 }
 
-async function handleInvoicePaymentFailed(invoice) {
+async function handleInvoicePaymentFailed(invoice, eventId) {
   const supabase = getSupabase()
   const { data: member } = await supabase
     .from('members')
@@ -449,38 +479,81 @@ async function handleInvoicePaymentFailed(invoice) {
 
   const customer = await stripe.customers.retrieve(invoice.customer)
   if (customer.email) {
-    await sendPaymentFailedEmail({
-      to: customer.email,
-      name: member.full_name || 'there',
-      planName: member.plan,
-    })
+    try {
+      await sendStripeEmailOnce({
+        eventId,
+        type: 'payment_failed',
+        to: customer.email,
+        send: () => sendPaymentFailedEmail({
+          to: customer.email,
+          name: member.full_name || 'there',
+          planName: member.plan,
+        }),
+      })
+    } catch (emailError) {
+      console.error('payment_failed email tracking failed:', emailError)
+    }
   }
 }
 
-async function handleSubscriptionCanceled(subscription) {
+async function handleSubscriptionCanceled(subscription, eventId) {
   const supabase = getSupabase()
+
+  // Read the existing plan before clearing it.
+  const { data: existing, error: readError } = await supabase
+    .from('members')
+    .select('full_name, plan')
+    .eq('stripe_customer_id', subscription.customer)
+    .eq('stripe_subscription_id', subscription.id)
+    .maybeSingle()
+
+  if (readError) {
+    console.error('members cancellation lookup error:', readError)
+    return
+  }
+
+  // Ignore stale cancellation events for previous subscriptions.
+  if (!existing) return
+
+  const previousPlan = existing.plan
+
   const { data: member, error } = await supabase
     .from('members')
-    .update({ plan: null, plan_id: null })
+    .update({
+      plan: null,
+      plan_id: null,
+      stripe_subscription_id: null,
+    })
     .eq('stripe_customer_id', subscription.customer)
+    .eq('stripe_subscription_id', subscription.id)
     .select()
-    .single()
+    .maybeSingle()
 
   if (error) {
     console.error('members plan reset error:', error)
     return
   }
 
+  if (!member) return
+
   const customer = await stripe.customers.retrieve(subscription.customer)
-  if (customer.email && member) {
-    await sendCancellationEmail({
-      to: customer.email,
-      name: member.full_name || 'there',
-      planName: member.plan,
-    })
+  if (customer.email) {
+    try {
+      await sendStripeEmailOnce({
+        eventId,
+        type: 'subscription_canceled',
+        to: customer.email,
+        send: () => sendCancellationEmail({
+          to: customer.email,
+          name: member.full_name || 'there',
+          planName: previousPlan,
+        }),
+      })
+    } catch (emailError) {
+      console.error('subscription_canceled email tracking failed:', emailError)
+    }
   }
 }
-
 // Handles one-time item purchases (article / audio / video unlocks, created
 // via /api/create-paywall-checkout) and membership subscriptions (Reader's
 // Circle / Printing Press) — signup, renewal, failed payment, and cancellation.
@@ -505,9 +578,9 @@ export async function POST(request) {
       if (session.metadata?.articleId) {
         await handleOneTimePurchase(session)
       } else if (session.metadata?.kind === 'tot_bundle') {
-        await handleTotBundle(session)
+        await handleTotBundle(session, event.id)
       } else if (session.metadata?.kind === 'shop_order' || session.shipping_details?.address || session.collected_information?.shipping_details?.address) {
-        await handleShopOrder(session)
+        await handleShopOrder(session, event.id)
       }
       // Save the card used for any purchase as the default-if-unset, so it
       // auto-populates in Settings.
@@ -518,7 +591,7 @@ export async function POST(request) {
         } catch (e) { console.error('purchase default PM failed:', e.message) }
       }
     } else if (session.mode === 'subscription') {
-      await handleSubscriptionCheckout(session)
+      await handleSubscriptionCheckout(session, event.id)
     }
   }
 
@@ -527,11 +600,11 @@ export async function POST(request) {
   }
 
   if (event.type === 'invoice.payment_failed') {
-    await handleInvoicePaymentFailed(event.data.object)
+    await handleInvoicePaymentFailed(event.data.object, event.id)
   }
 
   if (event.type === 'customer.subscription.deleted') {
-    await handleSubscriptionCanceled(event.data.object)
+    await handleSubscriptionCanceled(event.data.object, event.id)
   }
 
   return Response.json({ received: true })

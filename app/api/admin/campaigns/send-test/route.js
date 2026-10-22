@@ -36,7 +36,7 @@ export async function POST(request) {
     const resend = new Resend(process.env.RESEND_API_KEY)
 
     const { data, error } = await resend.emails.send({
-      from: process.env.RESEND_FROM || 'The Parlor <onboarding@resend.dev>',
+      from: process.env.RESEND_FROM || 'The Parlor <welcome@theparlormagazine.com>',
       to: [to.trim()],
       subject: `[TEST] ${subject}`,
       html,

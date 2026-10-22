@@ -1,16 +1,42 @@
-import { Resend } from 'resend'
 import { NextResponse } from 'next/server'
+import { serviceClient, requireUser, memberOf } from '../../../../lib/apiAuth'
 
-const AUDIENCE_ID = 'a90d5605-469b-41b4-b16f-86e26690ea96'
-
-export async function GET() {
+export async function GET(request) {
   try {
-    const resend = new Resend(process.env.RESEND_API_KEY)
-    const { data, error } = await resend.contacts.list({ audienceId: AUDIENCE_ID })
-    if (error) return NextResponse.json({ count: null, error: error.message })
-    const active = (data?.data || []).filter(c => !c.unsubscribed)
-    return NextResponse.json({ count: active.length })
-  } catch (e) {
-    return NextResponse.json({ count: null, error: e.message })
+    const user = await requireUser(request)
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const db = serviceClient()
+    const member = await memberOf(db, user.id)
+
+    if (member.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const { count, error } = await db
+      .from('members')
+      .select('id', { count: 'exact', head: true })
+      .eq('newsletter_subscribed', true)
+      .neq('role', 'admin')
+      .not('email', 'ilike', '%@theparlormagazine.com')
+
+    if (error) {
+      console.error('Newsletter count error:', error)
+      return NextResponse.json(
+        { count: null, error: 'Unable to load newsletter count' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ count })
+  } catch (error) {
+    console.error('Newsletter count error:', error)
+    return NextResponse.json(
+      { count: null, error: 'Unable to load newsletter count' },
+      { status: 500 }
+    )
   }
 }

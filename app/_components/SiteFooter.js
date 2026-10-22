@@ -14,8 +14,30 @@ export default function SiteFooter() {
         .footer-link { display: block; font-size: 13px; color: #374151; margin-bottom: 8px; transition: color 0.15s; text-decoration: none; font-family: 'Source Serif 4', Georgia, serif; }
         .footer-link:hover { color: #000000; }
         .footer-bottom { border-top: 1px solid #e5e7eb; padding-top: 22px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #374151; background: #ffffff; font-family: 'Source Serif 4', Georgia, serif; }
-        @media (max-width: 900px) {
-          .footer-grid { grid-template-columns: 1fr 1fr; gap: 28px; }
+        @media (max-width: 599px) {
+          .site-footer {
+            padding: 36px 20px 80px;
+          }
+
+          .footer-grid {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 28px;
+          }
+
+          .footer-grid > * {
+            min-width: 0;
+            width: 100%;
+          }
+
+          .footer-tagline {
+            max-width: 100%;
+          }
+
+          .footer-bottom {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+          }
         }
       `}</style>
 

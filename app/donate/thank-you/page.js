@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, Suspense } from 'react'
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 const LABELS = {
@@ -14,19 +14,6 @@ const LABELS = {
 function ThankYouInner() {
   const params = useSearchParams()
   const gift = params.get('gift')
-  const claimed = useRef(false)
-  const [done, setDone] = useState(false)
-
-  useEffect(() => {
-    if (!gift || claimed.current) return
-    claimed.current = true
-    fetch('/api/donate/claim', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gift_slug: gift }),
-    }).finally(() => setDone(true))
-  }, [gift])
-
   const label = LABELS[gift] || 'your gift'
 
   return (

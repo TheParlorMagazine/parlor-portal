@@ -88,9 +88,31 @@ export default function DonateClient({ gifts }) {
         .gift-btn--soldout { background: #ccc; cursor: not-allowed; }
 
         @media (max-width: 560px) {
-          .gift-item { flex-wrap: wrap; }
-          .gift-amount { min-width: unset; }
-          .gift-btn { width: 100%; text-align: center; }
+          .gift-item {
+            display: grid;
+            grid-template-columns: 72px minmax(0, 1fr);
+            column-gap: 14px;
+            row-gap: 18px;
+            align-items: start;
+          }
+          .gift-amount {
+            min-width: 0;
+            font-size: 17px;
+            overflow-wrap: anywhere;
+          }
+          .gift-body {
+            min-width: 0;
+          }
+          .gift-label {
+            font-size: 17px;
+          }
+          .gift-btn {
+            grid-column: 1 / -1;
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+          }
         }
       `}</style>
 

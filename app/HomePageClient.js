@@ -1277,6 +1277,55 @@ export default function HomePageClient({ initial = {} }) {
           .issue-hero-slide--tall .issue-hero-head,
           .issue-hero-slide--wide .issue-hero-head { top: auto; bottom: 44px; left: 14px; right: 14px; width: auto; transform: none; text-align: right; }
         }
+        /* Phone hero: give article text room to fit */
+        @media (max-width: 599px) {
+          .issue-hero-slide {
+            aspect-ratio: auto;
+            height: clamp(290px, 85vw, 350px);
+          }
+
+          .issue-hero-head,
+          .issue-hero-slide--split .issue-hero-head,
+          .issue-hero-slide--tall .issue-hero-head,
+          .issue-hero-slide--wide .issue-hero-head {
+            top: auto;
+            bottom: 32px;
+            left: 14px;
+            right: 14px;
+            width: auto;
+            transform: none;
+            text-align: right;
+          }
+
+          .issue-hero-title,
+          .issue-hero-slide--split .issue-hero-title,
+          .issue-hero-slide--tall .issue-hero-title,
+          .issue-hero-slide--wide .issue-hero-title {
+            font-size: clamp(17px, 4.8vw, 23px);
+            line-height: 1.12;
+          }
+
+          .issue-hero-eyebrow {
+            font-size: 9px;
+            margin-bottom: 5px;
+          }
+
+          .issue-hero-sub {
+            font-size: 12px;
+            line-height: 1.35;
+          }
+
+          .issue-hero-sub-wrap {
+            margin-top: 9px;
+          }
+
+          .issue-hero-btn {
+            margin-top: 8px;
+            padding: 7px 13px;
+            font-size: 11px;
+          }
+        }
+
         /* ── TABLET: constrain hero text block width ── */
         @media (min-width: 600px) and (max-width: 900px) {
           .issue-hero-head {
@@ -1305,6 +1354,31 @@ export default function HomePageClient({ initial = {} }) {
           .comp-right { border-left: none; padding-left: 0; border-top: 1px solid var(--border); padding-top: 32px; }
           .comp-right--img { border-top: none; padding-top: 0; min-height: 260px; }
           .header-top { padding: 10px 20px; align-items: flex-start; }
+@media (max-width: 599px) {
+  .header-top {
+    position: relative;
+    align-items: flex-start;
+  }
+
+  .header-top > .logo-wrap {
+    position: absolute;
+    left: 50%;
+    top: 34px;
+    transform: translateX(-50%);
+    order: 0;
+    z-index: 2;
+  }
+
+  .header-top > .header-side {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .header-top > .header-side.right {
+    position: relative;
+    z-index: 3;
+  }
+}
           /* Reorder: cart → left, stacked logo → center, hamburger → right */
           .header-side { order: 1; justify-content: flex-start; padding-top: 8px; }
           .logo-wrap { order: 2; flex-direction: column; align-items: center; gap: 4px; }
@@ -1375,6 +1449,52 @@ export default function HomePageClient({ initial = {} }) {
           .ribbon-mob-message { font-size: 13px; line-height: 1.6; opacity: 0.85; margin-bottom: 18px; }
           .ribbon-mob-cta { display: block; text-align: center; padding: 13px 20px; background: var(--black); color: var(--white); font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-weight: 700; text-decoration: none; }
         }
+        /* Mobile-only header and footer corrections */
+        @media (max-width: 599px) {
+          .header-top {
+            position: relative;
+            min-height: 210px;
+            box-sizing: border-box;
+            padding: 10px 16px 14px;
+            align-items: flex-start;
+          }
+
+          .header-top > .logo-wrap {
+            top: 34px;
+          }
+
+          .header-bottom-wrap {
+            position: relative;
+            z-index: 1;
+          }
+
+          .footer-grid {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 28px;
+          }
+
+          .footer-grid > * {
+            min-width: 0;
+            width: 100%;
+          }
+
+          .footer-tagline {
+            max-width: 100%;
+          }
+
+          .footer-bottom {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .header-top {
+            min-height: 190px;
+          }
+        }
+
         /* Tablet: larger nav font */
         @media (min-width: 600px) and (max-width: 900px) {
           .header-section-link { font-size: 16px; }

@@ -26,15 +26,53 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
   const [navCanRight, setNavCanRight] = useState(false)
   const supabase = createClient()
 
-  useEffect(() => {
-    async function loadMember() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data } = await supabase.from('members').select('role, avatar_url').eq('id', user.id).single()
-      setMember({ ...user, role: data?.role ?? null, avatar_url: data?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null })
+ useEffect(() => {
+  let active = true
+
+  async function loadMember() {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!active) return
+
+    if (!user) {
+      setMember(null)
+      return
     }
-    loadMember()
-  }, [])
+
+    const { data } = await supabase
+      .from('members')
+      .select('role, avatar_url')
+      .eq('id', user.id)
+      .single()
+
+    if (!active) return
+
+    setMember({
+      ...user,
+      role: data?.role ?? null,
+      avatar_url:
+        data?.avatar_url ||
+        user.user_metadata?.avatar_url ||
+        user.user_metadata?.picture ||
+        null
+    })
+  }
+
+  loadMember()
+
+  const {
+    data: { subscription }
+  } = supabase.auth.onAuthStateChange(() => {
+    setTimeout(() => {
+      if (active) loadMember()
+    }, 0)
+  })
+
+  return () => {
+    active = false
+    subscription.unsubscribe()
+  }
+}, [supabase])
 
   // Issues for the hamburger drawer (newest first).
   useEffect(() => {
@@ -278,6 +316,44 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
           .header-section-link { font-size: 16px; }
           .header-bottom { gap: 32px; padding: 16px 60px; }
         }
+@media (max-width: 599px) {
+  .header-top {
+    position: relative;
+    min-height: 210px;
+    box-sizing: border-box;
+    padding: 10px 16px 14px;
+    align-items: flex-start;
+  }
+
+  .header-top > .logo-wrap {
+    position: absolute;
+    left: 50%;
+    top: 34px;
+    transform: translateX(-50%);
+    z-index: 2;
+  }
+
+  .header-top > .header-side {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .header-top > .header-side.right {
+    position: relative;
+    z-index: 3;
+  }
+
+  .header-bottom-wrap {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+@media (max-width: 380px) {
+  .header-top {
+    min-height: 210px;
+  }
+}
         /* Hamburger + slide-out drawer (matches the homepage) */
         .hamburger-btn { display: inline-flex; flex-direction: column; justify-content: center; gap: 5px; width: 30px; height: 26px; padding: 0; background: none; border: none; cursor: pointer; }
         .hamburger-btn span { display: block; height: 2px; width: 100%; background: #1a1a1a; border-radius: 2px; transition: background 0.15s; }
