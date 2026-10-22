@@ -155,7 +155,7 @@ function Groups() {
           <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 500, margin: '0 0 4px' }}>Forums</h1>
           <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>Discussion forums across The Parlor. Join one, or propose your own.</p>
         </div>
-        <button onClick={() => setPropose(true)} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontFamily: SERIF, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>+ Propose a forum</button>
+        <button data-tour="propose-forum" onClick={() => setPropose(true)} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontFamily: SERIF, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>+ Propose a forum</button>
       </div>
 
       {proposed && <div style={{ border: '1px solid #b7e0c8', background: '#eaf6ef', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13.5, color: '#2d8f5a' }}>Proposal sent — a Master Admin will review it. You’ll be notified.</div>}

@@ -1,3 +1,4 @@
+import { createServerClient } from '@supabase/ssr'
 import { serviceClient } from '../../../../../../lib/apiAuth'
 
 // GET → an .ics calendar file for a published event. Public (calendar apps can't
@@ -15,9 +16,17 @@ export async function GET(request, { params }) {
   const { data: e } = await db.from('events').select('*').eq('id', id).single()
   if (!e || e.status !== 'published') return new Response('Not found', { status: 404 })
 
+  if (!e.is_public) {
+    const auth = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+      cookies: { getAll: () => request.cookies.getAll(), setAll: () => {} }
+    })
+    const { data: { user } } = await auth.auth.getUser()
+    const { data: visible } = user ? await db.rpc('event_visible', { p_event: id, p_member: user.id }) : { data: false }
+    if (!visible) return new Response('Not found', { status: 404 })
+  }
   const start = e.starts_at ? icsDate(e.starts_at) : ''
   const end = e.ends_at ? icsDate(e.ends_at) : start
-  const loc = e.location_type === 'in_person' ? (e.location || '') : (e.join_url || e.location || 'Online')
+  const loc = e.location_type === 'in_person' ? (e.location || '') : 'Online — sign in to the event page for access'
   const lines = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//The Parlor//Events//EN', 'CALSCALE:GREGORIAN',
     'BEGIN:VEVENT',

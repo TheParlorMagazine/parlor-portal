@@ -28,7 +28,7 @@ export async function GET(request) {
   const [postRes, blogRes, comRes, thrRes, promptRes] = await Promise.all([
     db.from('member_posts')
       .select('id, member_id, body, image_url, video_url, link_url, link_title, link_image, created_at, members!member_posts_member_id_fkey(full_name, avatar_url, headline)')
-      .eq('status', 'live')
+      .eq('status', 'live').is('forum_id', null)
       .order('created_at', { ascending: false })
       .limit(20),
     db.from('member_submissions')

@@ -1,3 +1,4 @@
+import { deliverEventMessages } from '../../../../lib/eventMessages'
 import { requireUser, serviceClient, memberOf } from '../../../../lib/apiAuth'
 
 const EVENT_ROLES = ['admin', 'editor', 'social_admin']
@@ -11,7 +12,7 @@ async function gate(request) {
   return { db, user }
 }
 
-const FIELDS = ['title', 'blurb', 'description', 'cover_image_url', 'location_type', 'location', 'join_url', 'starts_at', 'ends_at', 'capacity', 'status', 'host_name', 'featured_in_newsletter', 'featured_home']
+const FIELDS = ['title', 'blurb', 'description', 'cover_image_url', 'location_type', 'location', 'join_url', 'starts_at', 'ends_at', 'capacity', 'status', 'host_name', 'featured_in_newsletter', 'featured_home', 'is_public']
 function pick(b) {
   const out = {}
   for (const f of FIELDS) if (f in b) out[f] = b[f] === '' ? null : b[f]
@@ -51,11 +52,11 @@ export async function GET(request) {
   const g = await gate(request); if (g.error) return g.error
   const { db } = g
   const { data: events } = await db.from('events').select('*').order('starts_at', { ascending: false })
-  const ids = (events || []).map(e => e.id)
-  let counts = {}
-  if (ids.length) {
-    const { data: rsvps } = await db.from('event_rsvps').select('event_id, status').in('event_id', ids).eq('status', 'going')
-    for (const r of rsvps || []) counts[r.event_id] = (counts[r.event_id] || 0) + 1
+  const counts = {}
+  for (const event of events || []) {
+    const { count, error } = await db.from('event_attendance').select('member_id', { count: 'exact', head: true }).eq('event_id', event.id).eq('status', 'going')
+    if (error) return Response.json({ error: 'Event attendance unavailable' }, { status: 500 })
+    counts[event.id] = count || 0
   }
   const { data: forums } = await db.from('forums').select('id, name, tied_to_type').order('name', { ascending: true })
   return Response.json({ events: (events || []).map(e => ({ ...e, going_count: counts[e.id] || 0 })), forums: forums || [] })
@@ -67,14 +68,19 @@ export async function POST(request) {
   const { db, user } = g
   let b = {}; try { b = await request.json() } catch {}
   if (!(b.title || '').trim()) return Response.json({ error: 'Title required' }, { status: 400 })
-  let { data: event, error } = await db.from('events').insert({ ...pick(b), created_by: user.id }).select().single()
-  if (error && /featured_home/.test(error.message || '')) { // column not migrated yet — save without it
-    const { featured_home, ...rest } = pick(b)
-    const r = await db.from('events').insert({ ...rest, created_by: user.id }).select().single(); event = r.data; error = r.error
+  const fields = { is_public: true, ...pick(b) }
+  const wantsPrivate = fields.is_public === false
+  if (wantsPrivate && !(b.forum_mode === 'connect' && b.forum_id) && b.forum_mode !== 'create' && !b.enable_discussion) {
+    return Response.json({ error: 'Private events require a forum' }, { status: 400 })
   }
-  if (error) return Response.json({ error: error.message }, { status: 500 })
+  const requestedStatus = fields.status || 'draft'
+  const { data: event, error } = await db.from('events').insert({ ...fields,
+    status: wantsPrivate ? 'draft' : requestedStatus,
+    forum_id: b.forum_mode === 'connect' ? b.forum_id : null, created_by: user.id }).select().single()
+  if (error) return Response.json({ error: error.message }, { status: 400 })
   await applyForum(db, event, b, user.id)
-  const { data: fresh } = await db.from('events').select('*').eq('id', event.id).single()
+  const { data: fresh, error: publishError } = await db.from('events').update({ status: requestedStatus }).eq('id', event.id).select().single()
+  if (publishError) return Response.json({ error: 'Event saved as draft; attach a forum before publishing.' }, { status: 400 })
   return Response.json({ event: fresh })
 }
 
@@ -84,6 +90,9 @@ export async function PATCH(request) {
   const { db, user } = g
   let b = {}; try { b = await request.json() } catch {}
   if (!b.id) return Response.json({ error: 'id required' }, { status: 400 })
+  const { data: existing } = await db.from('events').select('*').eq('id', b.id).single()
+  if (!existing) return Response.json({ error: 'Not found' }, { status: 404 })
+  await applyForum(db, existing, b, user.id)
   const patch = pick(b)
   let event
   if (Object.keys(patch).length) {
@@ -100,8 +109,9 @@ export async function PATCH(request) {
     event = data
   }
   if (!event) return Response.json({ error: 'Not found' }, { status: 404 })
-  await applyForum(db, event, b, user.id)
   const { data: fresh } = await db.from('events').select('*').eq('id', b.id).single()
+  const { error: queueError } = await db.rpc('event_registration', { p_event: b.id, p_actor: user.id, p_action: 'reconcile' })
+  if (!queueError) { try { await deliverEventMessages(db, b.id) } catch { console.error('Event messages pending retry') } }
   return Response.json({ event: fresh })
 }
 

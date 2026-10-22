@@ -201,7 +201,7 @@ export default function PortalLibraryPage() {
             </div>
             <div className="lib-search-wrap">
               <svg viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" strokeWidth="1.4"/><path d="M10 10l3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
-              <input className="lib-search-input" placeholder="Search library..." value={query} onChange={e => setQuery(e.target.value)} />
+              <input data-tour="archive-search" className="lib-search-input" placeholder="Search library..." value={query} onChange={e => setQuery(e.target.value)} />
             </div>
           </div>
 

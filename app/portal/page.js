@@ -303,7 +303,7 @@ function Hub() {
 
       `}</style>
 
-      <h1 className="hub-greeting">Hello, <em>{first}.</em></h1>
+      <h1 data-tour="dashboard-ready" className="hub-greeting">Hello, <em>{first}.</em></h1>
       <p className="hub-sub">{subline}</p>
 
       {/* Top: New in the Library (left) + this month's book club pick (right) */}

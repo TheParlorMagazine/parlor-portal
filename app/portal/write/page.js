@@ -246,7 +246,7 @@ function Write() {
           <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 500, margin: '0 0 6px' }}>Member posts</h1>
           <p style={{ fontSize: 13.5, color: 'var(--muted)', margin: 0, lineHeight: 1.55, maxWidth: 560 }}>Share an essay, reflection or idea with the Parlor community. Member posts are unpaid and written by members. They appear in the member community space, and our editors may select some to edit, fact-check and publish in our verticals with a Member post label.</p>
         </div>
-        {view.mode === 'list' && <button onClick={() => setView({ mode: 'edit', id: null })} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontFamily: SERIF, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>+ New draft</button>}
+        {view.mode === 'list' && <button data-tour="new-draft" onClick={() => setView({ mode: 'edit', id: null })} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontFamily: SERIF, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>+ New draft</button>}
       </div>
 
       {view.mode === 'list' && (

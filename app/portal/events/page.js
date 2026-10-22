@@ -20,7 +20,7 @@ const LOC = { virtual: 'Online', in_person: 'In person', hybrid: 'Hybrid' }
 function EventCard({ e, past }) {
   const dp = e.starts_at ? dateParts(e.starts_at) : null
   return (
-    <a className="ev-card" href={`/portal/events/${e.id}`}>
+    <a data-tour="event-card" className="ev-card" href={`/portal/events/${e.id}`}>
       <div className="ev-date">{dp ? <><div className="m">{dp.m}</div><div className="d">{dp.d}</div><div className="t">{dp.t}</div></> : <div className="t">TBA</div>}</div>
       <div style={{ minWidth: 0 }}>
         <span className="ev-loc">{LOC[e.location_type] || 'Event'}</span>
@@ -28,7 +28,7 @@ function EventCard({ e, past }) {
         {e.blurb && <div className="ev-c-blurb">{e.blurb}</div>}
         <div className="ev-c-meta">{e.going_count || 0} {past ? 'attended' : 'going'}{e.host_name ? ` · Hosted by ${e.host_name}` : ''}</div>
       </div>
-      {e.my_status === 'going' ? <span className="ev-going-tag">✓ Going</span> : e.my_status === 'waitlist' ? <span className="ev-going-tag" style={{ color: '#b26a00' }}>Waitlisted</span> : <span style={{ fontSize: 12, color: 'var(--muted)' }}>Details →</span>}
+      {e.my_status === 'host' ? <span className="ev-going-tag">Host/admin access</span> : e.my_status === 'going' ? <span className="ev-going-tag">✓ Going</span> : e.my_status === 'waitlist' ? <span className="ev-going-tag" style={{ color: '#b26a00' }}>Waitlisted · #{e.queue_position}</span> : <span style={{ fontSize: 12, color: 'var(--muted)' }}>Details →</span>}
     </a>
   )
 }
@@ -52,8 +52,8 @@ function List() {
   return (
     <div className="ev-wrap">
       <style>{evCss}</style>
-      <h1 className="ev-h1">Events</h1>
-      <p className="ev-sub">Salons, readings, and roundtables. RSVP to join — and to unlock the event’s discussion.</p>
+      <h1 data-tour="events-heading" className="ev-h1">Events</h1>
+      <p className="ev-sub">Salons, readings, and roundtables. RSVP to attend. Forum membership is managed separately.</p>
 
       {d.loading ? <p style={{ color: 'var(--muted)' }}>Loading…</p> : (
         <>

@@ -101,7 +101,7 @@ function EventModal({ token, event, onClose, onSaved, forums = [], supabase }) {
     title: event?.title || '', blurb: event?.blurb || '', description: event?.description || '', cover_image_url: event?.cover_image_url || '',
     location_type: event?.location_type || 'virtual', location: event?.location || '', join_url: event?.join_url || '',
     starts_at: toLocal(event?.starts_at), ends_at: toLocal(event?.ends_at), capacity: event?.capacity ?? '',
-    status: event?.status || 'draft', host_name: event?.host_name || '',
+    is_public: event?.is_public === true, status: event?.status || 'draft', host_name: event?.host_name || '',
     forum_mode: event?.forum_id ? 'connect' : 'none',   // none | create | connect
     forum_id: event?.forum_id || '',
     forum_name: '',   // custom name when creating a new forum (blank = use the event name)
@@ -156,6 +156,7 @@ function EventModal({ token, event, onClose, onSaved, forums = [], supabase }) {
           <div><div style={label}>Location</div><input value={f.location} onChange={e => set('location', e.target.value)} placeholder="Venue / Zoom" style={input} /></div>
           <div><div style={label}>Capacity</div><input type="number" value={f.capacity} onChange={e => set('capacity', e.target.value)} placeholder="∞" style={input} /></div>
         </div>
+        <label style={{ display: 'block', margin: '12px 0' }}><input type="checkbox" checked={f.is_public} onChange={e => set('is_public', e.target.checked)} /> Public — all Parlor members (otherwise forum members only)</label>
         <div style={label}>Join link (shown to attendees)</div><input value={f.join_url} onChange={e => set('join_url', e.target.value)} placeholder="https://…" style={input} />
         <div style={label}>Cover image URL</div><input value={f.cover_image_url} onChange={e => set('cover_image_url', e.target.value)} placeholder="https://…" style={input} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -186,7 +187,7 @@ function EventModal({ token, event, onClose, onSaved, forums = [], supabase }) {
             {forums.map(fo => <option key={fo.id} value={fo.id}>{fo.name}{fo.tied_to_type === 'event' ? ' (event)' : ''}</option>)}
           </select>
         )}
-        <p style={{ fontSize: 12, color: '#aaa', margin: '4px 0 0' }}>Members are auto-added to this forum when they RSVP{hadForum && f.forum_mode !== 'connect' ? ' · this event already has a forum' : ''}.</p>
+        <p style={{ fontSize: 12, color: '#aaa', margin: '4px 0 0' }}>Event attendance does not grant forum membership{hadForum && f.forum_mode !== 'connect' ? ' · this event already has a forum' : ''}.</p>
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 14, fontSize: 13.5, color: '#333', cursor: 'pointer' }}>
           <input type="checkbox" checked={f.featured_in_newsletter} onChange={e => set('featured_in_newsletter', e.target.checked)} />
           Feature in the newsletter banner
@@ -218,14 +219,14 @@ function AttendeesModal({ token, event, onClose }) {
           <div style={{ fontFamily: ffH, fontSize: 21, fontWeight: 700 }}>Attendees</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, color: '#999', cursor: 'pointer' }}>×</button>
         </div>
-        <p style={{ fontSize: 13, color: '#888', marginBottom: 12 }}>{event.title}</p>
+        <p style={{ fontSize: 13, color: '#888', marginBottom: 12 }}>{event.title}</p><a href={`/portal/events/${event.id}`} style={{ display: 'block', marginBottom: 12 }}>Manage attendance and waitlist →</a>
         {emails && <button onClick={() => navigator.clipboard?.writeText(emails)} style={{ background: PINK, border: 'none', borderRadius: 7, padding: '7px 14px', fontFamily: ff, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', marginBottom: 14 }}>Copy going emails</button>}
         {loading ? <p style={{ color: '#aaa', fontSize: 13 }}>Loading…</p>
           : rows.length === 0 ? <p style={{ color: '#bbb', fontSize: 13, fontStyle: 'italic' }}>No RSVPs yet.</p>
           : rows.map((r, i) => (
             <div key={i} style={{ borderTop: `1px solid ${BORDER}`, padding: '9px 0', display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
               <span><strong style={{ color: '#0a0a0a' }}>{r.full_name}</strong> <span style={{ color: '#aaa' }}>{r.email}</span></span>
-              <span style={{ color: r.status === 'going' ? '#2d8f5a' : '#b26a00', fontSize: 12 }}>{r.status}</span>
+              <span style={{ color: r.status === 'going' ? '#2d8f5a' : '#b26a00', fontSize: 12 }}>{r.status}{r.queue_position ? ` #${r.queue_position}` : ''}</span>
             </div>
           ))}
       </div>
@@ -260,7 +261,7 @@ export default function EventsSection({ supabase }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 18 }}>
         <div>
           <h1 style={{ fontFamily: ffH, fontSize: 30, fontWeight: 700, margin: 0 }}>Events</h1>
-          <p style={{ fontSize: 14, color: '#888', margin: '4px 0 0' }}>Salons and readings. RSVPs auto-join the event’s discussion forum and trigger the confirmation email.</p>
+          <p style={{ fontSize: 14, color: '#888', margin: '4px 0 0' }}>Salons and readings. Attendance and forum membership are separate. Hosts and admins do not use attendee places.</p>
         </div>
         <button onClick={() => setEditing(null)} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: ff }}>+ New event</button>
       </div>

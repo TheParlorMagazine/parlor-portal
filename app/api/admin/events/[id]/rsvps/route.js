@@ -11,13 +11,13 @@ export async function GET(request, { params }) {
   if (!EVENT_ROLES.includes(me.role)) return Response.json({ error: 'Forbidden' }, { status: 403 })
   const { id } = await params
 
-  const { data, error } = await db.from('event_rsvps')
-    .select('status, created_at, members(full_name, email)')
-    .eq('event_id', id).neq('status', 'cancelled')
-    .order('created_at', { ascending: true })
+  const { data, error } = await db.from('event_attendance')
+    .select('member_id,status,created_at,queue_position').eq('event_id', id).neq('status', 'cancelled').order('created_at')
   if (error) return Response.json({ error: error.message }, { status: 500 })
-  const attendees = (data || []).map(r => ({
-    full_name: r.members?.full_name || '—', email: r.members?.email || '', status: r.status, rsvp_at: r.created_at,
-  }))
-  return Response.json({ attendees })
+  const ids = (data || []).map(r => r.member_id)
+  const { data: members } = ids.length ? await db.from('members').select('id,full_name,email').in('id', ids) : { data: [] }
+  const byId = Object.fromEntries((members || []).map(m => [m.id,m]))
+  return Response.json({ attendees: (data || []).map(r => ({ member_id: r.member_id,
+    full_name: byId[r.member_id]?.full_name || 'Member', email: byId[r.member_id]?.email || '',
+    status: r.status, queue_position: r.status === 'waitlist' ? r.queue_position : null, rsvp_at: r.created_at })) })
 }

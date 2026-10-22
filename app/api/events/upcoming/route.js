@@ -9,14 +9,14 @@ export async function GET() {
   const baseCols = 'id, title, blurb, cover_image_url, location_type, location, starts_at, host_name'
   let { data, error } = await db.from('events')
     .select(`${baseCols}, featured_home`)
-    .eq('status', 'published')
+    .eq('status', 'published').eq('is_public', true)
     .gte('starts_at', nowISO)
     .order('starts_at', { ascending: true })
     .limit(24)
   if (error) { // featured_home column not migrated yet — fall back
     const r = await db.from('events')
       .select(baseCols)
-      .eq('status', 'published').gte('starts_at', nowISO).order('starts_at', { ascending: true }).limit(24)
+      .eq('status', 'published').eq('is_public', true).gte('starts_at', nowISO).order('starts_at', { ascending: true }).limit(24)
     data = r.data; error = r.error
   }
   if (error) return Response.json({ events: [] })

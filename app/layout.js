@@ -3,6 +3,7 @@ import RecoveryRedirect from './_components/RecoveryRedirect'
 import CartDrawer from './_components/CartDrawer'
 import ShopStateSync from './_components/ShopStateSync'
 import ConfirmHost from './_components/ConfirmHost'
+import PortalTour from './_components/portal-tour/PortalTour'
 
 export const metadata = {
   title: 'The Parlor',
@@ -28,6 +29,7 @@ export default function RootLayout({ children }) {
         <ShopStateSync />
         <CartDrawer />
         <ConfirmHost />
+        <PortalTour />
       </body>
     </html>
   )

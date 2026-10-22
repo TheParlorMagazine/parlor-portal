@@ -1,3 +1,4 @@
+import { deliverEventMessages } from '../../../../lib/eventMessages'
 import { createClient } from '@supabase/supabase-js'
 import { sendEventReminderEmail } from '../../../../lib/emails'
 
@@ -17,6 +18,9 @@ function authorized(request) {
 async function run(request) {
   if (!authorized(request)) return Response.json({ error: 'Unauthorized' }, { status: 401 })
   const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
+  const { error: queueError } = await db.rpc('queue_event_audience_reminders')
+  if (queueError) return Response.json({ error: 'Event reminder setup unavailable' }, { status: 500 })
+  await deliverEventMessages(db)
   const now = new Date()
   const soon = new Date(now.getTime() + 24 * 3600 * 1000).toISOString()
 
@@ -30,8 +34,8 @@ async function run(request) {
   let uncertain = 0
 
   for (const e of events) {
-    const { data: rsvps, error: rsvpError } = await db.from('event_rsvps')
-      .select('member_id, members(full_name, email)')
+    const { data: rsvps, error: rsvpError } = await db.from('event_attendance')
+      .select('member_id')
       .eq('event_id', e.id)
       .eq('status', 'going')
       .is('reminded_at', null)
@@ -42,7 +46,10 @@ async function run(request) {
     }
 
     for (const r of rsvps || []) {
-      const email = r.members?.email
+      const { data: visible } = await db.rpc('event_visible', { p_event: e.id, p_member: r.member_id })
+      if (!visible) continue
+      const { data: recipient } = await db.from('members').select('full_name,email').eq('id', r.member_id).single()
+      const email = recipient?.email
       if (!email) continue
 
       const { data: claimed, error: claimError } = await db.rpc(
@@ -63,7 +70,7 @@ async function run(request) {
       try {
         const result = await sendEventReminderEmail({
           to: email,
-          name: (r.members.full_name || 'there').split(' ')[0],
+          name: (recipient.full_name || 'there').split(' ')[0],
           event: e,
           siteUrl: SITE,
         })

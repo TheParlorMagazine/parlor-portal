@@ -232,7 +232,7 @@ export default function PostsWall({ memberId, currentUserId, forumId }) {
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <Avatar name={me.full_name} src={me.avatar_url} size={44} />
-                <button onClick={() => setComposing(true)} style={{ flex: 1, textAlign: 'left', background: 'none', border: '1px solid var(--border)', borderRadius: 24, padding: '13px 18px', fontFamily: SERIF, fontSize: 15, color: 'var(--muted)', cursor: 'pointer' }}>Start a post</button>
+                <button data-tour="start-post" onClick={() => setComposing(true)} style={{ flex: 1, textAlign: 'left', background: 'none', border: '1px solid var(--border)', borderRadius: 24, padding: '13px 18px', fontFamily: SERIF, fontSize: 15, color: 'var(--muted)', cursor: 'pointer' }}>Start a post</button>
               </div>
               <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
                 <button onClick={() => { setComposing(true); setTimeout(() => fileRef.current?.click(), 0) }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: 'none', border: 'none', borderRadius: 8, padding: '8px 10px', fontFamily: SERIF, fontSize: 13.5, color: '#4a6fd4', cursor: 'pointer' }}>
