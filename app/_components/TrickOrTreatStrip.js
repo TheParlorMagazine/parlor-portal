@@ -13,7 +13,10 @@ export default function TrickOrTreatStrip({
   heroSelector = 'main > *:nth-child(2)',
   bottomSelector = 'main > *:nth-child(4)',
   bottomBar = false,
+  shopPopup = false,
+  onDismiss,
 }) {
+  const [shopMobile, setShopMobile] = useState(false)
   const [heroGone, setHeroGone]       = useState(false)
   const [everHidden, setEverHidden]   = useState(false)
   const [mounted, setMounted]         = useState(false)
@@ -40,16 +43,16 @@ export default function TrickOrTreatStrip({
   const slotCounterRef = useRef(0)
   const isMobileRef    = useRef(false)
 
-  const visible = heroGone && (bottomBar || !everHidden)
+  const visible = shopPopup ? (!shopMobile || heroGone) : heroGone && (bottomBar || !everHidden)
 
   useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
-    const update = () => { isMobileRef.current = window.innerWidth <= 1100 }
+    const update = () => { isMobileRef.current = window.innerWidth <= 1100; if (shopPopup) setShopMobile(isMobileRef.current) }
     update()
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
-  }, [])
+  }, [shopPopup])
 
   useEffect(() => {
     fetch('/api/trick-or-treat')
@@ -381,9 +384,21 @@ export default function TrickOrTreatStrip({
         }
       `}</style>
 
+      {shopPopup && <style>{`
+        .tot-strip.tot-shop-popup{left:16px;top:auto;bottom:16px;width:280px;min-width:0;max-width:280px;justify-content:flex-end}
+        .tot-shop-popup .tot-inner{margin:0;box-shadow:0 8px 30px rgba(0,0,0,.2);padding-top:24px}
+        .tot-shop-popup .tot-street{height:190px}
+        .tot-shop-dismiss{position:absolute;right:7px;top:6px;z-index:30;width:28px;height:28px;border:1px solid rgba(242,184,198,.45);border-radius:50%;background:#111;color:#f2b8c6;font-size:22px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+        .tot-shop-dismiss:hover{background:#f2b8c6;color:#111}
+        .tot-shop-dismiss:focus-visible{outline:2px solid #f2b8c6;outline-offset:3px}
+        .tot-shop-popup.hidden .tot-shop-dismiss{visibility:hidden}
+        .tot-shop-mobile.hidden .tot-shop-dismiss{visibility:hidden}
+      `}</style>}
+
       {/* Mobile / bottom-bar strip — two rows: scene on top, label+slots+button below */}
-      <div className={`tot-mob${bottomBar ? ' tot-bottom-bar' : ''}${visible ? ' shown' : ' hidden'}`}
+      <div className={`tot-mob${shopPopup ? ' tot-shop-mobile' : ''}${bottomBar ? ' tot-bottom-bar' : ''}${visible ? ' shown' : ' hidden'}`}
            aria-hidden={!visible} ref={mobContainerRef}>
+        {shopPopup && <button type="button" className="tot-shop-dismiss" onClick={onDismiss} aria-label="Dismiss shop Trick or Treat banner">×</button>}
         {/* Top: animated house scene */}
         <div className="tot-mob-scene" ref={streetMobRef}>
           <div className={`tot-house-track${trackPaused ? ' paused' : ''}`}>
@@ -427,7 +442,8 @@ export default function TrickOrTreatStrip({
       </div>
 
       {/* Desktop sidebar — hidden in bottomBar mode */}
-      {!bottomBar && <div className={`tot-strip${visible ? ' shown' : ' hidden'}`} aria-hidden={!visible}>
+      {!bottomBar && <div className={`tot-strip${shopPopup ? ' tot-shop-popup' : ''}${visible ? ' shown' : ' hidden'}`} aria-hidden={!visible}>
+        {shopPopup && <button type="button" className="tot-shop-dismiss" onClick={onDismiss} aria-label="Dismiss shop Trick or Treat banner">×</button>}
         <a href={href} className="tot-inner" ref={innerRef} title="Trick or Treat at The Parlor">
           <div className="tot-label">Trick or Treat at<br/>The Parlor</div>
 

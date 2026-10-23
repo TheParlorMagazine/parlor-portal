@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
+import ShopTrickOrTreatPopup from '../_components/ShopTrickOrTreatPopup'
 import SiteFooter from '../_components/SiteFooter'
 import { useCurrency, fmtPrice } from '../../lib/useCurrency'
 import { useCart, uniqueLineCount } from '../../lib/useCart'
@@ -400,7 +401,7 @@ export default function ShopPage() {
           primary image; the button links to its page. Hidden when nothing is
           featured. */}
       {catalogueLoaded && featured && (
-      <section style={{ background: '#f3c3d1' }}>
+      <section id="shop-featured-product" style={{ background: '#f3c3d1' }}>
         <div className="shop-herogrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', alignItems: 'center' }}>
           <div className="shop-hero-left">
             <h2 className="shop-hero-title" style={{ whiteSpace: 'pre-line' }}>{heroHeadline}</h2>
@@ -520,6 +521,7 @@ export default function ShopPage() {
         <BagIcon count={uniqueLineCount(cart)} />
       </button>
 
+      {catalogueLoaded && <ShopTrickOrTreatPopup />}
       <SiteFooter />
     </div>
   )
