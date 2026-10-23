@@ -2538,7 +2538,8 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
           </div>
 
           <section style={{ padding: 20, borderTop: '1px solid #333' }}>
-            <h3 style={{ fontSize: 14, margin: '0 0 12px' }}>Social share card</h3>
+            <h3 style={{ fontSize: 14, margin: '0 0 12px' }}>Social post graphic</h3>
+            <p style={{ fontSize: 12, color: '#aaa', lineHeight: 1.5 }}>Download for manual social posts. Shared article links use the cover image, headline, and subtitle.</p>
             {!savedId && <p style={{ fontSize: 12, color: '#aaa' }}>Generated automatically when you first save this article.</p>}
             {shareCardBusy && <p role="status" style={{ fontSize: 12, color: '#aaa' }}>Generating share card…</p>}
             {shareCard && <><img src={shareCard} alt="Article social share card preview" style={{ display: 'block', width: '100%', borderRadius: 6 }} /><a href={shareCard} download={`${form.slug || 'article'}-share.png`} style={{ display: 'inline-block', marginTop: 10, color: '#f2b8c6', fontSize: 12 }}>Download share card</a></>}
