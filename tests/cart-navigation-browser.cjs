@@ -46,7 +46,7 @@ const root=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
   }
   if(['home','shop','privacy','terms'].includes(surface)){
    const footer=page.locator('.site-footer')
-   const destinations={'Work & Wealth':'/work-wealth','Society & Culture':'/society-culture','World & Politics':'/world-politics','Perspectives & Identity':'/perspectives-identity','About':'/about/mission','Shop':'/shop','Donate':'/donate','People of The Parlor':'/about/people','Archive':'/portal/library','Become a member':'/plans','Member dashboard':'/portal','Reading Room':'/portal/reading-room','Events':'/portal/events','Library':'/portal/library','Privacy':'/privacy','Terms':'/terms'}
+   const destinations={'Work & Wealth':'/work-wealth','Society & Culture':'/society-culture','World & Politics':'/world-politics','Perspectives & Identity':'/perspectives-identity','About':'/about/mission','Shop':'/shop','Donate':'/buy-us-a-birthday-gift','People of The Parlor':'/about/people','Archive':'/portal/library','Become a member':'/plans','Member dashboard':'/portal','Reading Room':'/portal/reading-room','Events':'/portal/events','Library':'/portal/library','Privacy':'/privacy','Terms':'/terms'}
    for(const[label,href]of Object.entries(destinations))assert.equal(await footer.getByRole('link',{name:label,exact:true}).getAttribute('href'),href)
   }
   if(surface==='privacy'||surface==='terms'){

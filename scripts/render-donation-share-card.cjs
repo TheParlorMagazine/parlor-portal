@@ -1,0 +1,11 @@
+const fs=require('node:fs'),path=require('node:path')
+const{chromium}=require(path.join(process.env.TOUR_BROWSER_TOOLS||'/tmp/parlor-tour-validation/node_modules','playwright-core'))
+;(async()=>{
+ const root=path.resolve(__dirname,'..'),art=fs.readFileSync(path.join(root,'public/hil-13.webp')).toString('base64')
+ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']})
+ try{for(const scale of [1,.5]){
+ const page=await browser.newPage({viewport:{width:1200*scale,height:630*scale},deviceScaleFactor:1})
+ await page.setContent(`<!doctype html><style>*{box-sizing:border-box}body{margin:0;background:#fdf8f5;color:#23171b;font-family:Georgia,serif}main{width:1200px;height:630px;display:flex;position:relative;overflow:hidden;transform:scale(${scale});transform-origin:top left}.copy{width:590px;padding:52px 0 46px 52px;position:relative;z-index:2;display:flex;flex-direction:column}.brand{font-size:29px;font-weight:bold;margin-bottom:42px}.eyebrow{font-size:15px;letter-spacing:3px;color:#984d63;text-transform:uppercase;margin-bottom:20px}h1{font-size:62px;line-height:1.04;letter-spacing:-2px;margin:0 0 24px}p{font-size:23px;line-height:1.5;margin:0;color:#655057;max-width:470px}.url{font-size:15px;color:#7a1f3d;margin-top:auto}.art{position:absolute;right:-100px;bottom:0;width:780px;height:630px;display:flex;align-items:flex-end}.art img{width:100%;height:auto}.art:after{content:'';position:absolute;inset:0;background:linear-gradient(to right,#fdf8f5,rgba(253,248,245,.6) 12%,transparent 35%)}</style><main><div class="copy"><div class="brand">The Parlor</div><div class="eyebrow">Our first birthday</div><h1>Give The Parlor<br>a birthday gift.</h1><p>From a cup of coffee to our next print run, help keep independent publishing alive.</p><div class="url">theparlormagazine.com/buy-us-a-birthday-gift</div></div><div class="art"><img src="data:image/webp;base64,${art}" alt=""></div></main>`)
+ await page.locator('img').evaluate(i=>i.decode());await page.screenshot({path:path.join(root,'public',scale===1?'birthday-gift-social.png':'birthday-gift-thumbnail.png')});await page.close()
+ }}finally{await browser.close()}
+})().catch(e=>{console.error(e);process.exitCode=1})

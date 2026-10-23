@@ -1670,7 +1670,7 @@ export default function HomePageClient({ initial = {} }) {
 
         <div className="nav-drawer-section">
           <a href="/shop" className="nav-drawer-item"><span className="nav-drawer-title">Shop</span></a>
-          <a href="/donate" className="nav-drawer-item"><span className="nav-drawer-title">Donate</span></a>
+          <a href="/buy-us-a-birthday-gift" className="nav-drawer-item"><span className="nav-drawer-title">Donate</span></a>
           {ABOUT_LINKS.map(l => (
             <a key={l.label} href={l.href} className="nav-drawer-item"><span className="nav-drawer-title">{l.label}</span></a>
           ))}

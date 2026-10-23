@@ -4,7 +4,7 @@ const SECTION_LINKS = [
   ['World & Politics', '/world-politics'],
   ['Perspectives & Identity', '/perspectives-identity'],
 ]
-const MAGAZINE_LINKS = [['About', '/about/mission'], ['Shop', '/shop'], ['Donate', '/donate'], ['People of The Parlor', '/about/people'], ['Archive', '/portal/library']]
+const MAGAZINE_LINKS = [['About', '/about/mission'], ['Shop', '/shop'], ['Donate', '/buy-us-a-birthday-gift'], ['People of The Parlor', '/about/people'], ['Archive', '/portal/library']]
 const MEMBER_LINKS = [['Become a member', '/plans'], ['Member dashboard', '/portal'], ['Reading Room', '/portal/reading-room'], ['Events', '/portal/events'], ['Library', '/portal/library']]
 
 export default function SiteFooter() {

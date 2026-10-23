@@ -88,7 +88,7 @@ export default function FundraisingSection({ supabase }) {
                   {campaign.title}
                 </h2>
                 <p style={{ color: '#777', fontSize: 13 }}>
-                  {campaign.slug === 'birthday' ? 'Public page: /donate (connection pending)' : 'No public page connected'}
+                  {campaign.slug === 'birthday' ? 'Public page: /buy-us-a-birthday-gift (connection pending)' : 'No public page connected'}
                 </p>
               </div>
               <span style={{ fontSize: 12, color: '#7a263a', textTransform: 'capitalize' }}>
