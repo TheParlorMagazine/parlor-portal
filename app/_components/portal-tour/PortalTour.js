@@ -149,21 +149,34 @@ export default function PortalTour() {
     if (mode !== 'tour') { setRect(null); return }
     let last = ''
     let scrolled = false
+    let highlighted = null
     const measure = () => {
       const candidates = [...document.querySelectorAll(config.selector)]
       const element = candidates.find(node => { const r = node.getBoundingClientRect(); return r.width > 0 && r.height > 0 })
       target.current = element || null
+      if (highlighted && (highlighted !== element || activated)) { highlighted.classList.remove('parlor-tour-highlight'); highlighted = null }
       if (!element || activated) { if (last !== 'none') { last = 'none'; setRect(null) } return }
+      if (highlighted !== element) { element.classList.add('parlor-tour-highlight'); highlighted = element }
       if (!scrolled) {
         element.scrollIntoView({ block: mobile ? 'start' : 'center', behavior: 'instant' })
         scrolled = true
       }
       const bounds = element.getBoundingClientRect()
       const panelBounds = panel.current?.getBoundingClientRect()
-      const visibleBottom = mobile ? (panelBounds?.top || innerHeight) - 52 : innerHeight - 60
-      const top = Math.max(76, bounds.top)
-      const bottom = Math.min(visibleBottom, bounds.bottom)
-      const next = bottom > top ? { top: top - 4, left: Math.max(6, bounds.left - 4), width: Math.min(innerWidth - 12, bounds.width + 8), height: bottom - top + 8 } : null
+      // Measure the whole target. Never turn a clipped rectangle into a thin outline.
+      const visible = bounds.top >= (mobile ? 72 : 0) && bounds.bottom <= innerHeight && bounds.left >= 0 && bounds.right <= innerWidth
+      const cueWidth = 154, cueHeight = 50, gap = 18
+      const positions = [
+        { top: bounds.bottom + gap, left: bounds.left, above: false },
+        { top: bounds.top - cueHeight - gap, left: bounds.left, above: true },
+        { top: bounds.top, left: bounds.right + gap, above: false },
+        { top: bounds.top, left: bounds.left - cueWidth - gap, above: false },
+      ]
+      const position = positions.map(value => ({ ...value, left: Math.max(24, Math.min(value.left, innerWidth - cueWidth - 24)) })).find(value => {
+        if (value.top < (mobile ? 80 : 24) || value.top + cueHeight > innerHeight - 24) return false
+        return !panelBounds || value.left + cueWidth < panelBounds.left - 12 || value.left > panelBounds.right + 12 || value.top + cueHeight < panelBounds.top - 12 || value.top > panelBounds.bottom + 12
+      })
+      const next = visible && position ? position : null
       const signature = JSON.stringify(next)
       if (signature !== last) { last = signature; setRect(next) }
     }
@@ -180,6 +193,7 @@ export default function PortalTour() {
     document.addEventListener('input', changed, true)
     document.addEventListener('keydown', escape)
     return () => {
+      highlighted?.classList.remove('parlor-tour-highlight')
       clearInterval(timer); observer.disconnect()
       document.removeEventListener('scroll', measure, true); window.removeEventListener('resize', measure)
       document.removeEventListener('click', clicked, true); document.removeEventListener('input', changed, true); document.removeEventListener('keydown', escape)
@@ -235,8 +249,10 @@ export default function PortalTour() {
     </dialog>}
     {mode === 'tour' && <>
       {rect && !activated && <>
-        <div className={styles.ring} style={rect} aria-hidden="true" />
-        <button className={styles.cue} style={{ top: rect.top + rect.height + 7, left: Math.max(12, Math.min(rect.left, innerWidth - 155)) }} aria-label={config.action} onClick={activate}>{mobile ? 'Tap here' : 'Click here'} ↗</button>
+        <button className={styles.cue} style={{ top: rect.top, left: rect.left }} aria-label={config.action} onClick={activate}>
+          {mobile ? 'Tap here' : 'Click here'}
+          <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" style={rect.above ? { transform: 'scaleY(-1)' } : undefined}><path d="M3 28C18 28 23 19 24 5M16 12l8-8 6 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </button>
       </>}
       <section ref={panel} tabIndex={-1} className={styles.panel} role="region" aria-labelledby="parlor-tour-step">
         <div className={styles.header}><p className={styles.eyebrow}>Explore The Parlor · {step + 1} of {TOUR_STEPS.length}</p><button className={styles.link} onClick={() => dismiss()}>Pause</button></div>

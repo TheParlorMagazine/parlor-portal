@@ -72,8 +72,18 @@ async function main(){
    await page.goto(base+'/portal');await page.getByRole('button',{name:'Open your Parlor tour and help'}).waitFor();assert.equal(await page.locator('dialog').count(),0)
    await context.close()
   }
+  // A partly scrolled target must not produce a sliced highlight rectangle.
+  const clippedContext=await browser.newContext({viewport:{width:390,height:600},extraHTTPHeaders:{'x-test-client':'clipped'}})
+  const clippedPage=await clippedContext.newPage();await clippedPage.goto(base+'/portal');await clippedPage.getByRole('button',{name:'Start Tour',exact:true}).click()
+  await clippedPage.locator('.parlor-tour-highlight').waitFor()
+  await clippedPage.evaluate(()=>{const element=document.querySelector('[data-tour="start-post"]');window.scrollTo(0,element.getBoundingClientRect().top+scrollY-15)})
+  await clippedPage.waitForTimeout(450)
+  assert.equal(await clippedPage.getByRole('button',{name:'Open the post composer',exact:true}).filter({hasText:'Tap here'}).count(),0)
+  assert.equal(await clippedPage.locator('.parlor-tour-highlight').count(),1)
+  await clippedPage.evaluate(()=>scrollTo(0,0));await clippedPage.getByRole('button',{name:'Open the post composer',exact:true}).filter({hasText:'Tap here'}).waitFor()
+  await clippedContext.close()
   // Reduced motion leaves a static cue.
-  const context=await browser.newContext({reducedMotion:'reduce',extraHTTPHeaders:{'x-test-client':'reduced'}});const page=await context.newPage();await page.goto(base+'/portal');await page.getByRole('button',{name:'Start Tour',exact:true}).click();const cue=page.getByRole('button',{name:'Open the post composer',exact:true}).filter({hasText:'Click here'});await cue.waitFor();assert.equal(await cue.evaluate(el=>getComputedStyle(el).animationName),'none');await page.keyboard.press('Escape');assert.equal(await page.getByRole('region').count(),0);await context.close()
+  const context=await browser.newContext({reducedMotion:'reduce',extraHTTPHeaders:{'x-test-client':'reduced'}});const page=await context.newPage();await page.goto(base+'/portal');await page.getByRole('button',{name:'Start Tour',exact:true}).click();const cue=page.getByRole('button',{name:'Open the post composer',exact:true}).filter({hasText:'Click here'});await cue.waitFor();assert.equal(await cue.evaluate(el=>getComputedStyle(el,'::before').animationName),'none');await page.keyboard.press('Escape');assert.equal(await page.getByRole('region').count(),0);await context.close()
   console.log('PASS: real tour component in Chromium at desktop/mobile widths; five stops, pulse visibility, completion, postpone, skip, restart, Archive ending, reduced motion, Escape; no browser errors.')
   console.log('Screenshots: '+dir)
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}
