@@ -1686,6 +1686,36 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
     } catch { setThemeError('Could not add theme') } finally { setThemeBusy(false) }
   }
 
+  const [shareCard, setShareCard] = useState('')
+  const [shareCardError, setShareCardError] = useState('')
+  const [shareCardBusy, setShareCardBusy] = useState(false)
+  const [shareCardRetry, setShareCardRetry] = useState(0)
+
+  // Generate as soon as the first save creates an article, and refresh on saves.
+  // The authenticated PNG stays local to the editor until the article publishes.
+  useEffect(() => {
+    if (!savedId) return
+    const controller = new AbortController()
+    let objectUrl
+    setShareCardBusy(true); setShareCardError(''); setShareCard('')
+    async function generate() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const response = await fetch('/api/admin/article-share-card', {
+          method: 'POST', signal: controller.signal,
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+          body: JSON.stringify({ article_id: savedId }),
+        })
+        if (!response.ok) throw new Error('Could not generate the share card. Your article is saved.')
+        const blob = await response.blob()
+        if (!controller.signal.aborted) { objectUrl = URL.createObjectURL(blob); setShareCard(objectUrl) }
+      } catch (error) { if (!controller.signal.aborted) setShareCardError(error.message) }
+      finally { if (!controller.signal.aborted) setShareCardBusy(false) }
+    }
+    generate()
+    return () => { controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl) }
+  }, [savedId, lastSavedAt, shareCardRetry])
+
   const formRef = useRef(form)
   const savedIdRef = useRef(articleId)
   const isDirtyRef = useRef(false)
@@ -2506,6 +2536,14 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
               </div>
             )}
           </div>
+
+          <section style={{ padding: 20, borderTop: '1px solid #333' }}>
+            <h3 style={{ fontSize: 14, margin: '0 0 12px' }}>Social share card</h3>
+            {!savedId && <p style={{ fontSize: 12, color: '#aaa' }}>Generated automatically when you first save this article.</p>}
+            {shareCardBusy && <p role="status" style={{ fontSize: 12, color: '#aaa' }}>Generating share card…</p>}
+            {shareCard && <><img src={shareCard} alt="Article social share card preview" style={{ display: 'block', width: '100%', borderRadius: 6 }} /><a href={shareCard} download={`${form.slug || 'article'}-share.png`} style={{ display: 'inline-block', marginTop: 10, color: '#f2b8c6', fontSize: 12 }}>Download share card</a></>}
+            {shareCardError && <><p role="alert" style={{ color: '#e07070', fontSize: 12 }}>{shareCardError}</p><button type="button" onClick={() => setShareCardRetry(value => value + 1)}>Retry share card</button></>}
+          </section>
 
           {/* Delete */}
           {savedId && (

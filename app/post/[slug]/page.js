@@ -67,25 +67,28 @@ export async function generateMetadata({ params }) {
 
   const title = `${article.title} — The Parlor`
   const description = article.subtitle || 'An article from The Parlor Magazine.'
+  const articleUrl = `https://www.theparlormagazine.com/post/${encodeURIComponent(slug)}`
+  const shareImage = `${articleUrl}/share-image`
 
   return {
     title,
     description,
+    alternates: { canonical: articleUrl },
     openGraph: {
       title,
       description,
       type: 'article',
+      url: articleUrl,
+      siteName: 'The Parlor Magazine',
       publishedTime: article.date_published || undefined,
       authors: article.author_name ? [article.author_name] : [],
-      images: article.cover_image_url
-        ? [{ url: article.cover_image_url, width: 1200, height: 630, alt: article.title }]
-        : [],
+      images: [{ url: shareImage, width: 1200, height: 630, alt: article.title }],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: article.cover_image_url ? [article.cover_image_url] : [],
+      images: [shareImage],
     },
   }
 }

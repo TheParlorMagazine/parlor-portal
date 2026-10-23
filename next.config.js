@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  outputFileTracingIncludes: {
+    '/post/*/share-image': ['./assets/fonts/*.ttf'],
+    '/api/admin/article-share-card': ['./assets/fonts/*.ttf'],
+  },
   allowedDevOrigins: ['192.168.178.113'],
   async redirects() {
     return [
