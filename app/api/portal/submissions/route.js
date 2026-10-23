@@ -80,7 +80,7 @@ export async function PATCH(request) {
   return Response.json({ submission: data })
 }
 
-// DELETE { id } → delete own draft
+// DELETE { id } → delete own draft or community-only post; protect editorial work
 export async function DELETE(request) {
   const user = await requireUser(request)
   if (!user) return Response.json({ error: 'Not signed in' }, { status: 401 })
@@ -88,7 +88,7 @@ export async function DELETE(request) {
   try { b = await request.json() } catch {}
   if (!b.id) return Response.json({ error: 'id required' }, { status: 400 })
   const db = serviceClient()
-  const { data, error } = await db.from('member_submissions').delete().eq('id', b.id).eq('member_id', user.id).in('status', ['draft', 'rejected', 'changes_requested']).select('id')
+  const { data, error } = await db.from('member_submissions').delete().eq('id', b.id).eq('member_id', user.id).in('status', ['draft', 'rejected', 'changes_requested', 'released', 'community_only', 'removed']).select('id')
   if (error) return Response.json({ error: 'Could not delete this draft. Please try again.' }, { status: 500 })
   if (!data || data.length !== 1) return Response.json({ error: 'This draft no longer exists or is not editable. Refresh your drafts to check its status.' }, { status: 409 })
   return Response.json({ ok: true, deleted_id: data[0].id })

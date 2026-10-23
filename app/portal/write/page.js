@@ -96,6 +96,7 @@ function Editor({ id, onClose, auth, supabase }) {
   }, [id, auth])
 
   const locked = !['draft', 'rejected', 'changes_requested'].includes(status)
+  const canDelete = ['draft', 'rejected', 'changes_requested', 'released', 'community_only', 'removed'].includes(status)
 
   // Persist current form; returns the saved row (or null on error).
   const persist = useCallback((submit, consent) => {
@@ -139,7 +140,7 @@ function Editor({ id, onClose, auth, supabase }) {
   }, [f, locked, loading, persist])
 
   async function deleteDraft() {
-    if (deletingRef.current || busy || !(await confirmDialog('Delete this draft?'))) return
+    if (deletingRef.current || busy || !(await confirmDialog(locked ? 'Delete this community post? It will be removed from the community space.' : 'Delete this draft?'))) return
     deletingRef.current = true
     setDeleting(true); setMsg(''); clearTimeout(timerRef.current); dirtyRef.current = false
     try {
@@ -188,13 +189,15 @@ function Editor({ id, onClose, auth, supabase }) {
     <div>
       <button disabled={deleting || busy} onClick={() => onClose(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12.5, cursor: 'pointer', padding: 0, marginBottom: 14, fontFamily: SERIF }}>← All posts</button>
 
+      <div style={{ marginBottom: 14 }}><Badge status={status} /></div>
+
       {(status === 'rejected' || status === 'changes_requested') && editorNote && (
         <div style={{ border: '1px solid #f0c4c4', background: '#fbeaee', borderRadius: 10, padding: '14px 16px', marginBottom: 18 }}>
           <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#c04040', marginBottom: 5, fontWeight: 600 }}>Editor feedback</div>
           <div style={{ fontSize: 14, color: '#333', lineHeight: 1.55 }}>{editorNote}</div>
         </div>
       )}
-      {locked && <div style={{ border: '1px solid var(--border)', background: 'var(--cream)', borderRadius: 10, padding: '12px 16px', marginBottom: 18, fontSize: 13.5, color: 'var(--muted)' }}>{status === 'published' ? 'This piece is published — it can’t be edited here.' : status === 'approved' ? 'An editor is preparing this for a vertical. You’ll be asked to approve the final version.' : status === 'submitted' ? 'This piece is with the editors. You’ll get a notification when it’s reviewed.' : 'This piece is no longer an editable draft.'}</div>}
+      {locked && <div style={{ border: '1px solid var(--border)', background: 'var(--cream)', borderRadius: 10, padding: '12px 16px', marginBottom: 18, fontSize: 13.5, color: 'var(--muted)' }}>{status === 'published' ? 'This piece is published — it can’t be edited here.' : status === 'approved' ? 'An editor is preparing this for a vertical. You’ll be asked to approve the final version.' : status === 'submitted' ? 'This piece is with the editors. You’ll get a notification when it’s reviewed.' : ['released', 'community_only'].includes(status) ? 'This piece is in the community space. You can delete your post below.' : status === 'removed' ? 'This piece has been removed from the community space. You can delete your copy below.' : 'This piece is no longer an editable draft.'}</div>}
 
       {status === 'approved' && article && !article.published && (
         <div style={{ border: '1px solid #cfe8d8', background: '#eef8f1', borderRadius: 10, padding: '14px 16px', marginBottom: 18 }}>
@@ -240,12 +243,12 @@ function Editor({ id, onClose, auth, supabase }) {
       <div style={label}>Sources & links <span style={{ textTransform: 'none', letterSpacing: 0 }}>· optional — helps our editors fact-check</span></div>
       <textarea value={f.sources} onChange={e => set('sources', e.target.value)} rows={3} placeholder="Links, references, or notes to support fact-checking (not published)." style={{ ...input, resize: 'vertical', fontSize: 14 }} disabled={locked || deleting} />
 
-      {!locked && (
+      {(!locked || canDelete) && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 22 }}>
-          <button onClick={() => { if (!f.title.trim()) { setMsg('Give your piece a title first.'); return } setShowConsent(true) }} disabled={busy || deleting} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '11px 24px', fontFamily: SERIF, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Submit for review</button>
-          <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved automatically' : 'Autosaves as you write'}</span>
+          {!locked && <button onClick={() => { if (!f.title.trim()) { setMsg('Give your piece a title first.'); return } setShowConsent(true) }} disabled={busy || deleting} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '11px 24px', fontFamily: SERIF, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Submit for review</button>}
+          {!locked && <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved automatically' : 'Autosaves as you write'}</span>}
           {msg && <span role="alert" style={{ fontSize: 13, color: '#c04040' }}>{msg}</span>}
-          {subId && <button type="button" onClick={deleteDraft} disabled={deleting || busy} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#c04040', fontSize: 13, cursor: 'pointer', fontFamily: SERIF }}>{deleting ? 'Deleting…' : 'Delete draft'}</button>}
+          {subId && canDelete && <button type="button" onClick={deleteDraft} disabled={deleting || busy} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#c04040', fontSize: 13, cursor: 'pointer', fontFamily: SERIF }}>{deleting ? 'Deleting…' : locked ? 'Delete post' : 'Delete draft'}</button>}
         </div>
       )}
 
