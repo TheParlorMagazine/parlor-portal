@@ -5,7 +5,6 @@ import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../../../lib/supabase'
 import { uploadToCloudinary } from '../../../../lib/uploadImage'
-import MediaLibraryModal from './MediaLibraryModal'
 import ImageEditor from '../../_components/ImageEditor'
 import { confirmDialog } from '../../../../lib/confirmDialog'
 
@@ -176,6 +175,9 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
   const [editingImage, setEditingImage] = useState(null) // file
   const dragIndex = useRef(null)
   const [replacementIndex, setReplacementIndex] = useState(null)
+  const [replacing, setReplacing] = useState(false)
+  const [replacementError, setReplacementError] = useState('')
+  const replacementInputRef = useRef(null)
 
   useEffect(() => { loadFiles() }, [folder])
 
@@ -223,6 +225,12 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
   }
 
   function toggleImage(url) {
+    if (replacing) return
+    if (replacementIndex !== null) {
+      setSelected(prev => prev.map((image, index) => index === replacementIndex ? { ...image, src: url } : image))
+      setReplacementIndex(null); setReplacementError('')
+      return
+    }
     setSelected(prev => {
       const exists = prev.find(img => img.src === url)
       if (exists) return prev.filter(img => img.src !== url)
@@ -230,12 +238,27 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
     })
   }
 
+  async function uploadReplacement(file) {
+    if (!file || replacing || replacementIndex === null) return
+    if (!file.type.startsWith('image/')) { setReplacementError('Please choose an image file.'); return }
+    const target = replacementIndex
+    setReplacing(true); setReplacementError('')
+    try {
+      const url = await uploadToCloudinary(file, 'parlor/articles')
+      if (!url) throw new Error('Upload failed. Please try again.')
+      setSelected(prev => prev.map((image, index) => index === target ? { ...image, src: url } : image))
+      setFiles(prev => [{ name: file.name, _cloudinaryUrl: url }, ...prev])
+      setReplacementIndex(null)
+    } catch (error) { setReplacementError(error.message || 'Upload failed. Please try again.') }
+    finally { setReplacing(false) }
+  }
+
   function updateImage(index, field, value) {
     setSelected(prev => prev.map((img, i) => i === index ? { ...img, [field]: value } : img))
   }
 
   function handleInsert() {
-    if (!selected.length) return
+    if (!selected.length || replacing) return
     onInsert({ layout, images: selected })
   }
 
@@ -287,8 +310,9 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
             style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', position: 'relative', border: isDragOver ? '2px dashed #f2b8c6' : '2px dashed transparent', borderRadius: '8px', transition: 'border-color 0.15s' }}
             onDragOver={e => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer.types.includes('Files')) setIsDragOver(true) }}
             onDragLeave={e => { e.stopPropagation(); setIsDragOver(false) }}
-            onDrop={e => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); if (e.dataTransfer.files?.length) uploadFiles(e.dataTransfer.files) }}
+            onDrop={e => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); if (e.dataTransfer.files?.length) { if (replacementIndex !== null) uploadReplacement(e.dataTransfer.files[0]); else uploadFiles(e.dataTransfer.files) } }}
           >
+            {replacementIndex !== null && <p role="status" style={{ color: '#f2b8c6', fontSize: 12, margin: '0 0 12px' }}>Choose an image here to replace image {replacementIndex + 1}. Its caption and details will be kept.</p>}
             {isDragOver && (
               <div style={{ position: 'absolute', inset: 0, background: 'rgba(242,184,198,0.08)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, pointerEvents: 'none' }}>
                 <span style={{ color: '#f2b8c6', fontSize: '13px', fontWeight: '600' }}>Drop to upload</span>
@@ -338,14 +362,14 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
                 {selected.map((img, i) => (
                   <div
                     key={i}
-                    draggable="true"
+                    draggable={replacementIndex === null && !replacing}
                     onDragStart={e => { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move'; dragIndex.current = i }}
                     onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
                     onDrop={e => {
                       e.preventDefault()
                       const from = dragIndex.current
                       dragIndex.current = null
-                      if (from === null || from === i) return
+                      if (from === null || from === i || replacementIndex !== null || replacing) return
                       setSelected(prev => {
                         const next = [...prev]
                         const [moved] = next.splice(from, 1)
@@ -361,11 +385,24 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
                     </div>
                     <img src={img.src} alt="" draggable="false" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
-                      <button type="button" aria-label={`Change image ${i + 1}`} onClick={() => setReplacementIndex(i)} style={{ background: '#f2b8c6', color: '#111', border: 'none', borderRadius: 4, padding: '5px 8px', fontSize: 11, cursor: 'pointer' }}>Change image</button>
+                      <button type="button" aria-label={`Change image ${i + 1}`} disabled={replacing || uploading} onClick={() => { setReplacementIndex(i); setReplacementError('') }} style={{ background: '#f2b8c6', color: '#111', border: 'none', borderRadius: 4, padding: '5px 8px', fontSize: 11, cursor: 'pointer' }}>Change image</button>
                       <input type="text" value={img.alt} onChange={e => updateImage(i, 'alt', e.target.value)} onKeyDown={e => e.stopPropagation()} placeholder="Alt text…" style={selInputStyle} />
                       <input type="text" value={img.caption} onChange={e => updateImage(i, 'caption', e.target.value)} onKeyDown={e => e.stopPropagation()} placeholder="Caption (optional)…" style={selInputStyle} />
+                      {replacementIndex === i && <div
+                        aria-label={`Replacement drop zone for image ${i + 1}`}
+                        onDragOver={e => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'copy' }}
+                        onDrop={e => { e.preventDefault(); e.stopPropagation(); uploadReplacement(e.dataTransfer.files?.[0]) }}
+                        style={{ border: '1px dashed #f2b8c6', borderRadius: 6, padding: 9, marginTop: 4, fontSize: 11, lineHeight: 1.5, color: '#f2b8c6', background: '#241c20' }}
+                      >
+                        <div>{replacing ? 'Uploading replacement…' : 'Drop a new image here, or choose an image in the picker on the left.'}</div>
+                        <input ref={replacementInputRef} type="file" accept="image/*" aria-label="Upload replacement image" style={{ display: 'none' }} onChange={e => { uploadReplacement(e.target.files?.[0]); e.target.value = '' }} />
+                        <button type="button" disabled={replacing} onClick={() => replacementInputRef.current?.click()} style={{ marginTop: 7, cursor: 'pointer' }}>Upload new image</button>
+                        <button type="button" disabled={replacing} onClick={() => { setReplacementIndex(null); setReplacementError('') }} style={{ margin: '7px 0 0 6px', cursor: 'pointer' }}>Cancel replacement</button>
+                        {replacementError && <div role="alert" style={{ color: '#f87171', marginTop: 6 }}>{replacementError}</div>}
+                      </div>}
+
                     </div>
-                    <button type="button" onClick={() => setSelected(prev => prev.filter((_, index) => index !== i))} style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer', fontSize: '14px', padding: '2px 0', flexShrink: 0, lineHeight: 1 }}>×</button>
+                    <button type="button" disabled={replacementIndex !== null || replacing} onClick={() => setSelected(prev => prev.filter((_, index) => index !== i))} style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer', fontSize: '14px', padding: '2px 0', flexShrink: 0, lineHeight: 1 }}>×</button>
                   </div>
                 ))}
               </div>
@@ -381,25 +418,13 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
           <button
             type="button"
             onClick={handleInsert}
-            disabled={!selected.length}
+            disabled={!selected.length || replacing || uploading}
             style={{ padding: '8px 20px', background: '#f2b8c6', border: 'none', borderRadius: '6px', color: '#0a0a0a', fontSize: '12px', fontWeight: '600', cursor: selected.length ? 'pointer' : 'not-allowed', fontFamily: "'Source Serif 4', Georgia, serif", opacity: selected.length ? 1 : 0.5 }}
           >
             {isEditing ? 'Save Changes' : 'Insert Album'} ({selected.length})
           </button>
         </div>
       </div>
-
-      {replacementIndex !== null && <div onClick={e => e.stopPropagation()}>
-        <MediaLibraryModal
-          title={`Replace image ${replacementIndex + 1} — captions and layout are kept`}
-          defaultFolder={folder}
-          onSelect={url => {
-            setSelected(prev => prev.map((image, index) => index === replacementIndex ? { ...image, src: url } : image))
-            setReplacementIndex(null)
-          }}
-          onClose={() => setReplacementIndex(null)}
-        />
-      </div>}
 
       {/* Context menu */}
       {contextMenu && (
