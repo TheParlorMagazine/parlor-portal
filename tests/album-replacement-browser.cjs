@@ -15,12 +15,12 @@ const{build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chromi
  if(scenario==='single')await page.getByText('Media Library',{exact:true}).waitFor();else{await page.getByLabel('Replacement drop zone for image 2',{exact:true}).waitFor();assert.equal(await page.getByText('Media Library',{exact:true}).count(),0)}
  if(scenario==='upload'||scenario==='failure'){
   await page.getByLabel('Upload replacement image',{exact:true}).setInputFiles({name:'new.png',mimeType:'image/png',buffer:Buffer.from('test')})
-  if(scenario==='failure'){await page.getByRole('alert').filter({hasText:'Upload failed'}).waitFor();await page.getByRole('button',{name:'Cancel replacement',exact:true}).click()}
+  if(scenario==='failure'){await page.getByRole('alert').filter({hasText:'Upload failed'}).waitFor();await page.getByRole('button',{name:'Change image 2',exact:true}).click()}
   else await page.getByLabel('Replacement drop zone for image 2',{exact:true}).waitFor({state:'detached'})
  }else if(scenario==='drop'){
   const data=await page.evaluateHandle(()=>{const dt=new DataTransfer();dt.items.add(new File(['test'],'drop.png',{type:'image/png'}));return dt})
   await page.getByLabel('Replacement drop zone for image 2',{exact:true}).dispatchEvent('drop',{dataTransfer:data});await page.getByLabel('Replacement drop zone for image 2',{exact:true}).waitFor({state:'detached'})
- }else if(scenario==='cancel')await page.getByRole('button',{name:'Cancel replacement',exact:true}).click()
+ }else if(scenario==='cancel')await page.getByRole('button',{name:'Change image 2',exact:true}).click()
  else await page.getByAltText('replacement.png',{exact:true}).last().locator('..').click()
  if(scenario==='single'){
   await page.waitForFunction(()=>window.savedHTML?.includes('/replacement.png'));const html=await page.evaluate(()=>window.savedHTML);assert.equal((html.match(/<img /g)||[]).length,1);assert.ok(html.includes('data-caption="Original caption one"'));assert.ok(html.includes('alt="Alt one"'));assert.ok(html.includes('Before')&&html.includes('After'))

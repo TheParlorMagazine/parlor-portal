@@ -385,7 +385,7 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
                     </div>
                     <img src={img.src} alt="" draggable="false" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
-                      <button type="button" aria-label={`Change image ${i + 1}`} disabled={replacing || uploading} onClick={() => { setReplacementIndex(i); setReplacementError('') }} style={{ background: '#f2b8c6', color: '#111', border: 'none', borderRadius: 4, padding: '5px 8px', fontSize: 11, cursor: 'pointer' }}>Change image</button>
+                      <button type="button" aria-label={`Change image ${i + 1}`} disabled={replacing || uploading} onClick={() => { setReplacementIndex(current => current === i ? null : i); setReplacementError('') }} style={{ background: '#f2b8c6', color: '#111', border: 'none', borderRadius: 4, padding: '5px 8px', fontSize: 11, cursor: 'pointer' }}>Change image</button>
                       <input type="text" value={img.alt} onChange={e => updateImage(i, 'alt', e.target.value)} onKeyDown={e => e.stopPropagation()} placeholder="Alt text…" style={selInputStyle} />
                       <input type="text" value={img.caption} onChange={e => updateImage(i, 'caption', e.target.value)} onKeyDown={e => e.stopPropagation()} placeholder="Caption (optional)…" style={selInputStyle} />
                       {replacementIndex === i && <div
@@ -394,10 +394,9 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
                         onDrop={e => { e.preventDefault(); e.stopPropagation(); uploadReplacement(e.dataTransfer.files?.[0]) }}
                         style={{ border: '1px dashed #f2b8c6', borderRadius: 6, padding: 9, marginTop: 4, fontSize: 11, lineHeight: 1.5, color: '#f2b8c6', background: '#241c20' }}
                       >
-                        <div>{replacing ? 'Uploading replacement…' : 'Drop a new image here, or choose an image in the picker on the left.'}</div>
+                        {replacing && <div role="status">Uploading replacement…</div>}
                         <input ref={replacementInputRef} type="file" accept="image/*" aria-label="Upload replacement image" style={{ display: 'none' }} onChange={e => { uploadReplacement(e.target.files?.[0]); e.target.value = '' }} />
                         <button type="button" disabled={replacing} onClick={() => replacementInputRef.current?.click()} style={{ marginTop: 7, cursor: 'pointer' }}>Upload new image</button>
-                        <button type="button" disabled={replacing} onClick={() => { setReplacementIndex(null); setReplacementError('') }} style={{ margin: '7px 0 0 6px', cursor: 'pointer' }}>Cancel replacement</button>
                         {replacementError && <div role="alert" style={{ color: '#f87171', marginTop: 6 }}>{replacementError}</div>}
                       </div>}
 
