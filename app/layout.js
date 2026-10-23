@@ -7,7 +7,12 @@ import PortalTour from './_components/portal-tour/PortalTour'
 
 export const metadata = {
   title: 'The Parlor',
-  description: 'Member portal for The Parlor Magazine',
+  description: 'Independent ideas, shared conversations, and a place to belong. Explore The Parlor Magazine.',
+  metadataBase: new URL('https://www.theparlormagazine.com'),
+  icons: {
+    icon: [{ url: 'https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png', type: 'image/png', sizes: '200x200' }],
+    apple: 'https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png',
+  },
 }
 
 export default function RootLayout({ children }) {
