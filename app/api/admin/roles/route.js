@@ -9,7 +9,7 @@ async function authorize(request) {
   const db = serviceClient()
   const member = await memberOf(db, user.id)
 
-  if (member.role !== 'admin') {
+  if (member?.role !== 'admin') {
     return { error: Response.json({ error: 'Master Admin access required.' }, { status: 403 }) }
   }
 
@@ -25,13 +25,15 @@ export async function GET(request) {
   if (!q) return Response.json({ members: [] })
   if (q.length > 150) return Response.json({ error: 'Search is too long.' }, { status: 400 })
 
-  const escaped = q.replace(/[%_,().]/g, ' ').trim()
-  if (!escaped) return Response.json({ members: [] })
+  // Preserve email punctuation. Escape LIKE wildcards, then quote the whole
+  // PostgREST value so commas/parentheses cannot alter the filter expression.
+  const pattern = `%${q.replace(/[\\%_]/g, '\\$&')}%`
+  const value = JSON.stringify(pattern)
 
   const { data, error } = await auth.db
     .from('members')
     .select('id, full_name, email, role, joined_at')
-    .or(`email.ilike.%${escaped}%,full_name.ilike.%${escaped}%`)
+    .or(`email.ilike.${value},full_name.ilike.${value}`)
     .limit(15)
 
   if (error) return Response.json({ error: error.message }, { status: 500 })

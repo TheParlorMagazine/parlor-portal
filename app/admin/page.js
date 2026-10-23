@@ -730,6 +730,10 @@ function RolesSection({ supabase }) {
                     if (!pending) return
                     const success = await saveRole(m.id, pending)
                     if (!success) return
+                    setMembers(prev => prev.some(member => member.id === m.id) ? prev : [...prev, { ...m, role: pending }])
+                    setRoleState(prev => ({ ...prev, [m.id]: pending }))
+                    setAccessState(prev => ({ ...prev, [m.id]: new Set(ROLE_ACCESS_DEFAULTS[pending] || []) }))
+                    setSearch(''); setRoleFilter('all')
                     setAddRoleState(prev => ({ ...prev, [m.id]: '' }))
                     setAddResults(prev => prev.filter(r => r.id !== m.id))
                     if (addResults.length <= 1) { setShowAdd(false); setAddSearch('') }
