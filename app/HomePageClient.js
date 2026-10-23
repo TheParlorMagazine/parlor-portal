@@ -1011,7 +1011,7 @@ export default function HomePageClient({ initial = {} }) {
           background: radial-gradient(ellipse at center, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.60) 50%, rgba(0,0,0,0.15) 80%, rgba(0,0,0,0) 100%);
         }
         .issue-hero-slide--access .issue-hero-head::before {
-          background: radial-gradient(ellipse at 50% 35%, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.72) 55%, rgba(0,0,0,0.24) 85%, transparent 100%);
+          background: radial-gradient(ellipse at 38% 38%, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.52) 48%, rgba(0,0,0,0.10) 78%, transparent 100%);
         }
         /* Text pinned to bottom of hero */
         .issue-hero-head { position: absolute; top: 50%; transform: translateY(-50%); left: auto; right: clamp(40px,7vw,110px); width: clamp(280px,38vw,520px); z-index: 3; pointer-events: none; isolation: isolate; }
