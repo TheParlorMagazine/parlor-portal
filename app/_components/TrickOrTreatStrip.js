@@ -19,7 +19,7 @@ export default function TrickOrTreatStrip({
 }) {
   const [shopMobile, setShopMobile] = useState(false)
   const [heroGone, setHeroGone]       = useState(false)
-  const [everHidden, setEverHidden]   = useState(false)
+  const [bottomReached, setBottomReached]   = useState(false)
   const [mounted, setMounted]         = useState(false)
   const [itemImgs, setItemImgs]       = useState([null, null, null, null])
   const [filledSlots, setFilledSlots] = useState([])
@@ -44,7 +44,7 @@ export default function TrickOrTreatStrip({
   const slotCounterRef = useRef(0)
   const isMobileRef    = useRef(false)
 
-  const visible = shopPopup ? (!shopMobile || heroGone) : heroGone && (bottomBar || !everHidden)
+  const visible = shopPopup ? (!shopMobile || heroGone) : heroGone && (bottomBar || !bottomReached)
 
   useEffect(() => { onVisibilityChange?.(mounted && visible) }, [mounted, visible, onVisibilityChange])
 
@@ -81,7 +81,11 @@ export default function TrickOrTreatStrip({
     if (!mounted) return
     const bottom = document.querySelector(bottomSelector)
     if (!bottom) return
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setEverHidden(true) }, { threshold: 0 })
+    // Hide at and below the bottom section, then show again when scrolling
+    // back into the article. Do not permanently latch the hidden state.
+    const obs = new IntersectionObserver(([e]) => {
+      setBottomReached(e.boundingClientRect.top < window.innerHeight)
+    }, { threshold: 0 })
     obs.observe(bottom)
     return () => obs.disconnect()
   }, [mounted, bottomSelector])

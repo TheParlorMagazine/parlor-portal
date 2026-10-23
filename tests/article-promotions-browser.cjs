@@ -14,6 +14,8 @@ const{build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chromi
  if(width>1100){const r=await page.locator('.bones-banner').boundingBox();assert.ok(r.x>width/2+360);const tiles=await page.locator('.bones-tile').all();assert.ok((await tiles[1].boundingBox()).y>(await tiles[0].boundingBox()).y)}
  else{await page.waitForFunction(()=>{const r=document.querySelector('.bones-banner').getBoundingClientRect();return Math.round(r.bottom)===innerHeight});const tiles=await page.locator('.bones-tile').all();assert.ok((await tiles[1].boundingBox()).x>(await tiles[0].boundingBox()).x)}
  await page.evaluate(()=>window.scrollTo(0,2600));await page.waitForFunction(()=>!document.querySelector('.bones-banner').classList.contains('shown'));assert.equal(await page.locator(width>1100?'.tot-strip.shown':'.tot-mob.shown').count(),0)
+ await page.evaluate(()=>window.scrollTo(0,1100));await page.locator('.bones-banner.shown').waitFor();await page.locator(width>1100?'.tot-strip.shown':'.tot-mob.shown').waitFor()
+ await page.evaluate(()=>window.scrollTo(0,0));await page.waitForFunction(()=>!document.querySelector('.bones-banner').classList.contains('shown'))
  assert.deepEqual(errors,[]);await page.close()
  }console.log('PASS requested product data/links, desktop vertical/mobile bottom layouts, synchronized appearance and disappearance')}
  finally{await browser.close()}
