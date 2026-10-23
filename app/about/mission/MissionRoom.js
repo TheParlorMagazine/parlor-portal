@@ -1309,6 +1309,10 @@ export default function MissionRoom() {
           margin: 0 0 1.15rem;
         }
 
+        @media (min-width: 768px) {
+          .parlor-story-four p { font-size: 1.12em; }
+        }
+
         .parlor-four-back-cue {
           position: fixed;
           left: 3%;
