@@ -37,7 +37,7 @@ export default function BonesCoffeeBanner({ visible }) {
       }
       @media(prefers-reduced-motion:reduce){.bones-banner{transition:none}}
     `}</style>
-    <aside className={`bones-banner${visible ? ' shown' : ''}`} aria-label="Bones Coffee products" aria-hidden={!visible} inert={!visible ? '' : undefined}>
+    <aside className={`bones-banner${visible ? ' shown' : ''}`} aria-label="Bones Coffee products" aria-hidden={!visible}>
       <h2 className="bones-heading">Bones Coffee favourites</h2>
       <div className="bones-tiles">{products.map(product => <a key={product.id} className="bones-tile" href={`/shop/${encodeURIComponent(product.id)}`} aria-label={`Buy now: ${product.name}`}>
         {product.images?.[0] && <img src={product.images[0]} alt={product.name} />}

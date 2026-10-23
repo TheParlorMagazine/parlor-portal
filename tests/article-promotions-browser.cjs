@@ -6,8 +6,8 @@ const{build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chromi
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']})
  const products=[{id:'choc',name:'Bones Marshmallow Hot Chocolate',images:['/choc.png']},{id:'jack',name:'Jacked O Lantern Coffee',images:['/jack.png']},{id:'col',name:'Bones Colombian Coffee',images:['/col.png']},{id:'other',name:'Unrelated product'}]
  try{for(const width of [1440,390]){
- const page=await browser.newPage({viewport:{width,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message))
- await page.route('http://local.test/**',r=>{const u=r.request().url();return r.fulfill(u.endsWith('/api/shop/products')?{json:{products}}:u.endsWith('/api/trick-or-treat')?{json:{houses:[]}}:u.endsWith('.png')?{status:204}:{contentType:'text/html',body:'<div id="root"></div>'})})
+ const page=await browser.newPage({viewport:{width,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text())})
+ await page.route('http://local.test/**',r=>{const u=r.request().url();return r.fulfill(u.endsWith('/api/shop/products')?{json:{products}}:u.endsWith('/api/trick-or-treat')?{json:{houses:[]}}:u.endsWith('.png')?{contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a7x8AAAAASUVORK5CYII=','base64')}:{contentType:'text/html',body:'<div id="root"></div>'})})
  await page.goto('http://local.test/article');await page.addScriptTag({path:out});await page.locator('.bones-tile').first().waitFor({state:'attached'});assert.equal(await page.locator('.bones-tile').count(),3);assert.equal(await page.locator('.bones-banner.shown').count(),0)
  assert.deepEqual(await page.locator('.bones-tile').evaluateAll(tiles=>tiles.map(t=>t.getAttribute('href'))),['/shop/choc','/shop/jack','/shop/col'])
  await page.evaluate(()=>window.scrollTo(0,1100));await page.locator('.bones-banner.shown').waitFor();await page.locator(width>1100?'.tot-strip.shown':'.tot-mob.shown').waitFor();
