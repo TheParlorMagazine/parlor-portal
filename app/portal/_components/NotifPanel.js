@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../../lib/supabase'
 
 const DEST = { library: '/portal/library', 'library-detail': '/portal/library', dashboard: '/portal', forum: '/portal', events: '/portal', inbox: '/portal' }
@@ -19,6 +19,10 @@ export default function NotifPanel({ open, onClose, onChange }) {
   const supabase = createClient()
   const [items, setItems] = useState([])
   const [loaded, setLoaded] = useState(false)
+  const [error, setError] = useState('')
+  const [pendingIds, setPendingIds] = useState([])
+  const pendingRef = useRef(new Set())
+  const [markingAll, setMarkingAll] = useState(false)
 
   async function token() { const { data: { session } } = await supabase.auth.getSession(); return session?.access_token }
 
@@ -28,6 +32,7 @@ export default function NotifPanel({ open, onClose, onChange }) {
     async function load() {
       try {
         const res = await fetch('/api/portal/notifications', { headers: { Authorization: `Bearer ${await token()}` } })
+        if (!res.ok) throw new Error('Could not load notifications.')
         const data = await res.json()
         if (!cancelled) { setItems(data.notifications || []); setLoaded(true) }
       } catch { if (!cancelled) setLoaded(true) }
@@ -62,17 +67,30 @@ export default function NotifPanel({ open, onClose, onChange }) {
   }
 
   async function markAll() {
-    const unread = items.filter(n => !n.read).length
-    setItems([])
-    onChange && onChange(-unread)
-    fetch('/api/portal/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ all: true }) }).catch(() => {})
+    if (markingAll) return
+    setMarkingAll(true); setError('')
+    try {
+      const response = await fetch('/api/portal/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ all: true }) })
+      if (!response.ok) throw new Error('Could not mark notifications as read. Please try again.')
+      const unread = items.filter(n => !n.read).length
+      setItems(list => list.map(n => ({ ...n, read: true })))
+      onChange && onChange(-unread)
+    } catch (error) { setError(error.message || 'Could not update notifications.') }
+    finally { setMarkingAll(false) }
   }
 
   async function dismiss(e, n) {
     e.stopPropagation()
-    setItems(list => list.filter(x => x.id !== n.id))
-    if (!n.read) onChange && onChange(-1)
-    fetch('/api/portal/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ id: n.id }) }).catch(() => {})
+    if (pendingRef.current.has(n.id)) return
+    pendingRef.current.add(n.id); setPendingIds([...pendingRef.current]); setError('')
+    try {
+      const response = await fetch('/api/portal/notifications', { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ id: n.id }) })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok || result.deleted_id !== n.id) throw new Error(result.error || 'Could not dismiss this notification. Please try again.')
+      setItems(list => list.filter(x => x.id !== n.id))
+      if (!n.read) onChange && onChange(-1)
+    } catch (error) { setError(error.message || 'Could not dismiss this notification. Please try again.') }
+    finally { pendingRef.current.delete(n.id); setPendingIds([...pendingRef.current]) }
   }
 
   if (!open) return null
@@ -111,10 +129,11 @@ export default function NotifPanel({ open, onClose, onChange }) {
         <div className="np-head">
           <div className="np-title">Notifications</div>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <button className="np-mark" onClick={markAll}>Mark all read</button>
+            <button className="np-mark" onClick={markAll} disabled={markingAll || pendingIds.length > 0}>Mark all read</button>
             <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:'var(--muted)',fontSize:20,lineHeight:1,padding:'0 2px',display:'flex',alignItems:'center'}} aria-label="Close">×</button>
           </div>
         </div>
+        {error && <p role="alert" style={{ color: '#a52f3d', padding: '0 18px' }}>{error}</p>}
         {loaded && items.length === 0 && <div className="np-empty">You’re all caught up.</div>}
         {items.map(n => (
           <div key={n.id} className={`notif-row${n.read ? '' : ' unread'}`}>
@@ -129,7 +148,7 @@ export default function NotifPanel({ open, onClose, onChange }) {
           </button>
             <span style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,flexShrink:0,padding:'13px 12px 13px 0'}}>
               {!n.read && <span className="notif-unread-dot" />}
-              <button type="button" aria-label={`Dismiss notification: ${n.message}`} className="notif-dismiss" onClick={e => dismiss(e, n)} title="Dismiss">×</button>
+              <button type="button" aria-label={`Dismiss notification: ${n.message}`} className="notif-dismiss" disabled={markingAll || pendingIds.includes(n.id)} onClick={e => dismiss(e, n)} title="Dismiss">×</button>
             </span>
           </div>
         ))}
