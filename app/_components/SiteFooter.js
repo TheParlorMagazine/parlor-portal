@@ -73,8 +73,8 @@ export default function SiteFooter() {
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} The Parlor Magazine. All rights reserved.</span>
           <span style={{display:'flex',gap:'20px'}}>
-            <a href="#" className="footer-link" style={{marginBottom:0}}>Privacy</a>
-            <a href="#" className="footer-link" style={{marginBottom:0}}>Terms</a>
+            <a href="/privacy" className="footer-link" style={{marginBottom:0}}>Privacy</a>
+            <a href="/terms" className="footer-link" style={{marginBottom:0}}>Terms</a>
           </span>
         </div>
       </footer>
