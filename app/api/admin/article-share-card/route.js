@@ -13,7 +13,7 @@ export async function POST(request) {
   const body = await request.json().catch(() => ({}))
   if (!body.article_id) return Response.json({ error: 'article_id required' }, { status: 400 })
   const { data: article, error } = await db.from('articles')
-    .select('title, category, author_name, cover_image_url, writers(name)')
+    .select('title, subtitle, category, author_name, cover_image_url, writers(name)')
     .eq('id', body.article_id).single()
   if (error || !article) return Response.json({ error: 'Article not found' }, { status: 404 })
   return renderArticleShareImage(article, true)

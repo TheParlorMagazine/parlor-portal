@@ -36,7 +36,7 @@ test('draft card requires staff authentication and is private', async () => {
 
 test('cover artwork renders with long titles and live writer credit', async () => {
   const api = await route('app/post/[slug]/share-image/route.js')
-  global.cardDB = database({ title: 'How shared conversations and independent ideas help us imagine a more generous world together', author_name: 'Old name', writers: { name: 'Current writer' }, category: 'Society & Culture', cover_image_url: 'https://res.cloudinary.com/example/cover.png' })
+  global.cardDB = database({ title: 'How shared conversations and independent ideas help us imagine a more generous world together', subtitle: 'Exploring the ideas, communities, and everyday choices shaping the world we share.', author_name: 'Old name', writers: { name: 'Current writer' }, category: 'Society & Culture', cover_image_url: 'https://res.cloudinary.com/example/cover.png' })
   const originalFetch = global.fetch
   global.fetch = async () => new Response(fs.readFileSync('public/Victorian Birthday Tea Party Still Life.png'), { headers: { 'content-type': 'image/png' } })
   try {
