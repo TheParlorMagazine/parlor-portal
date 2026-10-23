@@ -86,9 +86,10 @@ export default function NotifPanel({ open, onClose, onChange }) {
         .np-title{font-size:16px;font-weight:600;color:var(--ink)}
         .np-mark{font-size:11.5px;color:var(--muted);background:none;border:none;font-family:'thermal-variable',Georgia,serif;cursor:pointer;padding:0}
         .np-mark:hover{color:var(--ink)}
-        .notif-item{display:flex;gap:10px;padding:13px 18px;border-bottom:1px solid var(--border);cursor:pointer;align-items:flex-start;transition:background 0.12s;width:100%;text-align:left;background:none;border-left:none;border-right:none;border-top:none;font-family:'thermal-variable',Georgia,serif}
-        .notif-item:hover{background:var(--cream)}
-        .notif-item.unread{background:#fef9fa}
+        .notif-row{display:flex;align-items:stretch;border-bottom:1px solid var(--border)}
+        .notif-row.unread{background:#fef9fa}
+        .notif-row:hover,.notif-row:focus-within{background:var(--cream)}
+        .notif-item{display:flex;gap:10px;padding:13px 18px;border-bottom:none;cursor:pointer;align-items:flex-start;transition:background 0.12s;width:100%;text-align:left;background:none;border-left:none;border-right:none;border-top:none;font-family:'thermal-variable',Georgia,serif}
         .notif-icon{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px}
         .ni-reply{background:#fce8ec}.ni-inbox{background:#e8f0f8}.ni-library{background:#ede8f5}.ni-event{background:#e8f5ec}
         .notif-icon svg{width:13px;height:13px;color:#555}
@@ -98,7 +99,8 @@ export default function NotifPanel({ open, onClose, onChange }) {
         .notif-unread-dot{width:6px;height:6px;border-radius:50%;background:var(--pink);flex-shrink:0;margin-top:5px}
         .notif-dismiss{opacity:0;background:none;border:none;cursor:pointer;color:var(--muted);font-size:15px;line-height:1;padding:0 2px;flex-shrink:0;transition:opacity 0.15s,color 0.15s;margin-top:1px}
         .notif-dismiss:hover{color:var(--ink)}
-        .notif-item:hover .notif-dismiss{opacity:1}
+        .notif-row:hover .notif-dismiss,.notif-row:focus-within .notif-dismiss{opacity:1}
+        @media(hover:none){.notif-dismiss{opacity:1}}
         .np-foot{padding:12px 18px;border-top:1px solid var(--border);text-align:center;margin-top:auto}
         .np-foot a{font-size:12px;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
         .np-empty{padding:40px 18px;text-align:center;color:var(--muted);font-style:italic;font-size:13px}
@@ -115,7 +117,8 @@ export default function NotifPanel({ open, onClose, onChange }) {
         </div>
         {loaded && items.length === 0 && <div className="np-empty">You’re all caught up.</div>}
         {items.map(n => (
-          <button key={n.id} className={`notif-item${n.read ? '' : ' unread'}`} onClick={() => openNotif(n)}>
+          <div key={n.id} className={`notif-row${n.read ? '' : ' unread'}`}>
+          <button type="button" className="notif-item" onClick={() => openNotif(n)}>
             <span className={`notif-icon ${ICONCLS[n.type] || 'ni-library'}`}>
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="6"/></svg>
             </span>
@@ -123,11 +126,12 @@ export default function NotifPanel({ open, onClose, onChange }) {
               <span className="notif-msg">{n.message}</span>
               <span className="notif-time">{timeAgo(n.created_at)}</span>
             </span>
-            <span style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,flexShrink:0}}>
-              {!n.read && <span className="notif-unread-dot" />}
-              <button className="notif-dismiss" onClick={e => dismiss(e, n)} title="Dismiss">×</button>
-            </span>
           </button>
+            <span style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,flexShrink:0,padding:'13px 12px 13px 0'}}>
+              {!n.read && <span className="notif-unread-dot" />}
+              <button type="button" aria-label={`Dismiss notification: ${n.message}`} className="notif-dismiss" onClick={e => dismiss(e, n)} title="Dismiss">×</button>
+            </span>
+          </div>
         ))}
         <div className="np-foot"><a href="/portal/notifications">See all notifications →</a></div>
       </div>
