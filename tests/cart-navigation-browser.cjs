@@ -44,6 +44,11 @@ const root=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
    notificationCount=105;await page.evaluate(()=>dispatchEvent(new Event('focus')));await page.waitForFunction(()=>document.querySelector('.header-notification-badge')?.textContent==='99+')
    notificationCount=0;await page.evaluate(()=>dispatchEvent(new Event('focus')));await page.locator('.header-notification-badge').waitFor({state:'detached'})
   }
+  if(surface==='home'||surface==='shop'){
+   const footer=page.locator('.site-footer')
+   const destinations={'Work & Wealth':'/work-wealth','Society & Culture':'/society-culture','World & Politics':'/world-politics','Perspectives & Identity':'/perspectives-identity','About':'/about/mission','Shop':'/shop','Donate':'/donate','People of The Parlor':'/about/people','Archive':'/portal/library','Become a member':'/plans','Member dashboard':'/portal','Reading Room':'/portal/reading-room','Events':'/portal/events','Library':'/portal/library'}
+   for(const[label,href]of Object.entries(destinations))assert.equal(await footer.getByRole('link',{name:label,exact:true}).getAttribute('href'),href)
+  }
   assert.deepEqual(errors,[])
   await context.close()
  }}console.log('PASS: homepage, shared header, shop and delayed drawer mount at desktop/mobile widths; cart/wishlist overlay without navigation; correct portal/Notifications links and wishlist tab; avatar counts refresh, cap at 99+ and disappear at zero; dropdown closes; Escape closes drawer; no browser errors.')

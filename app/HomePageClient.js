@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
+import SiteFooter from './_components/SiteFooter'
 import { createClient } from '../lib/supabase'
 import { useCart } from '../lib/useCart'
 import { useUnreadNotifications } from '../lib/useUnreadNotifications'
@@ -1905,36 +1906,7 @@ export default function HomePageClient({ initial = {} }) {
       )}
 
       {/* ── FOOTER ── */}
-      <footer className="site-footer">
-        <div className="footer-grid">
-          <div>
-            <div className="footer-logo-row">
-              <img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png" alt="" className="footer-logo-mark"/>
-              <img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1779376345/Heading_2560_x_1000_px_2600_x_1000_px_2650_x_1000_px_3_1_lxgvp5.png" alt="The Parlor" className="footer-logo-wordmark"/>
-            </div>
-            <p className="footer-tagline">Independent feminist journalism on the politics of everyday life — in print and online, by and for the people who live it.</p>
-          </div>
-          <div>
-            <div className="footer-col-title">Sections</div>
-            {NAV_LINKS.map(l=><a key={l} href="#" className="footer-link">{l}</a>)}
-          </div>
-          <div>
-            <div className="footer-col-title">Magazine</div>
-            {[['About','#'],['Shop','#'],['Donate','/donate'],['People of The Parlor','#'],['Archive','#']].map(([l,h])=><a key={l} href={h} className="footer-link">{l}</a>)}
-          </div>
-          <div>
-            <div className="footer-col-title">Members</div>
-            {['Become a member','Member dashboard','Reading Room','Events','Library'].map(l=><a key={l} href="#" className="footer-link">{l}</a>)}
-          </div>
-        </div>
-        <div className="footer-bottom">
-          <span>© {new Date().getFullYear()} The Parlor Magazine. All rights reserved.</span>
-          <span style={{display:'flex',gap:'20px'}}>
-            <a href="#" className="footer-link" style={{marginBottom:0}}>Privacy</a>
-            <a href="#" className="footer-link" style={{marginBottom:0}}>Terms</a>
-          </span>
-        </div>
-      </footer>
+      <SiteFooter />
 
       {/* ── RIBBON ── (admin-managed announcements, rotating) */}
       {(() => {

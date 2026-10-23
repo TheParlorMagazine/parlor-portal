@@ -1,4 +1,11 @@
-const NAV_LINKS = ["Work & Wealth", "Society & Culture", "World & Politics", "Perspectives & Identity"]
+const SECTION_LINKS = [
+  ['Work & Wealth', '/work-wealth'],
+  ['Society & Culture', '/society-culture'],
+  ['World & Politics', '/world-politics'],
+  ['Perspectives & Identity', '/perspectives-identity'],
+]
+const MAGAZINE_LINKS = [['About', '/about/mission'], ['Shop', '/shop'], ['Donate', '/donate'], ['People of The Parlor', '/about/people'], ['Archive', '/portal/library']]
+const MEMBER_LINKS = [['Become a member', '/plans'], ['Member dashboard', '/portal'], ['Reading Room', '/portal/reading-room'], ['Events', '/portal/events'], ['Library', '/portal/library']]
 
 export default function SiteFooter() {
   return (
@@ -44,23 +51,23 @@ export default function SiteFooter() {
       <footer className="site-footer">
         <div className="footer-grid">
           <div>
-            <div className="footer-logo-row">
+            <a href="/" aria-label="The Parlor home" className="footer-logo-row">
               <img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png" alt="" className="footer-logo-mark"/>
               <img src="https://res.cloudinary.com/dwytmbczs/image/upload/v1779376345/Heading_2560_x_1000_px_2600_x_1000_px_2650_x_1000_px_3_1_lxgvp5.png" alt="The Parlor" className="footer-logo-wordmark"/>
-            </div>
+            </a>
             <p className="footer-tagline">Independent feminist journalism on the politics of everyday life — in print and online, by and for the people who live it.</p>
           </div>
           <div>
             <div className="footer-col-title">Sections</div>
-            {NAV_LINKS.map(l => <a key={l} href="#" className="footer-link">{l}</a>)}
+            {SECTION_LINKS.map(([label, href]) => <a key={label} href={href} className="footer-link">{label}</a>)}
           </div>
           <div>
             <div className="footer-col-title">Magazine</div>
-            {[['About','#'],['Shop','#'],['Donate','/donate'],['People of The Parlor','#'],['Archive','#']].map(([l,h]) => <a key={l} href={h} className="footer-link">{l}</a>)}
+            {MAGAZINE_LINKS.map(([label, href]) => <a key={label} href={href} className="footer-link">{label}</a>)}
           </div>
           <div>
             <div className="footer-col-title">Members</div>
-            {['Become a member','Member dashboard','Reading Room','Events','Library'].map(l => <a key={l} href="#" className="footer-link">{l}</a>)}
+            {MEMBER_LINKS.map(([label, href]) => <a key={label} href={href} className="footer-link">{label}</a>)}
           </div>
         </div>
         <div className="footer-bottom">
