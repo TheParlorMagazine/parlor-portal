@@ -1010,6 +1010,9 @@ export default function HomePageClient({ initial = {} }) {
           content: ''; position: absolute; inset: -32px -48px; z-index: -1; pointer-events: none; border-radius: 4px;
           background: radial-gradient(ellipse at center, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.60) 50%, rgba(0,0,0,0.15) 80%, rgba(0,0,0,0) 100%);
         }
+        .issue-hero-slide--access .issue-hero-head::before {
+          background: radial-gradient(ellipse at 50% 35%, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.72) 55%, rgba(0,0,0,0.24) 85%, transparent 100%);
+        }
         /* Text pinned to bottom of hero */
         .issue-hero-head { position: absolute; top: 50%; transform: translateY(-50%); left: auto; right: clamp(40px,7vw,110px); width: clamp(280px,38vw,520px); z-index: 3; pointer-events: none; isolation: isolate; }
         .issue-hero-head a, .issue-hero-head button { pointer-events: auto; }
@@ -1714,7 +1717,7 @@ export default function HomePageClient({ initial = {} }) {
           {ext.map((s, i) => {
             const orig = cloneMode ? ((i - 1) % n + n) % n : i
             return (
-            <div key={i} className={`issue-hero-slide${i === pos ? ' active' : ''}${portraitSlides[orig] ? ' issue-hero-slide--split' : ''}${portraitSlides[orig] === 'wide' ? ' issue-hero-slide--wide' : ''}${portraitSlides[orig] === 'tall' ? ' issue-hero-slide--tall' : ''}${/against.the.cloud/i.test(s.title) ? ' issue-hero-slide--stars' : ''}`}>
+            <div key={i} className={`issue-hero-slide${i === pos ? ' active' : ''}${portraitSlides[orig] ? ' issue-hero-slide--split' : ''}${portraitSlides[orig] === 'wide' ? ' issue-hero-slide--wide' : ''}${portraitSlides[orig] === 'tall' ? ' issue-hero-slide--tall' : ''}${/against.the.cloud/i.test(s.title) ? ' issue-hero-slide--stars' : ''}${/access\s+over\s+ownership/i.test(s.title) ? ' issue-hero-slide--access' : ''}`}>
               <div className="issue-hero-head">
                 {heroIssue && <div className="issue-hero-eyebrow">Issue {heroIssue.number || 2} · {heroIssue.title || "The World We're Building"}</div>}
                 <h1 className="issue-hero-title">
