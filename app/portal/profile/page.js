@@ -14,12 +14,13 @@ const profileCss = `
   .prof-cam:hover { background: rgba(0,0,0,0.72); }
   .prof-cam.banner { top: 12px; right: 12px; }
   .prof-card { border: 1px solid var(--border); border-top: none; border-radius: 0 0 14px 14px; background: #fff; padding: 0 24px 24px; }
-  .prof-head { display: flex; align-items: flex-end; gap: 18px; margin-top: -50px; position: relative; }
-  .prof-avatar { width: 112px; height: 112px; border-radius: 50%; border: 4px solid #fff; background: var(--pink); display: flex; align-items: center; justify-content: center; font-family: 'thermal-variable', Georgia, serif; font-size: 44px; color: #000; flex-shrink: 0; position: relative; }
+  .prof-head { display: flex; align-items: flex-start; gap: 18px; position: relative; }
+  .prof-avatar { margin-top: -50px; width: 112px; height: 112px; border-radius: 50%; border: 4px solid #fff; background: var(--pink); display: flex; align-items: center; justify-content: center; font-family: 'thermal-variable', Georgia, serif; font-size: 44px; color: #000; flex-shrink: 0; position: relative; }
   .prof-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
   .prof-av-cam { position: absolute; bottom: 2px; right: 2px; width: 30px; height: 30px; border-radius: 50%; background: #0a0a0a; color: #fff; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
   .prof-av-cam svg { width: 14px; height: 14px; }
-  .prof-idrow { flex: 1; min-width: 0; padding-bottom: 8px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+  .prof-idrow { flex: 1; min-width: 0; padding: 16px 0 8px; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+  .prof-idrow > div { min-width: 0; overflow-wrap: anywhere; }
   .prof-name { font-family: 'thermal-variable', Georgia, serif; font-size: 24px; font-weight: 600; line-height: 1.15; }
   .prof-headline { font-size: 14px; color: var(--muted); margin-top: 3px; }
   .prof-role { display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #8a5a00; background: var(--goldlight); border-radius: 20px; padding: 2px 9px; margin-top: 7px; }
@@ -49,6 +50,7 @@ const profileCss = `
   .pg-group-count { font-size: 11.5px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
   .pg-groups-empty { font-size: 13px; color: var(--muted); line-height: 1.5; padding: 4px 0 14px; }
   .pg-groups-inline { display: none; }
+  @media (max-width: 600px) { .prof-head { flex-direction: column; gap: 12px; } .prof-idrow { width: 100%; padding-top: 0; } }
   @media (max-width: 900px) { .prof-layout { grid-template-columns: 1fr; } .prof-rail { display: none; } .pg-groups-inline { display: block; margin-top: 20px; } }
 `
 

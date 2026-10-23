@@ -37,16 +37,17 @@ function View() {
 
   return (
     <div style={{ maxWidth: 720 }}>
+      <style>{`@media (max-width: 600px) { .member-profile-head { flex-direction: column; gap: 12px !important; } .member-profile-identity { padding-top: 0 !important; } }`}</style>
       {/* Banner */}
       <div style={{ height: 190, borderRadius: '14px 14px 0 0', overflow: 'hidden', background: 'linear-gradient(120deg, #f2b8c6 0%, #fce8ec 55%, #ecd8f0 100%)' }}>
         {m.banner_url && <img src={m.banner_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
       </div>
       <div style={{ border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 14px 14px', background: '#fff', padding: '0 24px 22px' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 18, marginTop: -50 }}>
-          <div style={{ width: 112, height: 112, borderRadius: '50%', border: '4px solid #fff', background: 'var(--pink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontSize: 44, color: '#000', overflow: 'hidden', flexShrink: 0 }}>
+        <div className="member-profile-head" style={{ display: 'flex', alignItems: 'flex-start', gap: 18 }}>
+          <div style={{ marginTop: -50, width: 112, height: 112, borderRadius: '50%', border: '4px solid #fff', background: 'var(--pink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontSize: 44, color: '#000', overflow: 'hidden', flexShrink: 0 }}>
             {m.avatar_url ? <img src={m.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initial}
           </div>
-          <div style={{ paddingBottom: 8 }}>
+          <div className="member-profile-identity" style={{ paddingTop: 16, paddingBottom: 8, minWidth: 0, overflowWrap: 'anywhere' }}>
             <div style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 600, lineHeight: 1.15 }}>{m.full_name || 'Member'}</div>
             {m.headline && <div style={{ fontSize: 14, color: 'var(--muted)', marginTop: 3 }}>{m.headline}</div>}
             {roleLabel && <div style={{ display: 'inline-block', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8a5a00', background: 'var(--goldlight)', borderRadius: 20, padding: '2px 9px', marginTop: 7 }}>{roleLabel}</div>}
