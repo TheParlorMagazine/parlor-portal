@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingIncludes: {
+    '/shop/share-image': ['./assets/fonts/*.ttf'],
     '/post/*/share-image': ['./assets/fonts/*.ttf'],
     '/api/admin/article-share-card': ['./assets/fonts/*.ttf'],
   },
