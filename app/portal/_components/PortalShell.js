@@ -64,7 +64,7 @@ export default function PortalShell({ active = 'dashboard', children }) {
   const [inboxOpen, setInboxOpen] = useState(false)
   const [navOpen, setNavOpen] = useState(false)
   const [hiddenNav, setHiddenNav] = useState(new Set(['readingroom']))
-  const bump = (key, delta) => setCounts(c => ({ ...c, [key]: Math.max(0, (c[key] || 0) + delta) }))
+  const bump = (key, delta) => setCounts(c => ({ ...c, [key]: delta === null ? 0 : Math.max(0, (c[key] || 0) + delta) }))
 
   useEffect(() => {
     let cancelled = false

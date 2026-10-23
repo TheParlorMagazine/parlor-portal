@@ -66,15 +66,15 @@ export default function NotifPanel({ open, onClose, onChange }) {
     window.location.href = DEST[n.link_to] || '/portal'
   }
 
-  async function markAll() {
+  async function clearAll() {
     if (markingAll) return
     setMarkingAll(true); setError('')
     try {
-      const response = await fetch('/api/portal/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ all: true }) })
-      if (!response.ok) throw new Error('Could not mark notifications as read. Please try again.')
-      const unread = items.filter(n => !n.read).length
-      setItems(list => list.map(n => ({ ...n, read: true })))
-      onChange && onChange(-unread)
+      const response = await fetch('/api/portal/notifications', { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ all: true }) })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok || !result.cleared_all) throw new Error(result.error || 'Could not clear notifications. Please try again.')
+      setItems([])
+      onChange && onChange(null)
     } catch (error) { setError(error.message || 'Could not update notifications.') }
     finally { setMarkingAll(false) }
   }
@@ -129,7 +129,7 @@ export default function NotifPanel({ open, onClose, onChange }) {
         <div className="np-head">
           <div className="np-title">Notifications</div>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <button className="np-mark" onClick={markAll} disabled={markingAll || pendingIds.length > 0}>Mark all read</button>
+            <button className="np-mark" onClick={clearAll} disabled={markingAll || pendingIds.length > 0}>Clear all</button>
             <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:'var(--muted)',fontSize:20,lineHeight:1,padding:'0 2px',display:'flex',alignItems:'center'}} aria-label="Close">×</button>
           </div>
         </div>

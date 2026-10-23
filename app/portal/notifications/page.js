@@ -38,6 +38,8 @@ function Notifications() {
   const supabase = createClient()
   const [state, setState] = useState('loading')
   const [items, setItems] = useState([])
+  const [clearing, setClearing] = useState(false)
+  const [clearError, setClearError] = useState('')
 
   async function token() { const { data: { session } } = await supabase.auth.getSession(); return session?.access_token }
 
@@ -67,15 +69,20 @@ function Notifications() {
     window.location.href = dest
   }
 
-  async function markAll() {
-    setItems(list => list.map(x => ({ ...x, read: true })))
-    fetch('/api/portal/notifications', {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` },
-      body: JSON.stringify({ all: true }),
-    }).catch(() => {})
+  async function clearAll() {
+    if (clearing) return
+    setClearing(true); setClearError('')
+    try {
+      const res = await fetch('/api/portal/notifications', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` },
+        body: JSON.stringify({ all: true }),
+      })
+      const result = await res.json().catch(() => ({}))
+      if (!res.ok || !result.cleared_all) throw new Error(result.error || 'Could not clear notifications. Please try again.')
+      setItems([])
+    } catch (error) { setClearError(error.message || 'Could not clear notifications. Please try again.') }
+    finally { setClearing(false) }
   }
-
-  const hasUnread = items.some(n => !n.read)
 
   return (
     <>
@@ -85,10 +92,11 @@ function Notifications() {
 
       {state === 'ready' && items.length > 0 && (
         <div className="nt-actions">
-          <button className="btn-text" onClick={markAll} disabled={!hasUnread}>Mark all as read</button>
+          <button className="btn-text" onClick={clearAll} disabled={clearing}>Clear all</button>
         </div>
       )}
 
+      {clearError && <p role="alert" style={{ color: '#a52f3d' }}>{clearError}</p>}
       {state === 'loading' && <div className="nt-empty">Loading…</div>}
       {state === 'error' && <div className="nt-empty">Couldn’t load notifications.</div>}
       {state === 'ready' && (

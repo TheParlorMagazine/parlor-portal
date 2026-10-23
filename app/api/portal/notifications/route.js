@@ -32,15 +32,18 @@ export async function PATCH(request) {
   return Response.json({ ok: true })
 }
 
-// DELETE { id } permanently dismisses only the caller's notification.
+// DELETE { id } or { all: true } permanently dismisses the caller's notifications.
 export async function DELETE(request) {
   const user = await requireUser(request)
   if (!user) return Response.json({ error: 'Not signed in' }, { status: 401 })
   let body = {}
   try { body = await request.json() } catch {}
-  if (!body.id) return Response.json({ error: 'id required' }, { status: 400 })
-  const { data, error } = await serviceClient().from('notifications').delete().eq('member_id', user.id).eq('id', body.id).select('id')
+  if (!body.id && body.all !== true) return Response.json({ error: 'id or all required' }, { status: 400 })
+  let query = serviceClient().from('notifications').delete().eq('member_id', user.id)
+  if (body.all !== true) query = query.eq('id', body.id)
+  const { data, error } = await query.select('id')
   if (error) return Response.json({ error: 'Could not dismiss this notification. Please try again.' }, { status: 500 })
+  if (body.all === true) return Response.json({ ok: true, cleared_all: true })
   if (!data || data.length !== 1) return Response.json({ error: 'This notification could not be found. Refresh your notifications.' }, { status: 409 })
   return Response.json({ ok: true, deleted_id: data[0].id })
 }

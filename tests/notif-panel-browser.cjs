@@ -15,7 +15,7 @@ const root=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
   await page.route('http://parlor.test/**',async route=>{
    const request=route.request()
    if(request.url().endsWith('/api/portal/notifications')){
-    if(request.method()==='DELETE'){if(failDismiss){failDismiss=false;return route.fulfill({status:500,json:{error:'Could not dismiss this notification. Please try again.'}})}const {id}=request.postDataJSON();deletes.push(id);notifications=notifications.filter(n=>n.id!==id);return route.fulfill({json:{ok:true,deleted_id:id}})}
+    if(request.method()==='DELETE'){if(failDismiss){failDismiss=false;return route.fulfill({status:500,json:{error:'Could not dismiss this notification. Please try again.'}})}const {id,all}=request.postDataJSON();if(all){notifications=[];return route.fulfill({json:{ok:true,cleared_all:true}})}deletes.push(id);notifications=notifications.filter(n=>n.id!==id);return route.fulfill({json:{ok:true,deleted_id:id}})}
     if(request.method()==='PATCH'){const body=request.postDataJSON();patches.push(body);notifications=notifications.map(n=>body.all||n.id===body.id?{...n,read:true}:n);return route.fulfill({json:{ok:true}})}
     return route.fulfill({json:{notifications}})
    }
@@ -30,11 +30,8 @@ const root=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
   await page.waitForFunction(()=>window.changes.length===1)
   assert.equal(page.url(),'http://parlor.test/portal');assert.deepEqual(await page.evaluate(()=>window.changes),[-1]);assert.equal(await page.getByRole('button',{name:'Dismiss notification: Event invitation',exact:true}).count(),0)
   await page.reload();await page.evaluate(()=>{window.changes=[]});await page.addScriptTag({path:out});await page.getByText('A reply',{exact:true}).waitFor();assert.equal(await page.getByText('Event invitation',{exact:true}).count(),0)
-  await page.getByRole('button',{name:'Mark all read',exact:true}).click();await page.waitForFunction(()=>window.changes.length===1);assert.equal(await page.getByText('A reply',{exact:true}).count(),1)
-  await page.reload();await page.evaluate(()=>{window.changes=[]});await page.addScriptTag({path:out});await page.getByText('A reply',{exact:true}).waitFor();assert.equal(await page.locator('.notif-row.unread').count(),0)
-  await page.getByRole('button',{name:/A reply/}).filter({has:page.locator('.notif-msg')}).press('Enter')
-  await page.waitForURL('http://parlor.test/portal/events/another-event')
-  assert.deepEqual(deletes,['one']);assert.ok(patches.some(p=>p.all));assert.deepEqual(errors,[])
+  await page.getByRole('button',{name:'Clear all',exact:true}).click();await page.getByText('You’re all caught up.',{exact:true}).waitFor();assert.deepEqual(await page.evaluate(()=>window.changes),[null])
+  await page.reload();await page.evaluate(()=>{window.changes=[]});await page.addScriptTag({path:out});await page.getByText('You’re all caught up.',{exact:true}).waitFor();assert.deepEqual(deletes,['one']);assert.equal(notifications.length,0);assert.deepEqual(errors,[])
   await page.close()
- }console.log('PASS: desktop/mobile notification panel has no nested buttons or React errors; dismissal preserves location and unread count; keyboard activation opens the event.')}finally{await browser.close()}
+ }console.log('PASS: desktop/mobile notification panel has no nested buttons or React errors; dismissal and Clear all persist after reload; failures preserve notifications.')}finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1})

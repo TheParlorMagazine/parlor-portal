@@ -13,3 +13,8 @@ test('only confirmed deletion returns success and the deleted ID',async()=>{
 test('zero matching rows never report a successful delete',async()=>{const {run}=await endpoint({data:[]});const r=await run({id:'locked-or-missing'});assert.equal(r.status,409);assert.equal((await r.json()).ok,undefined)})
 test('database rejection is surfaced instead of success',async()=>{const {run}=await endpoint({error:{message:'foreign key'}});assert.equal((await run({id:'draft'})).status,500)})
 test('unauthenticated and missing-ID requests are rejected',async()=>{assert.equal((await(await endpoint({},null)).run({id:'draft'})).status,401);assert.equal((await(await endpoint({})).run({})).status,400)})
+
+test('clear all is scoped to the signed-in member and includes read notifications',async()=>{
+ const {run,filters}=await endpoint({data:[{id:'one'},{id:'two'}]});const r=await run({all:true,member_id:'other'});assert.equal(r.status,200);assert.equal((await r.json()).cleared_all,true);assert.ok(filters.some(f=>f[0]==='member_id'&&f[1]==='owner'));assert.equal(filters.some(f=>f[0]==='id'||f[0]==='read'),false)
+})
+test('clearing an empty list succeeds; database failures do not',async()=>{assert.equal((await(await endpoint({data:[]})).run({all:true})).status,200);assert.equal((await(await endpoint({error:{}})).run({all:true})).status,500)})
