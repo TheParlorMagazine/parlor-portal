@@ -88,7 +88,8 @@ export async function DELETE(request) {
   try { b = await request.json() } catch {}
   if (!b.id) return Response.json({ error: 'id required' }, { status: 400 })
   const db = serviceClient()
-  const { error } = await db.from('member_submissions').delete().eq('id', b.id).eq('member_id', user.id).in('status', ['draft', 'rejected', 'changes_requested'])
-  if (error) return Response.json({ error: error.message }, { status: 500 })
-  return Response.json({ ok: true })
+  const { data, error } = await db.from('member_submissions').delete().eq('id', b.id).eq('member_id', user.id).in('status', ['draft', 'rejected', 'changes_requested']).select('id')
+  if (error) return Response.json({ error: 'Could not delete this draft. Please try again.' }, { status: 500 })
+  if (!data || data.length !== 1) return Response.json({ error: 'This draft no longer exists or is not editable. Refresh your drafts to check its status.' }, { status: 409 })
+  return Response.json({ ok: true, deleted_id: data[0].id })
 }

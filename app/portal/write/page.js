@@ -67,6 +67,7 @@ function Editor({ id, onClose, auth, supabase }) {
   const [loading, setLoading] = useState(!!id)
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [msg, setMsg] = useState('')
   const [saveState, setSaveState] = useState('') // '', 'saving', 'saved'
   const [showConsent, setShowConsent] = useState(false)
@@ -77,6 +78,12 @@ function Editor({ id, onClose, auth, supabase }) {
   const subIdRef = useRef(id || null)
   const dirtyRef = useRef(false)
   const timerRef = useRef(null)
+  const deletingRef = useRef(false)
+  const saveQueueRef = useRef(Promise.resolve(null))
+  useEffect(() => {
+    deletingRef.current = false
+    return () => { deletingRef.current = true; clearTimeout(timerRef.current) }
+  }, [])
   const set = (k, v) => { setF(s => ({ ...s, [k]: v })); dirtyRef.current = true }
 
   useEffect(() => {
@@ -88,29 +95,37 @@ function Editor({ id, onClose, auth, supabase }) {
     })()
   }, [id, auth])
 
-  const locked = status === 'submitted' || status === 'published' || status === 'approved'
+  const locked = !['draft', 'rejected', 'changes_requested'].includes(status)
 
   // Persist current form; returns the saved row (or null on error).
-  const persist = useCallback(async (submit, consent) => {
-    if (!f.title.trim()) { if (submit) setMsg('Give your piece a title first.'); return null }
-    const curId = subIdRef.current
-    let res
-    if (curId) res = await fetch('/api/portal/submissions', { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ id: curId, ...f, submit, consent }) })
-    else res = await fetch('/api/portal/submissions', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify(f) })
-    const d = await res.json()
-    if (!res.ok) { setMsg(d.error || 'Could not save'); return null }
-    if (d.submission?.id) { subIdRef.current = d.submission.id; setSubId(d.submission.id) }
-    // If we just created and want to submit, do the submit PATCH now.
-    if (submit && !curId && d.submission?.id) {
-      const res2 = await fetch('/api/portal/submissions', { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ id: d.submission.id, submit: true, consent }) })
-      if (!res2.ok) { const e = await res2.json(); setMsg(e.error || 'Could not submit'); return null }
+  const persist = useCallback((submit, consent) => {
+    const save = async () => {
+      if (deletingRef.current) return null
+      try {
+        if (!f.title.trim()) { if (submit) setMsg('Give your piece a title first.'); return null }
+        const curId = subIdRef.current
+        let res
+        if (curId) res = await fetch('/api/portal/submissions', { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ id: curId, ...f, submit, consent }) })
+        else res = await fetch('/api/portal/submissions', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify(f) })
+        const d = await res.json()
+        if (!res.ok) { setMsg(d.error || 'Could not save'); return null }
+        if (d.submission?.id) { subIdRef.current = d.submission.id; setSubId(d.submission.id) }
+        // If we just created and want to submit, do the submit PATCH now.
+        if (submit && !curId && d.submission?.id) {
+          const res2 = await fetch('/api/portal/submissions', { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ id: d.submission.id, submit: true, consent }) })
+          if (!res2.ok) { const e = await res2.json(); setMsg(e.error || 'Could not submit'); return null }
+        }
+        return d.submission
+      } catch { setMsg('Could not save this draft. Please try again.'); return null }
     }
-    return d.submission
+    const pending = saveQueueRef.current.then(save, save)
+    saveQueueRef.current = pending.catch(() => null)
+    return pending
   }, [f, auth])
 
   // Debounced autosave while editable.
   useEffect(() => {
-    if (locked || loading) return
+    if (locked || loading || deletingRef.current) return
     if (!dirtyRef.current) return
     if (!f.title.trim()) return
     clearTimeout(timerRef.current)
@@ -122,6 +137,23 @@ function Editor({ id, onClose, auth, supabase }) {
     }, 1200)
     return () => clearTimeout(timerRef.current)
   }, [f, locked, loading, persist])
+
+  async function deleteDraft() {
+    if (deletingRef.current || busy || !(await confirmDialog('Delete this draft?'))) return
+    deletingRef.current = true
+    setDeleting(true); setMsg(''); clearTimeout(timerRef.current); dirtyRef.current = false
+    try {
+      await saveQueueRef.current
+      const idToDelete = subIdRef.current
+      if (!idToDelete) throw new Error('This draft has not been saved yet.')
+      const response = await fetch('/api/portal/submissions', { method: 'DELETE', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ id: idToDelete }) })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok || result.deleted_id !== idToDelete) throw new Error(result.error || 'Deletion could not be confirmed. Please try again.')
+      onClose(true)
+    } catch (error) {
+      deletingRef.current = false; setDeleting(false); setMsg(error.message || 'Could not delete this draft. Please try again.')
+    }
+  }
 
   async function uploadCover(file) {
     if (!file || !file.type.startsWith('image/')) return
@@ -154,7 +186,7 @@ function Editor({ id, onClose, auth, supabase }) {
 
   return (
     <div>
-      <button onClick={() => onClose(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12.5, cursor: 'pointer', padding: 0, marginBottom: 14, fontFamily: SERIF }}>← All posts</button>
+      <button disabled={deleting || busy} onClick={() => onClose(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12.5, cursor: 'pointer', padding: 0, marginBottom: 14, fontFamily: SERIF }}>← All posts</button>
 
       {(status === 'rejected' || status === 'changes_requested') && editorNote && (
         <div style={{ border: '1px solid #f0c4c4', background: '#fbeaee', borderRadius: 10, padding: '14px 16px', marginBottom: 18 }}>
@@ -162,7 +194,7 @@ function Editor({ id, onClose, auth, supabase }) {
           <div style={{ fontSize: 14, color: '#333', lineHeight: 1.55 }}>{editorNote}</div>
         </div>
       )}
-      {locked && <div style={{ border: '1px solid var(--border)', background: 'var(--cream)', borderRadius: 10, padding: '12px 16px', marginBottom: 18, fontSize: 13.5, color: 'var(--muted)' }}>{status === 'published' ? 'This piece is published — it can’t be edited here.' : status === 'approved' ? 'An editor is preparing this for a vertical. You’ll be asked to approve the final version.' : 'This piece is with the editors. You’ll get a notification when it’s reviewed.'}</div>}
+      {locked && <div style={{ border: '1px solid var(--border)', background: 'var(--cream)', borderRadius: 10, padding: '12px 16px', marginBottom: 18, fontSize: 13.5, color: 'var(--muted)' }}>{status === 'published' ? 'This piece is published — it can’t be edited here.' : status === 'approved' ? 'An editor is preparing this for a vertical. You’ll be asked to approve the final version.' : status === 'submitted' ? 'This piece is with the editors. You’ll get a notification when it’s reviewed.' : 'This piece is no longer an editable draft.'}</div>}
 
       {status === 'approved' && article && !article.published && (
         <div style={{ border: '1px solid #cfe8d8', background: '#eef8f1', borderRadius: 10, padding: '14px 16px', marginBottom: 18 }}>
@@ -187,16 +219,16 @@ function Editor({ id, onClose, auth, supabase }) {
       </div>
 
       <div style={label}>Title</div>
-      <input value={f.title} onChange={e => set('title', e.target.value)} placeholder="Your headline" style={{ ...input, fontSize: 18, fontWeight: 600 }} disabled={locked} />
+      <input value={f.title} onChange={e => set('title', e.target.value)} placeholder="Your headline" style={{ ...input, fontSize: 18, fontWeight: 600 }} disabled={locked || deleting} />
       <div style={label}>Subtitle <span style={{ textTransform: 'none', letterSpacing: 0 }}>· optional</span></div>
-      <input value={f.subtitle} onChange={e => set('subtitle', e.target.value)} placeholder="A short deck" style={input} disabled={locked} />
+      <input value={f.subtitle} onChange={e => set('subtitle', e.target.value)} placeholder="A short deck" style={input} disabled={locked || deleting} />
       <div style={label}>Vertical</div>
-      <select value={f.vertical} onChange={e => set('vertical', e.target.value)} style={{ ...input, cursor: locked ? 'default' : 'pointer' }} disabled={locked}>
+      <select value={f.vertical} onChange={e => set('vertical', e.target.value)} style={{ ...input, cursor: locked ? 'default' : 'pointer' }} disabled={locked || deleting}>
         <option value="">Choose where it best fits…</option>
         {VERTICALS.map(v => <option key={v} value={v}>{v}</option>)}
       </select>
       <div style={label}>Byline <span style={{ textTransform: 'none', letterSpacing: 0 }}>· optional — how you want to be credited</span></div>
-      <input value={f.byline} onChange={e => set('byline', e.target.value)} placeholder="Leave blank to use your name" style={input} disabled={locked} />
+      <input value={f.byline} onChange={e => set('byline', e.target.value)} placeholder="Leave blank to use your name" style={input} disabled={locked || deleting} />
 
       <div style={label}>Body</div>
       {locked
@@ -204,16 +236,16 @@ function Editor({ id, onClose, auth, supabase }) {
         : <RichTextEditor slim content={f.body} onChange={html => set('body', html)} placeholder="Write your piece…" />}
 
       <div style={label}>Short bio <span style={{ textTransform: 'none', letterSpacing: 0 }}>· one line about you, shown with the piece</span></div>
-      <input value={f.bio} onChange={e => set('bio', e.target.value)} placeholder="e.g. Maya is a writer and organizer based in Chicago." style={input} disabled={locked} />
+      <input value={f.bio} onChange={e => set('bio', e.target.value)} placeholder="e.g. Maya is a writer and organizer based in Chicago." style={input} disabled={locked || deleting} />
       <div style={label}>Sources & links <span style={{ textTransform: 'none', letterSpacing: 0 }}>· optional — helps our editors fact-check</span></div>
-      <textarea value={f.sources} onChange={e => set('sources', e.target.value)} rows={3} placeholder="Links, references, or notes to support fact-checking (not published)." style={{ ...input, resize: 'vertical', fontSize: 14 }} disabled={locked} />
+      <textarea value={f.sources} onChange={e => set('sources', e.target.value)} rows={3} placeholder="Links, references, or notes to support fact-checking (not published)." style={{ ...input, resize: 'vertical', fontSize: 14 }} disabled={locked || deleting} />
 
       {!locked && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 22 }}>
-          <button onClick={() => { if (!f.title.trim()) { setMsg('Give your piece a title first.'); return } setShowConsent(true) }} disabled={busy} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '11px 24px', fontFamily: SERIF, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Submit for review</button>
+          <button onClick={() => { if (!f.title.trim()) { setMsg('Give your piece a title first.'); return } setShowConsent(true) }} disabled={busy || deleting} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '11px 24px', fontFamily: SERIF, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Submit for review</button>
           <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved automatically' : 'Autosaves as you write'}</span>
-          {msg && <span style={{ fontSize: 13, color: '#c04040' }}>{msg}</span>}
-          {subId && <button onClick={async () => { if (!(await confirmDialog('Delete this draft?'))) return; await fetch('/api/portal/submissions', { method: 'DELETE', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ id: subId }) }); onClose(true) }} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#c04040', fontSize: 13, cursor: 'pointer', fontFamily: SERIF }}>Delete draft</button>}
+          {msg && <span role="alert" style={{ fontSize: 13, color: '#c04040' }}>{msg}</span>}
+          {subId && <button type="button" onClick={deleteDraft} disabled={deleting || busy} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#c04040', fontSize: 13, cursor: 'pointer', fontFamily: SERIF }}>{deleting ? 'Deleting…' : 'Delete draft'}</button>}
         </div>
       )}
 
