@@ -91,6 +91,7 @@ export default function MissionRoom() {
         const heading = viewport.querySelector('.parlor-mission-caption h1')
         const subtitle = viewport.querySelector('.parlor-mission-caption p')
         const dimmer = room.querySelector('.parlor-room-dimmer')
+        const background = room.querySelector('.parlor-room-background')
         const openingCue = viewport.querySelector(
           '.parlor-scroll-cue:not(.parlor-story-scroll-cue)'
         )
@@ -351,6 +352,15 @@ export default function MissionRoom() {
           const sceneBefore = scene
           busy = true
           scene = next
+
+          // Keep the foreground layers crisp while gently softening the room
+          // behind each zoom. Returning to the opening restores a sharp room.
+          if (background) gsap.to(background, {
+            '--mission-background-blur': `${[0, 0.8, 1, 1.2, 1.4, 1.4][next]}px`,
+            duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1.2,
+            ease: 'power2.inOut',
+            overwrite: 'auto',
+          })
 
           if (next === 1) {
             gsap.set(thirdStory, { autoAlpha: 0 })
@@ -1758,7 +1768,7 @@ export default function MissionRoom() {
 /* PARLOR MOBILE POLISH — RESPONSIVE SCENES */
 
         .parlor-room-background {
-          filter: saturate(0.76) sepia(0.06);
+          filter: saturate(0.76) sepia(0.06) blur(var(--mission-background-blur, 0px));
         }
 
         @media (max-width: 767px) {
