@@ -15,6 +15,7 @@ export default function TrickOrTreatStrip({
   bottomBar = false,
   shopPopup = false,
   onDismiss,
+  onVisibilityChange,
 }) {
   const [shopMobile, setShopMobile] = useState(false)
   const [heroGone, setHeroGone]       = useState(false)
@@ -44,6 +45,8 @@ export default function TrickOrTreatStrip({
   const isMobileRef    = useRef(false)
 
   const visible = shopPopup ? (!shopMobile || heroGone) : heroGone && (bottomBar || !everHidden)
+
+  useEffect(() => { onVisibilityChange?.(mounted && visible) }, [mounted, visible, onVisibilityChange])
 
   useEffect(() => { setMounted(true) }, [])
 

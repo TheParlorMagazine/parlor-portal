@@ -14,7 +14,7 @@ import ScrollToTop from '../../_components/ScrollToTop'
 import SubscribeWall from './_components/SubscribeWall'
 import ArticlePaywallPopup from './_components/ArticlePaywallPopup'
 import CommentsSection from './_components/CommentsSection'
-import TrickOrTreatStrip from '../../_components/TrickOrTreatStrip'
+import ArticlePromotions from '../../_components/ArticlePromotions'
 
 const db = createClient()
 
@@ -532,7 +532,7 @@ export default async function ArticlePage({ params, searchParams }) {
       </main>
 
       {/* Trick or treat sidebar strip — non-issue articles only, wide screens */}
-      {!article.issue_id && <TrickOrTreatStrip href="/trick-or-treat" />}
+      {!article.issue_id && <ArticlePromotions />}
 
       <SiteFooter />
     </>
