@@ -1173,6 +1173,11 @@ export default function MissionRoom() {
           text-align: center;
           line-height: 1.55;
         }
+        @media (min-width: 768px) {
+          .parlor-story-three p:first-of-type { font-size: 1em; }
+          .parlor-story-three p:nth-of-type(2) { font-size: 1.1em; }
+        }
+
         .parlor-third-cue {
           position: fixed;
           right: 7%;
