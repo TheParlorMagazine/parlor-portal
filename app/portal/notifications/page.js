@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
+import NotificationIcon from '../_components/NotificationIcon'
 import PortalShell from '../_components/PortalShell'
 import { fieldCss } from '../_components/formCss'
 
 const DEST = { library: '/library', 'library-detail': '/library', dashboard: '/portal', forum: '/portal', events: '/portal', inbox: '/portal' }
-const TYPE_LABEL = { reply: 'Reply', inbox: 'Message', library: 'Library', event: 'Event', new_thread: 'Discussion', system: 'Parlor' }
 
 function timeAgo(s) {
   const d = new Date(s); const sec = Math.floor((Date.now() - d.getTime()) / 1000)
@@ -26,7 +26,7 @@ const css = `
   .nt-item.unread { background:#fdf1f4; }
   .nt-item.unread:hover { background:#fce8ee; }
   .nt-dot { width:8px; height:8px; border-radius:50%; margin-top:7px; flex-shrink:0; background:transparent; }
-  .nt-item.unread .nt-dot { background:var(--pink); }
+  .nt-item.unread .nt-msg { font-weight:600; }
   .nt-body { flex:1; min-width:0; }
   .nt-type { font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:#9a7580; margin-bottom:3px; }
   .nt-msg { font-size:14px; line-height:1.5; color:var(--ink); }
@@ -105,9 +105,8 @@ function Notifications() {
           : <div className="nt-list">
               {items.map(n => (
                 <button key={n.id} className={`nt-item${n.read ? '' : ' unread'}`} onClick={() => open(n)}>
-                  <span className="nt-dot" />
+                  <NotificationIcon notification={n} />
                   <span className="nt-body">
-                    <span className="nt-type">{TYPE_LABEL[n.type] || 'Parlor'}</span>
                     <span className="nt-msg">{n.message}</span>
                   </span>
                   <span className="nt-time">{timeAgo(n.created_at)}</span>

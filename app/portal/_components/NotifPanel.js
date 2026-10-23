@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import NotificationIcon from './NotificationIcon'
 import { createClient } from '../../../lib/supabase'
 
 const DEST = { library: '/portal/library', 'library-detail': '/portal/library', dashboard: '/portal', forum: '/portal', events: '/portal', inbox: '/portal' }
-const ICONCLS = { reply: 'ni-reply', inbox: 'ni-inbox', library: 'ni-library', event: 'ni-event', new_thread: 'ni-reply', system: 'ni-library' }
 
 function timeAgo(s) {
   const sec = Math.floor((Date.now() - new Date(s).getTime()) / 1000)
@@ -138,9 +138,7 @@ export default function NotifPanel({ open, onClose, onChange }) {
         {items.map(n => (
           <div key={n.id} className={`notif-row${n.read ? '' : ' unread'}`}>
           <button type="button" className="notif-item" onClick={() => openNotif(n)}>
-            <span className={`notif-icon ${ICONCLS[n.type] || 'ni-library'}`}>
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="6"/></svg>
-            </span>
+            <NotificationIcon notification={n} />
             <span className="notif-body">
               <span className="notif-msg">{n.message}</span>
               <span className="notif-time">{timeAgo(n.created_at)}</span>
