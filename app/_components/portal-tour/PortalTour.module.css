@@ -1,4 +1,4 @@
-.help{position:fixed;right:22px;bottom:max(22px,env(safe-area-inset-bottom));width:50px;height:50px;border:2px solid #fff;border-radius:50%;background:#7a2531;color:#fff;font:700 26px Georgia,serif;box-shadow:0 4px 18px #36131b38;cursor:pointer;z-index:8500}
+.help{position:fixed;right:22px;bottom:max(22px,env(safe-area-inset-bottom));width:50px;height:50px;border:2px solid #fff;border-radius:50%;background:#000;color:#fff;font:700 26px Georgia,serif;box-shadow:0 4px 18px #36131b38;cursor:pointer;z-index:8500}
 .dialog{border:1px solid #e8d4d8;border-radius:20px;padding:32px;width:calc(100% - 32px);max-width:480px;color:#171717;background:#fff1f5;box-shadow:0 20px 80px #301b2133;font-family:Georgia,serif}
 .dialog::backdrop{background:#21151b80}
 .eyebrow{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#a64d70;margin:0 0 12px;font-weight:700}
@@ -30,3 +30,6 @@
 :global(.parlor-tour-space){padding-top:76px!important}
 :global(.parlor-tour-archive-tools){padding-right:164px!important;min-height:68px;box-sizing:border-box;flex-wrap:wrap;align-content:flex-start}
 :global(.parlor-tour-section-highlight){border-radius:16px;background:#fff5f9;box-shadow:0 0 0 8px #f7c6d960,0 8px 24px #d780a126;position:relative}
+
+@keyframes helpBounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}70%{transform:translateY(-2px)}}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){.help:hover{animation:helpBounce .45s ease-out}}
