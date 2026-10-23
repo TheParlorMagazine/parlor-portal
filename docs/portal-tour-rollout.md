@@ -13,7 +13,7 @@ The migration is repeatable and does not reset progress or its launch timestamp.
 
 ## Experience
 
-The five chapters are profile/short posts, article drafts, forums, events, then Archive search. Each chapter navigates to the actual feature, highlights a real control and offers a gently pulsing Click here / Tap here cue. The events chapter still works when no events are scheduled. Host-only controls are explained without exposing or activating them for ordinary members.
+The five chapters are profile/short posts, article drafts, forums, events, then Archive search. The profile, writing and forum chapters highlight real controls, with a gently pulsing Click here / Tap here cue placed above them and pointing down. The Archive uses Search here beside its saved/history controls. The Events chapter is informational: it highlights the complete event listings, explains past/upcoming events and RSVPs, and has no click cue. It still works when no events are scheduled. Host-only controls are explained without exposing or activating them for ordinary members.
 
 Start Tour, Maybe Later and Skip Tour are independent choices. A postponed tour leaves a quiet dashboard reminder; the help menu offers restart, resume and individual topics. Completing or skipping suppresses automatic invitations. Pausing or pressing Escape preserves the current chapter. Completion leaves the member in the Archive.
 

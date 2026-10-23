@@ -52,9 +52,10 @@ function List() {
   return (
     <div className="ev-wrap">
       <style>{evCss}</style>
-      <h1 data-tour="events-heading" className="ev-h1">Events</h1>
+      <h1 className="ev-h1">Events</h1>
       <p className="ev-sub">Salons, readings, and roundtables. RSVP to attend. Forum membership is managed separately.</p>
 
+      <section data-tour="events-listings" aria-label="Past and upcoming events">
       {d.loading ? <p style={{ color: 'var(--muted)' }}>Loading…</p> : (
         <>
           {d.upcoming.length === 0 && d.past.length === 0 ? (
@@ -72,6 +73,7 @@ function List() {
           )}
         </>
       )}
+      </section>
     </div>
   )
 }

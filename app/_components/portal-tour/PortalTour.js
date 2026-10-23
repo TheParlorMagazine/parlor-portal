@@ -150,13 +150,27 @@ export default function PortalTour() {
     let last = ''
     let scrolled = false
     let highlighted = null
+    let spaced = null
+    let archiveTools = null
     const measure = () => {
       const candidates = [...document.querySelectorAll(config.selector)]
       const element = candidates.find(node => { const r = node.getBoundingClientRect(); return r.width > 0 && r.height > 0 })
       target.current = element || null
-      if (highlighted && (highlighted !== element || activated)) { highlighted.classList.remove('parlor-tour-highlight'); highlighted = null }
+      if (highlighted && (highlighted !== element || activated)) { highlighted.classList.remove('parlor-tour-highlight', 'parlor-tour-section-highlight'); highlighted = null }
       if (!element || activated) { if (last !== 'none') { last = 'none'; setRect(null) } return }
-      if (highlighted !== element) { element.classList.add('parlor-tour-highlight'); highlighted = element }
+      if (highlighted !== element) {
+        spaced?.classList.remove('parlor-tour-space')
+        archiveTools?.classList.remove('parlor-tour-archive-tools')
+        if (!config.informational && config.id !== 'archive') {
+          spaced = element.parentElement
+          spaced?.classList.add('parlor-tour-space')
+        }
+        if (config.id === 'archive') {
+          archiveTools = document.querySelector('[data-tour="archive-tools"]')
+          archiveTools?.classList.add('parlor-tour-archive-tools')
+        }
+        element.classList.add(config.informational ? 'parlor-tour-section-highlight' : 'parlor-tour-highlight'); highlighted = element
+      }
       if (!scrolled) {
         element.scrollIntoView({ block: mobile ? 'start' : 'center', behavior: 'instant' })
         scrolled = true
@@ -166,11 +180,9 @@ export default function PortalTour() {
       // Measure the whole target. Never turn a clipped rectangle into a thin outline.
       const visible = bounds.top >= (mobile ? 72 : 0) && bounds.bottom <= innerHeight && bounds.left >= 0 && bounds.right <= innerWidth
       const cueWidth = 154, cueHeight = 50, gap = 18
-      const positions = [
-        { top: bounds.bottom + gap, left: bounds.left, above: false },
-        { top: bounds.top - cueHeight - gap, left: bounds.left, above: true },
-        { top: bounds.top, left: bounds.right + gap, above: false },
-        { top: bounds.top, left: bounds.left - cueWidth - gap, above: false },
+      const toolsBounds = archiveTools?.getBoundingClientRect()
+      const positions = config.informational ? [] : [
+        { top: toolsBounds ? toolsBounds.top + 4 : bounds.top - cueHeight - gap, left: toolsBounds ? toolsBounds.right - cueWidth - 8 : bounds.left, above: true },
       ]
       const position = positions.map(value => ({ ...value, left: Math.max(24, Math.min(value.left, innerWidth - cueWidth - 24)) })).find(value => {
         if (value.top < (mobile ? 80 : 24) || value.top + cueHeight > innerHeight - 24) return false
@@ -180,7 +192,7 @@ export default function PortalTour() {
       const signature = JSON.stringify(next)
       if (signature !== last) { last = signature; setRect(next) }
     }
-    const clicked = event => { if (target.current && (target.current === event.target || target.current.contains(event.target))) setActivated(true) }
+    const clicked = event => { if (!config.informational && target.current && (target.current === event.target || target.current.contains(event.target))) setActivated(true) }
     const changed = () => { if (activated && step < 3) dirty.current = true }
     const escape = event => { if (event.key === 'Escape') { event.preventDefault(); dismiss() } }
     const observer = new MutationObserver(measure)
@@ -193,7 +205,9 @@ export default function PortalTour() {
     document.addEventListener('input', changed, true)
     document.addEventListener('keydown', escape)
     return () => {
-      highlighted?.classList.remove('parlor-tour-highlight')
+      highlighted?.classList.remove('parlor-tour-highlight', 'parlor-tour-section-highlight')
+      spaced?.classList.remove('parlor-tour-space')
+      archiveTools?.classList.remove('parlor-tour-archive-tools')
       clearInterval(timer); observer.disconnect()
       document.removeEventListener('scroll', measure, true); window.removeEventListener('resize', measure)
       document.removeEventListener('click', clicked, true); document.removeEventListener('input', changed, true); document.removeEventListener('keydown', escape)
@@ -250,7 +264,7 @@ export default function PortalTour() {
     {mode === 'tour' && <>
       {rect && !activated && <>
         <button className={styles.cue} style={{ top: rect.top, left: rect.left }} aria-label={config.action} onClick={activate}>
-          {mobile ? 'Tap here' : 'Click here'}
+          {config.cue || (mobile ? 'Tap here' : 'Click here')}
           <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" style={rect.above ? { transform: 'scaleY(-1)' } : undefined}><path d="M3 28C18 28 23 19 24 5M16 12l8-8 6 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </button>
       </>}
@@ -259,7 +273,7 @@ export default function PortalTour() {
         <div className={styles.progress} aria-hidden="true">{TOUR_STEPS.map((item,index) => <span key={item.id} className={`${styles.dot} ${index <= step ? styles.current : ''}`} />)}</div>
         <h2 id="parlor-tour-step" className={styles.title}>{config.title}</h2>
         <p className={styles.copy} aria-live="polite">{activated ? config.after : config.text}</p>
-        {!activated && <button className={styles.secondary} disabled={busy} onClick={activate}>{rect ? config.action : `Open ${config.id === 'writing' ? 'article drafts' : config.id === 'archive' ? 'the Archive' : config.id}`}</button>}
+        {!activated && !config.informational && <button className={styles.secondary} disabled={busy} onClick={activate}>{rect ? config.action : `Open ${config.id === 'writing' ? 'article drafts' : config.id === 'archive' ? 'the Archive' : config.id}`}</button>}
         <div className={styles.actions} style={{ marginTop: 16 }}>
           {step > 0 && <button className={styles.link} disabled={busy} onClick={() => go(step - 1)}>Back</button>}
           {step < TOUR_STEPS.length - 1 ? <button className={styles.primary} disabled={busy} onClick={() => go(step + 1)}>Next</button> : <button className={styles.primary} disabled={busy} onClick={() => dismiss('completed')}>Finish & explore</button>}

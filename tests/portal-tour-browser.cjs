@@ -20,8 +20,8 @@ async function main(){
  {pathname==='/portal/profile'&&<><h1>My profile</h1>{opened!=='post'?<button data-tour="start-post" onClick={()=>setOpened('post')}>Start a post</button>:<textarea aria-label="Your post" placeholder="Share a thought"/>}</>}
  {pathname==='/portal/write'&&<><h1>Write for The Parlor</h1>{opened!=='draft'?<button data-tour="new-draft" onClick={()=>setOpened('draft')}>+ New draft</button>:<input aria-label="Draft title"/>}</>}
  {pathname==='/portal/groups'&&<><h1>Forums</h1><button data-tour="propose-forum" onClick={()=>setOpened('forum')}>+ Propose a forum</button>{opened==='forum'&&<p>Forum proposal form</p>}</>}
- {pathname.startsWith('/portal/events')&&<h1 data-tour="events-heading">Events</h1>}
- {pathname==='/portal/library'&&<><h1>The Archive</h1><input data-tour="archive-search" placeholder="Search library..."/></>}
+ {pathname.startsWith('/portal/events')&&<><h1>Events</h1><section data-tour="events-listings"><h2>Past events</h2><p>Past and upcoming gatherings appear here.</p></section></>}
+ {pathname==='/portal/library'&&<><h1>The Archive</h1><div data-tour="archive-tools" style={{display:'flex',gap:8,width:'100%'}}><button>Saved items</button><button>Reading history</button></div><input data-tour="archive-search" placeholder="Search library..."/></>}
  </main><PortalTour/></>};createRoot(document.getElementById('root')).render(<App/>);`)
  await esbuild.build({entryPoints:[path.join(dir,'entry.jsx')],bundle:true,outfile:path.join(dir,'bundle.js'),loader:{'.js':'jsx'},jsx:'automatic',plugins:[{name:'mock-services',setup(build){
  build.onResolve({filter:/^next\/navigation$/},()=>({path:path.join(dir,'navigation.js')}));
@@ -49,13 +49,15 @@ async function main(){
    await page.goto(base+'/portal');await page.getByRole('button',{name:'Start Tour',exact:true}).waitFor()
    if(!mobile){await page.getByRole('button',{name:'Maybe Later',exact:true}).click();await page.getByRole('button',{name:'Your tour is here when you’re ready'}).waitFor();await page.reload();await page.getByRole('button',{name:'Your tour is here when you’re ready'}).waitFor();await page.getByRole('button',{name:'Open your Parlor tour and help'}).click()}
    await page.getByRole('button',{name:'Start Tour',exact:true}).click()
-   const selectors=['[data-tour="start-post"]','[data-tour="new-draft"]','[data-tour="propose-forum"]','[data-tour="events-heading"]','[data-tour="archive-search"]']
+   const selectors=['[data-tour="start-post"]','[data-tour="new-draft"]','[data-tour="propose-forum"]','[data-tour="events-listings"]','[data-tour="archive-search"]']
    const actions=['Open the post composer','Open a new draft','See how to propose a forum','Explore events','Explore the Archive']
    for(let index=0;index<5;index++){
     await page.locator(selectors[index]).waitFor()
-    const cue=page.getByRole('button',{name:actions[index],exact:true}).filter({hasText:mobile?'Tap here':'Click here'})
+    if(index===3){assert.equal(await page.locator('.parlor-tour-section-highlight').count(),1);assert.equal(await page.getByRole('button',{name:'Explore events',exact:true}).count(),0);await page.getByRole('button',{name:'Next',exact:true}).click();continue}
+    const cue=page.getByRole('button',{name:actions[index],exact:true}).filter({hasText:index===4?'Search here':mobile?'Tap here':'Click here'})
     await cue.waitFor()
     const box=await cue.boundingBox();assert.ok(box.y>=0&&box.y+box.height<=(mobile?844:1000),'Cue must stay inside viewport')
+    const targetBox=await page.locator(selectors[index]).boundingBox();assert.ok(box.y+box.height<targetBox.y,'Cue belongs above its target')
     if(index===0)await page.screenshot({path:path.join(dir,mobile?'mobile-tour.png':'desktop-tour.png')})
     await cue.click()
     if(index===4) assert.equal(await page.locator('[data-tour="archive-search"]').evaluate(el=>document.activeElement===el),true,'Archive cue should focus search')

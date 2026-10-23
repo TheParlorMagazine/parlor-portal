@@ -195,7 +195,7 @@ export default function PortalLibraryPage() {
           )}
 
           <div className="filters-bar">
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10, width: '100%' }}>
+            <div data-tour="archive-tools" style={{ display: 'flex', gap: 8, marginBottom: 10, width: '100%' }}>
               <button className={`filter-btn${filter.kind === 'saved' ? ' active' : ''}`} onClick={() => setFilter(f => f.kind === 'saved' ? { kind: 'all' } : { kind: 'saved' })}>Saved items</button>
               <button className={`filter-btn${filter.kind === 'history' ? ' active' : ''}`} onClick={() => setFilter(f => f.kind === 'history' ? { kind: 'all' } : { kind: 'history' })}>Reading history</button>
             </div>
