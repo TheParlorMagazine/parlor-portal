@@ -348,7 +348,7 @@ export default function MissionRoom() {
         }, null, '+=0.4')
 
         function moveTo(next) {
-          if (busy || next === scene) return
+          if (busy || next === scene || scene === 5) return
           const sceneBefore = scene
           busy = true
           scene = next
@@ -596,32 +596,6 @@ export default function MissionRoom() {
               }, '<')
           }
 
-          if (next === 4 && sceneBefore === 5) {
-            const fifthStory = viewport.querySelector('.parlor-story-five')
-            const joinOverlay = viewport.querySelector('.parlor-join-overlay')
-            const joinCard = viewport.querySelector('.parlor-join-card')
-
-            gsap.timeline({ onComplete: ready })
-              .to(joinCard, {
-                y: 65,
-                duration: 0.55,
-                ease: 'power2.in',
-              })
-              .to(joinOverlay, {
-                opacity: 0,
-                duration: 0.45,
-              }, '<')
-              .set(joinOverlay, {
-                visibility: 'hidden',
-                pointerEvents: 'none',
-              })
-              .to(fifthStory, {
-                autoAlpha: 1,
-                duration: 0.7,
-                ease: 'power2.out',
-              })
-          }
-
           if (next === 3) {
             // Hide the final scene before returning to Our Perspective.
             const fifthStory = viewport.querySelector('.parlor-story-five')
@@ -674,9 +648,12 @@ export default function MissionRoom() {
         function navigate(direction) {
           if (!roomIsActive()) return false
 
-          // Let normal page scrolling resume at either end.
-          if ((scene === 0 && direction < 0 && !busy) ||
-              (scene === 5 && direction > 0 && !busy)) {
+          // The invitation is the final stop for this visit. Re-entering the
+          // page from Home creates a fresh story; scrolling cannot rewind it.
+          if (scene === 5) return true
+
+          // Let normal page scrolling resume before the opening scene.
+          if (scene === 0 && direction < 0 && !busy) {
             return false
           }
 
@@ -720,6 +697,11 @@ export default function MissionRoom() {
         }
 
         function onKey(event) {
+          if (event.target.closest?.('input, textarea, select, [contenteditable="true"]')) return
+          if (scene === 5 && roomIsActive() && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) {
+            event.preventDefault()
+            return
+          }
           if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
             if (navigateHorizontal(event.key === 'ArrowRight' ? 1 : -1)) {
               event.preventDefault()
