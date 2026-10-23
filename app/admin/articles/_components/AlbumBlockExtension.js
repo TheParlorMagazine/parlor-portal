@@ -5,6 +5,7 @@ import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../../../lib/supabase'
 import { uploadToCloudinary } from '../../../../lib/uploadImage'
+import MediaLibraryModal from './MediaLibraryModal'
 import ImageEditor from '../../_components/ImageEditor'
 import { confirmDialog } from '../../../../lib/confirmDialog'
 
@@ -174,6 +175,7 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
   const [editingFile, setEditingFile] = useState(null) // { file, newName }
   const [editingImage, setEditingImage] = useState(null) // file
   const dragIndex = useRef(null)
+  const [replacementIndex, setReplacementIndex] = useState(null)
 
   useEffect(() => { loadFiles() }, [folder])
 
@@ -228,8 +230,8 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
     })
   }
 
-  function updateImage(src, field, value) {
-    setSelected(prev => prev.map(img => img.src === src ? { ...img, [field]: value } : img))
+  function updateImage(index, field, value) {
+    setSelected(prev => prev.map((img, i) => i === index ? { ...img, [field]: value } : img))
   }
 
   function handleInsert() {
@@ -335,7 +337,7 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
               <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {selected.map((img, i) => (
                   <div
-                    key={img.src}
+                    key={i}
                     draggable="true"
                     onDragStart={e => { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move'; dragIndex.current = i }}
                     onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
@@ -359,10 +361,11 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
                     </div>
                     <img src={img.src} alt="" draggable="false" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
-                      <input type="text" value={img.alt} onChange={e => updateImage(img.src, 'alt', e.target.value)} onKeyDown={e => e.stopPropagation()} placeholder="Alt text…" style={selInputStyle} />
-                      <input type="text" value={img.caption} onChange={e => updateImage(img.src, 'caption', e.target.value)} onKeyDown={e => e.stopPropagation()} placeholder="Caption (optional)…" style={selInputStyle} />
+                      <button type="button" aria-label={`Change image ${i + 1}`} onClick={() => setReplacementIndex(i)} style={{ background: '#f2b8c6', color: '#111', border: 'none', borderRadius: 4, padding: '5px 8px', fontSize: 11, cursor: 'pointer' }}>Change image</button>
+                      <input type="text" value={img.alt} onChange={e => updateImage(i, 'alt', e.target.value)} onKeyDown={e => e.stopPropagation()} placeholder="Alt text…" style={selInputStyle} />
+                      <input type="text" value={img.caption} onChange={e => updateImage(i, 'caption', e.target.value)} onKeyDown={e => e.stopPropagation()} placeholder="Caption (optional)…" style={selInputStyle} />
                     </div>
-                    <button type="button" onClick={() => setSelected(prev => prev.filter(s => s.src !== img.src))} style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer', fontSize: '14px', padding: '2px 0', flexShrink: 0, lineHeight: 1 }}>×</button>
+                    <button type="button" onClick={() => setSelected(prev => prev.filter((_, index) => index !== i))} style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer', fontSize: '14px', padding: '2px 0', flexShrink: 0, lineHeight: 1 }}>×</button>
                   </div>
                 ))}
               </div>
@@ -385,6 +388,18 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
           </button>
         </div>
       </div>
+
+      {replacementIndex !== null && <div onClick={e => e.stopPropagation()}>
+        <MediaLibraryModal
+          title={`Replace image ${replacementIndex + 1} — captions and layout are kept`}
+          defaultFolder={folder}
+          onSelect={url => {
+            setSelected(prev => prev.map((image, index) => index === replacementIndex ? { ...image, src: url } : image))
+            setReplacementIndex(null)
+          }}
+          onClose={() => setReplacementIndex(null)}
+        />
+      </div>}
 
       {/* Context menu */}
       {contextMenu && (

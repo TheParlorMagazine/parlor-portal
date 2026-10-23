@@ -496,6 +496,7 @@ const CustomImage = Image.extend({
 export default function RichTextEditor({ content, onChange, placeholder, slim = false }) {
   const [openMenu, setOpenMenu] = useState(null)
   const [showMediaLibrary, setShowMediaLibrary] = useState(false)
+  const [imageReplacement, setImageReplacement] = useState(null)
   const [showAlbumModal, setShowAlbumModal] = useState(false)
   const slimFileRef = useRef(null)
 
@@ -847,10 +848,12 @@ export default function RichTextEditor({ content, onChange, placeholder, slim = 
         <MediaLibraryModal
           defaultFolder="body"
           onSelect={url => {
-            editor.chain().focus().setImage({ src: url }).run()
+            if (imageReplacement) imageReplacement.updateAttributes({ src: url })
+            else editor.chain().focus().setImage({ src: url }).run()
+            setImageReplacement(null)
             setShowMediaLibrary(false)
           }}
-          onClose={() => setShowMediaLibrary(false)}
+          onClose={() => { setShowMediaLibrary(false); setImageReplacement(null) }}
         />
       )}
 
@@ -879,6 +882,7 @@ export default function RichTextEditor({ content, onChange, placeholder, slim = 
                 setImgCtxMenu(null)
               }},
               { label: 'Replace Image', color: '#e0e0e0', action: () => {
+                setImageReplacement({ updateAttributes: imgCtxMenu.updateAttributes })
                 setShowMediaLibrary(true)
                 setImgCtxMenu(null)
               }},

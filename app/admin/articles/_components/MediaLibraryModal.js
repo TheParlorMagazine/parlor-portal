@@ -15,13 +15,14 @@ const menuBtnStyle = {
   fontFamily: "'Source Serif 4', Georgia, serif",
 }
 
-export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = 'body' }) {
+export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = 'body', title = 'Media Library' }) {
   const supabase = createClient()
   const dedupeRef = useRef(null)
   const [folder, setFolder]       = useState(defaultFolder)
   const [files, setFiles]         = useState([])
   const [loading, setLoading]     = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const [dragOver, setDragOver]   = useState(false)
   const fileInputRef = useRef(null)
 
@@ -49,11 +50,12 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
   async function handleUpload(e) {
     const file = e.target.files?.[0]; if (!file) return
     if (isDuplicateUpload(dedupeRef, file)) { e.target.value = ''; return }
-    setUploading(true)
+    setUploading(true); setUploadError('')
     try {
       const url = await uploadToCloudinary(file, 'parlor/articles')
+      if (!url) throw new Error('Upload failed. Please try again.')
       setFiles(prev => [{ name: file.name, _cloudinaryUrl: url }, ...prev])
-    } finally { setUploading(false); e.target.value = '' }
+    } catch (error) { setUploadError(error.message || 'Upload failed. Please try again.') } finally { setUploading(false); e.target.value = '' }
   }
 
   async function handleDrop(e) {
@@ -61,11 +63,12 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
     const file = Array.from(e.dataTransfer.files || []).find(f => f.type.startsWith('image/'))
     if (!file) return
     if (isDuplicateUpload(dedupeRef, file)) return
-    setUploading(true)
+    setUploading(true); setUploadError('')
     try {
       const url = await uploadToCloudinary(file, 'parlor/articles')
+      if (!url) throw new Error('Upload failed. Please try again.')
       setFiles(prev => [{ name: file.name, _cloudinaryUrl: url }, ...prev])
-    } finally { setUploading(false) }
+    } catch (error) { setUploadError(error.message || 'Upload failed. Please try again.') } finally { setUploading(false) }
   }
 
   async function deleteFile(file) {
@@ -90,7 +93,7 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
 
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-            <span style={{ fontSize: '14px', fontWeight: '600', color: '#e0e0e0', fontFamily: "'Playfair Display', Georgia, serif" }}>Media Library</span>
+            <span style={{ fontSize: '14px', fontWeight: '600', color: '#e0e0e0', fontFamily: "'Playfair Display', Georgia, serif" }}>{title}</span>
             <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '20px', lineHeight: 1, padding: '0 4px' }}>×</button>
           </div>
 
@@ -123,6 +126,7 @@ export default function MediaLibraryModal({ onSelect, onClose, defaultFolder = '
                 <span style={{ color: '#f2b8c6', fontSize: '13px' }}>Drop to upload</span>
               </div>
             )}
+            {uploadError && <p role="alert" style={{ color: '#f87171', fontSize: 12 }}>{uploadError}</p>}
             {loading ? (
               <div style={{ textAlign: 'center', padding: '48px 0', color: '#444', fontSize: '13px' }}>Loading…</div>
             ) : files.length === 0 ? (
