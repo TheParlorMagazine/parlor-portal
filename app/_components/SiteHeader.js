@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useCart, uniqueLineCount } from '../../lib/useCart'
+import { useUnreadNotifications } from '../../lib/useUnreadNotifications'
 import { openCart, openWishlist } from '../../lib/cartUI'
 
 const NAV_LINKS = ["Work & Wealth", "Society & Culture", "World & Politics", "Perspectives & Identity"]
@@ -16,6 +17,7 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
   const { cart } = useCart()
   const [memberOpen, setMemberOpen] = useState(false)
   const [member, setMember] = useState(null)
+  const unreadNotifications = useUnreadNotifications(member?.id, memberOpen)
   const [hidden, setHidden] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [issuesList, setIssuesList] = useState([])
@@ -203,6 +205,9 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
           cursor: pointer; background: none; border: none; padding: 0;
           user-select: none;
         }
+        .header-avatar-frame { position:relative; display:inline-flex; flex-shrink:0; }
+        .header-notification-badge { position:absolute; top:-6px; right:-7px; min-width:18px; height:18px; padding:0 4px; display:flex; align-items:center; justify-content:center; box-sizing:border-box; border:2px solid #fff; border-radius:12px; background:#9b3657; color:#fff; font:700 10px/1 Arial,sans-serif; pointer-events:none; }
+        .header-notification-count { margin-left:auto; border-radius:12px; background:#9b3657; color:#fff; padding:2px 7px; font:700 11px/1.3 Arial,sans-serif; }
         .member-avatar-sm {
           width: 36px; height: 36px; border-radius: 50%;
           background: #1a1a1a;
@@ -397,13 +402,15 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
 
           <div className="header-side right">
             <div className="member-wrap" ref={memberRef}>
-              <button className="member-trigger" onClick={() => setMemberOpen(o => !o)}>
-                <div className="member-avatar-sm">
+              <button type="button" className="member-trigger" aria-label={unreadNotifications > 0 ? `Member menu, ${unreadNotifications} unread notifications` : 'Member menu'} aria-expanded={memberOpen} onClick={() => setMemberOpen(o => !o)}>
+                <span className="header-avatar-frame"><span className="member-avatar-sm">
                   {member?.avatar_url
                     ? <img src={member.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
                     : <svg viewBox="0 0 36 36" fill="none"><circle cx="18" cy="13" r="6" fill="rgba(255,255,255,0.85)"/><path d="M4 32c0-8 6-13 14-13s14 5 14 13" fill="rgba(255,255,255,0.85)"/></svg>
                   }
-                </div>
+                </span>
+                  {unreadNotifications > 0 && <span className="header-notification-badge" aria-hidden="true">{unreadNotifications > 99 ? '99+' : unreadNotifications}</span>}
+                </span>
                 <div className={`member-chevron${memberOpen ? ' open' : ''}`}></div>
               </button>
               <div className={`member-dropdown${memberOpen ? ' open' : ''}`}>
@@ -412,6 +419,11 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
                     <a href="/portal" className="member-dropdown-item">
                       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="5" height="5" rx="0.5"/><rect x="9" y="2" width="5" height="5" rx="0.5"/><rect x="2" y="9" width="5" height="5" rx="0.5"/><rect x="9" y="9" width="5" height="5" rx="0.5"/></svg>
                       Member Portal
+                    </a>
+                    <a href="/portal/notifications" className="member-dropdown-item" aria-label={unreadNotifications > 0 ? `Notifications, ${unreadNotifications} unread` : 'Notifications'}>
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M3 11h10l-1.5-2V6a3.5 3.5 0 00-7 0v3L3 11zM6 13a2 2 0 004 0" /></svg>
+                      Notifications
+                      {unreadNotifications > 0 && <span className="header-notification-count" aria-hidden="true">{unreadNotifications > 99 ? '99+' : unreadNotifications}</span>}
                     </a>
                     <a href="/portal/subscriptions" className="member-dropdown-item">
                       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4h12M2 8h8M2 12h10"/></svg>
