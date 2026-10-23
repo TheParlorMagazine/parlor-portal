@@ -1717,6 +1717,7 @@ export default function MissionRoom() {
         }
 
         .parlor-room-canvas {
+          filter: saturate(0.86);
           position: relative;
           width: max(100vw, 150svh);
           flex: 0 0 auto;

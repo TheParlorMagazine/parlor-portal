@@ -916,3 +916,8 @@
     margin-bottom: 14px;
   }
 }
+
+/* Gently mute the full illustration, including its foreground layers. */
+@media (max-width: 767px) {
+  .mobile-mission-artwork { filter: saturate(.86); }
+}
