@@ -9,7 +9,7 @@ async function gate(request) {
   if (!user) return { error: Response.json({ error: 'Sign in' }, { status: 401 }) }
   const db = serviceClient()
   const me = await memberOf(db, user.id)
-  if (!REVIEW_ROLES.includes(me.role)) return { error: Response.json({ error: 'Forbidden' }, { status: 403 }) }
+  if (!REVIEW_ROLES.includes(me?.role)) return { error: Response.json({ error: 'Forbidden' }, { status: 403 }) }
   return { db, user }
 }
 
@@ -105,4 +105,16 @@ export async function PATCH(request) {
   }).eq('id', b.id)
   await notifyMember(db, { memberId: sub.member_id, type: 'system', message: `Your piece “${sub.title}” was accepted for The Parlor 🎉`, linkTo: 'write', linkRef: sub.id })
   return Response.json({ ok: true, status: 'approved', article_id: article.id, article_slug: article.slug })
+}
+
+// Permanently delete the submission; linked editorial articles are managed separately.
+export async function DELETE(request) {
+  const g = await gate(request); if (g.error) return g.error
+  let body = {}
+  try { body = await request.json() } catch {}
+  if (!body.id) return Response.json({ error: 'id required' }, { status: 400 })
+  const { data, error } = await g.db.from('member_submissions').delete().eq('id', body.id).select('id')
+  if (error) return Response.json({ error: 'Could not delete this post. Please try again.' }, { status: 500 })
+  if (!data || data.length !== 1) return Response.json({ error: 'This post no longer exists. Refresh the list.' }, { status: 409 })
+  return Response.json({ ok: true, deleted_id: data[0].id })
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { confirmDialog, alertDialog } from '../../../lib/confirmDialog'
 
 const ff = "'Source Serif 4', Georgia, serif"
@@ -87,11 +87,28 @@ export default function CommunityPostsSection({ supabase }) {
   const [subs, setSubs] = useState([])
   const [loading, setLoading] = useState(true)
   const [reviewing, setReviewing] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
+  const [deleteError, setDeleteError] = useState('')
+  const deletePending = useRef(false)
 
   async function load() {
     try { const res = await fetch('/api/admin/submissions', { headers: { Authorization: `Bearer ${await token()}` } }); const d = await res.json(); setSubs(d.submissions || []) } catch {} finally { setLoading(false) }
   }
   useEffect(() => { load() }, [])
+
+  async function deletePost(post) {
+    if (deletePending.current) return
+    deletePending.current = true
+    try {
+      if (!(await confirmDialog(`Permanently delete “${post.title}”? This removes the submission from the admin list and the member’s posts. Any linked editorial article is kept and must be managed separately in Articles.`))) return
+      setDeletingId(post.id); setDeleteError('')
+      const response = await fetch('/api/admin/submissions', { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ id: post.id }) })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok || result.deleted_id !== post.id) throw new Error(result.error || 'Deletion could not be confirmed. Please try again.')
+      setSubs(current => current.filter(item => item.id !== post.id))
+    } catch (error) { setDeleteError(error.message || 'Could not delete this post. Please try again.') }
+    finally { deletePending.current = false; setDeletingId(null) }
+  }
 
   const pending = subs.filter(s => s.status === 'submitted')
 
@@ -100,7 +117,8 @@ export default function CommunityPostsSection({ supabase }) {
       <h1 style={{ fontFamily: ffH, fontSize: 30, fontWeight: 700, margin: 0 }}>Community Posts</h1>
       <p style={{ fontSize: 14, color: '#888', margin: '4px 0 20px', lineHeight: 1.55, maxWidth: 720 }}>Member-submitted posts. Submitted posts are live in the member community space only. Approve to convert a post into an article draft for editing, fact-checking and publication in its vertical; send back with notes to request changes. {pending.length > 0 && <strong style={{ color: DP }}>{pending.length} awaiting review</strong>}</p>
 
-      <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
+      {deleteError && <p role="alert" style={{ color: '#a52f3d' }}>{deleteError}</p>}
+      <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, background: '#fff', overflowX: 'auto' }}>
         {loading ? <div style={{ padding: 40, textAlign: 'center', color: '#999', fontStyle: 'italic' }}>Loading…</div>
           : subs.length === 0 ? <div style={{ padding: 50, textAlign: 'center', color: '#999', fontStyle: 'italic' }}>No submissions yet.</div>
           : (
@@ -119,7 +137,7 @@ export default function CommunityPostsSection({ supabase }) {
                     <td style={{ padding: '14px 18px', color: '#555' }}>{s.author_name}</td>
                     <td style={{ padding: '14px 18px', color: '#666' }}>{new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</td>
                     <td style={{ padding: '14px 18px' }}><Badge status={s.status} /></td>
-                    <td style={{ padding: '14px 18px', textAlign: 'right' }}><button onClick={() => setReviewing(s)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, padding: '6px 14px', fontSize: 12.5, cursor: 'pointer', fontFamily: ff }}>{s.status === 'submitted' ? 'Review' : 'View'}</button></td>
+                    <td style={{ padding: '14px 18px', textAlign: 'right' }}><button onClick={() => setReviewing(s)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, padding: '6px 14px', fontSize: 12.5, cursor: 'pointer', fontFamily: ff }}>{s.status === 'submitted' ? 'Review' : 'View'}</button><button type="button" disabled={!!deletingId} onClick={() => deletePost(s)} style={{ marginLeft: 8, background: 'none', border: '1px solid #a52f3d', color: '#a52f3d', borderRadius: 6, padding: '6px 14px', fontSize: 12.5, cursor: 'pointer', fontFamily: ff }}>{deletingId === s.id ? 'Deleting…' : 'Delete'}</button></td>
                   </tr>
                 ))}
               </tbody>
