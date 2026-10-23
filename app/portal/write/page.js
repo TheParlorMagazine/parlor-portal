@@ -8,6 +8,8 @@ import RichTextEditor from '../../admin/articles/_components/RichTextEditor'
 import { VERTICALS, MEMBER_POST_CONSENT, HOW_MEMBER_POSTS_WORK_HREF, PITCH_HREF } from '../../../lib/memberPosts'
 import { confirmDialog } from '../../../lib/confirmDialog'
 
+const DELETABLE_STATUSES = ['draft', 'rejected', 'changes_requested', 'released', 'community_only', 'removed']
+
 const SERIF = "'thermal-variable', Georgia, serif"
 
 const STATUS = {
@@ -96,7 +98,7 @@ function Editor({ id, onClose, auth, supabase }) {
   }, [id, auth])
 
   const locked = !['draft', 'rejected', 'changes_requested'].includes(status)
-  const canDelete = ['draft', 'rejected', 'changes_requested', 'released', 'community_only', 'removed'].includes(status)
+  const canDelete = DELETABLE_STATUSES.includes(status)
 
   // Persist current form; returns the saved row (or null on error).
   const persist = useCallback((submit, consent) => {
@@ -191,10 +193,10 @@ function Editor({ id, onClose, auth, supabase }) {
 
       <div style={{ marginBottom: 14 }}><Badge status={status} /></div>
 
-      {(status === 'rejected' || status === 'changes_requested') && editorNote && (
+      {(status === 'removed' || ((status === 'rejected' || status === 'changes_requested') && editorNote)) && (
         <div style={{ border: '1px solid #f0c4c4', background: '#fbeaee', borderRadius: 10, padding: '14px 16px', marginBottom: 18 }}>
-          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#c04040', marginBottom: 5, fontWeight: 600 }}>Editor feedback</div>
-          <div style={{ fontSize: 14, color: '#333', lineHeight: 1.55 }}>{editorNote}</div>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#c04040', marginBottom: 5, fontWeight: 600 }}>{status === 'removed' ? 'Why this post was removed' : 'Editor feedback'}</div>
+          <div style={{ fontSize: 14, color: '#333', lineHeight: 1.55 }}>{editorNote?.trim() || 'This post was removed because it did not meet our community or publishing standards.'}</div>
         </div>
       )}
       {locked && <div style={{ border: '1px solid var(--border)', background: 'var(--cream)', borderRadius: 10, padding: '12px 16px', marginBottom: 18, fontSize: 13.5, color: 'var(--muted)' }}>{status === 'published' ? 'This piece is published — it can’t be edited here.' : status === 'approved' ? 'An editor is preparing this for a vertical. You’ll be asked to approve the final version.' : status === 'submitted' ? 'This piece is with the editors. You’ll get a notification when it’s reviewed.' : ['released', 'community_only'].includes(status) ? 'This piece is in the community space. You can delete your post below.' : status === 'removed' ? 'This piece has been removed from the community space. You can delete your copy below.' : 'This piece is no longer an editable draft.'}</div>}
@@ -261,6 +263,9 @@ function Write() {
   const supabase = useMemo(() => createClient(), [])
   const [subs, setSubs] = useState([])
   const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState(null)
+  const deletePendingRef = useRef(false)
+  const [deleteError, setDeleteError] = useState('')
   const [view, setView] = useState({ mode: 'list', id: null })
 
   const auth = useCallback(async () => {
@@ -272,6 +277,20 @@ function Write() {
     try { const res = await fetch('/api/portal/submissions', { headers: await auth() }); const d = await res.json(); setSubs(d.submissions || []) } catch {} finally { setLoading(false) }
   }, [auth])
   useEffect(() => { if (view.mode === 'list') load() }, [view.mode, load])
+
+  async function deleteFromList(post) {
+    if (deletePendingRef.current) return
+    deletePendingRef.current = true
+    try {
+      if (!(await confirmDialog(`Permanently delete “${post.title || 'Untitled'}”?`))) return
+      setDeletingId(post.id); setDeleteError('')
+      const response = await fetch('/api/portal/submissions', { method: 'DELETE', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ id: post.id }) })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok || result.deleted_id !== post.id) throw new Error(result.error || 'Deletion could not be confirmed. Please try again.')
+      setSubs(current => current.filter(item => item.id !== post.id))
+    } catch (error) { setDeleteError(error.message || 'Could not delete this post. Please try again.') }
+    finally { deletePendingRef.current = false; setDeletingId(null) }
+  }
 
   return (
     <div style={{ maxWidth: 760 }}>
@@ -290,6 +309,8 @@ function Write() {
         </div>
       )}
 
+      {view.mode === 'list' && deleteError && <p role="alert" style={{ color: '#c04040' }}>{deleteError}</p>}
+
       {view.mode === 'edit' ? (
         <Editor id={view.id} auth={auth} supabase={supabase} onClose={() => setView({ mode: 'list', id: null })} />
       ) : loading ? (
@@ -304,15 +325,16 @@ function Write() {
           {subs.map(s => {
             const where = whereText(s)
             return (
-              <div key={s.id} style={{ border: '1px solid var(--border)', borderRadius: 12, background: '#fff', padding: '15px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <div key={s.id} style={{ border: '1px solid var(--border)', borderRadius: 12, background: '#fff', padding: '15px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontFamily: SERIF, fontSize: 16, fontWeight: 500, color: 'var(--ink)' }}>{s.title || 'Untitled'}</div>
                   <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>
                     {[s.vertical, where].filter(Boolean).join(' · ')}{(s.vertical || where) ? ' · ' : ''}Updated {new Date(s.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   <Badge status={s.status} />
+                  {DELETABLE_STATUSES.includes(s.status) && <button type="button" onClick={() => deleteFromList(s)} disabled={!!deletingId} style={{ background: 'none', border: '1px solid #c04040', color: '#a52f3d', borderRadius: 7, padding: '6px 14px', fontFamily: SERIF, fontSize: 13, cursor: 'pointer' }}>{deletingId === s.id ? 'Deleting…' : 'Delete'}</button>}
                   <button onClick={() => setView({ mode: 'edit', id: s.id })} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 7, padding: '6px 14px', fontFamily: SERIF, fontSize: 13, cursor: 'pointer' }}>{['draft', 'rejected', 'changes_requested'].includes(s.status) ? 'Edit' : 'View'}</button>
                 </div>
               </div>
