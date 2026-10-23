@@ -246,7 +246,7 @@ function Hub() {
         .hub-fsb-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
         .hub-fsb-meta { font-size:11px; color:var(--muted); }
         .hub-fsb-new { font-size:10.5px; font-weight:600; color:#fff; background:var(--pink); border-radius:20px; padding:1px 7px; }
-        .hub-fsb-join { font-size:11px; font-weight:600; color:var(--pink); border:1px solid var(--pinkborder); border-radius:20px; padding:2px 9px; white-space:nowrap; }
+        .hub-fsb-join { font-size:11px; font-weight:600; color:#9b3657; border:1px solid #b85a78; background:#fff5f8; border-radius:20px; padding:2px 9px; white-space:nowrap; }
         .hub-fsb-joined { font-size:11px; color:var(--muted); }
         .hub-fsb-propose { display:block; width:100%; padding:10px 0; text-align:center; border:1px solid var(--border); border-radius:10px; font-size:13px; font-weight:600; color:var(--ink); text-decoration:none; background:#fff; cursor:pointer; font-family:inherit; transition:border-color 0.15s, background 0.15s; }
         .hub-fsb-propose:hover { border-color:var(--pinkborder); background:rgba(242,184,198,0.06); }
