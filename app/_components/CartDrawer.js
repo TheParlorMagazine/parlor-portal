@@ -5,6 +5,7 @@ import { createClient } from '../../lib/supabase'
 import { useCart, lineKey, uniqueLineCount } from '../../lib/useCart'
 import { useWishlist } from '../../lib/useWishlist'
 import { useCurrency, fmtPrice } from '../../lib/useCurrency'
+import { takeCartRequest } from '../../lib/cartUI'
 import { alertDialog } from '../../lib/confirmDialog'
 
 const DISPLAY = "'Playfair Display', Georgia, serif"
@@ -61,8 +62,10 @@ export default function CartDrawer() {
 
   // Open via event from any cart icon.
   useEffect(() => {
-    const onOpen = e => { ensureProducts(); setTab(e.detail?.tab === 'wishlist' ? 'wishlist' : 'cart'); setOpen(true) }
+    const onOpen = e => { const request = takeCartRequest() || e.detail; ensureProducts(); setTab(request?.tab === 'wishlist' ? 'wishlist' : 'cart'); setOpen(true) }
     window.addEventListener('parlor-cart-open', onOpen)
+    const pending = takeCartRequest()
+    if (pending) onOpen({ detail: pending })
     return () => window.removeEventListener('parlor-cart-open', onOpen)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -191,11 +194,18 @@ export default function CartDrawer() {
     }
   }, [resume, user, cartGroups, checkingOut]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (!open) return
+    const onKey = event => { if (event.key === 'Escape') setOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+
   if (!open) return null
 
   return (
     <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 10050, display: 'flex', justifyContent: 'flex-end' }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: 'min(420px, 92vw)', height: '100%', background: '#fff', display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.2)' }}>
+      <div role="dialog" aria-label="Cart and wishlist" onClick={e => e.stopPropagation()} style={{ width: 'min(420px, 92vw)', height: '100%', background: '#fff', display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.2)' }}>
         <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #eee', padding: '0 22px' }}>
           <button onClick={() => setTab('cart')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: DISPLAY, fontWeight: 700, fontSize: 18, color: tab === 'cart' ? '#1a1a1a' : '#aaa', padding: '20px 0', borderBottom: tab === 'cart' ? '2px solid #1a1a1a' : '2px solid transparent', marginBottom: -1 }}>
             Cart{cartGroups.length ? ` (${cartGroups.length})` : ''}
@@ -203,7 +213,7 @@ export default function CartDrawer() {
           <button onClick={() => setTab('wishlist')} title="Wishlist" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 19, color: tab === 'wishlist' ? '#c4364a' : '#bbb', padding: '20px 0', marginLeft: 22, borderBottom: tab === 'wishlist' ? '2px solid #c4364a' : '2px solid transparent', marginBottom: -1 }}>
             {tab === 'wishlist' ? '♥' : '♡'}{wish.count ? ` ${wish.count}` : ''}
           </button>
-          <button onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', fontSize: 24, color: '#999', cursor: 'pointer', lineHeight: 1 }}>×</button>
+          <button type="button" aria-label="Close cart and wishlist" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', fontSize: 24, color: '#999', cursor: 'pointer', lineHeight: 1 }}>×</button>
         </div>
 
         {tab === 'wishlist' ? (

@@ -316,7 +316,7 @@ export default function ShopPage() {
         <div className="shop-topgrid" style={{ display: 'grid', gridTemplateColumns: '1.05fr 1fr', gap: 40, padding: '14px 48px 46px' }}>
           <h1 className="shop-welcome">Welcome<br />to The Parlor<br />Shop</h1>
           <div style={{ position: 'relative', paddingTop: 6 }}>
-            <div style={{ position: 'absolute', top: -8, right: 0, cursor: 'pointer' }} onClick={openCart}><BagIcon count={uniqueLineCount(cart)} /></div>
+            <button type="button" aria-label="Open cart" style={{ position: 'absolute', top: -8, right: 0, cursor: 'pointer', background: 'none', border: 'none', padding: 0, color: 'inherit' }} onClick={openCart}><BagIcon count={uniqueLineCount(cart)} /></button>
             <div style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: 21, color: '#fff', marginBottom: 14, maxWidth: 460 }}>
               Sip a tea. Light a Candle. Fund a revolution.
             </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useCart, uniqueLineCount } from '../../lib/useCart'
-import { openCart } from '../../lib/cartUI'
+import { openCart, openWishlist } from '../../lib/cartUI'
 
 const NAV_LINKS = ["Work & Wealth", "Society & Culture", "World & Politics", "Perspectives & Identity"]
 const ABOUT_LINKS = [
@@ -241,6 +241,7 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
           border-bottom: 0.5px solid rgba(0,0,0,0.06);
           text-decoration: none;
         }
+        button.member-dropdown-item { width:100%; text-align:left; background:none; border-top:none; border-left:none; border-right:none; }
         .member-dropdown-item:last-child { border-bottom: none; }
         .member-dropdown-item:hover { background: #f7f6f4; color: var(--sh-black); }
         .member-dropdown-item svg { width: 14px; height: 14px; opacity: 0.45; flex-shrink: 0; }
@@ -412,19 +413,19 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
                       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="5" height="5" rx="0.5"/><rect x="9" y="2" width="5" height="5" rx="0.5"/><rect x="2" y="9" width="5" height="5" rx="0.5"/><rect x="9" y="9" width="5" height="5" rx="0.5"/></svg>
                       Member Portal
                     </a>
-                    <a href="/account/subscriptions" className="member-dropdown-item">
+                    <a href="/portal/subscriptions" className="member-dropdown-item">
                       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4h12M2 8h8M2 12h10"/></svg>
                       My subscriptions
                     </a>
-                    <a href="/account/wishlist" className="member-dropdown-item">
+                    <button type="button" onClick={() => { setMemberOpen(false); openWishlist() }} className="member-dropdown-item">
                       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 13.5S2 9.5 2 5.5A3.5 3.5 0 018 3a3.5 3.5 0 016 2c0 4-6 8.5-6 8.5z"/></svg>
                       Wishlist
-                    </a>
-                    <a href="/account/orders" className="member-dropdown-item">
+                    </button>
+                    <a href="/portal/orders" className="member-dropdown-item">
                       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 2h2l2 7h6l2-5H5"/><circle cx="7" cy="13" r="1"/><circle cx="12" cy="13" r="1"/></svg>
                       My orders
                     </a>
-                    <a href="/account/settings" className="member-dropdown-item">
+                    <a href="/portal/settings" className="member-dropdown-item">
                       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/></svg>
                       Account settings
                     </a>
@@ -448,14 +449,14 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
               </div>
             </div>
 
-            <a href="/shop?cart=1" className="cart-btn" onClick={e => { e.preventDefault(); openCart() }}>
+            <button type="button" aria-label="Open cart" className="cart-btn" onClick={() => { setMemberOpen(false); openCart() }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <path d="M16 10a4 4 0 01-8 0"/>
               </svg>
               {uniqueLineCount(cart) > 0 && <span className="cart-count">{uniqueLineCount(cart)}</span>}
-            </a>
+            </button>
           </div>
         </div>
 
