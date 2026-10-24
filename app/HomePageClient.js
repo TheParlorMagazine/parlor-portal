@@ -1300,11 +1300,18 @@ export default function HomePageClient({ initial = {} }) {
           .issue-hero-slide--wide .issue-hero-head {
             top: auto;
             bottom: 32px;
-            left: 14px;
+            left: auto;
             right: 14px;
-            width: auto;
+            width: min(78%, 340px);
             transform: none;
             text-align: right;
+          }
+
+          .issue-hero-head::before,
+          .issue-hero-slide--access .issue-hero-head::before {
+            inset: -16px -10px;
+            border-radius: 0;
+            background: radial-gradient(ellipse at 58% 50%, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.52) 48%, rgba(0,0,0,0.12) 76%, transparent 100%);
           }
 
           .issue-hero-title,
