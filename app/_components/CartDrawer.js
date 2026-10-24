@@ -73,7 +73,6 @@ export default function CartDrawer() {
   useEffect(() => {
     try {
       const q = new URLSearchParams(window.location.search)
-      if (q.get('ordered') === '1') { clear(); window.history.replaceState({}, '', window.location.pathname) }
       if (q.get('cart') === '1') { ensureProducts(); setOpen(true) }
       if (q.get('wishlist') === '1') { ensureProducts(); setTab('wishlist'); setOpen(true) }
       if (q.get('checkout') === '1') { ensureProducts(); setOpen(true); setResume(true) }
@@ -155,7 +154,7 @@ export default function CartDrawer() {
     let alive = true; setShipLoading(true)
     fetch('/api/shop/shipping', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null, bundle_picks: g.meta?.bundle_picks ?? null, single_pick: g.meta?.single_pick ?? null })), country: effCountry, state: addr.state || '' }),
+      body: JSON.stringify({ items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null, bundle_picks: g.meta?.bundle_picks ?? null, single_pick: g.meta?.single_pick ?? null })), country: effCountry, state: addr.state || '', address: addr }),
     }).then(r => r.json()).then(d => { if (alive) { setShipping(d); setShipLoading(false) } }).catch(() => { if (alive) setShipLoading(false) })
     return () => { alive = false }
   }, [open, cart, effCountry, addr.state]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -169,7 +168,7 @@ export default function CartDrawer() {
     const addrPayload = addr.line1.trim() ? addr : null
     try {
       const res = await fetch('/api/shop/checkout', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${(await createClient().auth.getSession()).data.session?.access_token || ''}` },
         body: JSON.stringify({
           items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null, bundle_picks: g.meta?.bundle_picks ?? null, bundle_price: g.meta?.bundle_price ?? null, single_pick: g.meta?.single_pick ?? null, single_pick_price: g.meta?.single_pick_price ?? null })),
           country: effCountry, userId: user.id, address: addrPayload,
@@ -178,7 +177,8 @@ export default function CartDrawer() {
         }),
       })
       const j = await res.json().catch(() => ({}))
-      if (j.url) { window.location.href = j.url; return }
+      if (res.status === 401) { window.location.href = '/login?returnTo=' + encodeURIComponent('/shop?checkout=1'); return }
+      if (res.ok && j.url) { window.location.href = j.url; return }
       alertDialog(j.error || 'Checkout is unavailable right now.')
     } catch { alertDialog('Checkout failed. Please try again.') }
     finally { setCheckingOut(false) }
@@ -385,7 +385,7 @@ export default function CartDrawer() {
             <button onClick={checkout} disabled={checkingOut || !!usOnlyError} style={{ width: '100%', background: BLACK, color: '#fff', border: 'none', borderRadius: 26, padding: '14px 0', fontFamily: BODY, fontSize: 15, letterSpacing: '0.03em', cursor: (checkingOut || usOnlyError) ? 'default' : 'pointer', opacity: (checkingOut || usOnlyError || !addr.line1.trim() || !addr.city.trim() || !addr.zip.trim() || !addr.country.trim()) ? 0.6 : 1 }}>
               {checkingOut ? 'Redirecting…' : user ? 'Checkout' : 'Sign in to check out'}
             </button>
-            {!user && <div style={{ fontFamily: BODY, fontSize: 11.5, color: '#999', textAlign: 'center', marginTop: 8 }}>Create an account or sign in to complete your order and track it.</div>}
+            {!user && <div style={{ fontFamily: BODY, fontSize: 11.5, color: '#999', textAlign: 'center', marginTop: 8 }}>Create a free account or sign in to order and track delivery. No paid membership is required.</div>}
           </div>
         )}
       </div>

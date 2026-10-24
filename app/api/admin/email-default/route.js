@@ -17,6 +17,7 @@ const SAMPLE = {
   event_rsvp: { name: 'Maya', title: 'Democracy Salon with DemCon', when: 'Friday, October 10, 2026 · 6:00 PM', where: 'Online', eventUrl: `${SITE}/portal/events/sample` },
   event_reminder: { name: 'Maya', title: 'Democracy Salon with DemCon', when: 'Friday, October 10, 2026 · 6:00 PM', eventUrl: `${SITE}/portal/events/sample` },
   forum_invite: { forumName: 'The Reading Room', inviterName: 'Lindsey', joinUrl: `${SITE}/portal/join/sample` },
+  order_confirmation: { name: 'Maya', order: { order_number: 'PARLOR-1042', subtotal_cents: 2500, shipping_cents: 500, total_cents: 3000, currency: 'usd' }, items: [{ product_name: 'The Parlor Tote', quantity: 1, unit_price_cents: 2500 }] },
   order_shipped: { name: 'Maya', order: { order_number: 'PARLOR-1042', carrier: 'USPS', tracking_number: '9400 1000 0000 0000', tracking_url: 'https://tools.usps.com' } },
   print_shipped: { name: 'Maya', issueTitle: 'Vol. 2 — Winter 2026', carrier: 'USPS', trackingNumber: '9400 1000 0000 0000', estimatedArrival: '2026-10-15', trackingUrl: 'https://tools.usps.com' },
 }
