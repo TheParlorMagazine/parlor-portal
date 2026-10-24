@@ -765,7 +765,7 @@ export default function MissionRoom() {
 
     // The mobile mission has its own layout and scrolling.
     // Do not initialize the desktop GSAP experience on mobile.
-    if (window.matchMedia('(max-width: 767px)').matches) {
+    if (window.matchMedia('(max-width: 1199px), (hover: none) and (pointer: coarse)').matches) {
       return
     }
 
@@ -1095,7 +1095,7 @@ export default function MissionRoom() {
           filter: drop-shadow(0 0 0px rgba(255, 175, 210, 0));
         }
 
-        @media (max-width: 767px) {
+        @media (max-width: 1199px), (hover: none) and (pointer: coarse) {
           .parlor-story-one {
             right: 7%;
             width: 86%;
@@ -1155,7 +1155,7 @@ export default function MissionRoom() {
           text-align: center;
           line-height: 1.55;
         }
-        @media (min-width: 768px) {
+        @media (min-width: 1200px) {
           .parlor-story-three p:first-of-type { font-size: 1em; }
           .parlor-story-three p:nth-of-type(2) { font-size: 1.1em; }
         }
@@ -1226,7 +1226,7 @@ export default function MissionRoom() {
           height: 36px;
           animation: parlor-arrow-pulse 1.8s ease-in-out infinite;
         }
-        @media (max-width: 767px) {
+        @media (max-width: 1199px), (hover: none) and (pointer: coarse) {
           .parlor-story-three {
             left: 7%;
             width: 86%;
@@ -1291,7 +1291,7 @@ export default function MissionRoom() {
           margin: 0 0 1.15rem;
         }
 
-        @media (min-width: 768px) {
+        @media (min-width: 1200px) {
           .parlor-story-four p { font-size: 1.12em; }
         }
 
@@ -1326,7 +1326,7 @@ export default function MissionRoom() {
           z-index: 30;
         }
 
-        @media (max-width: 767px) {
+        @media (max-width: 1199px), (hover: none) and (pointer: coarse) {
           .parlor-story-four {
             top: 7%;
             right: 6%;
@@ -1395,7 +1395,7 @@ export default function MissionRoom() {
           text-shadow: 0 0 22px rgba(255, 175, 210, .7);
         }
 
-        @media (max-width: 767px) {
+        @media (max-width: 1199px), (hover: none) and (pointer: coarse) {
           .parlor-story-five {
             padding: 0 5%;
           }
@@ -1673,7 +1673,7 @@ export default function MissionRoom() {
           text-shadow: 0 2px 12px rgba(20, 10, 18, 0.65);
         }
 
-        @media (max-width: 767px) {
+        @media (max-width: 1199px), (hover: none) and (pointer: coarse) {
           .parlor-mission-caption {
             right: 7%;
             left: 7%;
@@ -1749,7 +1749,7 @@ export default function MissionRoom() {
           pointer-events: none;
         }
 
-        @media (max-width: 767px) {
+        @media (max-width: 1199px), (hover: none) and (pointer: coarse) {
           .parlor-room-canvas {
             width: 170%;
             max-width: none;
@@ -1762,7 +1762,7 @@ export default function MissionRoom() {
           filter: saturate(0.76) sepia(0.06) blur(var(--mission-background-blur, 0px));
         }
 
-        @media (max-width: 767px) {
+        @media (max-width: 1199px), (hover: none) and (pointer: coarse) {
           .parlor-room-viewport {
             height: 100dvh;
             min-height: 100dvh;
@@ -1880,7 +1880,7 @@ export default function MissionRoom() {
           }
         }
 
-        @media (max-width: 767px) and (max-height: 700px) {
+        @media (max-width: 1199px) and (max-height: 700px), (hover: none) and (pointer: coarse) and (max-height: 700px) {
           .parlor-story-one {
             font-size: .78rem;
           }

@@ -123,7 +123,7 @@ export default function MissionPage() {
 
       <style>{`
         
-    @media (max-width: 767px) {
+    @media (max-width: 1199px), (hover: none) and (pointer: coarse) {
       .mission-desktop-only { display: none; }
       .mission-page { padding-bottom: 0 !important; }
     }

@@ -1,6 +1,6 @@
 .mobile-mission { display: none; }
 
-        @media (max-width: 767px) {
+        @media (max-width: 1199px), (hover: none) and (pointer: coarse) {
           .mobile-mission {
             display: block;
             background: #e9c9cf;
@@ -219,7 +219,7 @@
         }
 
 /* Keep mobile editorial content readable even if scroll animations do not initialize. */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-content {
     background: #fbf5ef;
   }
@@ -245,7 +245,7 @@
 }
 
 /* Keep mobile editorial content readable even if scroll animations do not initialize. */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-content {
     background: #fbf5ef;
   }
@@ -271,7 +271,7 @@
 }
 
 /* Mobile hero: preserve the original desktop illustration composition */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-hero {
     display: block;
     position: relative;
@@ -359,7 +359,7 @@
 }
 
 /* Mobile hero: portrait editorial crop */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-hero {
     height: min(78svh, 720px);
     min-height: 520px;
@@ -414,7 +414,7 @@
 }
 
 /* Refine mobile artwork framing */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-artwork {
     transform: translateX(-15%);
   }
@@ -452,7 +452,7 @@
 }
 
 /* Balance the mobile portrait crop around the woman and furniture */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-artwork {
     height: 90%;
     top: 5%;
@@ -462,7 +462,7 @@
 }
 
 /* Keep foreground illustration layers proportional to the original artwork */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-layer {
     height: auto !important;
     object-fit: contain;
@@ -471,7 +471,7 @@
 }
 
 /* Full-viewport mobile hero, focused on the newspaper reader */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-hero {
     width: 100%;
     height: 100svh;
@@ -528,7 +528,7 @@
 }
 
 /* Final mobile hero framing */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-hero {
     width: 100vw;
     margin-left: calc(50% - 50vw);
@@ -555,14 +555,14 @@
 }
 
 /* Shift the illustrated room right to reveal the newspaper reader */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-artwork {
     transform: translateX(-34%);
   }
 }
 
 /* Mobile hero finishing details */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   /* Remove inherited page gutters without changing the artwork's crop */
   .mission-page {
     margin: 0 !important;
@@ -628,7 +628,7 @@
 }
 
 /* Editorial spotlight: darker room, brighter newspaper reader */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   /* Darken and desaturate the room itself */
   .mobile-mission-image {
     filter: brightness(.68) saturate(.62) sepia(.08);
@@ -673,14 +673,14 @@
 }
 
 /* Lower the hero caption toward the settee and gramophone */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-intro {
     top: 38%;
   }
 }
 
 /* Cinematic opening: room sharpens before the text appears */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-artwork {
     animation: mobileRoomFocus 1.8s ease-out both;
   }
@@ -710,7 +710,7 @@
   }
 }
 
-@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+@media (max-width: 1199px) and (prefers-reduced-motion: reduce), (hover: none) and (pointer: coarse) and (prefers-reduced-motion: reduce) {
   .mobile-mission-artwork {
     animation: none !important;
     filter: none !important;
@@ -724,21 +724,21 @@
 }
 
 /* Reveal more of the newspaper reader's side table */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-artwork {
     transform: translateX(-30%);
   }
 }
 
 /* Restore preferred framing with a subtle additional zoom */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-artwork {
     transform: translateX(-34%) scale(1.03);
     transform-origin: 34% 65%;
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-artwork {
     transform: translateX(-34%) scale(1);
     transform-origin: center center;
@@ -746,7 +746,7 @@
 }
 
 /* Larger mobile hero typography, positioned higher */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-intro {
     top: 34%;
   }
@@ -763,7 +763,7 @@
 }
 
 /* Full-width mobile headline with right-aligned subtitle */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-intro {
     left: 5%;
     right: 5%;
@@ -790,7 +790,7 @@
 }
 
 /* Restore original mobile hero typography and positioning */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-intro {
     top: 38%;
     left: 37%;
@@ -816,14 +816,14 @@
 }
 
 /* Raise mobile hero text without changing typography */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-intro {
     top: calc(38% - 30px);
   }
 }
 
 /* Soft, feathered blur behind mobile hero typography */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-intro::before {
     content: "";
     position: absolute;
@@ -838,7 +838,7 @@
 }
 
 /* Remove blur behind mobile hero text */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-intro::before {
     content: none;
     backdrop-filter: none;
@@ -847,7 +847,7 @@
 }
 
 /* Hide mobile HOME header on downward scroll */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mission-page > a[href="/"] {
     transition: transform 0.35s ease !important;
     will-change: transform;
@@ -859,7 +859,7 @@
 }
 
 /* Hide mobile HOME header on downward scroll */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mission-page > a[href="/"] {
     transition: transform 0.35s ease !important;
     will-change: transform;
@@ -872,7 +872,7 @@
 
 
 /* Mobile body: reveal each section once as it enters view */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission .mobile-reveal {
     opacity: 0;
     visibility: visible;
@@ -888,7 +888,7 @@
   }
 }
 
-@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+@media (max-width: 1199px) and (prefers-reduced-motion: reduce), (hover: none) and (pointer: coarse) and (prefers-reduced-motion: reduce) {
   .mobile-mission .mobile-reveal {
     opacity: 1;
     transform: none;
@@ -897,7 +897,7 @@
 }
 
 /* Refine mobile newsletter form typography and spacing */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-join input[type="email"],
   .mobile-mission-join input[type="email"]::placeholder {
     font-family: Georgia, 'Times New Roman', serif !important;
@@ -918,6 +918,6 @@
 }
 
 /* Gently mute the full illustration, including its foreground layers. */
-@media (max-width: 767px) {
+@media (max-width: 1199px), (hover: none) and (pointer: coarse) {
   .mobile-mission-artwork { filter: saturate(.86); }
 }
