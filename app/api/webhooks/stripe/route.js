@@ -362,9 +362,10 @@ function formatAddress(name, a) {
 
 async function handleSubscriptionCheckout(session, eventId) {
   const memberId = session.client_reference_id
-  if (!memberId || !session.subscription) return
+  if (!memberId || !session.subscription) throw new Error('Subscription checkout has no linked account')
 
   const subscription = await stripe.subscriptions.retrieve(session.subscription)
+  if (!['active', 'trialing'].includes(subscription.status)) return
   const priceId = subscription.items.data[0]?.price?.id
   const planInfo = PLANS[priceId]
   if (!planInfo) {
@@ -394,7 +395,7 @@ async function handleSubscriptionCheckout(session, eventId) {
 
   if (error) {
     console.error('members plan update error:', error)
-    return
+    throw new Error('Subscription access could not be saved')
   }
 
   // Save the subscription's card as the customer default so it shows in Settings.
@@ -567,8 +568,9 @@ export async function POST(request) {
     }
   }
 
-  if (event.type === 'checkout.session.async_payment_succeeded' && event.data.object.metadata?.articleId) {
-    await fulfillItemPurchase(event.data.object)
+  if (event.type === 'checkout.session.async_payment_succeeded') {
+    if (event.data.object.metadata?.articleId) await fulfillItemPurchase(event.data.object)
+    else if (event.data.object.mode === 'subscription') await handleSubscriptionCheckout(event.data.object, event.id)
   }
 
   if (event.type === 'invoice.payment_succeeded') {

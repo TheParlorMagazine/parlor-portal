@@ -10,6 +10,7 @@ const SAMPLE = {
   weekly_digest: { name: 'Maya', notifications: [{ type: 'reply', message: 'Someone replied to your thread in The Reading Room.' }, { type: 'event', message: 'New event: Democracy Salon with DemCon.' }], unread: { count: 2, threads: [{ subject: 'Editorial feedback' }] } },
   password_reset: { name: 'Maya', resetUrl: `${SITE}/auth/reset-password?token=sample` },
   payment_confirmed: { name: 'Maya', planName: "Reader's Circle", amount: 10 },
+  item_purchase: { name: 'Maya', title: 'Songs for a Society Falling Apart', slug: 'songs-for-a-society-falling-apart', itemType: 'article', amount: 250, currency: 'usd' },
   payment_failed: { name: 'Maya', planName: "Reader's Circle" },
   plan_upgraded: { name: 'Maya', oldPlan: "Reader's Circle", newPlan: 'Printing Press' },
   cancellation: { name: 'Maya', planName: 'Printing Press' },

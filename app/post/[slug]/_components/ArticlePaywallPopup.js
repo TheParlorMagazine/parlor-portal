@@ -119,6 +119,7 @@ export default function ArticlePaywallPopup({ purchasePending = false, recoveryP
           {purchasePending ? <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 20 }}>
             <a href="" onClick={event => { event.preventDefault(); window.location.reload() }} style={{ color: '#171717' }}>Check purchase again</a>
             <a href={`/login?returnTo=${encodeURIComponent(recoveryPath || pagePath || '/')}`} style={{ color: '#171717' }}>Sign in</a>
+            <a href="/portal/recover-purchase" style={{ color: '#171717' }}>Recover a guest purchase</a>
             <a href="mailto:hello@theparlormagazine.com" style={{ color: '#171717' }}>Contact us</a>
           </div> : <div className="pw-actions" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'center', gap: 'clamp(18px,2.4vw,32px)' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>

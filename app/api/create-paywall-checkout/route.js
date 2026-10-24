@@ -24,12 +24,13 @@ export async function POST(request) {
     // Stripe replaces this literal placeholder with the paid checkout session.
     const successUrl = articleUrl.toString() + '&checkout_session_id={CHECKOUT_SESSION_ID}'
     const customer = await ensureStripeCustomer(db, stripe, user.id)
+    if (!customer) throw new Error('Could not link the purchase to a member account')
     const session = await stripe.checkout.sessions.create({
       mode: 'payment', line_items: [{ price: stripePriceId, quantity: 1 }],
       success_url: successUrl, cancel_url: cancelUrl,
       client_reference_id: user.id,
       metadata: { articleId, itemType, userId: user.id },
-      ...(customer ? { customer, payment_intent_data: { setup_future_usage: 'off_session' } } : { customer_email: user.email }),
+      customer, payment_intent_data: { setup_future_usage: 'off_session' },
     })
     return Response.json({ url: session.url })
   } catch (err) {
