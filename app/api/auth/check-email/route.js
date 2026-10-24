@@ -1,16 +1,29 @@
 import { serviceClient } from '../../../../lib/apiAuth'
+import { sendAccountPasswordLink } from '../../../../lib/passwordRecovery'
 import { sendMagicLinkEmail } from '../../../../lib/emails'
 
 // POST → check if an email is already registered; if so, send a magic link via Resend
 export async function POST(request) {
-  const { email, returnTo } = await request.json()
-  if (!email?.trim()) return Response.json({ error: 'Email required' }, { status: 400 })
+  const { email, returnTo, intent } = await request.json().catch(() => ({}))
+  if (typeof email !== 'string' || !email.trim()) return Response.json({ error: 'Email required' }, { status: 400 })
 
   const db = serviceClient()
-  const { data: member } = await db.from('members').select('id, full_name').eq('email', email.trim().toLowerCase()).maybeSingle()
+  const { data: member, error: lookupError } = await db.from('members').select('id, full_name').eq('email', email.trim().toLowerCase()).maybeSingle()
+
+  if (lookupError) return Response.json({ error: 'Could not check your account. Please try again.' }, { status: 503 })
 
   if (!member) {
     return Response.json({ exists: false })
+  }
+
+  // Imported subscribers already have a confirmed auth account, but may not
+  // have a password. Recover that account; never create a duplicate member.
+  if (intent === 'password-setup') {
+    try {
+      const sent = await sendAccountPasswordLink(db, email.trim().toLowerCase(), process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin, member.full_name?.split(' ')[0] || '')
+      if (!sent) throw new Error('Account unavailable')
+      return Response.json({ exists: true, passwordSetup: true })
+    } catch { return Response.json({ error: 'We could not send your password setup email right now. Please try again or contact us.' }, { status: 503 }) }
   }
 
   // Generate the magic link server-side (does NOT send an email)

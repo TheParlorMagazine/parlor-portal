@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -9,29 +9,30 @@ export default function ResetPasswordPage() {
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [sessionReady, setSessionReady] = useState(false)
+  const verification = useRef(null)
   const router = useRouter()
   const supabase = createClient()
 
-  // If we arrived via a reset email with a token hash, verify it to establish
-  // the recovery session. (Hash-based links are handled by Supabase's SDK.)
+  // Verify emailed tokens once, including React's development effect replay.
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    const params = new URLSearchParams(window.location.search)
-    const token_hash = params.get('token_hash')
-    const type = params.get('type')
-    if (token_hash && type) {
-      supabase.auth.verifyOtp({ type, token_hash }).then(({ error }) => {
-        if (error) setError('This reset link is invalid or has expired. Please request a new one.')
-        else {
-          // Clean the token out of the URL bar.
-          window.history.replaceState({}, '', '/auth/reset-password')
-        }
-      })
-    }
+    let active = true
+    if (!verification.current) verification.current = (async () => {
+      const params = new URLSearchParams(window.location.search)
+      const token = params.get('token_hash')
+      const result = token
+        ? await supabase.auth.verifyOtp({ type: 'recovery', token_hash: token })
+        : await supabase.auth.getSession()
+      if (result.error || !result.data?.session) throw new Error('This password link is invalid or has expired. Please request a new one.')
+      if (token) window.history.replaceState({}, '', '/auth/reset-password')
+    })()
+    verification.current.then(() => { if (active) setSessionReady(true) }).catch(error => { if (active) setError(error.message) })
+    return () => { active = false }
   }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
+    if (!sessionReady) return
     if (password !== confirm) { setError('Passwords do not match'); return }
     setLoading(true)
     setError('')
@@ -53,7 +54,7 @@ export default function ResetPasswordPage() {
           <label style={styles.label}>Confirm password</label>
           <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required placeholder="Repeat your password" style={styles.input} />
           {error && <div style={styles.error}>{error}</div>}
-          <button type="submit" disabled={loading} style={styles.btn}>
+          <button type="submit" disabled={loading || !sessionReady} style={styles.btn}>
             {loading ? 'Updating...' : 'Update password'}
           </button>
         </form>

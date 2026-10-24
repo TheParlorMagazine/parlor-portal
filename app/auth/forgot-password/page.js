@@ -16,10 +16,11 @@ export default function ForgotPasswordPage() {
     setError('')
 
     try {
-      await fetch('/api/auth/send-reset', {
+      const response = await fetch('/api/auth/send-reset', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       })
+      if (!response.ok) throw new Error('Password email unavailable')
     } catch { setError('Couldn’t send the reset email.'); setLoading(false); return }
 
     setSent(true)
@@ -32,7 +33,7 @@ export default function ForgotPasswordPage() {
         <a href="/" style={styles.logo}>The Parlor</a>
         <div style={{fontSize:'32px',marginBottom:'16px'}}>✉️</div>
         <div style={styles.heading}>Email sent</div>
-        <p style={styles.sub}>Check your inbox for a password reset link.</p>
+        <p style={styles.sub}>If an account exists for this email, you’ll receive a password reset link. Check your inbox and spam folder.</p>
         <a href="/login" style={styles.btn}>Back to login</a>
       </div>
     </div>
