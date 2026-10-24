@@ -29,6 +29,14 @@ export default function LibraryDetailPage() {
   const [data, setData] = useState(null)
   const [tab, setTab] = useState('preview')
   const [saved, setSaved] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => { setSidebarOpen(false) }, [slug])
+  useEffect(() => {
+    const closeOnEscape = event => { if (event.key === 'Escape') setSidebarOpen(false) }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -53,9 +61,26 @@ export default function LibraryDetailPage() {
 
   return (
     <>
-      <style>{libCss}</style>
-      <div className="lib-shell">
-        <aside className="sidebar">
+      <style>{libCss + `
+        .detail-mobile-nav{display:none}
+        @media(max-width:820px){
+          .detail-mobile-nav{display:flex;position:sticky;top:0;z-index:600;align-items:center;justify-content:space-between;box-sizing:border-box;height:56px;padding:0 18px;background:#000;color:#fff;font-family:'thermal-variable',Georgia,serif}
+          .detail-mobile-nav small{display:block;font-size:10px;color:#aaa}
+          .detail-menu-toggle{display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:#151515;border:0;border-radius:8px;color:#fff;cursor:pointer}
+          .detail-menu-toggle svg{width:20px;height:20px}
+          .lib-detail-shell > .sidebar{display:none}
+          .lib-detail-shell > .sidebar.open{display:flex;position:fixed;top:56px;bottom:0;left:0;right:0;height:auto;overflow-y:auto;z-index:500}
+          .lib-detail-shell .sidebar .sb-logo{display:none}
+        }
+      `}</style>
+      <div className="detail-mobile-nav">
+        <div>The Parlor<small>The Archive</small></div>
+        <button type="button" className="detail-menu-toggle" aria-label={sidebarOpen ? 'Close Archive navigation' : 'Open Archive navigation'} aria-expanded={sidebarOpen} aria-controls="archive-detail-navigation" onClick={() => setSidebarOpen(open => !open)}>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d={sidebarOpen ? 'M6 6l12 12M18 6 6 18' : 'M4 6h16M4 12h16M4 18h16'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+        </button>
+      </div>
+      <div className="lib-shell lib-detail-shell">
+        <aside id="archive-detail-navigation" className={`sidebar${sidebarOpen ? ' open' : ''}`}>
           <div className="sb-logo"><div>The Parlor<small>The Archive</small></div>
             <a href="/" title="Parlor home" className="sb-home-btn"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2L2 7v7h4v-4h4v4h4V7L8 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></a>
           </div>
