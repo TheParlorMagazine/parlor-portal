@@ -1,3 +1,4 @@
+import { confirmItemCheckout } from '../../../lib/confirmItemCheckout'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { notFound } from 'next/navigation'
@@ -96,7 +97,8 @@ export async function generateMetadata({ params }) {
 export default async function ArticlePage({ params, searchParams }) {
   const { slug } = await params
   const query = await searchParams
-  const justUnlocked = query?.unlocked === '1' && query?.retried !== '1'
+  const checkoutSessionId = query?.checkout_session_id
+  const justUnlocked = !checkoutSessionId && query?.unlocked === '1' && query?.retried !== '1'
 
   const { data: article } = await db
     .from('articles')
@@ -146,6 +148,12 @@ export default async function ArticlePage({ params, searchParams }) {
     const { data: memberRow } = await supabaseAdmin.from('members').select('plan, role').eq('id', userId).single()
     isPaidSubscriber = hasPaidAccess(memberRow)
   }
+
+  // Independently verify Stripe's paid session before reading entitlements.
+  // This closes the race between Checkout's redirect and webhook delivery.
+  const purchaseConfirmation = checkoutSessionId
+    ? await confirmItemCheckout(checkoutSessionId, user, article.id)
+    : null
 
   // Article-level access check
   let articleHasAccess = true
@@ -254,6 +262,12 @@ export default async function ArticlePage({ params, searchParams }) {
       <SiteHeader hideOnScroll activeCategory={article.category} />
 
       <main style={{ background: '#fff', minHeight: '100vh' }}>
+        {purchaseConfirmation && <div role="status" style={{ padding: '20px 24px', background: '#fff1f5', color: '#171717', fontFamily: "'Source Serif 4', Georgia, serif", textAlign: 'center' }}>
+          {purchaseConfirmation.status === 'confirmed' ? <>Thank you—your one-time {purchaseConfirmation.itemType} purchase is confirmed. Your access is saved to your account.</>
+            : purchaseConfirmation.status === 'sign_in' ? <>Sign in to confirm your purchase and restore access. <a href={`/login?returnTo=${encodeURIComponent(`/post/${article.slug}?checkout_session_id=${encodeURIComponent(checkoutSessionId)}`)}`}>Sign in</a></>
+            : <>We couldn’t confirm your purchase yet. Please don’t pay again. <a href={`/post/${article.slug}?checkout_session_id=${encodeURIComponent(checkoutSessionId)}`}>Check purchase again</a> or <a href="mailto:hello@theparlormagazine.com">contact us</a>.</>}
+        </div>}
+
 
         {/* Issue article parallax hero — title + deck + byline overlaid on the cover image */}
         {hasIssueHero && (
@@ -379,6 +393,8 @@ export default async function ArticlePage({ params, searchParams }) {
         {(article.paywall_type === 'paywall' || article.paywall_type === 'members')
           ? (!articleHasAccess && (
               <ArticlePaywallPopup
+                purchasePending={!!purchaseConfirmation}
+                recoveryPath={checkoutSessionId ? `/post/${article.slug}?checkout_session_id=${encodeURIComponent(checkoutSessionId)}` : undefined}
                 paywallType={article.paywall_type}
                 price={article.paywall_price}
                 stripePriceId={article.stripe_price_id}

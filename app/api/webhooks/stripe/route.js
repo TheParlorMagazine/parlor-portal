@@ -1,3 +1,4 @@
+import { fulfillItemPurchase } from '../../../../lib/itemPurchase'
 import Stripe from 'stripe'
 import { sendStripeEmailOnce } from '../../../../lib/stripeEmail'
 import { createClient } from '@supabase/supabase-js'
@@ -23,35 +24,6 @@ function getSupabase() {
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
   )
-}
-
-async function handleOneTimePurchase(session) {
-  const { articleId, itemType, userId } = session.metadata || {}
-  if (!articleId || !itemType) return
-
-  const supabase = getSupabase()
-  let memberId = userId || session.client_reference_id
-
-  // Fall back to looking the member up by Stripe customer if
-  // client_reference_id wasn't set on this session for some reason.
-  if (!memberId && session.customer) {
-    const { data: member } = await supabase
-      .from('members')
-      .select('id')
-      .eq('stripe_customer_id', session.customer)
-      .single()
-    memberId = member?.id
-  }
-  if (!memberId) return
-
-  const { error } = await supabase
-    .from('item_purchases')
-    .insert({ member_id: memberId, article_id: articleId, item_type: itemType })
-
-  // Ignore duplicate-purchase inserts (e.g. webhook retries); surface anything else
-  if (error && error.code !== '23505') {
-    console.error('item_purchases insert error:', error)
-  }
 }
 
 // Make a payment method the customer's default for future invoices/charges, but
@@ -576,7 +548,7 @@ export async function POST(request) {
       // Digital item unlocks carry articleId; everything else that's a physical
       // shop checkout (has shipping, or is tagged shop_order) becomes an order.
       if (session.metadata?.articleId) {
-        await handleOneTimePurchase(session)
+        await fulfillItemPurchase(session)
       } else if (session.metadata?.kind === 'tot_bundle') {
         await handleTotBundle(session, event.id)
       } else if (session.metadata?.kind === 'shop_order' || session.shipping_details?.address || session.collected_information?.shipping_details?.address) {
@@ -593,6 +565,10 @@ export async function POST(request) {
     } else if (session.mode === 'subscription') {
       await handleSubscriptionCheckout(session, event.id)
     }
+  }
+
+  if (event.type === 'checkout.session.async_payment_succeeded' && event.data.object.metadata?.articleId) {
+    await fulfillItemPurchase(event.data.object)
   }
 
   if (event.type === 'invoice.payment_succeeded') {

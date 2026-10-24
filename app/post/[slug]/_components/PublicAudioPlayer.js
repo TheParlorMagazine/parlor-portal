@@ -1,5 +1,7 @@
 'use client'
 
+import { startItemCheckout } from '../../../../lib/startItemCheckout'
+
 import { useState, useRef, useEffect } from 'react'
 
 const PREVIEW_LIMIT = 10
@@ -18,22 +20,9 @@ function AudioPaywallOverlay({ price, onReplay, stripePriceId, articleId, userId
       return
     }
     try {
-      const res = await fetch('/api/create-paywall-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stripePriceId,
-          articleId,
-          itemType: 'audio',
-          userId: userId || undefined,
-          successUrl: window.location.href + '?unlocked=1',
-          cancelUrl: window.location.href,
-        }),
-      })
-      const data = await res.json()
-      if (data.url) window.location.href = data.url
-    } catch {
-      window.location.href = '/plans'
+      await startItemCheckout({ stripePriceId, articleId, itemType: 'audio' })
+    } catch (error) {
+      window.alert(error.message)
     }
   }
 
