@@ -22,6 +22,9 @@ const CAMPAIGN_STATUS = {
   draft:     { label: 'Draft',     color: '#888',    bg: '#f5f5f5' },
   scheduled: { label: 'Scheduled', color: '#4a6fd4', bg: 'rgba(160,180,242,0.12)' },
   sending:   { label: 'Sending',   color: '#d4844a', bg: 'rgba(242,196,110,0.12)' },
+  failed: { label: 'Failed', color: '#c4364a', bg: '#fce8ec' },
+  partial: { label: 'Partially accepted — review', color: '#9b6400', bg: '#fff4d8' },
+  uncertain: { label: 'Needs review', color: '#9b6400', bg: '#fff4d8' },
   sent:      { label: 'Sent',      color: '#2d8f5a', bg: 'rgba(110,201,154,0.1)' },
 }
 
@@ -715,6 +718,10 @@ const hasUnsavedChanges = savedSnapshot !== null
     })
 
   async function handleSave(statusOverride) {
+    if (['sending','partial','uncertain','sent'].includes(savedCampaign?.status)) {
+      await alertDialog('This campaign needs review before it can be changed or resent. Check Resend for emails already accepted.')
+      return
+    }
     setSaving(true)
     const body_html = encodeBodyHtml(introHtml, blocks, introBg)
     const result = await onSave({
@@ -771,16 +778,21 @@ async function handleSendTest() {
   }
 }
   async function handleSend() {
+    if (['sending','partial','uncertain','sent'].includes(savedCampaign?.status)) return
     if (!(await confirmDialog(`Send "${name || subject}" now to ${sendTo === 'all' ? 'all subscribers' : 'selected segment'}?`))) return
     setSending(true)
     const body_html = encodeBodyHtml(introHtml, blocks, introBg)
     const saved = await onSave({
       ...(savedCampaign || {}), name, subject, preview_text: preview, body_html,
-      segment_id: sendTo === 'all' ? null : sendTo, status: 'sending',
+      segment_id: sendTo === 'all' ? null : sendTo, status: savedCampaign?.status === 'failed' ? 'failed' : 'draft',
     })
-    if (saved?.id) await onSend(saved.id)
+    if (saved?.id) {
+      setSavedCampaign(saved)
+      const result = await onSend(saved.id)
+      if (result?.status) setSavedCampaign({ ...saved, status: result.status, recipient_count: result.sent || 0 })
+      if (result?.ok) onClose()
+    }
     setSending(false)
-    onClose()
   }
 
   const inp = { padding: '9px 12px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '13px', fontFamily: ff, color: '#0a0a0a', outline: 'none', boxSizing: 'border-box', width: '100%', background: '#fff' }
@@ -887,7 +899,7 @@ async function handleSendTest() {
               Schedule
             </button>
           )}
-          <button onClick={handleSend} disabled={sending || !subject} style={{ padding: '7px 20px', background: sending || !subject ? '#f5f5f5' : PINK, border: 'none', borderRadius: '6px', color: sending || !subject ? '#bbb' : '#0a0a0a', fontSize: '12px', fontWeight: '600', cursor: sending || !subject ? 'not-allowed' : 'pointer', fontFamily: ff }}>
+          <button onClick={handleSend} disabled={sending || !subject || ['sending','partial','uncertain','sent'].includes(savedCampaign?.status)} style={{ padding: '7px 20px', background: sending || !subject ? '#f5f5f5' : PINK, border: 'none', borderRadius: '6px', color: sending || !subject ? '#bbb' : '#0a0a0a', fontSize: '12px', fontWeight: '600', cursor: sending || !subject ? 'not-allowed' : 'pointer', fontFamily: ff }}>
             {sending ? 'Sending…' : 'Send Now'}
           </button>
         </div>
@@ -1004,29 +1016,23 @@ export default function CampaignsTab({ supabase }) {
 
   async function sendCampaign(id) {
     setSending(prev => ({ ...prev, [id]: true }))
-    const { data: { session } } = await supabase.auth.getSession()
-
-if (!session?.access_token) {
-  alertDialog('Please sign in again.')
-  setSending(prev => ({ ...prev, [id]: false }))
-  return
-}
-
-const res = await fetch('/api/emails/send-campaign', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${session.access_token}`,
-  },
-  body: JSON.stringify({ campaignId: id }),
-})
-    const json = await res.json()
-    if (res.ok) {
-      setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: 'sent', sent_at: new Date().toISOString(), recipient_count: json.sent } : c))
-    } else {
-      alertDialog('Send failed: ' + (json.error || 'Unknown error'))
-    }
-    setSending(prev => ({ ...prev, [id]: false }))
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Please sign in again.')
+      const res = await fetch('/api/emails/send-campaign', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ campaignId: id }),
+      })
+      const result = await res.json()
+      if (result.status) setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: result.status, sent_at: result.sentAt || null, recipient_count: result.sent || 0 } : c))
+      if (!res.ok || !result.ok) { await alertDialog('Send failed: ' + (result.error || 'Unable to confirm acceptance. Check Resend before retrying.')); return result }
+      await alertDialog(`Accepted by Resend for ${result.sent} recipient${result.sent === 1 ? '' : 's'}. This does not confirm inbox delivery.`)
+      return result
+    } catch (error) {
+      await alertDialog(error.message + ' Check Resend before retrying if a send had started.')
+      setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: 'uncertain' } : c))
+      return { ok: false, status: 'uncertain', requiresReview: true }
+    } finally { setSending(prev => ({ ...prev, [id]: false })) }
   }
 
   async function deleteCampaign(id) {
@@ -1090,7 +1096,7 @@ const res = await fetch('/api/emails/send-campaign', {
                           {c.status !== 'sent' && (
                             <button onClick={() => setBuilding(c)} style={{ padding: '5px 12px', background: 'none', border: `1px solid ${PINK}`, borderRadius: '5px', color: DP, fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>Edit</button>
                           )}
-                          {(c.status === 'draft' || c.status === 'scheduled') && (
+                          {(c.status === 'draft' || c.status === 'scheduled' || (c.status === 'failed' && !c.recipient_count)) && (
                             <button onClick={() => sendCampaign(c.id)} disabled={!!sending[c.id]} style={{ padding: '5px 12px', background: 'none', border: '1px solid rgba(110,201,154,0.4)', borderRadius: '5px', color: '#2d8f5a', fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>
                               {sending[c.id] ? '…' : 'Send'}
                             </button>
