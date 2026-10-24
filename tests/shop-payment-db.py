@@ -17,8 +17,18 @@ try:
   try:sql('select 1;');break
   except RuntimeError:time.sleep(.1)
  sql('create role anon;create role authenticated;create role service_role;create table members(id uuid primary key);create table shop_products(id uuid primary key, inventory integer,variants jsonb);create table tot_treats(id uuid primary key,stock integer);create table email_automations(id text primary key,enabled boolean,sent_count integer);')
- for f in ['20260927_orders.sql','20260930_shop_printify.sql','20261021_stripe_email_tracking.sql','20261025_shop_payment_fulfillment.sql']:sql((root/'supabase/migrations'/f).read_text())
- sql((root/'supabase/migrations/20261025_shop_payment_fulfillment.sql').read_text())
+ for f in ['20260927_orders.sql','20260930_shop_printify.sql','20261021_stripe_email_tracking.sql']:sql((root/'supabase/migrations'/f).read_text())
+ migration=(root/'supabase/migrations/20261025_shop_payment_fulfillment.sql').read_text()
+ sql('alter table email_automations rename column sent_count to missing_count;')
+ try:sql(migration);raise AssertionError('Expected prerequisite rejection')
+ except RuntimeError as error:assert 'Missing prerequisite column' in str(error)
+ assert sql("select count(*) from information_schema.columns where table_schema='public' and table_name='orders' and column_name='metadata'")=='0'
+ sql('alter table email_automations rename column missing_count to sent_count;alter table orders add column metadata text;')
+ try:sql(migration);raise AssertionError('Expected custom-schema rejection')
+ except RuntimeError as error:assert 'custom type' in str(error)
+ assert sql("select count(*) from pg_proc where proname='record_paid_shop_order'")=='0'
+ sql('alter table orders drop column metadata;')
+ sql(migration);sql(migration)
  sql(f"insert into members values('{uid(1)}');insert into shop_products values('{uid(2)}',10,'[{{\"printify_variant_id\":7,\"inventory\":8}}]');insert into tot_treats values('{uid(3)}',5);")
  with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:results=list(pool.map(lambda _:json.loads(record()),range(6)))
  assert len({r['id'] for r in results})==1
@@ -39,6 +49,9 @@ try:
  assert sql("select public.claim_stripe_email('cs_paid','shop_order_confirmation','buyer@example.invalid')")=='f'
  assert sql("select has_table_privilege('anon','public.orders','select')")=='f'
  assert sql("select has_function_privilege('anon','public.record_paid_shop_order(text,jsonb,jsonb,uuid[])','execute')")=='f'
- print('PASS: PostgreSQL migration repeatable, six concurrent deliveries create one order, single stock decrement, variant stock, rollback, partial-order repair, shortages, safe receipt retry and service-only access.')
+ sql(migration)
+ assert sql("select status from stripe_email_deliveries")=='uncertain'
+ assert sql('select count(*) from orders')=='2'
+ print('PASS: prerequisite failures leave no partial changes; custom schema rejected; PostgreSQL migration repeatable, six concurrent deliveries create one order, single stock decrement, variant stock, rollback, partial-order repair, shortages, safe receipt retry and service-only access.')
 finally:
  subprocess.run(['docker','rm','-f',name],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)

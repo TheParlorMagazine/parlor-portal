@@ -1,3 +1,36 @@
+BEGIN;
+
+-- Validate the existing schema before making any changes. This migration builds
+-- on the orders, Printify, shop, Trick-or-Treat and email tracking migrations.
+DO $preflight$
+DECLARE dependency record; col text;
+BEGIN
+  FOR dependency IN SELECT * FROM jsonb_each_text('{
+    "orders":"id,member_id,stripe_session_id,stripe_payment_intent,email,order_number,status,shipping_name,shipping_address,subtotal_cents,shipping_cents,total_cents,currency,admin_note,printify_order_id,printify_status",
+    "order_items":"id,order_id,product_name,variant,quantity,unit_price_cents,image_url,stripe_price_id,shop_product_id,printify_product_id,printify_variant_id",
+    "shop_products":"id,inventory,variants",
+    "tot_treats":"id,stock",
+    "stripe_email_deliveries":"id,stripe_event_id,email_type,recipient,status,updated_at",
+    "email_automations":"id,enabled,sent_count"
+  }'::jsonb) LOOP
+    IF to_regclass('public.' || dependency.key) IS NULL THEN
+      RAISE EXCEPTION 'Missing prerequisite table public.%. Apply the existing shop/email migrations first.', dependency.key;
+    END IF;
+    FOREACH col IN ARRAY string_to_array(dependency.value, ',') LOOP
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=dependency.key AND column_name=col) THEN
+        RAISE EXCEPTION 'Missing prerequisite column public.%.%. Apply its existing migration first.', dependency.key, col;
+      END IF;
+    END LOOP;
+  END LOOP;
+  IF to_regclass('public.order_number_seq') IS NULL THEN
+    RAISE EXCEPTION 'Missing order_number_seq. Apply the existing orders migration first.';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='orders' AND column_name='metadata' AND udt_name <> 'jsonb') THEN
+    RAISE EXCEPTION 'orders.metadata has a custom type; review it before applying this migration. Expected jsonb.';
+  END IF;
+END;
+$preflight$;
+
 -- Persist the paid order, its lines and stock changes together. Retries reuse
 -- the same order and cannot decrement stock twice.
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS metadata jsonb NOT NULL DEFAULT '{}'::jsonb;
@@ -78,3 +111,5 @@ ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.orders, public.order_items FROM anon, authenticated;
 GRANT ALL ON public.orders, public.order_items TO service_role;
+
+COMMIT;

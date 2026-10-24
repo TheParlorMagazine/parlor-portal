@@ -18,7 +18,7 @@ Partner products with external URLs still open the partner store. Account, payme
 
 ## Before deployment
 
-Run `supabase/migrations/20261025_shop_payment_fulfillment.sql`, after the existing orders, Printify columns, Trick-or-Treat tables and Stripe email tracking migrations. This also seeds the receipt automation row. Deploy code and migration together; old code must not write order headers concurrently with the new fulfillment path during rollout.
+Run `supabase/migrations/20261025_shop_payment_fulfillment.sql`, after the existing orders, Printify columns, Trick-or-Treat tables and Stripe email tracking migrations. Prerequisite checks run before any changes, and the migration is wrapped in a transaction so errors roll back the entire update. It is safe to re-run against the expected schema. This also seeds the receipt automation row. Deploy code and migration together; old code must not write order headers concurrently with the new fulfillment path during rollout.
 
 Use the matching live/test Stripe keys and webhook secret; subscribe `/api/webhooks/stripe` to `checkout.session.completed` and `checkout.session.async_payment_succeeded`. Verify Resend sender authorization, Printify token/shop, Shippo origin, catalogue prices/variants/stock and shipping destinations. Printify production approval is governed by the Printify shop settings, which were not accessed during this audit.
 
