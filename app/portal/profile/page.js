@@ -27,7 +27,7 @@ const profileCss = `
   .prof-bio { font-size: 15px; line-height: 1.65; color: #333; margin-top: 18px; white-space: pre-wrap; }
   .prof-bio.empty { color: var(--muted); font-style: italic; }
 
-  .prof-edit-btn { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; font-family: 'thermal-variable', Georgia, serif; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .prof-edit-btn { appearance: none; -webkit-appearance: none; color: var(--ink, #000); -webkit-text-fill-color: currentColor; font-weight: 400; font-style: normal; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; font-family: 'thermal-variable', Georgia, serif; font-size: 13px; cursor: pointer; white-space: nowrap; }
   .prof-edit-btn:hover { border-color: var(--pinkborder); }
 
   .prof-fld { margin-top: 16px; }
