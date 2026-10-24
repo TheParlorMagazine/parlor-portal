@@ -1,5 +1,7 @@
 'use client'
 
+import OrderPackingList from './OrderPackingList'
+
 import { useEffect, useState } from 'react'
 import { confirmDialog } from '../../../lib/confirmDialog'
 
@@ -104,6 +106,8 @@ function OrderRow({ order, token, onChanged }) {
               </div>
             </div>
           </div>
+
+          <OrderPackingList order={order} />
 
           <div style={{ background: '#faf7f8', border: `1px solid ${BORDER}`, borderRadius: 9, padding: 14 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 1fr', gap: 12 }}>

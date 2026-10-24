@@ -31,3 +31,11 @@ Use Stripe test mode and mocked/sandbox fulfillment before enabling live fulfill
 `python tests/shop-payment-db.py` uses disposable PostgreSQL, including concurrent retries, rollback, stock, receipt claims and role privileges.
 
 `node tests/shop-confirmation-browser.cjs` uses the real confirmation page with isolated API/auth mocks. `node tests/cart-navigation-browser.cjs` verifies the shared cart at desktop/mobile widths. A full Next build compiles; this cloud workspace lacks the Resend key needed for page-data collection. Hosting settings and live provider delivery remain unverified.
+
+## Admin picking and packing
+
+Admin → Orders includes the buyer/address, charged lines and totals, status, internal notes and shipping/tracking controls. New paid orders additionally snapshot every physical component in `orders.metadata.packing_items`, including bundle source, total quantity, variant and SKU where available. The expanded order separates self-fulfilled items to pick/pack from items sent to Printify. Saved mappings also drive fulfillment on retry, so catalogue edits do not change an already-saved order's contents.
+
+This needs no additional SQL beyond the shop fulfillment migration above. Older orders without a snapshot show an explicit notice; their historical bundle contents are not reconstructed from today's catalogue. After packing, staff can mark the order shipped, add carrier/tracking and use the existing buyer-notification checkbox.
+
+Validation: `node tests/order-packing-browser.cjs` checks the actual packing list component; fulfillment tests cover fixed/mixed and pick-your-own bundle snapshots, quantity multiplication and reuse of saved mappings.
