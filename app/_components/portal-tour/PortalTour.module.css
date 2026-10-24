@@ -33,3 +33,9 @@
 
 @keyframes helpBounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}70%{transform:translateY(-2px)}}
 @media(hover:hover) and (prefers-reduced-motion:no-preference){.help:hover{animation:helpBounce .45s ease-out}}
+
+.headerActions{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.toggle{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:0;background:transparent;color:#9b4767;cursor:pointer;border-radius:50%}
+.toggle svg{width:22px;height:22px}
+.toggle:focus-visible{outline:3px solid #bd7890;outline-offset:2px}
+@media(max-width:820px){.header{gap:4px}.header .eyebrow{font-size:10px}.headerActions .link{padding:10px 6px}.panel.minimized{padding:8px 14px}.minimized .header{margin-bottom:0}}

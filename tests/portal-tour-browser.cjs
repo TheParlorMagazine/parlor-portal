@@ -53,6 +53,18 @@ async function main(){
    const actions=['Open the post composer','Open a new draft','See how to propose a forum','Explore events','Explore the Archive']
    for(let index=0;index<5;index++){
     await page.locator(selectors[index]).waitFor()
+    if(mobile){
+     const toggle=page.getByRole('button',{name:'Minimize tour',exact:true});await toggle.waitFor()
+     assert.equal(await toggle.getAttribute('aria-expanded'),'true','Each stop opens fully')
+     await toggle.click()
+     assert.equal(await page.getByRole('button',{name:'Next',exact:true}).count(),0,'Minimized content is hidden')
+     const region=await page.getByRole('region').boundingBox();assert.ok(region.height<100,'Collapsed tour frees the page')
+     if(index===0){
+      const target=await page.locator(selectors[index]).boundingBox();assert.ok(target.y+target.height<region.y,'Target is uncovered while minimized')
+     }
+     await page.getByRole('button',{name:'Expand tour',exact:true}).click()
+     assert.equal(await toggle.getAttribute('aria-expanded'),'true')
+    }
     if(index===3){assert.equal(await page.locator('.parlor-tour-section-highlight').count(),1);assert.equal(await page.getByRole('button',{name:'Explore events',exact:true}).count(),0);await page.getByRole('button',{name:'Next',exact:true}).click();continue}
     const cue=page.getByRole('button',{name:actions[index],exact:true}).filter({hasText:index===4?'Search here':mobile?'Tap here':'Click here'})
     await cue.waitFor()

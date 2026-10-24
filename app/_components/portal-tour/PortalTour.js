@@ -21,6 +21,7 @@ export default function PortalTour() {
   const [activated, setActivated] = useState(false)
   const [rect, setRect] = useState(null)
   const [mobile, setMobile] = useState(false)
+  const [minimized, setMinimized] = useState(false)
   const [syncError, setSyncError] = useState(false)
   const [busy, setBusy] = useState(false)
   const [offer, setOffer] = useState(false)
@@ -220,7 +221,7 @@ export default function PortalTour() {
     setOffer(false)
     const request = ++navigation.current
     dirty.current = false
-    setStep(index); setActivated(false); setMode('tour')
+    setStep(index); setActivated(false); setMinimized(false); setMode('tour')
     if (user) write(sessionStorage, `${keyFor(user.id)}:active`, true)
     setBusy(true)
     await persist('in_progress', index)
@@ -268,8 +269,11 @@ export default function PortalTour() {
           <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" style={rect.above ? { transform: 'scale(-1, -1)' } : undefined}><path d="M3 28C18 28 23 19 24 5M16 12l8-8 6 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </button>
       </>}
-      <section ref={panel} tabIndex={-1} className={styles.panel} role="region" aria-labelledby="parlor-tour-step">
-        <div className={styles.header}><p className={styles.eyebrow}>Explore The Parlor · {step + 1} of {TOUR_STEPS.length}</p><button className={styles.link} onClick={() => dismiss()}>Pause</button></div>
+      <section ref={panel} tabIndex={-1} className={`${styles.panel} ${mobile && minimized ? styles.minimized : ''}`} role="region" aria-labelledby="parlor-tour-step">
+        <div className={styles.header}><p className={styles.eyebrow}>Explore The Parlor · {step + 1} of {TOUR_STEPS.length}</p><div className={styles.headerActions}><button className={styles.link} onClick={() => dismiss()}>Pause</button>
+          {mobile && <button type="button" className={styles.toggle} aria-label={minimized ? 'Expand tour' : 'Minimize tour'} aria-expanded={!minimized} aria-controls="parlor-tour-content" onClick={() => setMinimized(value => !value)}><svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style={minimized ? { transform: 'rotate(180deg)' } : undefined}><path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></button>}
+        </div></div>
+        <div id="parlor-tour-content" hidden={mobile && minimized}>
         <div className={styles.progress} aria-hidden="true">{TOUR_STEPS.map((item,index) => <span key={item.id} className={`${styles.dot} ${index <= step ? styles.current : ''}`} />)}</div>
         <h2 id="parlor-tour-step" className={styles.title}>{config.title}</h2>
         <p className={styles.copy} aria-live="polite">{activated ? config.after : config.text}</p>
@@ -280,6 +284,7 @@ export default function PortalTour() {
           <button className={styles.link} disabled={busy} onClick={() => dismiss('skipped')}>Skip Tour</button>
         </div>
         {syncError && <p className={styles.notice} role="status">Progress is saved in this browser; account sync will retry on your next visit.</p>}
+        </div>
       </section>
     </>}
   </>
