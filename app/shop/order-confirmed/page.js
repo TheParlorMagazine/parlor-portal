@@ -56,7 +56,7 @@ function Confirmed() {
         <p style={{ fontFamily: BODY, fontSize: 13, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#a06a76', margin: '0 0 10px' }}>{order ? 'Order confirmed' : 'Checking your payment'}</p>
         <h1 style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 700, color: BLACK, margin: '0 0 14px', lineHeight: 1.1 }}>{order ? 'Thank you for your order' : 'Confirming your order'}</h1>
         <p style={{ fontFamily: BODY, fontSize: 16.5, lineHeight: 1.65, color: '#5a3d44', margin: '0 auto 30px', maxWidth: 460 }}>
-          {order ? <>Your payment is confirmed{order.order_number ? <> for <strong>{order.order_number}</strong></> : ''}. Your receipt is sent to your checkout email. Follow delivery progress in your account.</> : <>We’re checking your payment and saving your order. Please don’t pay again.</>}
+          {order ? <>Your payment is confirmed{order.order_number ? <> for <strong>{order.order_number}</strong></> : ''}. Your order is saved to your account. Check your checkout email for the receipt, and follow delivery progress in your account.</> : <>We’re checking your payment and saving your order. Please don’t pay again.</>}
         </p>
 
         {order && (

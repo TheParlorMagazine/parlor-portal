@@ -253,9 +253,9 @@ export async function POST(request) {
       if (session.metadata?.articleId) {
         await fulfillItemPurchase(session)
       } else if (session.metadata?.kind === 'tot_bundle') {
-        await fulfillShopPurchase(stripe, session)
+        await fulfillShopPurchase(stripe, session, { retryReceipt: true })
       } else if (session.metadata?.kind === 'shop_order' || session.shipping_details?.address || session.collected_information?.shipping_details?.address) {
-        await fulfillShopPurchase(stripe, session)
+        await fulfillShopPurchase(stripe, session, { retryReceipt: true })
       }
       // Save the card used for any purchase as the default-if-unset, so it
       // auto-populates in Settings.
@@ -272,7 +272,7 @@ export async function POST(request) {
 
   if (event.type === 'checkout.session.async_payment_succeeded') {
     if (event.data.object.metadata?.articleId) await fulfillItemPurchase(event.data.object)
-    else if (['shop_order','tot_bundle'].includes(event.data.object.metadata?.kind)) await fulfillShopPurchase(stripe,event.data.object)
+    else if (['shop_order','tot_bundle'].includes(event.data.object.metadata?.kind)) await fulfillShopPurchase(stripe,event.data.object,{ retryReceipt: true })
     else if (event.data.object.mode === 'subscription') await handleSubscriptionCheckout(event.data.object, event.id)
   }
 
