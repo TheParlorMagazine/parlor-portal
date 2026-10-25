@@ -18,6 +18,19 @@ try:
   except RuntimeError:time.sleep(.1)
  sql('create role anon;create role authenticated;create role service_role;create table members(id uuid primary key);create table shop_products(id uuid primary key, inventory integer,variants jsonb);create table tot_treats(id uuid primary key,stock integer);create table email_automations(id text primary key,enabled boolean,sent_count integer);')
  for f in ['20260927_orders.sql','20260930_shop_printify.sql','20261021_stripe_email_tracking.sql']:sql((root/'supabase/migrations'/f).read_text())
+ # Match the reported production digital-access schema, including its existing
+ # UUID default, purchased_at timestamp and locally-added unique index.
+ sql('create schema auth;create function auth.uid() returns uuid language sql as $$ select null::uuid $$;create table articles(id uuid primary key);create table item_purchases(id uuid primary key default gen_random_uuid(),member_id uuid not null references members(id),article_id uuid not null references articles(id),item_type text not null,purchased_at timestamptz not null default now());create unique index item_purchases_member_article_type_uidx on item_purchases(member_id,article_id,item_type);')
+ digital=(root/'supabase/migrations/20261025_item_purchases.sql').read_text()
+ registry=(root/'supabase/migrations/20261025_item_purchase_email_registry.sql').read_text()
+ sql(digital);sql(digital);sql(registry);sql(registry)
+ assert sql("select count(*) from information_schema.columns where table_name='item_purchases' and column_name='created_at'")=='0'
+ assert sql("select count(*) from information_schema.columns where table_name='item_purchases' and column_name='purchased_at'")=='1'
+ sql(f"insert into members values('{uid(9)}');insert into articles values('{uid(9)}');insert into item_purchases(member_id,article_id,item_type) values('{uid(9)}','{uid(9)}','article');")
+ sql(digital)
+ assert sql('select count(*) from item_purchases where id is not null and purchased_at is not null')=='1'
+ assert sql("select count(*) from email_automations where id='item_purchase'")=='1'
+ assert sql("select has_table_privilege('authenticated','public.item_purchases','insert')")=='f'
  migration=(root/'supabase/migrations/20261025_shop_payment_fulfillment.sql').read_text()
  sql('alter table email_automations rename column sent_count to missing_count;')
  try:sql(migration);raise AssertionError('Expected prerequisite rejection')

@@ -1,3 +1,4 @@
+import { encodeShopSnapshot, snapshotShopProduct } from '../../../../lib/shopSnapshot'
 import { requireShopUser } from '../../../../lib/shopAuth'
 import { ensureStripeCustomer } from '../../../../lib/stripeCustomer'
 import Stripe from 'stripe'
@@ -36,7 +37,7 @@ export async function POST(request) {
   // 2. Validate selected treats — they must exist, be active, and have stock
   const { data: treats, error: tErr } = await db
     .from('tot_treats')
-    .select('id, name, stock, house_id, product_id, shop_products(id, name, images, ships_to)')
+    .select('id, name, stock, house_id, product_id, shop_products(*)')
     .in('id', treatIds)
     .eq('active', true)
   if (tErr) return Response.json({ error: tErr.message }, { status: 500 })
@@ -57,7 +58,7 @@ export async function POST(request) {
   // 3. Load standalone products (always-included items like the tote)
   const { data: standaloneRows, error: standaloneError } = await db
     .from('tot_collection_products')
-    .select('product_id, shop_products(id, name, images, ships_to)')
+    .select('product_id, shop_products(*)')
     .eq('collection_id', collectionId)
     .order('sort_order')
 
@@ -84,6 +85,21 @@ export async function POST(request) {
     else if (Array.isArray(product.ships_to) && product.ships_to.length) allowedCountries = allowedCountries.filter(c => product.ships_to.includes(c))
   }
   if (!allowedCountries.length) return Response.json({ error: 'These items do not share a delivery destination.' }, { status: 400 })
+  let snapshot
+  try {
+    const packing = [...treats.map(t => t.shop_products ? snapshotShopProduct(t.shop_products, 1, null, 'Trick-or-Treat bundle') : {product_name:t.name,quantity:1,fulfillment:'manual',bundle_name:'Trick-or-Treat bundle'}), ...standalone.map(r => snapshotShopProduct(r.shop_products, 1, null, 'Trick-or-Treat bundle'))]
+    const demand = new Map()
+    for (const part of packing) {
+      if (part.fulfillment === 'printify' && (!part.printify_product_id || !part.printify_variant_id)) throw new Error('A product is not ready to ship.')
+      if (part.product_id) demand.set(part.product_id, (demand.get(part.product_id) || 0) + part.quantity)
+    }
+    for (const product of [...treats.map(t => t.shop_products), ...standalone.map(r => r.shop_products)].filter(Boolean)) {
+      if (product.external_url || product.fulfillment === 'external') throw new Error('A selected product must be purchased from its partner shop.')
+      const variant = product.variants?.find(v => String(v.printify_variant_id) === String(product.printify_variant_id)) || product.variants?.[0]
+      if ((product.inventory != null && product.inventory < demand.get(product.id)) || (variant?.inventory != null && variant.inventory < demand.get(product.id))) throw new Error('A selected product is out of stock.')
+    }
+    snapshot = encodeShopSnapshot(packing)
+  } catch (error) { return Response.json({error:error.message}, {status:400}) }
   const customer = await ensureStripeCustomer(db, stripe, user.id)
   if (!customer) return Response.json({ error: 'Your billing account could not be linked.' }, { status: 409 })
   const session = await stripe.checkout.sessions.create({
@@ -116,6 +132,7 @@ export async function POST(request) {
       treat_ids: treatIds.join(','),
       standalone_product_ids: standalone.map(r => r.product_id).join(','),
       userId: user.id,
+      ...snapshot,
     },
     shipping_address_collection: {
       allowed_countries: allowedCountries,

@@ -1,3 +1,6 @@
+BEGIN;
+
+-- Existing purchased_at and id defaults are intentionally left unchanged.
 -- One-time digital access. Existing installations may already have this table.
 CREATE TABLE IF NOT EXISTS public.item_purchases (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -22,3 +25,6 @@ CREATE POLICY "Members read own item purchases" ON public.item_purchases
 -- Payment fulfillment writes through the server service role only.
 REVOKE INSERT, UPDATE, DELETE ON public.item_purchases FROM anon, authenticated;
 GRANT SELECT ON public.item_purchases TO authenticated;
+
+GRANT ALL ON public.item_purchases TO service_role;
+COMMIT;

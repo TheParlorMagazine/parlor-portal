@@ -108,8 +108,8 @@ async function handleSubscriptionCheckout(session, eventId) {
   const customer = await stripe.customers.retrieve(session.customer)
   if (customer.email) {
     try {
-      await sendStripeEmailOnce({
-        eventId,
+      const receipt = await sendStripeEmailOnce({
+        eventId: session.id,
         type: 'payment_confirmed',
         to: customer.email,
         send: () => sendPaymentConfirmedEmail({
@@ -119,8 +119,10 @@ async function handleSubscriptionCheckout(session, eventId) {
           amount: planInfo.amount,
         }),
       })
+      if (receipt?.trackingStatus === 'failed') throw new Error('Subscription receipt rejected; retry required')
     } catch (emailError) {
       console.error('Payment confirmation email tracking failed:', emailError)
+      throw emailError
     }
   }
 }
@@ -130,6 +132,7 @@ async function handleInvoicePaymentSucceeded(invoice) {
   if (!invoice.subscription) return
 
   const subscription = await stripe.subscriptions.retrieve(invoice.subscription)
+  if (!['active', 'trialing'].includes(subscription.status)) return
   const priceId = subscription.items.data[0]?.price?.id
   const planInfo = PLANS[priceId]
   if (!planInfo) return
@@ -139,8 +142,9 @@ async function handleInvoicePaymentSucceeded(invoice) {
     .from('members')
     .update({ plan: planInfo.plan, plan_id: planInfo.plan_id, billing_source: 'stripe', stripe_subscription_id: invoice.subscription })
     .eq('stripe_customer_id', invoice.customer)
+    .eq('stripe_subscription_id', subscription.id)
 
-  if (error) console.error('members renewal update error:', error)
+  if (error) throw new Error('Subscription renewal could not be saved')
 }
 
 async function handleInvoicePaymentFailed(invoice, eventId) {
@@ -177,22 +181,23 @@ async function handleSubscriptionCanceled(subscription, eventId) {
   // Read the existing plan before clearing it.
   const { data: existing, error: readError } = await supabase
     .from('members')
-    .select('full_name, plan')
+    .select('full_name, plan, stripe_subscription_id, billing_source')
     .eq('stripe_customer_id', subscription.customer)
-    .eq('stripe_subscription_id', subscription.id)
     .maybeSingle()
 
   if (readError) {
     console.error('members cancellation lookup error:', readError)
-    return
+    throw new Error('Subscription cancellation could not be checked')
   }
 
   // Ignore stale cancellation events for previous subscriptions.
-  if (!existing) return
+  if (!existing || (existing.stripe_subscription_id && existing.stripe_subscription_id !== subscription.id)) return
+  // A replay after clearing this Stripe subscription may still need to retry
+  // an explicitly rejected receipt. Never clear a replacement/external plan.
+  if (!existing.stripe_subscription_id && (existing.billing_source !== 'stripe' || existing.plan)) return
+  const previousPlan = PLANS[subscription.items?.data?.[0]?.price?.id]?.plan || existing.plan || 'your subscription'
 
-  const previousPlan = existing.plan
-
-  const { data: member, error } = await supabase
+  const { data: member, error } = existing.stripe_subscription_id ? await supabase
     .from('members')
     .update({
       plan: null,
@@ -202,20 +207,17 @@ async function handleSubscriptionCanceled(subscription, eventId) {
     .eq('stripe_customer_id', subscription.customer)
     .eq('stripe_subscription_id', subscription.id)
     .select()
-    .maybeSingle()
+    .maybeSingle() : { data: existing, error: null }
 
-  if (error) {
-    console.error('members plan reset error:', error)
-    return
-  }
+  if (error) throw new Error('Subscription cancellation could not be saved')
 
   if (!member) return
 
   const customer = await stripe.customers.retrieve(subscription.customer)
   if (customer.email) {
     try {
-      await sendStripeEmailOnce({
-        eventId,
+      const receipt = await sendStripeEmailOnce({
+        eventId: subscription.id,
         type: 'subscription_canceled',
         to: customer.email,
         send: () => sendCancellationEmail({
@@ -224,8 +226,10 @@ async function handleSubscriptionCanceled(subscription, eventId) {
           planName: previousPlan,
         }),
       })
+      if (receipt?.trackingStatus === 'failed') throw new Error('Cancellation receipt rejected; retry required')
     } catch (emailError) {
       console.error('subscription_canceled email tracking failed:', emailError)
+      throw emailError
     }
   }
 }
@@ -251,7 +255,7 @@ export async function POST(request) {
       // Digital item unlocks carry articleId; everything else that's a physical
       // shop checkout (has shipping, or is tagged shop_order) becomes an order.
       if (session.metadata?.articleId) {
-        await fulfillItemPurchase(session)
+        await fulfillItemPurchase(session, { retryReceipt: true })
       } else if (session.metadata?.kind === 'tot_bundle') {
         await fulfillShopPurchase(stripe, session, { retryReceipt: true })
       } else if (session.metadata?.kind === 'shop_order' || session.shipping_details?.address || session.collected_information?.shipping_details?.address) {
@@ -271,7 +275,7 @@ export async function POST(request) {
   }
 
   if (event.type === 'checkout.session.async_payment_succeeded') {
-    if (event.data.object.metadata?.articleId) await fulfillItemPurchase(event.data.object)
+    if (event.data.object.metadata?.articleId) await fulfillItemPurchase(event.data.object, { retryReceipt: true })
     else if (['shop_order','tot_bundle'].includes(event.data.object.metadata?.kind)) await fulfillShopPurchase(stripe,event.data.object,{ retryReceipt: true })
     else if (event.data.object.mode === 'subscription') await handleSubscriptionCheckout(event.data.object, event.id)
   }
