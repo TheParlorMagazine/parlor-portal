@@ -1,0 +1,91 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { createClient } from '../../../lib/supabase'
+
+export default function AuthCallback() {
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let active = true
+
+    async function handleCallback() {
+      try {
+        const params = new URLSearchParams(window.location.search)
+        const oauthError = params.get('error_description') || params.get('error')
+
+        if (oauthError) {
+          throw new Error(oauthError.replace(/\+/g, ' '))
+        }
+
+        const code = params.get('code')
+        if (!code) {
+          throw new Error('Google did not return an authorization code.')
+        }
+
+        const supabase = createClient()
+        const { data, error: authError } =
+          await supabase.auth.exchangeCodeForSession(code)
+
+        if (authError) throw authError
+
+        if (!data?.session?.access_token) {
+          throw new Error('We could not establish your login session.')
+        }
+
+        // Ask the server to handle onboarding.
+        // The server decides whether this is an eligible new account.
+        if (params.get('flow') === 'signup') {
+          try {
+            const response = await fetch('/api/auth/onboarding', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${data.session.access_token}`
+            }
+          })
+
+          if (!response.ok) {
+            console.error('Onboarding request failed:', response.status)
+          }
+          } catch (onboardingError) {
+            console.error('Onboarding request failed:', onboardingError)
+          }
+        }
+
+        // Authentication succeeds even if onboarding is unavailable.
+        window.location.replace('/')
+      } catch (err) {
+        console.error('Authentication callback failed:', err)
+        if (active) {
+          setError(err.message || 'Authentication could not be completed.')
+        }
+      }
+    }
+
+    handleCallback()
+    return () => { active = false }
+  }, [])
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontFamily: 'Georgia,serif',
+      padding: 24
+    }}>
+      {error ? (
+        <div style={{maxWidth: 420, textAlign: 'center'}}>
+          <h1>We couldn't sign you in</h1>
+          <p style={{lineHeight: 1.6}}>{error}</p>
+          <a href="/login" style={{color: '#8b465a'}}>
+            Return to login and try again
+          </a>
+        </div>
+      ) : (
+        <p>Confirming your account...</p>
+      )}
+    </div>
+  )
+}

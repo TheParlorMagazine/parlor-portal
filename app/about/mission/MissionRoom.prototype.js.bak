@@ -1,0 +1,153 @@
+'use client'
+
+import { useEffect, useRef } from 'react'
+
+const layers = [
+  {
+    name: 'Settee and gramophone',
+    file: 'sette and gramaphone.png',
+    x: 336, y: 487, w: 555, h: 312,
+  },
+  {
+    name: 'Woman reading The Parlor',
+    file: 'Victorian Woman Reading The Parlor 1@2x.png',
+    x: 0, y: 463, w: 601, h: 549,
+  },
+  {
+    name: 'Woman reading a book',
+    file: 'woman reading a book.png',
+    x: 891, y: 351, w: 299, h: 448,
+  },
+  {
+    name: 'Tea table and chairs',
+    file: 'tabnle and chairs.png',
+    x: 976, y: 579, w: 476, h: 318,
+  },
+]
+
+export default function MissionRoom() {
+  const roomRef = useRef(null)
+
+  useEffect(() => {
+    const room = roomRef.current
+    if (!room) return
+
+    let animationContext
+    let cancelled = false
+
+    async function initializeAnimation() {
+      const { gsap } = await import('gsap')
+      const { ScrollTrigger } = await import('gsap/ScrollTrigger')
+
+      if (cancelled) return
+
+      gsap.registerPlugin(ScrollTrigger)
+
+      animationContext = gsap.context(() => {
+        gsap.fromTo(
+          room,
+          {
+            scale: 1,
+            transformOrigin: 'center center',
+          },
+          {
+            scale: 1.35,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: room.parentElement,
+              start: 'top top',
+              end: '+=2400',
+              scrub: 1,
+              pin: room.parentElement,
+              anticipatePin: 1,
+              invalidateOnRefresh: true,
+            },
+          }
+        )
+      }, room.parentElement)
+    }
+
+    initializeAnimation()
+
+    return () => {
+      cancelled = true
+      if (animationContext) animationContext.revert()
+    }
+  }, [])
+
+  return (
+    <div className="parlor-room-viewport">
+      <div
+        ref={roomRef}
+        className="parlor-room-canvas"
+        role="img"
+        aria-label="An illustrated Victorian parlor with women reading, a settee, a gramophone, and a tea table"
+      >
+        <img
+          className="parlor-room-background"
+          src="/mission-room/the%20room.png"
+          alt=""
+        />
+
+        {layers.map(layer => (
+          <img
+            key={layer.name}
+            className="parlor-room-layer"
+            src={`/mission-room/${encodeURIComponent(layer.file)}`}
+            alt=""
+            style={{
+              left: `${(layer.x / 1536) * 100}%`,
+              top: `${(layer.y / 1024) * 100}%`,
+              width: `${(layer.w / 1536) * 100}%`,
+              height: `${(layer.h / 1024) * 100}%`,
+            }}
+          />
+        ))}
+      </div>
+
+      <style jsx>{`
+        .parlor-room-viewport {
+          position: relative;
+          width: 100%;
+          height: 100vh;
+          height: 100svh;
+          overflow: hidden;
+          background: #e9c9cf;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .parlor-room-canvas {
+          position: relative;
+          width: max(100vw, 150svh);
+          flex: 0 0 auto;
+          aspect-ratio: 3 / 2;
+          overflow: hidden;
+          transform-origin: center center;
+        }
+
+        .parlor-room-background {
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: fill;
+        }
+
+        .parlor-room-layer {
+          position: absolute;
+          object-fit: fill;
+          pointer-events: none;
+        }
+
+        @media (max-width: 767px) {
+          .parlor-room-canvas {
+            width: 170%;
+            max-width: none;
+            transform: translateX(-20%);
+          }
+        }
+      `}</style>
+    </div>
+  )
+}
