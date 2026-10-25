@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import ShopHeader from '../../_components/ShopHeader'
 import SiteFooter from '../../_components/SiteFooter'
+import { createClient } from '../../../lib/supabase'
 import { useCart } from '../../../lib/useCart'
 
 const DISPLAY = "'Playfair Display', Georgia, serif"
@@ -15,10 +16,12 @@ function Confirmed() {
   const params = useSearchParams()
   const sessionId = params.get('session_id')
   const { clear } = useCart()
+  const [signIn, setSignIn] = useState(false)
+  const [retry, setRetry] = useState(0)
   const [order, setOrder] = useState(undefined) // undefined=loading, null=not found yet, object=found
 
   // The purchase succeeded — empty the cart.
-  useEffect(() => { clear() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (order) clear() }, [order]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // The order is created by the Stripe webhook moments after redirect, so poll briefly.
   useEffect(() => {
@@ -26,18 +29,22 @@ function Confirmed() {
     let tries = 0, alive = true, timer
     const poll = async () => {
       try {
-        const d = await fetch(`/api/shop/order-by-session?session_id=${encodeURIComponent(sessionId)}`).then(r => r.json())
+        const { data: { session } } = await createClient().auth.getSession()
+        const response = await fetch(`/api/shop/order-by-session?session_id=${encodeURIComponent(sessionId)}`, { headers: session ? { Authorization: `Bearer ${session.access_token}` } : {} })
+        if (response.status === 401) { if (alive) { setSignIn(true); setOrder(null) }; return }
+        if ([400,404].includes(response.status)) { if (alive) setOrder(null); return }
+        const d = await response.json()
         if (!alive) return
         if (d.order) { setOrder(d.order); return }
       } catch {}
       if (!alive) return
       tries++
-      if (tries < 6) timer = setTimeout(poll, 1500)
+      if (tries < 12) timer = setTimeout(poll, 1500)
       else setOrder(null)
     }
     poll()
     return () => { alive = false; clearTimeout(timer) }
-  }, [sessionId])
+  }, [sessionId, retry])
 
   const cur = order?.currency || 'usd'
 
@@ -45,11 +52,11 @@ function Confirmed() {
     <div style={{ background: '#f6e4e7', minHeight: '100vh' }}>
       <ShopHeader />
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '60px 24px 90px', textAlign: 'center' }}>
-        <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#0a0a0a', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, margin: '0 auto 22px' }}>✓</div>
-        <p style={{ fontFamily: BODY, fontSize: 13, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#a06a76', margin: '0 0 10px' }}>Order confirmed</p>
-        <h1 style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 700, color: BLACK, margin: '0 0 14px', lineHeight: 1.1 }}>Thank you for your order</h1>
+        <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#0a0a0a', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, margin: '0 auto 22px' }}>{order ? '✓' : '…'}</div>
+        <p style={{ fontFamily: BODY, fontSize: 13, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#a06a76', margin: '0 0 10px' }}>{order ? 'Order confirmed' : 'Checking your payment'}</p>
+        <h1 style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 700, color: BLACK, margin: '0 0 14px', lineHeight: 1.1 }}>{order ? 'Thank you for your order' : 'Confirming your order'}</h1>
         <p style={{ fontFamily: BODY, fontSize: 16.5, lineHeight: 1.65, color: '#5a3d44', margin: '0 auto 30px', maxWidth: 460 }}>
-          We’ve emailed your receipt{order?.order_number ? <> and confirmation for <strong>{order.order_number}</strong></> : ''}. You can follow it from placement to delivery in your account.
+          {order ? <>Your payment is confirmed{order.order_number ? <> for <strong>{order.order_number}</strong></> : ''}. Your order is saved to your account. Check your checkout email for the receipt, and follow delivery progress in your account.</> : <>We’re checking your payment and saving your order. Please don’t pay again.</>}
         </p>
 
         {order && (
@@ -67,7 +74,10 @@ function Confirmed() {
         )}
         {order === undefined && <p style={{ fontFamily: BODY, fontSize: 14, color: '#a06a76', margin: '0 0 28px' }}>Finalizing your order details…</p>}
 
-        <a href="/portal/orders" style={{ display: 'inline-block', background: BLACK, color: '#fff', fontFamily: BODY, fontSize: 15, letterSpacing: '0.03em', padding: '14px 30px', borderRadius: 26, textDecoration: 'none' }}>Track your order →</a>
+        {!order && order !== undefined && (signIn
+          ? <p><a href={`/login?returnTo=${encodeURIComponent('/shop/order-confirmed?session_id=' + (sessionId || ''))}`}>Sign in to confirm your order</a></p>
+          : <p role="status">Your order isn’t confirmed yet. <button onClick={() => { setOrder(undefined); setRetry(n => n + 1) }} style={{ font: 'inherit', color: '#7a2531', border: 0, background: 'none', textDecoration: 'underline', cursor: 'pointer' }}>Check again</button> or <a href="mailto:hello@theparlormagazine.com">contact us</a>.</p>)}
+        {order && <a href="/portal/orders" style={{ display: 'inline-block', background: BLACK, color: '#fff', fontFamily: BODY, fontSize: 15, letterSpacing: '0.03em', padding: '14px 30px', borderRadius: 26, textDecoration: 'none' }}>Track your order →</a>}
         <div style={{ marginTop: 18 }}>
           <a href="/shop" style={{ fontFamily: BODY, fontSize: 14, color: '#7a2531', textDecoration: 'none' }}>← Continue shopping</a>
         </div>

@@ -1,5 +1,7 @@
 'use client'
 
+import OrderPackingList from './OrderPackingList'
+
 import { useEffect, useState } from 'react'
 import { confirmDialog } from '../../../lib/confirmDialog'
 
@@ -37,6 +39,7 @@ function OrderRow({ order, token, onChanged }) {
   const [msg, setMsg] = useState(null)
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
   const sm = STATUS_META[order.status] || STATUS_META.processing
+  const needsReview = order.printify_status === 'needs_review' || !!order.metadata?.stock_review_required
 
   async function save() {
     setBusy(true); setMsg(null)
@@ -73,12 +76,15 @@ function OrderRow({ order, token, onChanged }) {
           </div>
         </div>
         <div style={{ flex: '0 0 auto', fontSize: 13, color: '#444' }}>{money(order.total_cents, order.currency)}</div>
+        {needsReview && <span style={{ fontSize: 11, color: '#9b3c42', fontWeight: 700 }}>Fulfillment needs review</span>}
         <span style={{ flex: '0 0 auto', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '4px 11px', borderRadius: 999, background: sm.bg, color: sm.color }}>{sm.label}</span>
         <span style={{ flex: '0 0 auto', color: '#bbb', fontSize: 13 }}>{open ? '▲' : '▼'}</span>
       </div>
 
       {open && (
         <div style={{ padding: '4px 16px 18px', borderTop: `1px solid ${BORDER}` }}>
+          {needsReview && <p style={{ color: '#9b3c42', fontSize: 13 }}>Payment is saved. Check stock and the existing Printify order before fulfilling manually or submitting a replacement; do not charge the customer again.</p>}
+          {order.printify_status && <p style={{ color: '#666', fontSize: 12 }}>Printify: {order.printify_status}{order.printify_order_id ? ` · ${order.printify_order_id}` : ''}</p>}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, margin: '16px 0' }}>
             <div>
               <div style={label}>Ship to</div>
@@ -100,6 +106,8 @@ function OrderRow({ order, token, onChanged }) {
               </div>
             </div>
           </div>
+
+          <OrderPackingList order={order} />
 
           <div style={{ background: '#faf7f8', border: `1px solid ${BORDER}`, borderRadius: 9, padding: 14 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 1fr', gap: 12 }}>

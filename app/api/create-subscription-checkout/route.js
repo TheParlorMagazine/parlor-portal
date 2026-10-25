@@ -1,5 +1,5 @@
 import Stripe from 'stripe'
-import { serviceClient } from '../../../lib/apiAuth'
+import { requireUser, serviceClient } from '../../../lib/apiAuth'
 import { ensureStripeCustomer } from '../../../lib/stripeCustomer'
 import { currencyForRequest } from '../../../lib/geo'
 
@@ -18,27 +18,36 @@ const PLAN_PRICE_IDS = {
 const SHIP_COUNTRIES = ['US', 'CA', 'GB', 'IE', 'AU', 'NZ', 'FR', 'DE', 'ES', 'IT', 'NL', 'SE', 'NO', 'DK', 'FI', 'BE', 'AT', 'CH', 'PT', 'MX', 'BR', 'JP']
 
 export async function POST(request) {
-  const { planId, userId, successUrl, cancelUrl, coupon } = await request.json()
-
-  const priceId = PLAN_PRICE_IDS[planId]
-  if (!priceId || !userId || !successUrl || !cancelUrl) {
-    return Response.json({ error: 'planId, userId, successUrl, and cancelUrl are required' }, { status: 400 })
-  }
-
+  const user = await requireUser(request)
+  if (!user) return Response.json({ error: 'Sign in or create an account before subscribing.' }, { status: 401 })
   try {
+    const { planId, successUrl, cancelUrl, coupon } = await request.json()
+    const priceId = PLAN_PRICE_IDS[planId]
+    if (!priceId) return Response.json({ error: 'Unknown subscription plan.' }, { status: 400 })
+    const origin = new URL(request.url).origin
+    const success = new URL(successUrl || '/portal/subscriptions', origin)
+    const cancel = new URL(cancelUrl || '/plans', origin)
+    if (success.origin !== origin || cancel.origin !== origin) return Response.json({ error: 'Checkout must return to this site.' }, { status: 400 })
+    const db = serviceClient()
+    const { data: member, error: memberError } = await db.from('members').select('id').eq('id', user.id).single()
+    if (memberError || !member) return Response.json({ error: 'Your account is not ready for checkout. Please sign in again or contact us.' }, { status: 409 })
+    // Never accept an account id from the browser or silently create guest checkout.
+    const customerId = await ensureStripeCustomer(db, stripe, user.id)
+    if (!customerId) throw new Error('Could not link a billing account')
+    const existing = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 })
+    if (existing.data.some(sub => ['active', 'trialing', 'past_due', 'unpaid', 'paused', 'incomplete'].includes(sub.status) && sub.items.data.some(item => Object.values(PLAN_PRICE_IDS).includes(item.price.id)))) {
+      return Response.json({ url: `${origin}/portal/subscriptions`, alreadySubscribed: true })
+    }
     const params = {
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      client_reference_id: userId,
+      success_url: success.toString(),
+      cancel_url: cancel.toString(),
+      client_reference_id: user.id,
+      customer: customerId,
+      metadata: { userId: user.id, planId },
+      subscription_data: { metadata: { userId: user.id, planId } },
     }
-    // Reuse the member's existing Stripe customer (e.g. if they already saved a
-    // card in Settings) so we never create a duplicate and orphan saved methods.
-    try {
-      const customerId = await ensureStripeCustomer(serviceClient(), stripe, userId)
-      if (customerId) params.customer = customerId
-    } catch {}
     // The Printing Press ships a physical magazine, so collect a shipping address
     // at checkout. The webhook saves it back to members.mailing_address.
     if (planId === PRINTING_PRESS_ID) {

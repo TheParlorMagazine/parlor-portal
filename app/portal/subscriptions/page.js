@@ -121,8 +121,8 @@ function Subscriptions() {
         // New member → Stripe Checkout creates the subscription.
         const res = await fetch('/api/create-subscription-checkout', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ planId, userId: ctx.user.id, successUrl: window.location.href, cancelUrl: window.location.href }),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` },
+          body: JSON.stringify({ planId, successUrl: window.location.href, cancelUrl: window.location.href }),
         })
         const data = await res.json()
         if (res.ok && data.url) { window.location.href = data.url; return }

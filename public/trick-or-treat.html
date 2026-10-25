@@ -533,6 +533,7 @@ dialog::backdrop{background:rgba(23,18,31,.6)}
     <p class="extras">Also in every bundle: a handwritten thank-you.</p>
     <div class="total"><span>Total</span><strong id="price"></strong></div>
     <div class="actions">
+      <p style="font-size:.85rem;text-align:center;">A free account is required to order and track delivery. No paid membership is needed.</p>
       <button class="checkout-btn" id="payBtn">Continue to payment</button>
       <button class="secondary" id="backBtn">Keep trick-or-treating</button>
     </div>
@@ -910,6 +911,11 @@ $("#payBtn").addEventListener("click", async () => {
         cancelUrl: window.location.href,
       }),
     });
+    if (res.status === 401) {
+      try { sessionStorage.setItem('parlor-tot-pending', JSON.stringify({ collectionId: _collectionId, picks: [...tote] })); } catch {}
+      window.location.href = '/signup?returnTo=' + encodeURIComponent('/trick-or-treat?resume=1');
+      return;
+    }
     const data = await res.json();
     if (data.url) {
       window.location.href = data.url;
@@ -1373,6 +1379,15 @@ async function loadFromDB() {
 
 // Boot: try DB first, then render
 loadFromDB().then(() => {
+  try {
+    if (new URLSearchParams(location.search).get('resume') === '1') {
+      const pending = JSON.parse(sessionStorage.getItem('parlor-tot-pending') || 'null');
+      if (pending?.collectionId === _collectionId) for (const id of pending.picks || []) {
+        if (treatById[id]?.stock > 0 && !tote.includes(id) && !pickFrom(treatById[id].house)) tote.push(id);
+      }
+      sessionStorage.removeItem('parlor-tot-pending');
+    }
+  } catch {}
   renderStreet();
   renderTote();
 });

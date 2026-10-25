@@ -15,8 +15,14 @@ export async function POST(request) {
   if (!ROLES.includes(me.role)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
-  let sections = {}, supportCopy = '', supportTitle = '', supportBtn1 = '', supportBtn2 = '', announcementOverride = null
-  try { const body = await request.json(); sections = body?.sections || {}; supportCopy = body?.supportCopy || ''; supportTitle = body?.supportTitle || ''; supportBtn1 = body?.supportBtn1 || ''; supportBtn2 = body?.supportBtn2 || '' ; announcementOverride = body?.announcementOverride || null } catch {}
+  let retryId = null, sections = {}, supportCopy = '', supportTitle = '', supportBtn1 = '', supportBtn2 = '', announcementOverride = null
+  try { const body = await request.json(); retryId = body?.campaignId || null; sections = body?.sections || {}; supportCopy = body?.supportCopy || ''; supportTitle = body?.supportTitle || ''; supportBtn1 = body?.supportBtn1 || ''; supportBtn2 = body?.supportBtn2 || '' ; announcementOverride = body?.announcementOverride || null } catch {}
+  if (retryId) {
+    const { data: existing, error } = await db.from('email_campaigns').select('*').eq('id', retryId).eq('kind', 'newsletter').single()
+    if (error || !existing) return Response.json({ error: 'Newsletter not found.' }, { status: 404 })
+    const result = await sendCampaignRow(db, existing, { baseUrl })
+    return Response.json({ ...result, campaignId: existing.id, error: result.ok ? undefined : result.error || 'No eligible recipients.' }, { status: result.ok ? 200 : result.httpStatus || 502 })
+  }
   const nl = await gatherNewsletter(db, { baseUrl, sections, supportCopy, supportTitle, supportBtn1, supportBtn2, announcementOverride })
   if (nl.empty) return Response.json({ error: 'Nothing to send yet — no articles or events.' }, { status: 400 })
 
@@ -26,10 +32,7 @@ export async function POST(request) {
   }).select('*').single()
   if (error) return Response.json({ error: error.message }, { status: 500 })
 
-  const { sent, reason } = await sendCampaignRow(db, campaign, { baseUrl })
-  if (!sent) {
-    await db.from('email_campaigns').delete().eq('id', campaign.id)
-    return Response.json({ error: reason === 'no_recipients' ? 'No subscribers to send to.' : 'Could not send.' }, { status: 400 })
-  }
-  return Response.json({ ok: true, sent, subject: nl.subject })
+  const result = await sendCampaignRow(db, campaign, { baseUrl })
+  if (!result.ok) return Response.json({ ...result, campaignId: campaign.id, error: result.error || (result.reason === 'no_recipients' ? 'No subscribers to send to.' : 'Could not send.') }, { status: result.httpStatus || 502 })
+  return Response.json({ ...result, campaignId: campaign.id, subject: nl.subject })
 }

@@ -21,36 +21,38 @@ function SignupForm() {
   const [googleHovered, setGoogleHovered] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [passwordSetup, setPasswordSetup] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
  async function handleSignup(e) {
   e.preventDefault()
-  setLoading(true)
-  setError('')
+  setLoading(true); setError('')
+  const normalizedEmail = email.trim().toLowerCase()
+  try {
+    const check = await fetch('/api/auth/check-email', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normalizedEmail, intent: 'password-setup' }),
+    })
+    const account = await check.json()
+    if (!check.ok) throw new Error(account.error || 'Could not check your account. Please try again.')
+    if (account.exists) { setPasswordSetup(true); setSuccess(true); return }
 
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { full_name: name },
-      emailRedirectTo: `${window.location.origin}/auth/callback?flow=signup&returnTo=${encodeURIComponent(returnTo)}`
+    const { data, error } = await supabase.auth.signUp({
+      email: normalizedEmail, password,
+      options: { data: { full_name: name }, emailRedirectTo: `${window.location.origin}/auth/callback?flow=signup&returnTo=${encodeURIComponent(returnTo)}` },
+    })
+    const existing = data?.user?.identities?.length === 0 || error?.code === 'user_already_exists' || /already (been )?registered/i.test(error?.message || '')
+    if (existing) {
+      const response = await fetch('/api/auth/send-reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: normalizedEmail }) })
+      if (!response.ok) throw new Error('Could not send the password email. Please try again.')
+      setPasswordSetup(true); setSuccess(true); return
     }
-  })
-
-  if (error) {
-    // Email already exists — send them to login instead
-    if (error.message?.toLowerCase().includes('already registered') || error.message?.toLowerCase().includes('already been registered') || error.status === 422) {
-      router.push(`/login?returnTo=${encodeURIComponent(returnTo)}&email=${encodeURIComponent(email)}`)
-      return
-    }
-    setError(error.message)
-    setLoading(false)
-    return
-  }
-
-  setSuccess(true)
-  setLoading(false)
+    if (error) throw error
+    if (data?.session) { router.push(returnTo); return }
+    setSuccess(true)
+  } catch (error) { setError(error.message || 'Could not create your account. Please try again.') }
+  finally { setLoading(false) }
 }
 
   async function handleGoogleSignup() {
@@ -74,8 +76,7 @@ function SignupForm() {
         <div style={{fontSize:'32px',marginBottom:'16px'}}>✉️</div>
         <div style={styles.heading}>Check your email</div>
         <p style={styles.sub}>
-          We sent a confirmation link to <strong>{email}</strong>.
-          Click it to activate your account.
+          {passwordSetup ? <>An account is already associated with <strong>{email}</strong>. We sent a link to set or reset your password. Use that email link to access your existing subscription.</> : <>We requested a confirmation email for <strong>{email}</strong>. Check your inbox and spam folder, then follow the link to activate your account.</>}
         </p>
         <a href="/login" style={styles.btn}>Back to login</a>
       </div>

@@ -1,5 +1,7 @@
 'use client'
 
+import { startItemCheckout } from '../../../../lib/startItemCheckout'
+
 import { useState, useEffect, useRef } from 'react'
 
 // Reader's Circle membership plan — routed through /checkout-relay, which
@@ -9,8 +11,8 @@ const READERS_CIRCLE_PLAN_ID = 'fccb348a-7433-4080-8699-9ef8c0e7a519'
 // Membership paywall shown as a pop-up (like the newsletter SubscribeWall) on
 // paywalled articles. Frosted backdrop + fixed bottom card, revealed after the
 // reader scrolls into the piece, with body scroll locked while it's up.
-export default function ArticlePaywallPopup({ paywallType, price, stripePriceId, articleId, userId, pagePath }) {
-  const [visible, setVisible] = useState(false)
+export default function ArticlePaywallPopup({ purchasePending = false, recoveryPath, paywallType, price, stripePriceId, articleId, userId, pagePath }) {
+  const [visible, setVisible] = useState(purchasePending)
 
   // Reveal the paywall on a timer: the reader gets ~10s with the article,
   // then the wall pops up and locks scroll.
@@ -42,23 +44,9 @@ export default function ArticlePaywallPopup({ paywallType, price, stripePriceId,
       return
     }
     try {
-      const res = await fetch('/api/create-paywall-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stripePriceId,
-          articleId,
-          itemType: 'article',
-          userId: userId || undefined,
-          successUrl: window.location.href + '?unlocked=1',
-          cancelUrl: window.location.href,
-        }),
-      })
-      const data = await res.json()
-      if (data.url) window.location.href = data.url
-      else window.location.href = '/plans'
-    } catch {
-      window.location.href = '/plans'
+      await startItemCheckout({ stripePriceId, articleId, itemType: 'article' })
+    } catch (error) {
+      window.alert(error.message)
     }
   }
 
@@ -125,10 +113,15 @@ export default function ArticlePaywallPopup({ paywallType, price, stripePriceId,
             fontSize: 'clamp(20px,2.4vw,29px)', lineHeight: '1.45',
             color: '#241016', margin: '0 auto clamp(26px,3.5vw,38px)', fontWeight: '400', maxWidth: '780px',
           }}>
-            Full access is available to members of <strong style={{ fontWeight: '700' }}>The Reader&rsquo;s Circle</strong>, who support the writers, editors, and work that make The Parlor possible.
+            {purchasePending ? 'We couldn’t confirm your purchase yet. Please don’t pay again. Sign in with the account used at checkout, or check your purchase again.' : <>Full access is available to members of <strong style={{ fontWeight: '700' }}>The Reader&rsquo;s Circle</strong>, who support the writers, editors, and work that make The Parlor possible.</>}
           </p>
 
-          <div className="pw-actions" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'center', gap: 'clamp(18px,2.4vw,32px)' }}>
+          {purchasePending ? <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 20 }}>
+            <a href="" onClick={event => { event.preventDefault(); window.location.reload() }} style={{ color: '#171717' }}>Check purchase again</a>
+            <a href={`/login?returnTo=${encodeURIComponent(recoveryPath || pagePath || '/')}`} style={{ color: '#171717' }}>Sign in</a>
+            <a href="/portal/recover-purchase" style={{ color: '#171717' }}>Recover a guest purchase</a>
+            <a href="mailto:hello@theparlormagazine.com" style={{ color: '#171717' }}>Contact us</a>
+          </div> : <div className="pw-actions" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'center', gap: 'clamp(18px,2.4vw,32px)' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <a
                 className="pw-join"
@@ -175,7 +168,7 @@ export default function ArticlePaywallPopup({ paywallType, price, stripePriceId,
                 Sign in here
               </a>
             </span>
-          </div>
+          </div>}
         </div>
       </div>
     </div>

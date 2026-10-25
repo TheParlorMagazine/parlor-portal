@@ -25,12 +25,12 @@ function LoginForm() {
     setError('')
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim().toLowerCase(),
       password,
     })
 
     if (error) {
-      setError(error.message)
+      setError(error.code === 'invalid_credentials' || /invalid login credentials/i.test(error.message || '') ? 'We couldn’t sign you in with that password. If you joined on our previous site, set a password for this site using “Set or reset password” above.' : error.message)
       setLoading(false)
       return
     }
@@ -49,17 +49,20 @@ function LoginForm() {
 
   async function handleForgotPassword() {
     if (!email) {
-      setError('Enter your email address above, then click "Forgot password?".')
+      setError('Enter your email address above, then click "Set or reset password".')
       return
     }
     setResetLoading(true)
     setError('')
-    await fetch('/api/auth/send-reset', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    })
-    setResetLoading(false)
-    setResetSent(true)
+    try {
+      const response = await fetch('/api/auth/send-reset', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      if (!response.ok) throw new Error('We could not send the password email right now. Please try again.')
+      setResetSent(true)
+    } catch (error) { setError(error.message || 'Could not send the password email.') }
+    finally { setResetLoading(false) }
   }
 
   async function handleGoogleLogin() {
@@ -205,7 +208,7 @@ function LoginForm() {
                   textUnderlineOffset: '2px',
                 }}
               >
-                {resetLoading ? 'Sending…' : 'Forgot password?'}
+                {resetLoading ? 'Sending…' : 'Set or reset password'}
               </button>
             </div>
             <input
@@ -263,7 +266,7 @@ function LoginForm() {
               color: '#555',
               textAlign: 'center',
             }}>
-              Check your inbox — we sent a password reset link to <strong>{email}</strong>.
+              If an account exists for <strong>{email}</strong>, you’ll receive a link to set or reset its password. Check your spam folder too.
             </div>
           )}
         </form>

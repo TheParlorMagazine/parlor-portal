@@ -1,3 +1,5 @@
+import { requireShopUser } from '../../../../lib/shopAuth'
+import { ensureStripeCustomer } from '../../../../lib/stripeCustomer'
 import Stripe from 'stripe'
 import { serviceClient } from '../../../../lib/apiAuth'
 import { currencyForRequest, priceForCurrency } from '../../../../lib/geo'
@@ -5,14 +7,21 @@ import { currencyForRequest, priceForCurrency } from '../../../../lib/geo'
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 export async function POST(request) {
+  const user = await requireShopUser(request)
+  if (!user) return Response.json({ error: 'Sign in or create an account before checkout.' }, { status: 401 })
   let body = {}; try { body = await request.json() } catch {}
-  const { treatIds, collectionId, successUrl, cancelUrl, userId } = body
+  const { treatIds, collectionId, successUrl, cancelUrl } = body
 
   if (!Array.isArray(treatIds) || !treatIds.length || !collectionId || !successUrl || !cancelUrl) {
     return Response.json({ error: 'treatIds, collectionId, successUrl and cancelUrl are required' }, { status: 400 })
   }
 
   const db = serviceClient()
+  const origin = new URL(request.url).origin
+  let cancel
+  try { cancel = new URL(cancelUrl, origin) } catch { return Response.json({ error: 'Invalid return URL' }, { status: 400 }) }
+  if (cancel.origin !== origin) return Response.json({ error: 'Checkout must return to this site.' }, { status: 400 })
+  if (treatIds.length > 20 || new Set(treatIds).size !== treatIds.length) return Response.json({ error: 'Choose one different treat from each house.' }, { status: 400 })
 
   // 1. Load collection (for price + name)
   const { data: collection, error: colErr } = await db
@@ -27,7 +36,7 @@ export async function POST(request) {
   // 2. Validate selected treats — they must exist, be active, and have stock
   const { data: treats, error: tErr } = await db
     .from('tot_treats')
-    .select('id, name, stock, house_id, product_id, shop_products(id, name, images)')
+    .select('id, name, stock, house_id, product_id, shop_products(id, name, images, ships_to)')
     .in('id', treatIds)
     .eq('active', true)
   if (tErr) return Response.json({ error: tErr.message }, { status: 500 })
@@ -41,13 +50,18 @@ export async function POST(request) {
     return Response.json({ error: `Sold out: ${soldOut.map(t => t.name).join(', ')}` }, { status: 400 })
   }
 
+  const { data: houses, error: houseError } = await db.from('tot_houses').select('id').eq('collection_id', collectionId).eq('active', true)
+  const houseIds = new Set((houses || []).map(h => h.id))
+  if (houseError || !houseIds.size || treats.length !== houseIds.size || new Set(treats.map(t => t.house_id)).size !== houseIds.size || treats.some(t => !houseIds.has(t.house_id))) return Response.json({ error: 'Choose exactly one treat from each house in this collection.' }, { status: 400 })
+
   // 3. Load standalone products (always-included items like the tote)
-  const { data: standaloneRows } = await db
+  const { data: standaloneRows, error: standaloneError } = await db
     .from('tot_collection_products')
-    .select('product_id, shop_products(id, name, images)')
+    .select('product_id, shop_products(id, name, images, ships_to)')
     .eq('collection_id', collectionId)
     .order('sort_order')
 
+  if (standaloneError) return Response.json({ error: 'Included products could not be loaded.' }, { status: 500 })
   const standalone = (standaloneRows || []).filter(r => r.product_id)
 
   // 4. Build the Stripe line item — one flat bundle price
@@ -64,6 +78,14 @@ export async function POST(request) {
   const firstImage = standalone[0]?.shop_products?.images?.[0]
     || treats?.[0]?.shop_products?.images?.[0]
 
+  let allowedCountries = ['US', 'CA', 'GB', 'IE', 'AU', 'NZ', 'FR', 'DE', 'ES', 'IT', 'NL', 'SE', 'NO', 'DK', 'FI', 'BE', 'AT', 'CH', 'PT', 'MX', 'BR', 'JP']
+  for (const product of [...treats.map(t => t.shop_products), ...standalone.map(r => r.shop_products)].filter(Boolean)) {
+    if (product.ships_to === 'us_only') allowedCountries = allowedCountries.filter(c => c === 'US')
+    else if (Array.isArray(product.ships_to) && product.ships_to.length) allowedCountries = allowedCountries.filter(c => product.ships_to.includes(c))
+  }
+  if (!allowedCountries.length) return Response.json({ error: 'These items do not share a delivery destination.' }, { status: 400 })
+  const customer = await ensureStripeCustomer(db, stripe, user.id)
+  if (!customer) return Response.json({ error: 'Your billing account could not be linked.' }, { status: 409 })
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     line_items: [{
@@ -84,18 +106,19 @@ export async function POST(request) {
         },
       },
     }],
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-    client_reference_id: userId || undefined,
+    success_url: `${origin}/shop/order-confirmed?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: cancel.toString(),
+    client_reference_id: user.id,
+    customer,
     metadata: {
       kind: 'tot_bundle',
       collection_id: collectionId,
       treat_ids: treatIds.join(','),
       standalone_product_ids: standalone.map(r => r.product_id).join(','),
-      userId: userId || '',
+      userId: user.id,
     },
     shipping_address_collection: {
-      allowed_countries: ['US', 'CA', 'GB', 'IE', 'AU', 'NZ', 'FR', 'DE', 'ES', 'IT', 'NL', 'SE', 'NO', 'DK', 'FI', 'BE', 'AT', 'CH', 'PT', 'MX', 'BR', 'JP'],
+      allowed_countries: allowedCountries,
     },
     phone_number_collection: { enabled: true },
   })
