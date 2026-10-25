@@ -7,6 +7,14 @@ CREATE TABLE IF NOT EXISTS public.item_purchases (
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (member_id, article_id, item_type)
 );
+CREATE UNIQUE INDEX IF NOT EXISTS
+  item_purchases_member_article_type_uidx
+ON public.item_purchases (
+  member_id,
+  article_id,
+  item_type
+);
+
 ALTER TABLE public.item_purchases ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Members read own item purchases" ON public.item_purchases;
 CREATE POLICY "Members read own item purchases" ON public.item_purchases
