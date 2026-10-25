@@ -1,3 +1,4 @@
+import { observeStripeCheckout } from '../../../../lib/checkoutReservations'
 import { fulfillShopPurchase } from '../../../../lib/fulfillShopPurchase'
 import { fulfillItemPurchase } from '../../../../lib/itemPurchase'
 import Stripe from 'stripe'
@@ -247,6 +248,25 @@ export async function POST(request) {
     return Response.json({ error: `Webhook signature verification failed: ${err.message}` }, { status: 400 })
   }
 
+  if (['checkout.session.expired','checkout.session.async_payment_failed'].includes(event.type)) {
+    const object=event.data.object
+    if(object.metadata?.reservation_id) {
+      const db=getSupabase()
+      const {data:row,error}=await db.from('checkout_reservations').select('*').eq('id',object.metadata.reservation_id).single()
+      if(error || !row)throw new Error('Checkout allocation could not be loaded')
+      const current=await observeStripeCheckout(db,stripe,row,{id:object.id})
+      if(current.payment_status==='paid' && current.status==='complete') {
+        if(current.metadata?.articleId)await fulfillItemPurchase(current,{retryReceipt:true})
+        else await fulfillShopPurchase(stripe,current,{retryReceipt:true})
+      }
+    }
+  }
+  if (event.type==='checkout.session.completed' && event.data.object.payment_status!=='paid' && event.data.object.metadata?.reservation_id) {
+    const object=event.data.object,db=getSupabase()
+    const {data:row,error}=await db.from('checkout_reservations').select('*').eq('id',object.metadata.reservation_id).single()
+    if(error || !row)throw new Error('Checkout allocation could not be loaded')
+    await observeStripeCheckout(db,stripe,row,{id:object.id})
+  }
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object
     if (session.mode === 'setup') {

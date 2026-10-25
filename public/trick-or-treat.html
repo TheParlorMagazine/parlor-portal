@@ -891,7 +891,8 @@ $("#checkoutBtn").addEventListener("click", () => {
 });
 $("#haul").addEventListener("close", () => { document.body.style.overflow = ""; });
 $("#backBtn").addEventListener("click", () => $("#haul").close());
-$("#payBtn").addEventListener("click", async () => {
+let pendingCheckoutId=null, pendingCheckoutSignature=null;
+$('#payBtn').addEventListener('click', async () => {
   if (!_collectionId) {
     $("#note").textContent = "Bundle not available for purchase yet.";
     return;
@@ -901,10 +902,13 @@ $("#payBtn").addEventListener("click", async () => {
   btn.textContent = "Redirecting…";
   $("#note").textContent = "";
   try {
+    const signature=JSON.stringify({collectionId:_collectionId,picks:[...tote]});
+    if (!pendingCheckoutId || pendingCheckoutSignature!==signature) {pendingCheckoutId=crypto.randomUUID();pendingCheckoutSignature=signature;}
     const res = await fetch("/api/trick-or-treat/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        requestId: pendingCheckoutId,
         treatIds: [...tote],
         collectionId: _collectionId,
         successUrl: window.location.origin + "/trick-or-treat?order=success",
@@ -912,9 +916,8 @@ $("#payBtn").addEventListener("click", async () => {
       }),
     });
     if (res.status === 401) {
-      try { localStorage.setItem('parlor-tot-pending', JSON.stringify({ collectionId: _collectionId, picks: [...tote], savedAt: Date.now() })); } catch {}
-      document.cookie = `parlor_checkout_return=${encodeURIComponent('/trick-or-treat?resume=1')}; Path=/; Max-Age=3600; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`;
-      window.location.href = '/signup?returnTo=' + encodeURIComponent('/trick-or-treat?resume=1');
+      try { localStorage.setItem('parlor-tot-pending:'+pendingCheckoutId, JSON.stringify({ collectionId: _collectionId, picks: [...tote], savedAt: Date.now() })); } catch {}
+      window.location.href = '/signup?returnTo=' + encodeURIComponent('/trick-or-treat?resume='+pendingCheckoutId);
       return;
     }
     const data = await res.json();
@@ -1381,19 +1384,20 @@ async function loadFromDB() {
 // Boot: try DB first, then render
 loadFromDB().then(() => {
   try {
-    if (new URLSearchParams(location.search).get('resume') === '1') {
-      const pending = JSON.parse(localStorage.getItem('parlor-tot-pending') || 'null');
-      if (pending?.savedAt > Date.now() - 60*60*1000 && pending?.collectionId === _collectionId) for (const id of pending.picks || []) {
+    if (new URLSearchParams(location.search).get('resume')) {
+      const intent=new URLSearchParams(location.search).get('resume');
+      const pending = JSON.parse(localStorage.getItem('parlor-tot-pending:'+intent) || 'null');
+      if(pending && /^[0-9a-f-]{36}$/i.test(intent) && pending.savedAt<=Date.now()+60000){pendingCheckoutId=intent;pendingCheckoutSignature=JSON.stringify({collectionId:pending.collectionId,picks:pending.picks});}
+      if (pending?.savedAt<=Date.now()+60000 && pending?.savedAt > Date.now() - 60*60*1000 && pending?.collectionId === _collectionId) for (const id of pending.picks || []) {
         if (treatById[id]?.stock > 0 && !tote.includes(id) && !pickFrom(treatById[id].house)) tote.push(id);
       }
-      localStorage.removeItem('parlor-tot-pending');
+
     }
   } catch {}
   renderStreet();
   renderTote();
-  if (new URLSearchParams(location.search).get('resume') === '1') {
+  if (new URLSearchParams(location.search).get('resume')) {
     history.replaceState({}, '', location.pathname);
-    document.cookie = 'parlor_checkout_return=; Path=/; Max-Age=0; SameSite=Lax';
     if (tote.length >= TOTE_SIZE - 1) {
       $('#checkoutBtn').click();
       $('#payBtn').click();

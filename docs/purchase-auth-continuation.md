@@ -1,3 +1,5 @@
+> Latest implementation and migration instructions: [Purchase reservations release](purchase-reservations-release.md). This earlier report describes the prior commit; its no-reservations/shared-cookie limitations have been superseded.
+
 # Resume purchases after authentication
 
 Changes on `audit/parlor-production-readiness`; no additional SQL migration.

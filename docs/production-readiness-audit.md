@@ -1,3 +1,5 @@
+> Latest implementation and migration instructions: [Purchase reservations release](purchase-reservations-release.md). This earlier report describes the prior commit; its no-reservations/shared-cookie limitations have been superseded.
+
 # Production-readiness audit — 2026-10-25
 
 Target: `integration/parlor-consolidation`, exact base `9daa35772f6997e29d6a24953adf55c4636b8410`.

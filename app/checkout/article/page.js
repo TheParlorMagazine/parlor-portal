@@ -10,23 +10,24 @@ function ArticleCheckout() {
   const [error, setError] = useState('')
   const articleId = params.get('articleId')
   const stripePriceId = params.get('stripePriceId')
+  const requestId = params.get('requestId')
+  const createdAt = Number(params.get('createdAt'))
   const itemType = params.get('itemType') || 'article'
 
   async function proceed() {
     setError('')
-    if (!articleId || !stripePriceId || !['article','audio','video'].includes(itemType)) {
+    if (!articleId || !stripePriceId || !/^[0-9a-f-]{36}$/i.test(requestId || '') || !Number.isFinite(createdAt) || createdAt < Date.now()-3600000 || createdAt > Date.now()+60000 || !['article','audio','video'].includes(itemType)) {
       setError('This purchase link is incomplete. Please return to the article and try again.')
       return
     }
     try {
       // The API rechecks publication, stored price, account and existing access.
-      await startItemCheckout({ articleId, stripePriceId, itemType })
+      await startItemCheckout({ articleId, stripePriceId, itemType, requestId, createdAt })
     } catch (err) { setError(err.message || 'We could not open checkout. Please try again.') }
   }
   useEffect(() => {
     if (started.current) return
     started.current = true
-    document.cookie = 'parlor_checkout_return=; Path=/; Max-Age=0; SameSite=Lax'
     proceed()
   }, [])
 

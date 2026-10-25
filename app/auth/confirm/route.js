@@ -7,13 +7,9 @@ export async function GET(request) {
   const token_hash = url.searchParams.get('token_hash')
   const type = url.searchParams.get('type')
 
-  // Keep the intended purchase across verification. Older email templates may
-  // omit returnTo, so the initiating browser also carries a short-lived cookie.
+  // Verification links carry the specific intent; never guess from another tab.
   let destination = '/'
-  let intended = url.searchParams.get('returnTo') || url.searchParams.get('redirect_to')
-  if (!intended) {
-    try { intended = decodeURIComponent(request.cookies.get('parlor_checkout_return')?.value || '') } catch {}
-  }
+  const intended = url.searchParams.get('returnTo') || url.searchParams.get('redirect_to')
   try {
     let target = new URL(intended || '/', url.origin)
     if (target.origin === url.origin && target.pathname === '/auth/callback') target = new URL(target.searchParams.get('returnTo') || '/', url.origin)
@@ -60,7 +56,6 @@ export async function GET(request) {
         }
       }
 
-      response.cookies.set('parlor_checkout_return', '', { path: '/', maxAge: 0 })
       return response
     }
 

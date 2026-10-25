@@ -1,3 +1,4 @@
+import { createReservedCheckout } from '../../../../lib/checkoutReservations'
 import { requireShopUser } from '../../../../lib/shopAuth'
 import { ensureStripeCustomer } from '../../../../lib/stripeCustomer'
 import { prepareShopCart } from '../../../../lib/prepareShopCart'
@@ -11,21 +12,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 // Countries we ship to (mirrors the print-subscription list).
 const SHIP_COUNTRIES = ['US', 'CA', 'GB', 'IE', 'AU', 'NZ', 'FR', 'DE', 'ES', 'IT', 'NL', 'SE', 'NO', 'DK', 'FI', 'BE', 'AT', 'CH', 'PT', 'MX', 'BR', 'JP']
 
-// Buy-now-pay-later methods offered per billing currency. Only list methods
-// activated in the Stripe Dashboard (Klarna + Afterpay/Clearpay are live; add
-// 'affirm' to usd here once it's activated). If a listed method isn't active,
-// the checkout falls back to dynamic dashboard methods.
-const BNPL_METHODS = {
-  usd: ['klarna', 'afterpay_clearpay'],
-  gbp: ['klarna', 'afterpay_clearpay'],
-  eur: ['klarna', 'afterpay_clearpay'],
-}
-
 export async function POST(request) {
   const user = await requireShopUser(request)
   if (!user) return Response.json({ error: 'Sign in or create an account before checkout.' }, { status: 401 })
+  if (!user.email_confirmed_at) return Response.json({error:'Verify your email before purchasing.'},{status:403})
   let body = {}; try { body = await request.json() } catch {}
-  const { items, successUrl, cancelUrl, address } = body
+  const { items, successUrl, cancelUrl, address, requestId } = body
   // Ship-to country: from address if provided, else cart selector, else detected, else US.
   const shipCountry = String(address?.country || body.country || countryFromRequest(request) || 'US').toUpperCase()
   if (!Array.isArray(items) || !items.length || !successUrl || !cancelUrl) {
@@ -98,19 +90,11 @@ export async function POST(request) {
     ),
   }
 
-  // Buy-now-pay-later: offer the BNPL methods eligible for the billing currency
-  // alongside cards. These must be activated in the Stripe Dashboard (Settings →
-  // Payment methods); if any isn't, Stripe rejects the explicit list, so we fall
-  // back to dynamic (dashboard-enabled) methods.
   try {
-    const session = await stripe.checkout.sessions.create({ ...base, payment_method_types: ['card', ...(BNPL_METHODS[currency] || [])] })
-    return Response.json({ url: session.url })
-  } catch (bnplErr) {
-    try {
-      const session = await stripe.checkout.sessions.create(base)
-      return Response.json({ url: session.url })
-    } catch (err) {
-      return Response.json({ error: err.message }, { status: 500 })
-    }
-  }
+    const inventory=prepared.shippingItems.map(p=>({product_id:p.id,variant_id:p.printify_variant_id || null,quantity:p.qty}))
+    // Dashboard-managed payment methods avoid a second, differently-shaped
+    // create request after an uncertain provider response.
+    const session=await createReservedCheckout({db,stripe,userId:user.id,requestId,kind:'shop_order',inventory,params:base})
+    return Response.json({url:session.url})
+  } catch(error) { return Response.json({error:error.message}, {status:409}) }
 }

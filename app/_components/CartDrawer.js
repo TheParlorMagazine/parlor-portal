@@ -1,4 +1,5 @@
 'use client'
+import { startShopCheckout } from '../../lib/startShopCheckout'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { createClient } from '../../lib/supabase'
@@ -31,9 +32,9 @@ export default function CartDrawer() {
   const [loaded, setLoaded] = useState(false)
   const loadingProducts = useRef(false)
   const checkoutStarted = useRef(false)
+  const pendingIntent = useRef(null)
   const [user, setUser] = useState(null)
   const [checkingOut, setCheckingOut] = useState(false)
-  const [resume, setResume] = useState(false)
   const [shipping, setShipping] = useState(null)
   const [shipLoading, setShipLoading] = useState(false)
   const [addr, setAddr] = useState({ name: '', line1: '', line2: '', city: '', state: '', zip: '', country: '' })
@@ -81,15 +82,8 @@ export default function CartDrawer() {
       const q = new URLSearchParams(window.location.search)
       if (q.get('cart') === '1') { ensureProducts(); setOpen(true) }
       if (q.get('wishlist') === '1') { ensureProducts(); setTab('wishlist'); setOpen(true) }
-      if (q.get('checkout') === '1') {
-        try {
-          const pending = JSON.parse(localStorage.getItem('parlor-shop-checkout') || 'null')
-          if (pending?.savedAt > Date.now() - 60*60*1000 && pending.address) setAddr(pending.address)
-          else localStorage.removeItem('parlor-shop-checkout')
-        } catch {}
-        document.cookie = 'parlor_checkout_return=; Path=/; Max-Age=0; SameSite=Lax'
-        ensureProducts(); setOpen(true); setResume(true)
-      }
+      if (q.get('checkout') === '1') { ensureProducts(); setOpen(true) } // Legacy links require review, never guess an intent.
+
     } catch {}
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -173,47 +167,28 @@ export default function CartDrawer() {
     return () => { alive = false }
   }, [open, cart, effCountry, addr.state]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function authenticate(path) {
-    try { localStorage.setItem('parlor-shop-checkout', JSON.stringify({savedAt:Date.now(), address:addr})) } catch {}
-    document.cookie = `parlor_checkout_return=${encodeURIComponent('/shop?checkout=1')}; Path=/; Max-Age=3600; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`
-    window.location.href = path + '?returnTo=' + encodeURIComponent('/shop?checkout=1')
-  }
-
   async function checkout() {
     if (!loaded || !cartGroups.length || checkingOut || checkoutStarted.current) return
     if (usOnlyError) return
     if (!addr.line1.trim() || !addr.city.trim() || !addr.zip.trim() || !addr.country.trim()) { setAddrOpen(true); setAddrError(true); return }
-    if (!user) { return authenticate('/signup') }
     checkoutStarted.current = true
     setCheckingOut(true)
     const addrPayload = addr.line1.trim() ? addr : null
     try {
-      const res = await fetch('/api/shop/checkout', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${(await createClient().auth.getSession()).data.session?.access_token || ''}` },
-        body: JSON.stringify({
-          items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null, bundle_picks: g.meta?.bundle_picks ?? null, bundle_price: g.meta?.bundle_price ?? null, single_pick: g.meta?.single_pick ?? null, single_pick_price: g.meta?.single_pick_price ?? null })),
-          country: effCountry, userId: user.id, address: addrPayload,
-          successUrl: window.location.origin + '/shop/order-confirmed?session_id={CHECKOUT_SESSION_ID}',
-          cancelUrl: window.location.href,
-        }),
-      })
-      const j = await res.json().catch(() => ({}))
-      if (res.status === 401) { authenticate('/login'); return }
-      if (res.ok && j.url) { try { localStorage.removeItem('parlor-shop-checkout') } catch {} window.location.href = j.url; return }
-      alertDialog(j.error || 'Checkout is unavailable right now.')
-    } catch { alertDialog('Checkout failed. Please try again.') }
+      const payload={
+        items:cartGroups.map(g=>({id:g.product.id,qty:g.qty,printify_variant_id:g.variant?.printify_variant_id ?? null,bundle_picks:g.meta?.bundle_picks ?? null,single_pick:g.meta?.single_pick ?? null})),
+        country:effCountry,address:addrPayload,
+        successUrl:window.location.origin+'/shop/order-confirmed?session_id={CHECKOUT_SESSION_ID}',cancelUrl:window.location.origin+'/shop?cart=1'
+      }
+      const signature=JSON.stringify(payload)
+      if(!pendingIntent.current || pendingIntent.current.signature!==signature)pendingIntent.current={id:crypto.randomUUID(),signature}
+      const requestId=pendingIntent.current.id
+      // Per-intent immutable snapshot; a different tab's cart cannot replace it.
+      localStorage.setItem('parlor-purchase:'+requestId,JSON.stringify({kind:'shop',savedAt:Date.now(),payload}))
+      await startShopCheckout({requestId,payload})
+    } catch (error) { alertDialog(error.message || 'Checkout failed. Please try again.') }
     finally { checkoutStarted.current = false; setCheckingOut(false) }
   }
-
-  // Resume checkout automatically after returning from auth with ?checkout=1.
-  useEffect(() => {
-    if (resume && loaded && user && cartGroups.length && !checkingOut) {
-      setResume(false)
-      try { window.history.replaceState({}, '', window.location.pathname) } catch {}
-      if (!addr.line1.trim() || !addr.city.trim() || !addr.zip.trim() || !addr.country.trim()) { setAddrOpen(true); setAddrError(true); return }
-      checkout()
-    }
-  }, [resume, loaded, user, cartGroups, checkingOut]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open) return
