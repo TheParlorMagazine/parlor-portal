@@ -7,9 +7,19 @@ export async function GET(request) {
   const token_hash = url.searchParams.get('token_hash')
   const type = url.searchParams.get('type')
 
-  const response = NextResponse.redirect(
-    new URL('/', url.origin)
-  )
+  // Keep the intended purchase across verification. Older email templates may
+  // omit returnTo, so the initiating browser also carries a short-lived cookie.
+  let destination = '/'
+  let intended = url.searchParams.get('returnTo') || url.searchParams.get('redirect_to')
+  if (!intended) {
+    try { intended = decodeURIComponent(request.cookies.get('parlor_checkout_return')?.value || '') } catch {}
+  }
+  try {
+    let target = new URL(intended || '/', url.origin)
+    if (target.origin === url.origin && target.pathname === '/auth/callback') target = new URL(target.searchParams.get('returnTo') || '/', url.origin)
+    if (target.origin === url.origin && !target.pathname.startsWith('/auth/') && !String(intended).includes('\\')) destination = target.pathname + target.search + target.hash
+  } catch {}
+  const response = NextResponse.redirect(new URL(destination, url.origin))
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -50,6 +60,7 @@ export async function GET(request) {
         }
       }
 
+      response.cookies.set('parlor_checkout_return', '', { path: '/', maxAge: 0 })
       return response
     }
 

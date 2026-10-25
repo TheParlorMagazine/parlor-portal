@@ -912,7 +912,8 @@ $("#payBtn").addEventListener("click", async () => {
       }),
     });
     if (res.status === 401) {
-      try { sessionStorage.setItem('parlor-tot-pending', JSON.stringify({ collectionId: _collectionId, picks: [...tote] })); } catch {}
+      try { localStorage.setItem('parlor-tot-pending', JSON.stringify({ collectionId: _collectionId, picks: [...tote], savedAt: Date.now() })); } catch {}
+      document.cookie = `parlor_checkout_return=${encodeURIComponent('/trick-or-treat?resume=1')}; Path=/; Max-Age=3600; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`;
       window.location.href = '/signup?returnTo=' + encodeURIComponent('/trick-or-treat?resume=1');
       return;
     }
@@ -1381,15 +1382,23 @@ async function loadFromDB() {
 loadFromDB().then(() => {
   try {
     if (new URLSearchParams(location.search).get('resume') === '1') {
-      const pending = JSON.parse(sessionStorage.getItem('parlor-tot-pending') || 'null');
-      if (pending?.collectionId === _collectionId) for (const id of pending.picks || []) {
+      const pending = JSON.parse(localStorage.getItem('parlor-tot-pending') || 'null');
+      if (pending?.savedAt > Date.now() - 60*60*1000 && pending?.collectionId === _collectionId) for (const id of pending.picks || []) {
         if (treatById[id]?.stock > 0 && !tote.includes(id) && !pickFrom(treatById[id].house)) tote.push(id);
       }
-      sessionStorage.removeItem('parlor-tot-pending');
+      localStorage.removeItem('parlor-tot-pending');
     }
   } catch {}
   renderStreet();
   renderTote();
+  if (new URLSearchParams(location.search).get('resume') === '1') {
+    history.replaceState({}, '', location.pathname);
+    document.cookie = 'parlor_checkout_return=; Path=/; Max-Age=0; SameSite=Lax';
+    if (tote.length >= TOTE_SIZE - 1) {
+      $('#checkoutBtn').click();
+      $('#payBtn').click();
+    }
+  }
 });
 </script>
 <script>

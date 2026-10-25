@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { createClient } from '../../lib/supabase'
 import { useCart, lineKey, uniqueLineCount } from '../../lib/useCart'
 import { useWishlist } from '../../lib/useWishlist'
@@ -29,6 +29,8 @@ export default function CartDrawer() {
   const [products, setProducts] = useState([])
   const [bundles, setBundles] = useState([])
   const [loaded, setLoaded] = useState(false)
+  const loadingProducts = useRef(false)
+  const checkoutStarted = useRef(false)
   const [user, setUser] = useState(null)
   const [checkingOut, setCheckingOut] = useState(false)
   const [resume, setResume] = useState(false)
@@ -50,14 +52,18 @@ export default function CartDrawer() {
 
   // Lazily load the catalogue + bundles the first time the drawer is needed.
   function ensureProducts() {
-    if (loaded) return
-    setLoaded(true)
-    fetch('/api/shop/products').then(r => r.json())
-      .then(d => { if (Array.isArray(d.products)) setProducts(d.products) })
-      .catch(() => {})
-    fetch('/api/shop/bundles').then(r => r.json())
-      .then(d => { if (Array.isArray(d.bundles)) setBundles(d.bundles.map(b => ({ ...b, _isBundle: true }))) })
-      .catch(() => {})
+    if (loaded || loadingProducts.current) return
+    loadingProducts.current = true
+    Promise.all([
+      fetch('/api/shop/products').then(r => { if (!r.ok) throw new Error('Catalogue unavailable'); return r.json() }),
+      fetch('/api/shop/bundles').then(r => { if (!r.ok) throw new Error('Bundles unavailable'); return r.json() }),
+    ]).then(([p,b]) => {
+      if (!Array.isArray(p.products) || !Array.isArray(b.bundles)) throw new Error('Catalogue unavailable')
+      setProducts(p.products)
+      setBundles(b.bundles.map(bundle => ({ ...bundle, _isBundle: true })))
+      setLoaded(true)
+    }).catch(() => { alertDialog('The shop could not be loaded. Please refresh and try again.') })
+      .finally(() => { loadingProducts.current = false })
   }
 
   // Open via event from any cart icon.
@@ -75,13 +81,21 @@ export default function CartDrawer() {
       const q = new URLSearchParams(window.location.search)
       if (q.get('cart') === '1') { ensureProducts(); setOpen(true) }
       if (q.get('wishlist') === '1') { ensureProducts(); setTab('wishlist'); setOpen(true) }
-      if (q.get('checkout') === '1') { ensureProducts(); setOpen(true); setResume(true) }
+      if (q.get('checkout') === '1') {
+        try {
+          const pending = JSON.parse(localStorage.getItem('parlor-shop-checkout') || 'null')
+          if (pending?.savedAt > Date.now() - 60*60*1000 && pending.address) setAddr(pending.address)
+          else localStorage.removeItem('parlor-shop-checkout')
+        } catch {}
+        document.cookie = 'parlor_checkout_return=; Path=/; Max-Age=0; SameSite=Lax'
+        ensureProducts(); setOpen(true); setResume(true)
+      }
     } catch {}
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // When products finish loading, purge any cart entries whose product no longer exists.
   useEffect(() => {
-    if (!loaded || (!products.length && !bundles.length)) return
+    if (!loaded) return
     const allIds = new Set([...products.map(p => p.id), ...bundles.map(b => b.id)])
     const stale = cart.filter(({ id }) => !allIds.has(id))
     stale.forEach(({ id, vid, meta }) => removeAll(lineKey(id, vid, meta)))
@@ -159,11 +173,18 @@ export default function CartDrawer() {
     return () => { alive = false }
   }, [open, cart, effCountry, addr.state]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  function authenticate(path) {
+    try { localStorage.setItem('parlor-shop-checkout', JSON.stringify({savedAt:Date.now(), address:addr})) } catch {}
+    document.cookie = `parlor_checkout_return=${encodeURIComponent('/shop?checkout=1')}; Path=/; Max-Age=3600; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`
+    window.location.href = path + '?returnTo=' + encodeURIComponent('/shop?checkout=1')
+  }
+
   async function checkout() {
-    if (!cartGroups.length || checkingOut) return
+    if (!loaded || !cartGroups.length || checkingOut || checkoutStarted.current) return
     if (usOnlyError) return
     if (!addr.line1.trim() || !addr.city.trim() || !addr.zip.trim() || !addr.country.trim()) { setAddrOpen(true); setAddrError(true); return }
-    if (!user) { window.location.href = '/signup?returnTo=' + encodeURIComponent('/shop?checkout=1'); return }
+    if (!user) { return authenticate('/signup') }
+    checkoutStarted.current = true
     setCheckingOut(true)
     const addrPayload = addr.line1.trim() ? addr : null
     try {
@@ -177,22 +198,22 @@ export default function CartDrawer() {
         }),
       })
       const j = await res.json().catch(() => ({}))
-      if (res.status === 401) { window.location.href = '/login?returnTo=' + encodeURIComponent('/shop?checkout=1'); return }
-      if (res.ok && j.url) { window.location.href = j.url; return }
+      if (res.status === 401) { authenticate('/login'); return }
+      if (res.ok && j.url) { try { localStorage.removeItem('parlor-shop-checkout') } catch {} window.location.href = j.url; return }
       alertDialog(j.error || 'Checkout is unavailable right now.')
     } catch { alertDialog('Checkout failed. Please try again.') }
-    finally { setCheckingOut(false) }
+    finally { checkoutStarted.current = false; setCheckingOut(false) }
   }
 
   // Resume checkout automatically after returning from auth with ?checkout=1.
   useEffect(() => {
-    if (resume && user && cartGroups.length && !checkingOut) {
+    if (resume && loaded && user && cartGroups.length && !checkingOut) {
       setResume(false)
       try { window.history.replaceState({}, '', window.location.pathname) } catch {}
       if (!addr.line1.trim() || !addr.city.trim() || !addr.zip.trim() || !addr.country.trim()) { setAddrOpen(true); setAddrError(true); return }
       checkout()
     }
-  }, [resume, user, cartGroups, checkingOut]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [resume, loaded, user, cartGroups, checkingOut]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open) return
