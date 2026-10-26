@@ -6,6 +6,7 @@ export default function ParallaxHero({
   src, alt, title, subtitle,
   authorName, authorPhotoUrl, authorProfileUrl, publishedDate,
   objectPosition = 'center center',
+  desktopObjectPosition,
 }) {
   const wrapRef  = useRef(null)
   const imgRef   = useRef(null)
@@ -67,9 +68,16 @@ export default function ParallaxHero({
         background: '#111',
       }}
     >
+      <style>{`
+        .parallax-article-hero-image { object-position: var(--hero-position); }
+        @media (min-width: 1024px) {
+          .parallax-article-hero-image { object-position: var(--hero-desktop-position); }
+        }
+      `}</style>
       {/* Parallax image */}
       <img
         ref={imgRef}
+        className="parallax-article-hero-image"
         src={src}
         alt={alt || title || ''}
         style={{
@@ -79,7 +87,8 @@ export default function ParallaxHero({
           height: 'auto',
           minHeight: '115%',
           objectFit: 'cover',
-          objectPosition,
+          '--hero-position': objectPosition,
+          '--hero-desktop-position': desktopObjectPosition || objectPosition,
           display: 'block',
           willChange: 'transform',
           opacity: ready ? 1 : 0,
