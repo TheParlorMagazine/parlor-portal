@@ -264,7 +264,7 @@ export default function PortalTour() {
     </dialog>}
     {mode === 'tour' && <>
       {rect && !activated && <>
-        <button className={styles.cue} style={{ top: rect.top, left: rect.left }} aria-label={config.action} onClick={activate}>
+        <button className={`${styles.cue} ${['writing', 'forums'].includes(config.id) ? styles.rightArrow : ''}`} style={{ top: rect.top, left: rect.left }} aria-label={config.action} onClick={activate}>
           {config.cue || (mobile ? 'Tap here' : 'Click here')}
           <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" style={rect.above ? { transform: 'scale(-1, -1)' } : undefined}><path d="M3 28C18 28 23 19 24 5M16 12l8-8 6 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </button>
