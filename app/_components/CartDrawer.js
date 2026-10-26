@@ -184,7 +184,7 @@ export default function CartDrawer() {
       if(!pendingIntent.current || pendingIntent.current.signature!==signature)pendingIntent.current={id:crypto.randomUUID(),signature}
       const requestId=pendingIntent.current.id
       // Per-intent immutable snapshot; a different tab's cart cannot replace it.
-      localStorage.setItem('parlor-purchase:'+requestId,JSON.stringify({kind:'shop',savedAt:Date.now(),payload}))
+      localStorage.setItem('parlor-purchase:'+requestId,JSON.stringify({kind:'shop',savedAt:Date.now(),payload,cartSnapshot:cart}))
       await startShopCheckout({requestId,payload})
     } catch (error) { alertDialog(error.message || 'Checkout failed. Please try again.') }
     finally { checkoutStarted.current = false; setCheckingOut(false) }

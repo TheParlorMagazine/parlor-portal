@@ -15,13 +15,13 @@ const money = (c, cur = 'usd') => (c == null ? '' : `${cur === 'gbp' ? '£' : cu
 function Confirmed() {
   const params = useSearchParams()
   const sessionId = params.get('session_id')
-  const { clear } = useCart()
+  const { completePurchase } = useCart()
   const [signIn, setSignIn] = useState(false)
   const [retry, setRetry] = useState(0)
   const [order, setOrder] = useState(undefined) // undefined=loading, null=not found yet, object=found
 
-  // The purchase succeeded — empty the cart.
-  useEffect(() => { if (order) clear() }, [order]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Remove only the saved checkout contents after the server confirms payment.
+  useEffect(() => { if (order && sessionId) completePurchase(sessionId) }, [order]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // The order is created by the Stripe webhook moments after redirect, so poll briefly.
   useEffect(() => {
