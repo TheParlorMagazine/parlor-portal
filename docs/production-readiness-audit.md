@@ -1,0 +1,68 @@
+> Latest implementation and migration instructions: [Purchase reservations release](purchase-reservations-release.md). This earlier report describes the prior commit; its no-reservations/shared-cookie limitations have been superseded.
+
+# Production-readiness audit — 2026-10-25
+
+Target: `integration/parlor-consolidation`, exact base `9daa35772f6997e29d6a24953adf55c4636b8410`.
+Local audit worktree: `/workspace/parlor-audit`, branch `audit/parlor-production-readiness`.
+No production SQL, emails, Stripe charges, Printify orders, pushes, merges or deployments were performed. The unrelated campaign-tracking worktree was not edited.
+
+## Confirmed bugs and targeted fixes
+
+- **Purchased bundle definitions could change before first fulfillment.** Regular fixed/pick bundles previously expanded the current catalog after payment; Trick-or-Treat also reloaded current products. Checkout now stores a versioned, size-bounded server-created packing snapshot in Stripe metadata, including products, selected variants, SKUs, quantities, manual/Printify mappings and images. Fulfillment consumes that snapshot. No new table required. Snapshots over the metadata budget are rejected before payment. Historical sessions without snapshots retain the old fallback.
+- **Replays rebuilt saved orders before using their packing snapshot.** A removed or edited catalog entry could prevent receipt/fulfillment recovery. Persisted orders with saved lines and packing data now reuse those records without fetching Stripe line items or rebuilding the catalog.
+- **Deleting a paid order erased duplicate protection.** Admin deletion now rejects Stripe-linked orders; cancellation remains available. Manual orders can still be deleted. The delete itself also requires a null Stripe session ID.
+- **Ambiguous email responses were retryable.** A missing Resend ID or app/server error is now `uncertain`, preserving its claim. Only explicit known rejection or a skipped send becomes `failed` and eligible for retry. Network exceptions remain uncertain. A tracking-write failure leaves the preexisting claim, preventing a blind resend.
+- **Digital receipt rejection was acknowledged permanently.** Signed completed/delayed-success webhooks now retry known digital receipt failures while retaining the entitlement. Browser return/recovery continues to confirm saved access even if email delivery fails. Recipient lookup errors also surface on webhook retries.
+- **Every unique-key error was treated as an entitlement race.** A 23505 now requires checking that the exact member/article/type entitlement exists before confirming access.
+- **Subscription confirmation deduplication used the event ID.** Completed and asynchronous-success events now share the Checkout session ID.
+- **Subscription renewals/cancellations could acknowledge database failures, and old renewals could overwrite a replacement plan.** Database failures now surface for webhook retry; renewal requires a currently active/trialing subscription and updates only its linked member subscription. Cancellation preserves newer subscriptions and can retry a rejected receipt after access was cleared, using the subscription ID as the receipt key.
+- **Order item lookup failures appeared as empty orders.** Customer and admin history now report failure instead of an empty packing list. Their successful responses explicitly use private/no-store caching.
+- Item-purchase migration is now transactional and explicitly grants service-role access; existing timestamp columns and UUID defaults remain unchanged.
+
+## Migration compatibility
+
+The three files are additive and preserve existing rows. An existing `item_purchases.purchased_at` column is compatible: application inserts omit both timestamps and the UUID ID; they do not depend on `created_at`. The existing UUID default is retained. The unique index is created if absent, including on an existing table. If a populated installation contains duplicate member/article/type rows, index creation aborts without deleting or deduplicating data. The item migration transaction prevents partial application.
+
+Tested the reported production shape (empty existing table, `purchased_at`, generated UUIDs, preexisting unique index), inserted a record, reapplied the migration and checked preservation. Also applied both email registry and shop migrations repeatedly. Shop preflight rejects absent prerequisite columns and a custom non-jsonb `orders.metadata` before changes.
+
+This is schema-fixture validation, not inspection of the live database. Before deployment, inspect existing constraints, indexes, RLS policies, grants and triggers. In particular, confirm there are no older permissive item-purchase SELECT policies that defeat the own-member policy, and confirm existing order/session and receipt composite uniqueness constraints. Shop preflight checks columns/types needed for metadata but does not certify every production constraint or trigger.
+
+## Verified payment and authorization behavior
+
+- Stripe route verifies the signature against the exact raw body before dispatching.
+- Digital and physical fulfillment requires payment mode, complete Checkout status and paid payment status; URL flags never grant access.
+- Payment creation uses a verified Supabase account, server catalog prices and selected mappings; browser-supplied identities/prices are ignored.
+- Digital claim requires its owner or matching verified guest email. Shop session claiming similarly rejects another linked owner even when emails match, and only attaches a guest order while its member ID is null.
+- Customer history scopes by verified member ID; line queries use only those returned order IDs. Admin order methods require admin/finance roles. Direct anonymous/authenticated order table access is revoked by the shop migration.
+- Paid-order RPC serializes by Checkout session, saves header/lines/stock in one transaction and decrements product, variant and Trick-or-Treat stock only on first creation. Six concurrent replays produce one order and one deduction. Header-only historical repair does not deduct again, since prior deduction cannot safely be inferred.
+- Printify claim is atomic before outbound submission. Accepted orders store the provider ID; unavailable credentials/address, submission failure, timeout or uncertain outcome require review rather than automatic duplicate submission. Replays do not reopen cancelled, shipped or fulfilled orders. Physical components in admin packing lists distinguish manual from Printify and preserve bundle quantities/SKUs.
+
+## Remaining risks and operational limits
+
+1. **No stock reservation.** Multiple independently paid sessions can exhaust inventory. The RPC clamps stock at zero, records stock-review metadata/admin notes and suppresses Printify for shortage orders. Staff must resolve/refund shortages; payment is not automatically reversed. Catalog deletion during an in-flight purchase remains unsafe (order item foreign keys may prevent persistence); use inactive/soft-delete and retain sold products/treat records.
+2. **Older in-flight sessions lack checkout snapshots.** Their first fulfillment still uses the compatibility catalog fallback. Keep definitions unchanged until those sessions expire/complete. Historical orders without packing snapshots cannot recover a missing bundle definition automatically.
+3. **External exactly-once delivery cannot be guaranteed.** Uncertain email or Printify outcomes remain claimed and require checking provider records. A process crash after claim can leave `sending`/`submitting`; never clear it without reconciling the provider. No automatic reconciliation or resend UI was added. Printify production approval/shipping configuration and actual Resend delivery were not exercised. Configure the explicit Printify shop ID and verify the catalog belongs to it.
+4. **Subscription operational limits.** Legacy Stripe members without a stored `stripe_subscription_id` are deliberately not reassigned by renewal events; reconcile their linkage separately. Payment-failed advisory emails retain existing best-effort handling. Historical subscription replacement/upgrade behavior still needs provider-backed staging coverage; this audit does not claim full lifecycle reconciliation.
+5. **Historical receipt records.** Older subscription confirmations/cancellations keyed by event ID cannot be fully correlated automatically with new session/subscription-keyed records. Avoid replaying old accepted subscription events without checking the delivery ledger. Previously `failed` rows created by older ambiguous-error handling also need provider review before retry.
+6. Admin manual-order creation and shipping notices retain their existing best-effort behavior: manual header/items are not one transaction, and shipment notification is not backed by the paid-receipt ledger. This audit does not claim exactly-once shipment emails. Cancel status is not a Stripe refund or inventory restock operation.
+7. Tests use real disposable PostgreSQL and browser rendering but mock Stripe, Resend and Printify APIs. Production schema, webhook subscriptions, keys, delivery acceptance and provider approval settings require staging verification. No live end-to-end financial test was run.
+
+## Exact recommended rollout order (not performed)
+
+1. Back up production; review a schema-only export and migration history against the prerequisites. Confirm production `item_purchases` is empty as reported (or review duplicate triples without deleting data), has a UUID ID default, and retains `purchased_at`. Verify own-member RLS and order/receipt uniqueness. Rehearse on an isolated schema copy.
+2. Verify existing prerequisite migrations are already applied: orders/order-number helper (`20260927_orders.sql`), Printify order columns (`20260930_shop_printify.sql`), shop/bundle/Trick-or-Treat tables, email automation tables, and Stripe email tracking (`20261021_stripe_email_tracking.sql`). Do not blindly rerun all historical migrations.
+3. Run `supabase/migrations/20261025_item_purchases.sql` manually, by full filename. Confirm UUID/timestamp defaults and index; preserve `purchased_at`.
+4. Run `supabase/migrations/20261025_item_purchase_email_registry.sql` manually. This only seeds the receipt automation if missing.
+5. Run `supabase/migrations/20261025_shop_payment_fulfillment.sql` manually. Its transaction/preflight installs atomic order/stock persistence, safe receipt retry, metadata and service-only order access. Do not revert to the older email-claim function afterward.
+6. These three legacy filenames share `20261025`; do **not** use an unreviewed automatic `supabase db push` expecting distinct version numbers. Use the explicit manual sequence above and record the full filenames, consistent with the repository's existing SQL-editor workflow. Reapplying these revised files is supported if an earlier version was already run.
+7. Review the local audit changes and incorporate them into the intended release through the normal review process. Deploy code only after the migrations. Configure real Netlify server keys for Supabase service role, Stripe and webhook secret, Resend, Printify and explicit shop ID, plus the existing plan/price settings. Keep secrets out of client bundles. Ensure Stripe delivers completed and async-payment-success events (and existing subscription invoice/cancellation events) to the configured signed endpoint.
+8. Verify in staging: guest gates; own/other-user order access; article paid return and receipt rejection recovery; fixed/pick/Trick-or-Treat packing and deductions; duplicate/concurrent events; provider timeout requiring review. Reconcile old incomplete/uncertain orders before replaying events. A production smoke purchase is a separately authorized operational step.
+9. Monitor webhook failures, stock-review flags, receipt `failed`/`uncertain`/`sending`, and Printify `needs_review`/`submitting`. Do not delete paid order records, reset uncertain claims, or request another payment to repair fulfillment.
+
+## Validation results
+
+- `NODE_PATH="$PWD/node_modules" node --experimental-vm-modules --test tests/*.test.cjs`: **117 passed, 0 failed**. New coverage includes Stripe signature dispatch, delayed-success receipt retries, renewal/cancellation database failures and stale events, digital unique-key verification, email accepted/rejected/uncertain responses, checkout snapshots, persisted-order replay, unknown Printify outcomes, customer scope, guest claiming and all admin-role gates/deletion protection.
+- `python3 tests/shop-payment-db.py`: **passed**, using a disposable PostgreSQL 16 container removed afterward. Covers the reported `purchased_at` schema, existing UUID default/index and preserved rows, all three revised migrations, repeatability, failed preflight rollback, six concurrent deliveries, exactly one stock deduction, variant and treat stock, header repair, shortages, receipt claims and service-only grants.
+- Browser checks **passed**: `order-packing-browser.cjs`, `shop-confirmation-browser.cjs`, `payment-account-browser.cjs`, `cart-navigation-browser.cjs`, `shop-trick-or-treat-browser.cjs` (desktop/mobile and pending/signed-out return behavior).
+- `npm run build`: the first credential-free attempt compiled but stopped at the existing eager Resend constructor because this environment has no live API key. A full production build then **passed**, with all 146 static pages generated, using explicitly fake Resend/Stripe keys and Supabase pointed to `http://127.0.0.1:9`. This verifies compilation/prerendering, not live integrations; these build artifacts must not be deployed.
+- `git diff --check`: **passed**.

@@ -1,5 +1,7 @@
 'use client'
 
+import { startItemCheckout } from '../../../../lib/startItemCheckout'
+
 import { useState, useRef, useEffect, useCallback } from 'react'
 
 const PREVIEW_LIMIT = 20
@@ -230,22 +232,9 @@ function VideoPaywallOverlay({ price, onReplay, previewShown, stripePriceId, art
       return
     }
     try {
-      const res = await fetch('/api/create-paywall-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stripePriceId,
-          articleId,
-          itemType: 'video',
-          userId: userId || undefined,
-          successUrl: window.location.href + '?unlocked=1',
-          cancelUrl: window.location.href,
-        }),
-      })
-      const data = await res.json()
-      if (data.url) window.location.href = data.url
-    } catch {
-      window.location.href = '/plans'
+      await startItemCheckout({ stripePriceId, articleId, itemType: 'video' })
+    } catch (error) {
+      window.alert(error.message)
     }
   }
 

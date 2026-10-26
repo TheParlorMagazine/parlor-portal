@@ -10,3 +10,6 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[functions."inventory-reconciliation"]
+  schedule = "* * * * *"

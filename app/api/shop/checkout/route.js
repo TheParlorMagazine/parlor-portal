@@ -1,6 +1,10 @@
+import { createReservedCheckout } from '../../../../lib/checkoutReservations'
+import { requireShopUser } from '../../../../lib/shopAuth'
+import { ensureStripeCustomer } from '../../../../lib/stripeCustomer'
+import { prepareShopCart } from '../../../../lib/prepareShopCart'
 import Stripe from 'stripe'
 import { serviceClient } from '../../../../lib/apiAuth'
-import { currencyForRequest, priceForCurrency, countryFromRequest } from '../../../../lib/geo'
+import { currencyForRequest, countryFromRequest } from '../../../../lib/geo'
 import { quoteCartShipping } from '../../../../lib/shopShipping'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -8,170 +12,38 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 // Countries we ship to (mirrors the print-subscription list).
 const SHIP_COUNTRIES = ['US', 'CA', 'GB', 'IE', 'AU', 'NZ', 'FR', 'DE', 'ES', 'IT', 'NL', 'SE', 'NO', 'DK', 'FI', 'BE', 'AT', 'CH', 'PT', 'MX', 'BR', 'JP']
 
-// Buy-now-pay-later methods offered per billing currency. Only list methods
-// activated in the Stripe Dashboard (Klarna + Afterpay/Clearpay are live; add
-// 'affirm' to usd here once it's activated). If a listed method isn't active,
-// the checkout falls back to dynamic dashboard methods.
-const BNPL_METHODS = {
-  usd: ['klarna', 'afterpay_clearpay'],
-  gbp: ['klarna', 'afterpay_clearpay'],
-  eur: ['klarna', 'afterpay_clearpay'],
-}
-
 export async function POST(request) {
+  const user = await requireShopUser(request)
+  if (!user) return Response.json({ error: 'Sign in or create an account before checkout.' }, { status: 401 })
+  if (!user.email_confirmed_at) return Response.json({error:'Verify your email before purchasing.'},{status:403})
   let body = {}; try { body = await request.json() } catch {}
-  const { items, successUrl, cancelUrl, userId, address } = body
+  const { items, successUrl, cancelUrl, address, requestId } = body
   // Ship-to country: from address if provided, else cart selector, else detected, else US.
-  const shipCountry = (address?.country || body.country || countryFromRequest(request) || 'US').toUpperCase()
+  const shipCountry = String(address?.country || body.country || countryFromRequest(request) || 'US').toUpperCase()
   if (!Array.isArray(items) || !items.length || !successUrl || !cancelUrl) {
     return Response.json({ error: 'items, successUrl and cancelUrl are required' }, { status: 400 })
   }
 
   const db = serviceClient()
-  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-  // Separate bundle IDs from regular product IDs
-  const allIds = [...new Set(items.map(i => i.id).filter(id => UUID.test(id)))]
-  if (!allIds.length) return Response.json({ error: 'No purchasable items in cart' }, { status: 400 })
-
-  // Look up bundles and regular products in parallel
-  const [{ data: bundles }, { data: products, error }] = await Promise.all([
-    db.from('shop_bundles')
-      .select('id, title, price, price_eur, price_gbp, images, shop_bundle_items(product_id, variant_id, quantity, shop_products(id, name, price, price_eur, price_gbp, fulfillment, printify_product_id, printify_variant_id, variants))')
-      .in('id', allIds).eq('active', true),
-    db.from('shop_products')
-      .select('id, name, variant, price, price_eur, price_gbp, images, fulfillment, printify_product_id, printify_variant_id, variants, external_url, inventory')
-      .in('id', allIds).eq('active', true),
-  ])
-  if (error) return Response.json({ error: error.message }, { status: 500 })
-
+  let prepared
   const currency = currencyForRequest(request)
-  const bundleById = new Map((bundles || []).map(b => [b.id, b]))
-  const byId = new Map((products || []).map(p => [p.id, p]))
-
-  const line_items = []
-  for (const it of items) {
-    const qty = Math.max(1, Math.min(20, Number(it.qty) || 1))
-
-    // Bundle: single Stripe line item at bundle price; webhook expands to individual Printify lines
-    const bundle = bundleById.get(it.id)
-    if (bundle) {
-      const amount = Math.round(priceForCurrency(bundle, currency) * 100)
-      if (!amount) continue
-      line_items.push({
-        quantity: qty,
-        price_data: {
-          currency,
-          unit_amount: amount,
-          product_data: {
-            name: bundle.title,
-            images: bundle.images?.length ? [bundle.images[0]] : undefined,
-            metadata: {
-              shop_bundle_id: bundle.id,
-              fulfillment: 'bundle',
-              printify_product_id: '',
-              printify_variant_id: '',
-            },
-          },
-        },
-      })
-      continue
-    }
-
-    const p = byId.get(it.id)
-    if (!p) continue
-    if (p.external_url) continue
-
-    // "Buy one" from a pick-your-own bundle: use the pick's Printify data for fulfillment
-    if (it.single_pick) {
-      const amount = Math.round((it.single_pick_price != null ? Number(it.single_pick_price) : priceForCurrency(p, currency)) * 100)
-      if (!amount) continue
-      // Fetch the pick's Printify IDs (it's inactive so not in byId)
-      const { data: pickData } = await db.from('shop_products')
-        .select('id, name, images, fulfillment, printify_product_id, printify_variant_id, variants')
-        .eq('id', it.single_pick).single()
-      const pick = pickData || p
-      const variantId = pick.printify_variant_id || pick.variants?.[0]?.printify_variant_id || null
-      const variantObj = pick.variants?.find(v => String(v.printify_variant_id) === String(variantId))
-      const printifyProductId = variantObj?.printify_product_id || pick.printify_product_id || ''
-      line_items.push({
-        quantity: qty,
-        price_data: {
-          currency,
-          unit_amount: amount,
-          product_data: {
-            name: pick.name || p.name,
-            images: (pick.images || p.images)?.length ? [(pick.images || p.images)[0]] : undefined,
-            metadata: {
-              shop_product_id: pick.id,
-              fulfillment: pick.fulfillment || 'printify',
-              printify_product_id: printifyProductId,
-              printify_variant_id: variantId ? String(variantId) : '',
-            },
-          },
-        },
-      })
-      continue
-    }
-
-    // Pick-your-own bundle: product is the active bundle holder; picks are individual poster IDs
-    if (it.bundle_picks?.length) {
-      const amount = Math.round((it.bundle_price != null ? Number(it.bundle_price) : priceForCurrency(p, currency)) * 100)
-      if (!amount) continue
-      line_items.push({
-        quantity: qty,
-        price_data: {
-          currency,
-          unit_amount: amount,
-          product_data: {
-            name: p.name,
-            images: p.images?.length ? [p.images[0]] : undefined,
-            metadata: {
-              shop_product_id: p.id,
-              fulfillment: 'pick_bundle',
-              bundle_pick_ids: it.bundle_picks.join(','),
-              printify_product_id: '',
-              printify_variant_id: '',
-            },
-          },
-        },
-      })
-      continue
-    }
-
-    // bundle_unit_price overrides the product price (legacy pick-your-own bundles).
-    const basePrice = it.bundle_unit_price != null ? Number(it.bundle_unit_price) : priceForCurrency(p, currency)
-    const amount = Math.round(basePrice * 100)
-    if (!amount) continue
-    const variantId = it.printify_variant_id || p.printify_variant_id || p.variants?.[0]?.printify_variant_id || null
-    // For collection products, each variant may point to a different Printify product.
-    const variantObj = p.variants?.find(v => String(v.printify_variant_id) === String(variantId))
-    const printifyProductId = it.printify_product_id || variantObj?.printify_product_id || p.printify_product_id || ''
-    line_items.push({
-      quantity: qty,
-      price_data: {
-        currency,
-        unit_amount: amount,
-        product_data: {
-          name: p.name,
-          description: (variantObj?.name || p.variant) || undefined,
-          images: p.images?.length ? [p.images[0]] : undefined,
-          metadata: {
-            shop_product_id: p.id,
-            fulfillment: p.fulfillment || 'manual',
-            printify_product_id: printifyProductId,
-            printify_variant_id: variantId ? String(variantId) : '',
-          },
-        },
-      },
-    })
-  }
-  if (!line_items.length) return Response.json({ error: 'No purchasable items in cart' }, { status: 400 })
+  const origin = new URL(request.url).origin
+  let cancel
+  try {
+    cancel = new URL(cancelUrl, origin)
+    if (cancel.origin !== origin) throw new Error('Checkout must return to this site.')
+    if (!SHIP_COUNTRIES.includes(shipCountry)) throw new Error('We do not ship to this country.')
+    if (address?.line1 && (![address.line1,address.city,address.zip].every(v => typeof v === 'string' && v.trim()))) throw new Error('Complete your delivery address before checkout.')
+    prepared = await prepareShopCart(db, items, currency, shipCountry)
+  } catch (error) { return Response.json({ error: error.message }, { status: 400 }) }
+  const line_items = prepared.lineItems
+  const customer = await ensureStripeCustomer(db, stripe, user.id)
+  if (!customer) return Response.json({ error: 'Your billing account could not be linked.' }, { status: 409 })
 
   // Live Printify shipping quote for the chosen country (same-numeral in the
   // billing currency). Lock Stripe's address collection to that country so the
   // quote we charge matches where it ships.
-  const quote = await quoteCartShipping(db, items, shipCountry)
+  const quote = await quoteCartShipping(db, prepared.shippingItems, shipCountry, address?.state, new Map(prepared.shippingItems.map(i => [i.id, i.resolvedProduct])), address)
   const allowed = SHIP_COUNTRIES.includes(shipCountry) ? [shipCountry] : SHIP_COUNTRIES
 
   // If the customer pre-filled their address in-app, pass it on the payment intent
@@ -194,10 +66,11 @@ export async function POST(request) {
     mode: 'payment',
     line_items,
     currency,
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-    client_reference_id: userId || undefined,
-    metadata: { kind: 'shop_order', userId: userId || '', ship_country: shipCountry },
+    success_url: `${origin}/shop/order-confirmed?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: cancel.toString(),
+    client_reference_id: user.id,
+    customer,
+    metadata: { kind: 'shop_order', userId: user.id, ship_country: shipCountry },
     phone_number_collection: { enabled: true },
     shipping_options: [{
       shipping_rate_data: {
@@ -217,19 +90,11 @@ export async function POST(request) {
     ),
   }
 
-  // Buy-now-pay-later: offer the BNPL methods eligible for the billing currency
-  // alongside cards. These must be activated in the Stripe Dashboard (Settings →
-  // Payment methods); if any isn't, Stripe rejects the explicit list, so we fall
-  // back to dynamic (dashboard-enabled) methods.
   try {
-    const session = await stripe.checkout.sessions.create({ ...base, payment_method_types: ['card', ...(BNPL_METHODS[currency] || [])] })
-    return Response.json({ url: session.url })
-  } catch (bnplErr) {
-    try {
-      const session = await stripe.checkout.sessions.create(base)
-      return Response.json({ url: session.url })
-    } catch (err) {
-      return Response.json({ error: err.message }, { status: 500 })
-    }
-  }
+    const inventory=prepared.shippingItems.map(p=>({product_id:p.id,variant_id:p.printify_variant_id || null,quantity:p.qty}))
+    // Dashboard-managed payment methods avoid a second, differently-shaped
+    // create request after an uncertain provider response.
+    const session=await createReservedCheckout({db,stripe,userId:user.id,requestId,kind:'shop_order',inventory,params:base})
+    return Response.json({url:session.url})
+  } catch(error) { return Response.json({error:error.message}, {status:409}) }
 }

@@ -18,13 +18,14 @@ export async function GET(request) {
   const ids = (orders || []).map(o => o.id)
   let itemsByOrder = {}
   if (ids.length) {
-    const { data: items } = await db
+    const { data: items, error: itemError } = await db
       .from('order_items')
       .select('order_id, product_name, variant, quantity, unit_price_cents, image_url')
       .in('order_id', ids)
+    if (itemError) return Response.json({ error: 'Order items could not be loaded.' }, { status: 503 })
     for (const it of items || []) (itemsByOrder[it.order_id] ||= []).push(it)
   }
 
   const out = (orders || []).map(o => ({ ...o, items: itemsByOrder[o.id] || [] }))
-  return Response.json({ orders: out })
+  return Response.json({ orders: out }, { headers: { 'Cache-Control': 'private, no-store' } })
 }

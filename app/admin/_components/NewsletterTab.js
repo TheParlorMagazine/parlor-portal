@@ -71,6 +71,8 @@ export default function NewsletterTab({ supabase }) {
   const [loading, setLoading]     = useState(true)
   const [mode, setMode]           = useState('desktop')
   const [sending, setSending]     = useState(false)
+  const [sendReview, setSendReview] = useState(false)
+  const [retryCampaignId, setRetryCampaignId] = useState(null)
   const [msg, setMsg]             = useState('')
 
   // Issue promo fields (saved to DB)
@@ -121,7 +123,7 @@ export default function NewsletterTab({ supabase }) {
   }, [supabase])
 
   const load = useCallback(async (secs, supCopy, annOverride, supTitle, supBtn1, supBtn2) => {
-    setMsg('')
+    // Preview refreshes must not erase the result of the last send.
     const activeSections     = secs     ?? sections
     const activeSupportCopy  = supCopy  ?? supportCopy
     const activeSupportTitle = supTitle ?? supportTitle
@@ -236,18 +238,21 @@ export default function NewsletterTab({ supabase }) {
   }
 
   async function sendNow() {
-    if (!(await confirmDialog(`Send the newsletter to ${data?.recipientCount ?? 'all'} subscribers now?`))) return
+    if (sendReview || sending) return
+    if (!(await confirmDialog(retryCampaignId ? 'Retry the saved newsletter? This uses the version saved with the failed attempt.' : `Send the newsletter to ${data?.recipientCount ?? 'all'} subscribers now?`))) return
     setSending(true); setMsg('')
     try {
       const res = await fetch('/api/admin/newsletter/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` },
-        body: JSON.stringify({ sections, supportCopy, supportTitle, supportBtn1, supportBtn2, announcementOverride: { title: announcementTitle, text: announcement, url: announcementUrl, img: announcementImg, btn: announcementBtn } }),
+        body: JSON.stringify({ campaignId: retryCampaignId, sections, supportCopy, supportTitle, supportBtn1, supportBtn2, announcementOverride: { title: announcementTitle, text: announcement, url: announcementUrl, img: announcementImg, btn: announcementBtn } }),
       })
       const d = await res.json()
-      setMsg(res.ok ? `Sent to ${d.sent} subscriber${d.sent === 1 ? '' : 's'} ✓` : (d.error || 'Could not send.'))
-      if (res.ok) load()
-    } catch { setMsg('Could not send.') }
+      setMsg(res.ok && d.ok ? `Accepted by Resend for ${d.sent} subscriber${d.sent === 1 ? '' : 's'}; inbox delivery is not yet confirmed.` : (d.error || 'Could not confirm sending.'))
+      setRetryCampaignId(res.ok && d.ok ? null : d.campaignId || retryCampaignId)
+      setSendReview(!!d.requiresReview)
+      if (res.ok && d.ok) load()
+    } catch { setSendReview(true); setMsg('The send outcome could not be confirmed. Check Resend before sending again.') }
     setSending(false)
   }
 
@@ -369,8 +374,8 @@ export default function NewsletterTab({ supabase }) {
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           <button onClick={() => load()} disabled={loading} style={{ padding: '8px 16px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '7px', color: '#555', fontSize: '13px', cursor: 'pointer', fontFamily: ff }}>↻ Refresh</button>
-          <button onClick={sendNow} disabled={sending || loading || data?.empty} title={data?.empty ? 'No content to send yet' : ''} style={{ padding: '8px 18px', background: (sending || data?.empty) ? '#ccc' : PINK, border: 'none', borderRadius: '7px', color: '#0a0a0a', fontSize: '13px', fontWeight: 600, cursor: (sending || data?.empty) ? 'default' : 'pointer', fontFamily: ff }}>
-            {sending ? 'Sending…' : 'Send to subscribers now'}
+          <button onClick={sendNow} disabled={sending || loading || data?.empty || sendReview} title={data?.empty ? 'No content to send yet' : ''} style={{ padding: '8px 18px', background: (sending || data?.empty) ? '#ccc' : PINK, border: 'none', borderRadius: '7px', color: '#0a0a0a', fontSize: '13px', fontWeight: 600, cursor: (sending || data?.empty) ? 'default' : 'pointer', fontFamily: ff }}>
+            {sending ? 'Sending…' : sendReview ? 'Review required' : retryCampaignId ? 'Retry saved newsletter' : 'Send to subscribers now'}
           </button>
         </div>
       </div>
