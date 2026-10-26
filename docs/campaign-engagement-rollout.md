@@ -45,7 +45,12 @@ Resubscribing clears the old unsubscribed_at suppression timestamp.
    selecting email.delivered, email.opened, email.clicked, email.bounced,
    email.failed and email.complained. Copy its signing secret into the server-only
    Netlify variable RESEND_WEBHOOK_SECRET (production Functions scope).
-   Keep NEWSLETTER_SECRET stable so existing unsubscribe links remain valid.
+   New links use NEWSLETTER_SECRET when configured. Verification also accepts
+   the existing CRON_SECRET and SUPABASE_SERVICE_ROLE_KEY fallback keys so adding
+   a dedicated secret does not invalidate older signed emails. Deploy this code
+   before activating a newly added NEWSLETTER_SECRET. Keep those fallback keys
+   unchanged; for a later dedicated-key rotation, put the old dedicated key in
+   NEWSLETTER_PREVIOUS_SECRET before deploying with the new one.
 4. Separately authorize merge/deployment, then deploy with those settings.
 5. Send a new small, consented test campaign to your own test subscriber accounts.
    Test a click, confirmation-page unsubscribe, RFC one-click POST, and account
