@@ -42,14 +42,15 @@ const PROSE_STYLES = `
     color: #0a0a0a;
     margin: 1.75em 0 0.5em;
   }
-  .parlor-prose a {
-    color: #c4364a;
+  .parlor-prose a, .parlor-prose a:visited {
+    color: #7A263A !important;
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 2px;
   }
-  .parlor-prose a:hover {
-    color: #9b2537;
+  .parlor-prose a * { color: inherit !important; }
+  .parlor-prose a:hover, .parlor-prose a:focus-visible {
+    color: #5c1c2b !important;
   }
   .parlor-prose blockquote {
     border-left: 3px solid #f2b8c6;
