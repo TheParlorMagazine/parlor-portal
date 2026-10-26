@@ -30,6 +30,10 @@ export async function PATCH(request) {
   if (Object.keys(patch).length === 0) {
     return Response.json({ error: 'No editable fields' }, { status: 400 })
   }
+  if ('newsletter_subscribed' in patch) {
+    if(typeof patch.newsletter_subscribed!=='boolean')return Response.json({error:'Invalid email preference'},{status:400})
+    patch.unsubscribed_at=patch.newsletter_subscribed?null:new Date().toISOString()
+  }
   patch.updated_at = new Date().toISOString()
 
   const db = serviceClient()

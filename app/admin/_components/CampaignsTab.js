@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { Fragment, useEffect, useState, useCallback, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
@@ -12,6 +12,9 @@ import ImageEditor from './ImageEditor'
 import { campaignEmailHtml } from '../../../lib/campaignTemplate'
 import { blocksToEmailHtml } from '../../../lib/campaignRenderer'
 import { footer } from '../../../lib/sendCampaign'
+import SubscriberActivity from './SubscriberActivity'
+import useCampaignTracking from './useCampaignTracking'
+import CampaignEngagement, { engagementRate } from './CampaignEngagement'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -969,10 +972,13 @@ export default function CampaignsTab({ supabase }) {
   const [building,  setBuilding]  = useState(null)
   const [sending,   setSending]   = useState({})
   const [deleting,  setDeleting]  = useState({})
+  const [showUnsubscribes,setShowUnsubscribes] = useState(false)
+  const [trackingOpen,setTrackingOpen] = useState(null)
+  const tracking = useCampaignTracking(campaigns,supabase)
 
   useEffect(() => {
     Promise.allSettled([
-      supabase.from('email_campaigns').select('*').or('kind.is.null,kind.neq.newsletter').order('created_at', { ascending: false }),
+      supabase.from('email_campaigns').select('*').order('created_at', { ascending: false }),
       supabase.from('email_segments').select('id,name,member_count').order('name'),
     ]).then(([cRes, sRes]) => {
       setCampaigns(cRes.status === 'fulfilled' ? (cRes.value.data || []) : [])
@@ -1043,8 +1049,8 @@ export default function CampaignsTab({ supabase }) {
     setDeleting(prev => ({ ...prev, [id]: false }))
   }
 
-  function openRate(c)  { return c.recipient_count > 0 ? `${Math.round((c.open_count  / c.recipient_count) * 100)}%` : '—' }
-  function clickRate(c) { return c.recipient_count > 0 ? `${Math.round((c.click_count / c.recipient_count) * 100)}%` : '—' }
+  function openRate(c) { return engagementRate(tracking.metrics[c.id], 'open_count') }
+  function clickRate(c) { return engagementRate(tracking.metrics[c.id], 'click_count') }
 
   const thStyle = { fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#aaa', fontFamily: ff, padding: '10px 14px', textAlign: 'left', background: '#fafafa', borderBottom: '1px solid #f0f0f0', fontWeight: '500' }
   const tdStyle = { padding: '12px 14px', fontFamily: ff, verticalAlign: 'middle' }
@@ -1055,7 +1061,12 @@ export default function CampaignsTab({ supabase }) {
         <CampaignBuilder campaign={building} segments={segments} onSave={saveCampaign} onSend={sendCampaign} onClose={() => setBuilding(null)} supabase={supabase} onUpload={uploadImage} />
       )}
       <div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
+        {showUnsubscribes && <SubscriberActivity supabase={supabase} unsubscribes />}
+        <p style={{ color:'#888',fontSize:12,lineHeight:1.6 }}>Campaigns and newsletter sends. Open/click rates use unique recipients divided by accepted emails; opens are estimates.</p>
+        {tracking.error && <p role="status" style={{ color:DP,fontSize:12 }}>{tracking.error}</p>}
+        <div style={{ display: 'flex', gap:10, justifyContent: 'flex-end', marginBottom: '14px' }}>
+          <button type="button" onClick={()=>setShowUnsubscribes(v=>!v)} style={{fontFamily:ff}}>Unsubscribe history</button>
+          <button onClick={tracking.refresh} style={{ fontFamily:ff,padding:'8px 14px',border:'1px solid #ddd',borderRadius:6,background:'#fff',cursor:'pointer' }}>Refresh tracking</button>
           <button onClick={() => setBuilding({})} style={{ padding: '8px 18px', background: PINK, border: 'none', borderRadius: '7px', color: '#0a0a0a', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: ff }}>
             + New Campaign
           </button>
@@ -1078,9 +1089,9 @@ export default function CampaignsTab({ supabase }) {
                 {campaigns.map((c, i) => {
                   const sc = CAMPAIGN_STATUS[c.status] || CAMPAIGN_STATUS.draft
                   return (
-                    <tr key={c.id} style={{ borderBottom: i === campaigns.length-1 ? 'none' : '1px solid #f5f5f5' }}>
+                    <Fragment key={c.id}><tr style={{ borderBottom: i === campaigns.length-1 ? 'none' : '1px solid #f5f5f5' }}>
                       <td style={tdStyle}>
-                        <div style={{ fontWeight: '500', color: '#0a0a0a', fontSize: '13px' }}>{c.name || 'Untitled'}</div>
+                        <div style={{ fontWeight: '500', color: '#0a0a0a', fontSize: '13px' }}>{c.name || 'Untitled'}{c.kind === 'newsletter' && <span style={{ fontSize:10,color:'#888',marginLeft:8 }}>Newsletter</span>}</div>
                         <div style={{ fontSize: '12px', color: '#aaa', marginTop: '1px' }}>{c.subject}</div>
                       </td>
                       <td style={tdStyle}><span style={{ padding: '2px 9px', borderRadius: '20px', fontSize: '11px', background: sc.bg, color: sc.color }}>{sc.label}</span></td>
@@ -1093,7 +1104,7 @@ export default function CampaignsTab({ supabase }) {
                       <td style={{ ...tdStyle, fontSize: '13px', color: '#333' }}>{clickRate(c)}</td>
                       <td style={{ ...tdStyle, textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                          {c.status !== 'sent' && (
+                          {c.status !== 'sent' && c.kind !== 'newsletter' && (
                             <button onClick={() => setBuilding(c)} style={{ padding: '5px 12px', background: 'none', border: `1px solid ${PINK}`, borderRadius: '5px', color: DP, fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>Edit</button>
                           )}
                           {(c.status === 'draft' || c.status === 'scheduled' || (c.status === 'failed' && !c.recipient_count)) && (
@@ -1101,12 +1112,13 @@ export default function CampaignsTab({ supabase }) {
                               {sending[c.id] ? '…' : 'Send'}
                             </button>
                           )}
+                          <button onClick={() => setTrackingOpen(value => value === c.id ? null : c.id)} aria-expanded={trackingOpen === c.id} aria-label={`View tracking for ${c.name || c.subject}`} style={{ padding:'5px 10px',font:'inherit',fontSize:12,background:'#fff',border:'1px solid #ddd',borderRadius:5,cursor:'pointer' }}>Tracking</button>
                           <button onClick={() => deleteCampaign(c.id)} disabled={!!deleting[c.id]} style={{ padding: '5px 10px', background: 'none', border: '1px solid rgba(224,112,112,0.2)', borderRadius: '5px', color: '#c04040', fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>
                             {deleting[c.id] ? '…' : '✕'}
                           </button>
                         </div>
                       </td>
-                    </tr>
+                    </tr>{trackingOpen === c.id && <tr><td colSpan={7} style={{ padding:'8px 18px',background:'#fffbfc' }}><CampaignEngagement stats={tracking.metrics[c.id]} /><SubscriberActivity campaignId={c.id} supabase={supabase} /></td></tr>}</Fragment>
                   )
                 })}
               </tbody>
