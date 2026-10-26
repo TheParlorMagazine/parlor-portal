@@ -2,7 +2,7 @@
 
 import OrderPackingList from './OrderPackingList'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { confirmDialog } from '../../../lib/confirmDialog'
 
 const ff  = "'Source Serif 4', Georgia, serif"
@@ -28,7 +28,7 @@ function money(cents, currency = 'usd') {
 }
 function fmtDate(iso) { if (!iso) return '—'; return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
 
-function OrderRow({ order, token, onChanged }) {
+function OrderRow({ order, token, onChanged, onDeleted }) {
   const [open, setOpen] = useState(false)
   const [f, setF] = useState({
     status: order.status, carrier: order.carrier || '', tracking_number: order.tracking_number || '',
@@ -54,10 +54,17 @@ function OrderRow({ order, token, onChanged }) {
 
   async function remove() {
     if (!(await confirmDialog(`Delete order ${order.order_number || ''}? This can’t be undone.`))) return
-    setBusy(true)
-    const res = await fetch(`/api/admin/orders?id=${order.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${await token()}` } })
-    setBusy(false)
-    if (res.ok) onChanged()
+    setBusy(true); setMsg(null)
+    try {
+      const res = await fetch(`/api/admin/orders?id=${order.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${await token()}` } })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.ok !== true) throw new Error(data.error || 'Order was not deleted. Please try again.')
+      onDeleted(order.id)
+    } catch (error) {
+      setMsg(error.message || 'Order could not be deleted.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -206,10 +213,23 @@ export default function OrdersSection({ supabase }) {
   const [orders, setOrders] = useState(null)
   const [filter, setFilter] = useState('all')
   const [creating, setCreating] = useState(false)
+  const [loadError, setLoadError] = useState(null)
+  const loadVersion = useRef(0)
 
   async function load() {
-    const res = await fetch('/api/admin/orders', { headers: { Authorization: `Bearer ${await token()}` } })
-    if (res.ok) { const d = await res.json(); setOrders(d.orders || []) } else setOrders([])
+    const version = ++loadVersion.current
+    try {
+      const res = await fetch('/api/admin/orders', { cache: 'no-store', headers: { Authorization: `Bearer ${await token()}` } })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Orders could not be loaded.')
+      if (version === loadVersion.current) { setOrders(data.orders || []); setLoadError(null) }
+    } catch (error) {
+      if (version === loadVersion.current) setLoadError(error.message || 'Orders could not be loaded.')
+    }
+  }
+  function deleted(id) {
+    ++loadVersion.current // Ignore any list request started before deletion.
+    setOrders(rows => (rows || []).filter(order => order.id !== id))
   }
   useEffect(() => { load() }, [])
 
@@ -238,13 +258,14 @@ export default function OrdersSection({ supabase }) {
         })}
       </div>
 
-      {orders === null && <div style={{ color: '#999', fontSize: 14, padding: 20 }}>Loading orders…</div>}
+      {loadError && <p role="alert" style={{ color: DP }}>{loadError} <button onClick={load} style={{ fontFamily: ff }}>Retry</button></p>}
+      {orders === null && !loadError && <div style={{ color: '#999', fontSize: 14, padding: 20 }}>Loading orders…</div>}
       {orders !== null && shown.length === 0 && (
         <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 12, padding: 40, textAlign: 'center', color: '#999', fontSize: 14 }}>
           {(orders || []).length === 0 ? 'No orders yet. Stripe shop checkouts appear here automatically, or add one manually.' : 'No orders with this status.'}
         </div>
       )}
-      {shown.map(o => <OrderRow key={o.id} order={o} token={token} onChanged={load} />)}
+      {shown.map(o => <OrderRow key={o.id} order={o} token={token} onChanged={load} onDeleted={deleted} />)}
 
       {creating && <NewOrderModal token={token} onClose={() => setCreating(false)} onSaved={load} />}
     </div>
