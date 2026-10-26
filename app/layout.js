@@ -1,3 +1,4 @@
+import SubscriberSiteTracker from './_components/SubscriberSiteTracker'
 import PageViewTracker from './_components/PageViewTracker'
 import RecoveryRedirect from './_components/RecoveryRedirect'
 import CartDrawer from './_components/CartDrawer'
@@ -30,6 +31,7 @@ export default function RootLayout({ children }) {
       <body>
         <RecoveryRedirect />
         <PageViewTracker />
+        <SubscriberSiteTracker />
         {children}
         <ShopStateSync />
         <CartDrawer />

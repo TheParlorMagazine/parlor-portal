@@ -13,3 +13,6 @@
 
 [functions."inventory-reconciliation"]
   schedule = "* * * * *"
+
+[functions."subscriber-activity-retention"]
+  schedule = "0 3 * * *"

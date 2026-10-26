@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import SubscriberRecentActivity from './SubscriberRecentActivity'
 import { isPaidPlan } from '../../../lib/plans'
 
 // Match a member's plan against the filter dropdown. Plan values are real names
@@ -214,6 +215,7 @@ function SubscriberProfile({ member, onClose, onUpdate, supabase }) {
                   </button>
                 </div>
               </div>
+              <SubscriberRecentActivity memberId={member.id} supabase={supabase} />
             </div>
           )}
 
