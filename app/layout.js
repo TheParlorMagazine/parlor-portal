@@ -1,3 +1,4 @@
+import LiveSessionTracker from './_components/LiveSessionTracker'
 import SubscriberSiteTracker from './_components/SubscriberSiteTracker'
 import PageViewTracker from './_components/PageViewTracker'
 import RecoveryRedirect from './_components/RecoveryRedirect'
@@ -31,6 +32,7 @@ export default function RootLayout({ children }) {
       <body>
         <RecoveryRedirect />
         <PageViewTracker />
+        <LiveSessionTracker />
         <SubscriberSiteTracker />
         {children}
         <ShopStateSync />

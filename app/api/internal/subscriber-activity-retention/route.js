@@ -6,5 +6,7 @@ export async function POST(request){
   const received=request.headers.get('authorization') || '',expected='Bearer '+secret
   if(Buffer.byteLength(received)!==Buffer.byteLength(expected) || !timingSafeEqual(Buffer.from(received),Buffer.from(expected)))return Response.json({error:'Unauthorized.'},{status:401})
   const {error}=await serviceClient().rpc('prune_subscriber_activity')
-  return Response.json(error?{error:'Cleanup failed.'}:{ok:true},{status:error?503:200,headers:{'Cache-Control':'no-store'}})
+  if(error)return Response.json({error:'Cleanup failed.'},{status:503})
+  const {error:liveError}=await serviceClient().rpc('prune_live_site_sessions')
+  return Response.json(liveError?{error:'Cleanup failed.'}:{ok:true},{status:liveError?503:200,headers:{'Cache-Control':'no-store'}})
 }
