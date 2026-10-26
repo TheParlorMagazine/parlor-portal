@@ -280,7 +280,7 @@ export default async function ArticlePage({ params, searchParams }) {
             authorPhotoUrl={article.author_photo_url}
             authorProfileUrl={article.author_profile_url}
             publishedDate={publishedDate}
-            objectPosition={article.cover_image_position || 'center center'}
+            objectPosition={article.slug === 'against-the-cloud' ? 'right 65%' : (article.cover_image_position || 'center center')}
           />
         )}
 
