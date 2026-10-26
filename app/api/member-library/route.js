@@ -25,7 +25,7 @@ async function requireUser(request) {
 }
 
 const LIST_FIELDS = [
-  'slug', 'title', 'subtitle', 'excerpt', 'cover_image_url',
+  'slug', 'title', 'subtitle', 'meta_description', 'excerpt', 'cover_image_url',
   'category', 'article_category', 'theme', 'tags',
   'author_name', 'author_photo_url', 'date_published',
   'reading_time_minutes', 'thumbnail_style', 'is_new',
