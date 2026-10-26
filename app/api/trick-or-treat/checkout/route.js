@@ -1,3 +1,4 @@
+import { checkoutOrigin } from '../../../../lib/checkoutOrigin'
 import { createReservedCheckout } from '../../../../lib/checkoutReservations'
 import { encodeShopSnapshot, snapshotShopProduct } from '../../../../lib/shopSnapshot'
 import { requireShopUser } from '../../../../lib/shopAuth'
@@ -20,7 +21,7 @@ export async function POST(request) {
   }
 
   const db = serviceClient()
-  const origin = new URL(request.url).origin
+  const origin = checkoutOrigin(request)
   let cancel
   try { cancel = new URL(cancelUrl, origin) } catch { return Response.json({ error: 'Invalid return URL' }, { status: 400 }) }
   if (cancel.origin !== origin) return Response.json({ error: 'Checkout must return to this site.' }, { status: 400 })

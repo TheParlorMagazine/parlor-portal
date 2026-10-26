@@ -1,3 +1,4 @@
+import { checkoutOrigin } from '../../../../lib/checkoutOrigin'
 import { createReservedCheckout } from '../../../../lib/checkoutReservations'
 import { requireShopUser } from '../../../../lib/shopAuth'
 import { ensureStripeCustomer } from '../../../../lib/stripeCustomer'
@@ -27,7 +28,7 @@ export async function POST(request) {
   const db = serviceClient()
   let prepared
   const currency = currencyForRequest(request)
-  const origin = new URL(request.url).origin
+  const origin = checkoutOrigin(request)
   let cancel
   try {
     cancel = new URL(cancelUrl, origin)

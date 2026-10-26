@@ -1,3 +1,4 @@
+import { checkoutOrigin } from '../../../lib/checkoutOrigin'
 import { checkItemAccess } from '../../../lib/checkAccess'
 import { createReservedCheckout } from '../../../lib/checkoutReservations'
 import { itemPriceMatches } from '../../../lib/itemPurchasePrice'
@@ -19,7 +20,7 @@ export async function POST(request) {
     const db = serviceClient()
     const { data: article, error } = await db.from('articles').select('id, slug, published, paywall_type, stripe_price_id, body').eq('id', articleId).single()
     if (error || !article?.published || !itemPriceMatches(article, itemType, stripePriceId)) return Response.json({ error: 'This item is not available for purchase.' }, { status: 400 })
-    const articleUrl = new URL(`/post/${encodeURIComponent(article.slug)}`, request.url)
+    const articleUrl = new URL(`/post/${encodeURIComponent(article.slug)}`, checkoutOrigin(request))
     const cancelUrl = articleUrl.toString()
     purchaseContext={articleId,itemType,url:cancelUrl}
     const access = await checkItemAccess(user.id, articleId, itemType, {db, strict:true})

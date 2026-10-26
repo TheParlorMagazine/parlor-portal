@@ -1,3 +1,4 @@
+import { checkoutOrigin } from '../../../lib/checkoutOrigin'
 import Stripe from 'stripe'
 import { requireUser, serviceClient } from '../../../lib/apiAuth'
 import { ensureStripeCustomer } from '../../../lib/stripeCustomer'
@@ -24,7 +25,7 @@ export async function POST(request) {
     const { planId, successUrl, cancelUrl, coupon } = await request.json()
     const priceId = PLAN_PRICE_IDS[planId]
     if (!priceId) return Response.json({ error: 'Unknown subscription plan.' }, { status: 400 })
-    const origin = new URL(request.url).origin
+    const origin = checkoutOrigin(request)
     const success = new URL(successUrl || '/portal/subscriptions', origin)
     const cancel = new URL(cancelUrl || '/plans', origin)
     if (success.origin !== origin || cancel.origin !== origin) return Response.json({ error: 'Checkout must return to this site.' }, { status: 400 })
