@@ -94,3 +94,11 @@ metadata on ordinary articles, preserved in-session author selection, and editor
 fallback limited to normal articles. Subscriber and email-layout regressions pass.
 Production build passed using placeholder keys/local endpoints; no real emails,
 payments, provider changes, production article writes or live SQL were performed.
+
+
+## Multiple authors extension
+
+See [republication-authors.md](republication-authors.md) for the new author-list and
+biography controls and their separate 20261028110000 migration. The applied
+20261028100000 migration remains unchanged. Existing single-author behavior is the
+fallback until the additional migration is installed.

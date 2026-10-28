@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr'
 import { notFound } from 'next/navigation'
 import { checkItemAccess } from '../../../lib/checkAccess'
 import { hasPaidAccess } from '../../../lib/plans'
+import RepublishedAuthorBios from '../../_components/RepublishedAuthorBios'
 import RepublishedByline from '../../_components/RepublishedByline'
 import { articleAuthorName } from '../../../lib/articleRepublication'
 import ArticleBody from './_components/ArticleBody'
@@ -429,6 +430,7 @@ export default async function ArticlePage({ params, searchParams }) {
         </div>
 
         {/* Author box */}
+        <RepublishedAuthorBios article={article} />
         {!article.is_republished && article.author_name && (
           <div style={{ borderTop: '1px solid #f0e8e0', borderBottom: '1px solid #f0e8e0', padding: '40px 24px', marginBottom: '64px' }}>
             <div style={{ maxWidth: '720px', margin: '0 auto', display: 'flex', gap: '20px', alignItems: 'flex-start' }}>

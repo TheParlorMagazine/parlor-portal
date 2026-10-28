@@ -1,6 +1,7 @@
 import { existsSync } from 'fs'
 import path from 'path'
 import { createClient } from '@supabase/supabase-js'
+import RepublishedAuthorBios from '../../_components/RepublishedAuthorBios'
 import RepublishedByline from '../../_components/RepublishedByline'
 import { articleAuthorName } from '../../../lib/articleRepublication'
 import ArticleBody from '../../post/[slug]/_components/ArticleBody'
@@ -240,6 +241,7 @@ export default async function PreviewPage({ params }) {
         </div>
 
         {/* Author box */}
+        <RepublishedAuthorBios article={article} />
         {!article.is_republished && article.author_name && (
           <div style={{ borderTop: '1px solid #f0e8e0', borderBottom: '1px solid #f0e8e0', padding: '40px 24px', marginBottom: '64px' }}>
             <div style={{ maxWidth: '720px', margin: '0 auto', display: 'flex', gap: '20px', alignItems: 'flex-start' }}>

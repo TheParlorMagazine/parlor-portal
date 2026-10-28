@@ -9,7 +9,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import MediaLibraryModal from './MediaLibraryModal'
 import { hasDisclaimerBlock, withDisclaimer } from '../../../../lib/memberPosts'
-import { REPUBLICATION_DEFAULTS, republicationPayload, republicationError } from '../../../../lib/articleRepublication'
+import { REPUBLICATION_DEFAULTS, republicationPayload, republicationError, republicationAuthors, republicationAuthorNames } from '../../../../lib/articleRepublication'
 import { confirmDialog } from '../../../../lib/confirmDialog'
 
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), {
@@ -1633,6 +1633,15 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
 
   const [form, setForm] = useState(() => initForm(initialData))
   const [republicationReady, setRepublicationReady] = useState(Object.keys(REPUBLICATION_DEFAULTS).every(key => Object.prototype.hasOwnProperty.call(initialData || {}, key)) ? true : null)
+  const [republicationAuthorsReady, setRepublicationAuthorsReady] = useState(Array.isArray(initialData?.republication_authors) ? true : null)
+  useEffect(() => {
+    if (Array.isArray(initialData?.republication_authors)) return
+    let active = true
+    supabase.from('articles').select('republication_authors').limit(1)
+      .then(({ error }) => { if (active) setRepublicationAuthorsReady(!error) })
+      .catch(() => { if (active) setRepublicationAuthorsReady(false) })
+    return () => { active = false }
+  }, [])
   useEffect(() => {
     if (Object.keys(REPUBLICATION_DEFAULTS).every(key => Object.prototype.hasOwnProperty.call(initialData || {}, key))) return
     let active = true
@@ -2000,6 +2009,19 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
       setStripeStatus('error')
       setStripeError(err.message || 'Network error')
     }
+  }
+
+  function setRepublicationAuthors(authors) {
+    const primary = authors[0] || { name: '', bio: '', photo_url: '', profile_url: '' }
+    batchUpdate({ republication_authors: authors,
+      author_name: republicationAuthorNames(authors), author_bio: primary.bio || '',
+      author_photo_url: primary.photo_url || '', author_profile_url: primary.profile_url || '',
+    })
+  }
+  function editRepublicationAuthor(index, patch) {
+    const authors = republicationAuthors(formRef.current)
+    if (!authors.length) authors.push({ name: '', bio: '', photo_url: '', profile_url: '' })
+    setRepublicationAuthors(authors.map((a, i) => i === index ? { ...a, ...patch } : a))
   }
 
   function handleToggleRepublication(checked) {
@@ -2472,7 +2494,21 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
               {!form.author_id && !form.author_name && <p style={{ color: '#888', fontSize: 11, lineHeight: 1.5 }}>The Parlor Editors</p>}
             </>}
             {form.is_republished && <>
-              <SideInput label="Original author" value={form.author_name} onChange={v => update('author_name', v)} placeholder="Original author’s full name" />
+              {republicationAuthorsReady === true ? <>
+                {(republicationAuthors(form).length ? republicationAuthors(form) : [{ name: '', bio: '', photo_url: '', profile_url: '' }]).map((author, index) => <div key={index} style={{ borderBottom: '1px solid rgba(255,255,255,.08)', paddingBottom: 14, marginBottom: 14 }} data-republication-author-editor>
+                  <SideInput label={`Original author ${index + 1}`} value={author.name} onChange={v => editRepublicationAuthor(index, { name: v })} placeholder={index === 0 ? 'Original author’s full name' : 'Additional author’s full name'} />
+                  <SideTextarea label="Author bio (optional)" value={author.bio} onChange={v => editRepublicationAuthor(index, { bio: v })} placeholder="About this author…" rows={5} />
+                  <SideLabel>Author photo (optional)</SideLabel>
+                  <CoverImagePicker value={author.photo_url} onChange={v => editRepublicationAuthor(index, { photo_url: v })} folder="republished-authors" addLabel={`+ Add author ${index + 1} photo`} />
+                  <SideInput label="Author website or profile (optional)" value={author.profile_url} onChange={v => editRepublicationAuthor(index, { profile_url: v })} placeholder="https://…" />
+                  {index > 0 && <button type="button" onClick={() => setRepublicationAuthors(republicationAuthors(formRef.current).filter((_, i) => i !== index))} style={{ background: 'none', color: '#e5a7b8', border: '1px solid #59434a', borderRadius: 6, padding: '6px 10px', cursor: 'pointer' }}>Remove author {index + 1}</button>}
+                </div>)}
+                <button type="button" onClick={() => { const authors = republicationAuthors(formRef.current); if (!authors.length) authors.push({ name: '', bio: '', photo_url: '', profile_url: '' }); setRepublicationAuthors([...authors, { name: '', bio: '', photo_url: '', profile_url: '' }]) }} style={{ background: 'none', color: '#f2b8c6', border: '1px solid #59434a', borderRadius: 6, padding: '8px 12px', marginBottom: 16, cursor: 'pointer' }}>+ Add another author</button>
+              </> : <>
+                <SideInput label="Original author" value={form.author_name} onChange={v => update('author_name', v)} placeholder="Original author’s full name" />
+                {republicationAuthorsReady === false && <p style={{ color: '#bbb', fontSize: 11, lineHeight: 1.5 }}>Additional authors and bios require the republication authors migration. Existing single-author editing still works.</p>}
+              </>}
+
               <SideInput label="Republished from: publication name" value={form.original_publication_name} onChange={v => update('original_publication_name', v)} placeholder="Publication name" />
               <SideLabel>Publication logo (optional)</SideLabel>
               <CoverImagePicker value={form.original_publication_logo_url} onChange={v => update('original_publication_logo_url', v)} folder="publication-logos" addLabel="+ Add publication logo" />
