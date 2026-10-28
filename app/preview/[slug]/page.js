@@ -1,6 +1,8 @@
 import { existsSync } from 'fs'
 import path from 'path'
 import { createClient } from '@supabase/supabase-js'
+import RepublishedByline from '../../_components/RepublishedByline'
+import { articleAuthorName } from '../../../lib/articleRepublication'
 import ArticleBody from '../../post/[slug]/_components/ArticleBody'
 import ParallaxHero from '../../post/[slug]/_components/ParallaxHero'
 import PreviewBanner from './PreviewBanner'
@@ -83,12 +85,14 @@ export default async function PreviewPage({ params }) {
   }
 
   // Always use live writer profile data when available, fall back to article snapshot
-  if (article.writers) {
+  if (!article.is_republished && article.writers) {
     article.author_name        = article.writers.name        || article.author_name
     article.author_bio         = article.writers.bio         || article.author_bio
     article.author_photo_url   = article.writers.photo_url   || article.author_photo_url
     article.author_profile_url = article.writers.profile_url || article.author_profile_url
   }
+
+  const bylineName = articleAuthorName(article)
 
   // "The World We're Building" (Vol 2) articles use the special template.
   let isVol2 = false
@@ -152,14 +156,15 @@ export default async function PreviewPage({ params }) {
           )}
 
           {/* Byline */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: isVol2 ? '14px' : '12px', marginBottom: '40px' }}>
+          {article.is_republished && <RepublishedByline article={article} publishedDate={publishedDate} />}
+          {!article.is_republished && <div style={{ display: 'flex', alignItems: 'center', gap: isVol2 ? '14px' : '12px', marginBottom: '40px' }}>
             {article.author_photo_url ? (
               <img
                 src={article.author_photo_url}
-                alt={article.author_name || ''}
+                alt={bylineName || ''}
                 style={{ width: isVol2 ? '52px' : '36px', height: isVol2 ? '52px' : '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
               />
-            ) : article.author_name ? (
+            ) : bylineName ? (
               <div style={{
                 width: isVol2 ? '52px' : '36px', height: isVol2 ? '52px' : '36px', borderRadius: '50%',
                 background: '#f2b8c6', flexShrink: 0,
@@ -167,34 +172,34 @@ export default async function PreviewPage({ params }) {
                 fontFamily: "'Playfair Display', serif", fontSize: isVol2 ? '20px' : '14px',
                 fontWeight: '600', color: '#c4364a',
               }}>
-                {article.author_name[0]}
+                {bylineName[0]}
               </div>
             ) : null}
 
             <div>
-              {article.author_name && (
+              {bylineName && (
                 <div style={{
                   fontFamily: "'Source Serif 4', Georgia, serif",
                   fontSize: isVol2 ? '18px' : '14px', color: '#0a0a0a',
                 }}>
                   {article.author_profile_url ? (
                     <a href={article.author_profile_url} style={{ color: '#0a0a0a', textDecoration: 'none' }}>
-                      {article.author_name}
+                      {bylineName}
                     </a>
-                  ) : article.author_name}
+                  ) : bylineName}
                 </div>
               )}
               {publishedDate && (
                 <div style={{
                   fontFamily: "'Source Serif 4', Georgia, serif",
                   fontSize: '12px', color: '#999',
-                  marginTop: article.author_name ? '2px' : 0,
+                  marginTop: bylineName ? '2px' : 0,
                 }}>
                   {publishedDate}
                 </div>
               )}
             </div>
-          </div>
+          </div>}
         </div>
 
         {/* Cover image (standard template only — Vol 2 shows it in the hero) */}
@@ -235,7 +240,7 @@ export default async function PreviewPage({ params }) {
         </div>
 
         {/* Author box */}
-        {article.author_name && (
+        {!article.is_republished && article.author_name && (
           <div style={{ borderTop: '1px solid #f0e8e0', borderBottom: '1px solid #f0e8e0', padding: '40px 24px', marginBottom: '64px' }}>
             <div style={{ maxWidth: '720px', margin: '0 auto', display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
               {article.author_photo_url ? (

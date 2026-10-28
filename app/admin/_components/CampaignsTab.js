@@ -9,12 +9,22 @@ import Image from '@tiptap/extension-image'
 import TextAlign from '@tiptap/extension-text-align'
 import { confirmDialog, alertDialog } from '../../../lib/confirmDialog'
 import ImageEditor from './ImageEditor'
+import { campaignLinkUrl } from '../../../lib/campaignEmailStyles'
 import { campaignEmailHtml } from '../../../lib/campaignTemplate'
 import { blocksToEmailHtml } from '../../../lib/campaignRenderer'
 import { footer } from '../../../lib/sendCampaign'
 import SubscriberActivity from './SubscriberActivity'
 import useCampaignTracking from './useCampaignTracking'
 import CampaignEngagement, { engagementRate } from './CampaignEngagement'
+
+function editCampaignLink(editor) {
+  const value = window.prompt('URL (https://… or /portal):', editor.getAttributes('link').href || '')
+  if (value === null) return
+  if (!value.trim()) { editor.chain().focus().unsetLink().run(); return }
+  const href = campaignLinkUrl(value)
+  if (!href) { alertDialog('Enter a valid website, email or phone link.'); return }
+  editor.chain().focus().setLink({ href }).run()
+}
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -371,7 +381,7 @@ function IntroEditor({ content, onChange, supabase, onUpload, bg, onBgChange }) 
         {sep}
         {[1,2,3].map(l => btn(`H${l}`, editor.isActive('heading',{level:l}), () => editor.chain().focus().toggleHeading({level:l}).run(), <span style={{fontSize:'11px',fontWeight:'600'}}>H{l}</span>))}
         {sep}
-        {btn('Link', editor.isActive('link'), () => { const u = window.prompt('URL:',editor.getAttributes('link').href||''); if (u!==null) u.trim() ? editor.chain().focus().setLink({href:u.trim()}).run() : editor.chain().focus().unsetLink().run() },
+        {btn('Link', editor.isActive('link'), () => editCampaignLink(editor),
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>)}
         {sep}
         {/* Image insert */}
@@ -500,7 +510,7 @@ function BlockBodyEditor({ content, onChange }) {
         {/* Inline */}
         {btn('Bold',   editor.isActive('bold'),   () => editor.chain().focus().toggleBold().run(),   <b style={{ fontSize: '13px' }}>B</b>)}
         {btn('Italic', editor.isActive('italic'), () => editor.chain().focus().toggleItalic().run(), <i style={{ fontSize: '13px' }}>I</i>)}
-        {btn('Link',   editor.isActive('link'),   () => { const u = window.prompt('URL:', editor.getAttributes('link').href || ''); if (u !== null) u.trim() ? editor.chain().focus().setLink({ href: u.trim() }).run() : editor.chain().focus().unsetLink().run() },
+        {btn('Link',   editor.isActive('link'),   () => editCampaignLink(editor),
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>)}
         {sep}
         {/* Alignment */}
@@ -619,7 +629,7 @@ function BlockCard({ block, index, total, onChange, onDelete, onMove, supabase, 
         </div>
         <div>
           <span style={lbl}>Button URL</span>
-          <input value={block.cta_href} onChange={e => f('cta_href', e.target.value)} placeholder="https://theparlormagazine.com/…" style={inp} />
+          <input value={block.cta_href} onChange={e => f('cta_href', e.target.value)} onBlur={e => { const href = campaignLinkUrl(e.target.value); if (href) f('cta_href', href) }} placeholder="https://theparlormagazine.com/…" style={inp} />
         </div>
       </div>
 

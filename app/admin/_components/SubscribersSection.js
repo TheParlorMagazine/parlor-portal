@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import SubscriberRecentActivity from './SubscriberRecentActivity'
+import { subscriberStatus } from '../../../lib/subscriberStatus'
 import { isPaidPlan } from '../../../lib/plans'
 
 // Match a member's plan against the filter dropdown. Plan values are real names
@@ -101,7 +102,7 @@ function SubscriberProfile({ member, onClose, onUpdate, supabase }) {
   const displayName = member.name || member.full_name || member.display_name || null
   const displayEmail = member.email || null
   const plan = member.plan || null
-  const status = member.status || member.subscription_status || 'active'
+  const status = subscriberStatus(member)
   const planC = planColor(plan)
   const statusC = statusColor(status)
 
@@ -323,7 +324,7 @@ export default function SubscribersSection({ supabase }) {
       (m.email || '').toLowerCase().includes(search_) ||
       (m.name || m.full_name || '').toLowerCase().includes(search_) ||
       m.id.toLowerCase().includes(search_)
-    const status = m.status || m.subscription_status || 'active'
+    const status = subscriberStatus(m)
     const matchPlan = matchesPlan(m.plan, filterPlan)
     const matchStatus = filterStatus === 'all' || status === filterStatus
     return matchSearch && matchPlan && matchStatus
@@ -344,7 +345,7 @@ export default function SubscribersSection({ supabase }) {
         m.name || m.full_name || '',
         m.email || '',
         m.plan || 'free',
-        m.status || m.subscription_status || 'active',
+        subscriberStatus(m),
         m.joined_at ? new Date(m.joined_at).toLocaleDateString('en-US') : '',
         m.last_active ? new Date(m.last_active).toLocaleDateString('en-US') : '',
         m.onboarding_sent || m.onboarding_sent_at ? 'Yes' : 'No',
@@ -493,7 +494,7 @@ export default function SubscribersSection({ supabase }) {
             <tbody>
               {filtered.map((m, i) => {
                 const plan = m.plan || 'free'
-                const status = m.status || m.subscription_status || 'active'
+                const status = subscriberStatus(m)
                 const planC = planColor(plan)
                 const statusC = statusColor(status)
                 const displayName = m.name || m.full_name || m.display_name || null

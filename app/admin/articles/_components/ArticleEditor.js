@@ -9,6 +9,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import MediaLibraryModal from './MediaLibraryModal'
 import { hasDisclaimerBlock, withDisclaimer } from '../../../../lib/memberPosts'
+import { REPUBLICATION_DEFAULTS, republicationPayload, republicationError } from '../../../../lib/articleRepublication'
 import { confirmDialog } from '../../../../lib/confirmDialog'
 
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), {
@@ -70,6 +71,7 @@ function relativeTime(date) {
 
 function initForm(data) {
   if (!data) return {
+    ...REPUBLICATION_DEFAULTS,
     title: '', slug: '', subtitle: '', excerpt: '',
     cover_image_url: '',
     author_id: null,
@@ -93,7 +95,9 @@ function initForm(data) {
     scheduled_at: null,
   }
   return {
+    ...REPUBLICATION_DEFAULTS,
     ...data,
+    _hasRepublicationFields: Object.keys(REPUBLICATION_DEFAULTS).every(key => Object.prototype.hasOwnProperty.call(data, key)),
     author_id: data.author_id || null,
     body: data.body || '',
     tags: Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || ''),
@@ -133,6 +137,7 @@ function buildPayload(form, overrides = {}) {
     author_photo_url: form.author_photo_url || null,
     author_profile_url: form.author_profile_url || null,
     author_bio: form.author_bio || null,
+    ...republicationPayload(form),
     category: form.vertical || null,
     article_category: form.article_category || null,
     theme: form.theme || null,
@@ -640,7 +645,7 @@ function CoverImagePicker({ value, onChange, folder = 'covers', addLabel = '+ Ad
           <button type="button" onMouseDown={e => { e.preventDefault(); fileRef.current?.click(); setOpen(false) }} style={menuItemStyle}>
             Upload image
           </button>
-          <button type="button" onMouseDown={e => { e.preventDefault(); setUrlMode(true) }} style={{ ...menuItemStyle, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <button type="button" onClick={e => { e.preventDefault(); setUrlMode(true) }} style={{ ...menuItemStyle, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
             Paste URL
           </button>
           <button type="button" onMouseDown={e => { e.preventDefault(); setShowLibrary(true); setOpen(false) }} style={{ ...menuItemStyle, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
@@ -708,7 +713,7 @@ function CoverImagePicker({ value, onChange, folder = 'covers', addLabel = '+ Ad
               >
                 {uploading ? 'Uploading…' : 'Change'}
               </button>
-              {open && <Menu />}
+              {open && Menu()}
             </div>
             <button
               type="button"
@@ -754,7 +759,7 @@ function CoverImagePicker({ value, onChange, folder = 'covers', addLabel = '+ Ad
               onDrop={handleDrop}
             />
           )}
-          {open && <Menu />}
+          {open && Menu()}
         </div>
       )}
 
@@ -1627,6 +1632,15 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
   const router = useRouter()
 
   const [form, setForm] = useState(() => initForm(initialData))
+  const [republicationReady, setRepublicationReady] = useState(Object.keys(REPUBLICATION_DEFAULTS).every(key => Object.prototype.hasOwnProperty.call(initialData || {}, key)) ? true : null)
+  useEffect(() => {
+    if (Object.keys(REPUBLICATION_DEFAULTS).every(key => Object.prototype.hasOwnProperty.call(initialData || {}, key))) return
+    let active = true
+    supabase.from('articles').select(Object.keys(REPUBLICATION_DEFAULTS).join(',')).limit(1)
+      .then(({ error }) => { if (active) setRepublicationReady(!error) })
+      .catch(() => { if (active) setRepublicationReady(false) })
+    return () => { active = false }
+  }, [])
   const [savedId, setSavedId] = useState(articleId)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -1717,6 +1731,11 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
   }, [savedId, lastSavedAt, shareCardRetry])
 
   const formRef = useRef(form)
+  const parlorAuthorRef = useRef(initialData?.is_republished ? null : {
+    author_id: initialData?.author_id || null, author_name: initialData?.author_name || '',
+    author_photo_url: initialData?.author_photo_url || '', author_profile_url: initialData?.author_profile_url || '', author_bio: initialData?.author_bio || '',
+  })
+  const originalAuthorRef = useRef(initialData?.is_republished ? initialData.author_name || '' : '')
   const savedIdRef = useRef(articleId)
   const isDirtyRef = useRef(false)
   const slugTouchedRef = useRef(!!articleId)
@@ -1785,6 +1804,9 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
   async function performSave(overrides = {}) {
     setSaving(true)
     setSaveError('')
+    if (((overrides.published ?? formRef.current.published) || (overrides.scheduled_at ?? formRef.current.scheduled_at)) && republicationError(formRef.current)) {
+      setSaveError(republicationError(formRef.current)); setSaving(false); return false
+    }
     const payload = buildPayload(formRef.current, overrides)
     const id = savedIdRef.current
 
@@ -1833,6 +1855,8 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
 
   async function handlePublish() {
     const f = formRef.current
+    const creditError = republicationError(f)
+    if (creditError) { setSaveError(creditError); return }
     // Member posts have two hard gates before they can go live.
     if (f.media_type === 'member_post') {
       if (!hasDisclaimerBlock(f.body)) {
@@ -1978,6 +2002,18 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
     }
   }
 
+  function handleToggleRepublication(checked) {
+    const f = formRef.current
+    const emptyAuthor = { author_id: null, author_name: '', author_photo_url: '', author_profile_url: '', author_bio: '' }
+    if (checked) {
+      parlorAuthorRef.current = Object.fromEntries(Object.keys(emptyAuthor).map(k => [k, f[k] || emptyAuthor[k]]))
+      batchUpdate({ ...emptyAuthor, is_republished: true, author_name: originalAuthorRef.current })
+    } else {
+      originalAuthorRef.current = f.author_name || ''
+      batchUpdate({ ...emptyAuthor, ...parlorAuthorRef.current, is_republished: false })
+    }
+  }
+
   function handleSelectWriter(writer) {
     if (!writer) {
       batchUpdate({ author_id: null, author_name: '', author_photo_url: '', author_profile_url: '', author_bio: '' })
@@ -2008,6 +2044,8 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
 
   async function handleSchedule() {
     if (!scheduleDraft || saving) return
+    const creditError = republicationError(formRef.current)
+    if (creditError) { setSaveError(creditError); return }
     const isoDate = new Date(scheduleDraft).toISOString()
     const ok = await performSave({ scheduled_at: isoDate, published: false })
     if (ok) {
@@ -2424,7 +2462,26 @@ export default function ArticleEditor({ initialData = null, articleId = null }) 
 
           {/* Author */}
           <SideSection title="Author">
-            <WriterSelector supabase={supabase} authorId={form.author_id} onSelect={handleSelectWriter} />
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: '#ccc', lineHeight: 1.6, marginBottom: 14 }}>
+              <input type="checkbox" disabled={republicationReady !== true} checked={!!form.is_republished} onChange={e => handleToggleRepublication(e.target.checked)} style={{ accentColor: '#f2b8c6', marginTop: 3 }} />
+              Republished Article
+            </label>
+            {republicationReady === false && <p style={{ color: '#bbb', fontSize: 11, lineHeight: 1.5 }}>Republication is unavailable. Check its database migration or connection, then reload. Ordinary articles can still be saved.</p>}
+            {!form.is_republished && <>
+              <WriterSelector supabase={supabase} authorId={form.author_id} onSelect={handleSelectWriter} />
+              {!form.author_id && !form.author_name && <p style={{ color: '#888', fontSize: 11, lineHeight: 1.5 }}>The Parlor Editors</p>}
+            </>}
+            {form.is_republished && <>
+              <SideInput label="Original author" value={form.author_name} onChange={v => update('author_name', v)} placeholder="Original author’s full name" />
+              <SideInput label="Republished from: publication name" value={form.original_publication_name} onChange={v => update('original_publication_name', v)} placeholder="Publication name" />
+              <SideLabel>Publication logo (optional)</SideLabel>
+              <CoverImagePicker value={form.original_publication_logo_url} onChange={v => update('original_publication_logo_url', v)} folder="publication-logos" addLabel="+ Add publication logo" />
+              <SideInput label="Publication website (optional)" value={form.original_publication_url} onChange={v => update('original_publication_url', v)} placeholder="https://…" />
+              <SideInput label="Original article link (optional)" value={form.original_article_url} onChange={v => update('original_article_url', v)} placeholder="https://…" />
+              <SideInput label="Original publication date (optional)" type="date" value={form.original_publication_date} onChange={v => update('original_publication_date', v)} />
+              <SideInput label="License or permission (optional)" value={form.republication_license} onChange={v => update('republication_license', v)} placeholder="e.g. Republished with permission" />
+              <SideInput label="License link (optional)" value={form.republication_license_url} onChange={v => update('republication_license_url', v)} placeholder="https://…" />
+            </>}
           </SideSection>
 
           {/* Classification */}

@@ -1,10 +1,11 @@
 'use client'
 
+import RepublishedByline from '../../../_components/RepublishedByline'
 import { useEffect, useRef, useState } from 'react'
 
 export default function ParallaxHero({
   src, alt, title, subtitle,
-  authorName, authorPhotoUrl, authorProfileUrl, publishedDate,
+  authorName, authorPhotoUrl, authorProfileUrl, publishedDate, republishedArticle,
   objectPosition = 'center center',
   desktopObjectPosition,
 }) {
@@ -143,7 +144,8 @@ export default function ParallaxHero({
           </p>
         )}
 
-        {(authorName || publishedDate) && (
+        {republishedArticle && <RepublishedByline article={republishedArticle} publishedDate={publishedDate} dark />}
+        {!republishedArticle && (authorName || publishedDate) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', pointerEvents: 'auto' }}>
             {authorPhotoUrl ? (
               <img src={authorPhotoUrl} alt={authorName || ''} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(255,255,255,0.3)' }} />

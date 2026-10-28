@@ -4,6 +4,8 @@ import { createServerClient } from '@supabase/ssr'
 import { notFound } from 'next/navigation'
 import { checkItemAccess } from '../../../lib/checkAccess'
 import { hasPaidAccess } from '../../../lib/plans'
+import RepublishedByline from '../../_components/RepublishedByline'
+import { articleAuthorName } from '../../../lib/articleRepublication'
 import ArticleBody from './_components/ArticleBody'
 import ParallaxHero from './_components/ParallaxHero'
 import { createClient } from '../../../lib/supabase'
@@ -110,12 +112,14 @@ export default async function ArticlePage({ params, searchParams }) {
   if (!article) notFound()
 
   // Always use live writer profile data when available, fall back to article snapshot
-  if (article.writers) {
+  if (!article.is_republished && article.writers) {
     article.author_name     = article.writers.name        || article.author_name
     article.author_bio      = article.writers.bio         || article.author_bio
     article.author_photo_url   = article.writers.photo_url    || article.author_photo_url
     article.author_profile_url = article.writers.profile_url  || article.author_profile_url
   }
+
+  const bylineName = articleAuthorName(article)
 
   // All issue articles get the parallax hero template.
   // isVol2 kept for drop-cap styling (Vol 2 only).
@@ -276,10 +280,11 @@ export default async function ArticlePage({ params, searchParams }) {
             alt={article.cover_image_alt || article.title}
             title={article.title}
             subtitle={article.subtitle}
-            authorName={article.author_name}
+            authorName={bylineName}
             authorPhotoUrl={article.author_photo_url}
             authorProfileUrl={article.author_profile_url}
             publishedDate={publishedDate}
+            republishedArticle={article.is_republished ? article : null}
             objectPosition={article.slug === 'against-the-cloud' ? 'left 65%' : (article.cover_image_position || 'center center')}
           />
         )}
@@ -318,14 +323,15 @@ export default async function ArticlePage({ params, searchParams }) {
           )}
 
           {/* Byline */}
-          {!hasIssueHero && <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px' }}>
+          {!hasIssueHero && article.is_republished && <RepublishedByline article={article} publishedDate={publishedDate} />}
+          {!hasIssueHero && !article.is_republished && <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px' }}>
             {article.author_photo_url ? (
               <img
                 src={article.author_photo_url}
-                alt={article.author_name || ''}
+                alt={bylineName || ''}
                 style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
               />
-            ) : article.author_name ? (
+            ) : bylineName ? (
               <div style={{
                 width: '36px', height: '36px', borderRadius: '50%',
                 background: '#f2b8c6', flexShrink: 0,
@@ -333,21 +339,21 @@ export default async function ArticlePage({ params, searchParams }) {
                 fontFamily: "'Playfair Display', serif", fontSize: '14px',
                 fontWeight: '600', color: '#c4364a',
               }}>
-                {article.author_name[0]}
+                {bylineName[0]}
               </div>
             ) : null}
 
             <div>
-              {article.author_name && (
+              {bylineName && (
                 <div style={{
                   fontFamily: "'Source Serif 4', Georgia, serif",
                   fontSize: '14px', color: '#0a0a0a',
                 }}>
                   {article.author_profile_url ? (
                     <a href={article.author_profile_url} style={{ color: '#0a0a0a', textDecoration: 'none' }}>
-                      {article.author_name}
+                      {bylineName}
                     </a>
-                  ) : article.author_name}
+                  ) : bylineName}
                   {article.media_type === 'member_post' && <span style={{ color: '#8a6b72' }}> · Parlor member</span>}
                 </div>
               )}
@@ -355,7 +361,7 @@ export default async function ArticlePage({ params, searchParams }) {
                 <div style={{
                   fontFamily: "'Source Serif 4', Georgia, serif",
                   fontSize: '12px', color: '#999',
-                  marginTop: article.author_name ? '2px' : 0,
+                  marginTop: bylineName ? '2px' : 0,
                 }}>
                   {publishedDate}
                 </div>
@@ -423,7 +429,7 @@ export default async function ArticlePage({ params, searchParams }) {
         </div>
 
         {/* Author box */}
-        {article.author_name && (
+        {!article.is_republished && article.author_name && (
           <div style={{ borderTop: '1px solid #f0e8e0', borderBottom: '1px solid #f0e8e0', padding: '40px 24px', marginBottom: '64px' }}>
             <div style={{ maxWidth: '720px', margin: '0 auto', display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
               {article.author_photo_url ? (
