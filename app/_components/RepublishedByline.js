@@ -12,7 +12,7 @@ export default function RepublishedByline({ article, publishedDate, dark = false
   const logo = publicationUrl(article.original_publication_logo_url)
   const licenseUrl = publicationUrl(article.republication_license_url)
   return <div data-republished-byline style={{ display: 'flex', alignItems: 'flex-start', gap: 12, color, fontFamily: "'Source Serif 4', Georgia, serif", marginBottom: dark ? 0 : 40, pointerEvents: 'auto', overflowWrap: 'anywhere' }}>
-    {logo && <img src={logo} alt={`${article.original_publication_name || 'Original publication'} logo`} style={{ width: dark ? 44 : 36, height: dark ? 44 : 36, objectFit: 'contain', flexShrink: 0 }} />}
+    {logo && <img src={logo} alt={`${article.original_publication_name || 'Original publication'} logo`} style={{ width: 'clamp(64px, 10vw, 88px)', height: 'clamp(64px, 10vw, 88px)', objectFit: 'contain', flexShrink: 0 }} />}
     <div style={{ minWidth: 0 }}>
       <div style={{ fontSize: dark ? 16 : 14 }}>By {articleAuthorName(article) || 'Original author not specified'}</div>
       <div data-republication-attribution style={{ fontSize: 13, lineHeight: 1.6, marginTop: 4, color: muted }}>

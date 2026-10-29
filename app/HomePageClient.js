@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { republishedCardCreditHtml } from '../lib/articleCardCredits'
 import SiteFooter from './_components/SiteFooter'
 import { createClient } from '../lib/supabase'
 import { useCart } from '../lib/useCart'
@@ -104,6 +105,7 @@ function heroKind(img) {
 }
 
 function slideHTML(it, idx) {
+  const republicationCredit = republishedCardCreditHtml({ ...it, author_name: it.authorName })
   const authorNode = it.authorProfile
     ? `<a class="authorLink" href="${esc(it.authorProfile)}" target="_top">${esc(it.authorName || '')}</a>`
     : `<span class="authorLink">${esc(it.authorName || '')}</span>`
@@ -121,11 +123,12 @@ function slideHTML(it, idx) {
   return `<div class="swiper-slide">
     <div class="card${titleClass}">
       <div class="media">${cover}</div>
-      <div class="meta">
-        <div class="byline"><span class="avatarWrap">${avatar}</span>${authorNode}</div>
+      <div class="meta${republicationCredit ? ' meta--republished' : ''}">
+        ${republicationCredit ? '' : `<div class="byline"><span class="avatarWrap">${avatar}</span>${authorNode}</div>`}
         ${it.category ? `<div class="category">${esc(it.category)}</div>` : ''}
         <a class="titleLink" href="${esc(it.url)}" target="_top"><h3 class="title">${esc(it.title)}</h3></a>
         ${it.excerpt ? `<p class="excerpt">${esc(it.excerpt)}</p>` : ''}
+        ${republicationCredit}
       </div>
     </div>
   </div>`
@@ -1178,6 +1181,8 @@ export default function HomePageClient({ initial = {} }) {
         .media { position: relative; overflow: hidden; }
         .cover { width: 100%; aspect-ratio: 16/9; object-fit: cover; object-position: top; display: block; transform: scale(1.15); transform-origin: center; transition: transform 0.3s ease; }
         .meta { padding: 10px 14px 12px; display: grid; gap: 6px; grid-template-rows: 32px auto auto 1fr; }
+        .meta.meta--republished { display:flex;flex-direction:column;gap:6px; }
+        .meta--republished [data-republished-card-credit] { margin-top:auto !important; }
         .byline { display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.2; min-height: 32px; color: #6b7280; }
         .avatarWrap { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex: 0 0 32px; }
         .avatar { width: 100%; height: 100%; object-fit: cover; display: block; }

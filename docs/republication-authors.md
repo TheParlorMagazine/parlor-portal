@@ -6,7 +6,7 @@ emails or production SQL. Release/merge status is reported separately in the han
 The republished Author section supports multiple named authors. Each author has a
 plain-text biography (paragraph breaks preserved), optional headshot and optional
 external website/profile URL. Add/remove authors without creating Parlor writer
-profiles. Names are displayed in their saved order in the byline. Biographies
+profiles. Names are displayed in their saved order as “Author One & Author Two, Author Three”. Biographies
 appear after the article body and before comments, using the regular article
 About the author layout/fonts. Each named author with a nonblank biography gets
 an individual entry. Missing photos use the regular initial-circle fallback.

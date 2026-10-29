@@ -4,6 +4,8 @@ import { createServerClient } from '@supabase/ssr'
 import { notFound } from 'next/navigation'
 import { checkItemAccess } from '../../../lib/checkAccess'
 import { hasPaidAccess } from '../../../lib/plans'
+import { withRepublicationCardCredits } from '../../../lib/articleCardCredits'
+import RepublishedCardCredit from '../../_components/RepublishedCardCredit'
 import RepublishedAuthorBios from '../../_components/RepublishedAuthorBios'
 import RepublishedByline from '../../_components/RepublishedByline'
 import { articleAuthorName } from '../../../lib/articleRepublication'
@@ -217,6 +219,8 @@ export default async function ArticlePage({ params, searchParams }) {
       .limit(3)
     related = data || []
   }
+
+  related = await withRepublicationCardCredits(db, related)
 
   // Custom template
   if (article.template === 'custom') {
@@ -539,7 +543,7 @@ export default async function ArticlePage({ params, searchParams }) {
                   }}>
                     {r.title}
                   </div>
-                  {r.author_name && (
+                  {r.is_republished && r.original_publication_name ? <RepublishedCardCredit article={r} /> : r.author_name && (
                     <div style={{
                       fontFamily: "'Source Serif 4', Georgia, serif",
                       fontSize: '13px', color: '#999', marginTop: '6px',
