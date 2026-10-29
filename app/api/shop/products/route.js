@@ -1,3 +1,4 @@
+import { publicShopProduct } from '../../../../lib/shopProductImages'
 import { serviceClient } from '../../../../lib/apiAuth'
 
 // GET → active shop products for the public storefront (/shop), in sort order.
@@ -8,5 +9,5 @@ export async function GET() {
     .eq('active', true)
     .order('sort', { ascending: true }).order('created_at', { ascending: false })
   if (error) return Response.json({ products: [] })
-  return Response.json({ products: data || [] })
+  return Response.json({ products: (data || []).map(publicShopProduct) })
 }

@@ -23,3 +23,9 @@ Product pages also emit server-rendered Product/Offer JSON-LD from the same elig
 5. Test a product URL with Google's Rich Results Test and URL Inspection. Merchant Center and Google control review, recrawl timing and placement.
 
 The product condition is `new`, matching this shop's retail catalogue. Do not add used/refurbished inventory to this feed without extending the condition mapping. Merchant Center fetches are read-only and don't send emails or create purchases.
+
+## Printify images
+
+Images from `images.printify.com` and `images-api.printify.com` are presented through public first-party URLs under `/shop/product-image/{product-id}/{image-index}?v=...`. The feed, Product JSON-LD and public storefront product API use the same URLs. The original database image URLs and fulfillment identifiers are unchanged. Cloudinary, Wix and other image hosts remain unchanged.
+
+The image endpoint looks up an active product, accepts only those two HTTPS source hosts, refuses redirects, limits downloads to 8 MiB and image decoding to 40 million pixels, and serves an actual normalized JPEG. Successful images are cached at the CDN for a day; changing an upstream URL changes the generated cache key. A failed download returns an uncached 503, never a placeholder that might misrepresent the product. This needs no migration or new credentials. First-party serving avoids requiring Google to fetch Printify directly, but cannot recover an upstream image that Printify will not deliver to the server. After publishing, open an affected product's new image URL, then refresh the Merchant Center feed and allow Google to recrawl.
