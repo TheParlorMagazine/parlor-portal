@@ -1,6 +1,7 @@
 import ShopClient from './ShopClient'
 
 export const metadata = {
+  verification: { google: 'c6nVmzR9LB1G0pke1jckjMRNUZG_jNQiv06Zc1j7AkA' },
   title: 'The Parlor Shop',
   description: 'Explore The Parlor Shop: independent print, thoughtful gifts, coffee, and curated finds.',
   alternates: { canonical: 'https://www.theparlormagazine.com/shop' },

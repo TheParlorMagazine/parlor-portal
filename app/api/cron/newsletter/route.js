@@ -21,7 +21,7 @@ async function run(request) {
   const force = url.searchParams.get('force') === '1'
 
   const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://theparlormagazine.com'
+  const baseUrl = 'https://theparlormagazine.com'
 
   if (!force && !isNewsletterWeek()) return Response.json({ ok: true, nudged: false, reason: 'off_week' })
 
