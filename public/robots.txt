@@ -1,0 +1,15 @@
+# Public pages, product assets and catalogue feeds are crawlable.
+User-agent: *
+User-agent: Googlebot
+User-agent: Googlebot-Image
+User-agent: Storebot-Google
+User-agent: AdsBot-Google
+User-agent: AdsBot-Google-Mobile
+Allow: /api/feeds/
+Allow: /api/shop/products
+Allow: /api/shop/bundles
+Allow: /api/shop/categories
+Disallow: /admin
+Disallow: /portal
+Disallow: /api/
+Allow: /
