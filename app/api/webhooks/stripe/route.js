@@ -1,3 +1,4 @@
+import { notifyAdminPaidSubscription } from '../../../../lib/adminNotifications'
 import { observeStripeCheckout } from '../../../../lib/checkoutReservations'
 import { fulfillShopPurchase } from '../../../../lib/fulfillShopPurchase'
 import { fulfillItemPurchase } from '../../../../lib/itemPurchase'
@@ -126,6 +127,7 @@ async function handleSubscriptionCheckout(session, eventId) {
       throw emailError
     }
   }
+  await notifyAdminPaidSubscription({ session, subscription, member, planName: planInfo.plan })
 }
 
 // Recurring renewal — reaffirm the plan in case access had lapsed.

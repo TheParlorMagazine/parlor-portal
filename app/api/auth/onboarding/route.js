@@ -16,6 +16,12 @@ export async function POST(request) {
       )
     }
 
+    try {
+      const { notifyAdminFreeSignup } = await import('../../../../lib/adminNotifications')
+      const provider = user.app_metadata?.provider === 'google' || user.identities?.some(i => i.provider === 'google') ? 'google' : 'email'
+      await notifyAdminFreeSignup(user, { provider })
+    } catch (error) { console.error('Admin signup notification failed:', error.message) }
+
     // A browser request cannot authorize onboarding for an old account.
     if (!isAfterOnboardingLaunch(user)) {
       return NextResponse.json({

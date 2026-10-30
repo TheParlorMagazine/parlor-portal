@@ -43,6 +43,11 @@ export async function GET(request) {
     if (!error) {
       if (data?.user) {
         try {
+          const { notifyAdminFreeSignup } = await import('../../../lib/adminNotifications')
+          await notifyAdminFreeSignup(data.user, { provider: 'email' })
+        } catch (error) { console.error('Admin signup notification failed:', error.message) }
+
+        try {
           const { sendNewMemberWelcome, isAfterOnboardingLaunch } =
             await import('../../../lib/onboarding')
 
