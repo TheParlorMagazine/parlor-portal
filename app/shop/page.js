@@ -4,10 +4,10 @@ export const metadata = {
   verification: { google: 'c6nVmzR9LB1G0pke1jckjMRNUZG_jNQiv06Zc1j7AkA' },
   title: 'The Parlor Shop',
   description: 'Explore The Parlor Shop: independent print, thoughtful gifts, coffee, and curated finds.',
-  alternates: { canonical: 'https://www.theparlormagazine.com/shop' },
+  alternates: { canonical: 'https://theparlormagazine.com/shop' },
   openGraph: {
     type: 'website',
-    url: 'https://www.theparlormagazine.com/shop',
+    url: 'https://theparlormagazine.com/shop',
     siteName: 'The Parlor Magazine',
     title: 'The Parlor Shop',
     description: 'Independent print, thoughtful gifts, coffee, and curated finds. Discover your next favorite.',

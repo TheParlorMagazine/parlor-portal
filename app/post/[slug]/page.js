@@ -73,7 +73,7 @@ export async function generateMetadata({ params }) {
 
   const title = `${article.title} — The Parlor`
   const description = article.subtitle || 'An article from The Parlor Magazine.'
-  const articleUrl = `https://www.theparlormagazine.com/post/${encodeURIComponent(slug)}`
+  const articleUrl = `https://theparlormagazine.com/post/${encodeURIComponent(slug)}`
   const shareImage = article.cover_image_url || `${articleUrl}/share-image`
 
   return {

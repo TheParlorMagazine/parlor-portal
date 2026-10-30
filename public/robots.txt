@@ -13,3 +13,5 @@ Disallow: /admin
 Disallow: /portal
 Disallow: /api/
 Allow: /
+
+Sitemap: https://theparlormagazine.com/sitemap.xml
