@@ -4,9 +4,9 @@ const fs=require('node:fs')
 const vm=require('node:vm')
 
 async function newsletter(){
-  const context=vm.createContext({URL})
+  const context=vm.createContext({URL,URLSearchParams})
   const module=new vm.SourceTextModule(fs.readFileSync('lib/newsletter.js','utf8'),{context})
-  await module.link(async()=>{const images=new vm.SourceTextModule(fs.readFileSync('lib/campaignEmailStyles.js','utf8'),{context});await images.link(()=>{});return images});await module.evaluate()
+  await module.link(async spec=>{const images=new vm.SourceTextModule(fs.readFileSync(spec==='./emailImages'?'lib/emailImages.js':'lib/campaignEmailStyles.js','utf8'),{context});await images.link(()=>{});return images});await module.evaluate()
   return module.namespace
 }
 
@@ -23,10 +23,10 @@ test('newsletter article and issue links use the public domain despite a deploym
 test('transparent print promotions use a white email derivative and link to the purchase destination, leaving the original asset unchanged',async()=>{
   const module=await newsletter()
   for(const key of ['newsletter_image','cover_image_url']){
-    const original='https://res.cloudinary.com/demo/image/upload/v123/transparent-cover.png'
+    const original='https://nxpwcdtduxsorbzoajbm.supabase.co/storage/v1/object/public/Media/announcements/1791806804668-ptxti5i527.webp'
     const issue={id:'issue',title:'The World',number:2,[key]:original,newsletter_button_url:'/plans',newsletter_section_title:'Subscribe to print'}
     const {html}=module.buildNewsletter({issue})
-    assert.match(html,/<a href="https:\/\/theparlormagazine.com\/plans"[^>]*style="[^"]*background:#ffffff[^>]*><img src="https:\/\/res.cloudinary.com\/demo\/image\/upload\/b_rgb:ffffff,f_jpg\/v123\/transparent-cover.png"/)
+    assert.match(html,/<a href="https:\/\/theparlormagazine.com\/plans"[^>]*style="[^"]*background:#ffffff[^>]*><img src="https:\/\/theparlormagazine.com\/email-art\/ffffff\/[^"]+"/)
     assert.match(html,/background-color:#ffffff;" alt="Issue 2 print edition"/)
     assert.equal(issue[key],original)
     assert.doesNotMatch(html,/download=/)
@@ -34,12 +34,12 @@ test('transparent print promotions use a white email derivative and link to the 
 })
 
 test('single-product and shop-grid artwork use white email derivatives with product-page links',async()=>{
-  const module=await newsletter(),original='https://res.cloudinary.com/demo/image/upload/v123/print-trio.png'
+  const module=await newsletter(),original='https://nxpwcdtduxsorbzoajbm.supabase.co/storage/v1/object/public/Media/shop/1791453280859-vi7csx.webp'
   const trio={id:'trio',name:'The Parlor Print Trio: Pick Any Three',images:[original],price:45}
   for(const count of [1,2,3]){
     const shopProducts=[trio,...Array.from({length:count-1},(_,i)=>({id:'product-'+i,name:'Other product',images:[],price:10}))]
     const {html}=module.buildNewsletter({shopProducts})
-    assert.match(html,/<a href="https:\/\/theparlormagazine.com\/shop\/trio"[^>]*style="[^"]*background:#ffffff[^>]*><img src="https:\/\/res.cloudinary.com\/demo\/image\/upload\/b_rgb:ffffff,f_jpg\/v123\/print-trio.png"/)
+    assert.match(html,/<a href="https:\/\/theparlormagazine.com\/shop\/trio"[^>]*style="[^"]*background:#ffffff[^>]*><img src="https:\/\/theparlormagazine.com\/email-art\/ffffff\/[^"]+"/)
     assert.match(html,/background-color:#ffffff;" alt="The Parlor Print Trio: Pick Any Three"/)
     assert.equal(trio.images[0],original)
   }
@@ -57,11 +57,11 @@ test('newsletter image destinations support full URLs and website paths without 
 })
 
 test('announcement transparency matches its pink block and links only when a destination is provided',async()=>{
-  const module=await newsletter(),original='https://res.cloudinary.com/demo/image/upload/v123/trick-or-treat.png'
+  const module=await newsletter(),original='https://nxpwcdtduxsorbzoajbm.supabase.co/storage/v1/object/public/Media/announcements/tote.webp'
   for(const url of ['/trick-or-treat','']){
     const issue={id:'issue',newsletter_announcement_title:'Trick or Treat at The Parlor',newsletter_announcement_img:original,newsletter_announcement_url:url}
     const {html}=module.buildNewsletter({issue,sections:{issuPromo:false}})
-    assert.match(html,/src="https:\/\/res.cloudinary.com\/demo\/image\/upload\/b_rgb:fdf0f3,f_jpg\/v123\/trick-or-treat.png"/)
+    assert.match(html,/src="https:\/\/theparlormagazine.com\/email-art\/fdf0f3\/[^"]+"/)
     assert.match(html,/background-color:#fdf0f3;" alt="Trick or Treat at The Parlor"/)
     if(url)assert.match(html,/<a href="https:\/\/theparlormagazine.com\/trick-or-treat"[^>]*><img/)
     else assert.doesNotMatch(html,/<a[^>]*><img[^>]*class="ann-img"/)

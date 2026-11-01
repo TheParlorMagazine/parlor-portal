@@ -1,0 +1,74 @@
+[
+  {
+    "tag": "IMG",
+    "text": "",
+    "x": 66,
+    "y": 174,
+    "width": 90,
+    "height": 90
+  },
+  {
+    "tag": "TD",
+    "text": "\n        \n        Product 1\n        $20.00\n        Shop \u2192\n      ",
+    "x": 66,
+    "y": 375.484375,
+    "width": 169.328125,
+    "height": 244.546875
+  },
+  {
+    "tag": "TD",
+    "text": "\n        \n        Product 2\n        $20.00\n        Shop \u2192\n      ",
+    "x": 235.328125,
+    "y": 375.484375,
+    "width": 169.328125,
+    "height": 244.546875
+  },
+  {
+    "tag": "TD",
+    "text": "\n        \n        Product 3\n        $20.00\n        Shop \u2192\n      ",
+    "x": 404.65625,
+    "y": 375.484375,
+    "width": 169.34375,
+    "height": 244.546875
+  },
+  {
+    "tag": "H2",
+    "text": "Issue is finally here!",
+    "x": 72,
+    "y": 739.03125,
+    "width": 496,
+    "height": 30
+  },
+  {
+    "tag": "A",
+    "text": "Buy the issue",
+    "x": 72,
+    "y": 1337.828125,
+    "width": 130.578125,
+    "height": 40
+  },
+  {
+    "tag": "A",
+    "text": "Subscribe",
+    "x": 214.578125,
+    "y": 1336.828125,
+    "width": 113.125,
+    "height": 42
+  },
+  {
+    "tag": "A",
+    "text": "Become a subscriber",
+    "x": 72,
+    "y": 1612.390625,
+    "width": 167.65625,
+    "height": 38
+  },
+  {
+    "tag": "A",
+    "text": "Make a donation",
+    "x": 251.65625,
+    "y": 1611.390625,
+    "width": 147.125,
+    "height": 40
+  }
+]
