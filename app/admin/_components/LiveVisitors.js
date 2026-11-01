@@ -49,7 +49,7 @@ export default function LiveVisitors({supabase,onCount}){
     {open && <div style={{position:'fixed',inset:0,zIndex:2200,display:'flex',justifyContent:'flex-end',background:'rgba(0,0,0,.35)'}} onClick={()=>setOpen(false)}>
       <aside ref={drawer} role="dialog" aria-modal="true" aria-label="Active website sessions" onClick={e=>e.stopPropagation()} style={{width:'min(560px,100vw)',height:'100%',overflowY:'auto',background:'#fff',boxShadow:'-8px 0 30px rgba(0,0,0,.12)',fontFamily:ff,padding:24,boxSizing:'border-box'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}><h2 style={{margin:0,fontSize:24}}>Active sessions</h2><button ref={closeButton} type="button" aria-label="Close active sessions" onClick={()=>setOpen(false)} style={{font:'inherit',border:0,background:'none',fontSize:26,cursor:'pointer'}}>×</button></div>
-        <p style={{fontSize:12,color:'#888',lineHeight:1.5}}>Seen within the last 90 seconds. Updates every 5 seconds while open. IP-based location is approximate and may reflect a VPN.</p>
+        <p style={{fontSize:12,color:'#888',lineHeight:1.5}}>Seen within the last 90 seconds. Updates every 5 seconds while open. Names require a signed-in session; an email click does not sign the visitor in. IP-based location is approximate and may reflect a VPN.</p>
         {asOf && <p style={{fontSize:12,color:'#888'}}>Last refreshed {stamp(asOf)}</p>}
         {error && <p role="alert">{error} Displayed sessions may be out of date.</p>}
         {!loaded && !error && <p>Loading sessions…</p>}
