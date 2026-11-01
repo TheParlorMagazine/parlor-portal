@@ -11,6 +11,15 @@ const ff   = "'Source Serif 4', Georgia, serif"
 const ffH  = "'Playfair Display', Georgia, serif"
 const PINK      = '#f2b8c6'
 const DARK_PINK = '#c4364a'
+const reportControlStyle = {
+  width: '100%', height: 36, boxSizing: 'border-box',
+  padding: '7px 32px 7px 12px', border: '1px solid #e0e0e0', borderRadius: 7,
+  backgroundColor: '#fff', color: '#555', fontFamily: ff, fontSize: 13,
+  fontWeight: 500, lineHeight: '20px', cursor: 'pointer', appearance: 'none',
+  backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23777777' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
+  backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center',
+}
+
 const GEO_URL   = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
 
 // Country name → ISO-3166 numeric (used by world-atlas topojson)
@@ -481,20 +490,23 @@ export default function AnalyticsSection({ supabase }) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', maxWidth: '100%' }}>
-            <label style={{ fontSize: 12, color: '#777' }}>Report{' '}
-              <select aria-label="Analytics report" value={reportType} onChange={e => setReportType(e.target.value)} style={{ padding: '8px 10px', border: '1px solid #ddd', borderRadius: 6, background: '#fff', fontFamily: ff }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12, marginLeft: 'auto', maxWidth: '100%' }}>
+          <div role="group" aria-label="Reporting controls" style={{ display: 'flex', gap: 8, width: 316, maxWidth: '100%' }}>
+            <div style={{ flex: '1 1 190px', minWidth: 0 }}>
+              <select aria-label="Analytics report" value={reportType} onChange={e => setReportType(e.target.value)} style={reportControlStyle}>
                 <option value="overview">Website overview</option><option value="page-health">Page health</option><option value="search">Search &amp; SEO</option><option value="ga4">GA4 acquisition</option><option value="merchant">Product visibility</option><option value="paid">Paid marketing</option>
               </select>
-            </label>
-            <select aria-label="Export analytics" value="" onChange={e => exportReport(e.target.value)} style={{ padding: '8px 10px', border: '1px solid #ddd', borderRadius: 6, background: '#fff', fontFamily: ff }}>
+            </div>
+            <div style={{ flex: '0 0 118px' }}>
+            <select aria-label="Export analytics" value="" onChange={e => exportReport(e.target.value)} style={reportControlStyle}>
               <option value="" disabled>Export…</option>
               <option value="csv" disabled={reportType === 'overview' ? !overviewReady : reportType === 'page-health' ? !pageHealthReport : !connectedReports[exportSource]}>Current report — CSV</option>
               <option value="zip" disabled={!overviewReady && !pageHealthReport && !Object.keys(connectedReports).length}>Available reports — ZIP</option>
               <option value="pdf">Website annual report — PDF</option>
             </select>
+            </div>
           </div>
-          {reportType === 'overview' && <div style={{ display: 'flex', gap: '4px' }}>
+          {reportType === 'overview' && <div role="group" aria-label="Analytics year" style={{ display: 'flex', gap: '4px' }}>
             {years.filter(y => y >= 2025).map(y => (
               <button key={y}
                 onClick={() => {
@@ -510,6 +522,7 @@ export default function AnalyticsSection({ supabase }) {
               </button>
             ))}
           </div>}
+          </div>
         </div>
 
         {/* Month pills — shown below, attached to selected year */}

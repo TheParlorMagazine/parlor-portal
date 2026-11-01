@@ -1,6 +1,6 @@
 # Welcome email delivery and missed-send recovery
 
-This repair is on `feat/campaign-engagement-tracking`. It does not send emails just by deploying code, loading Subscribers or viewing a subscriber profile.
+This repair does not send emails just by deploying code, loading Subscribers or viewing a subscriber profile.
 
 ## Diagnosed failures
 
@@ -15,7 +15,7 @@ Eligibility uses verified Supabase auth data, never client-supplied names, dates
 
 The existing atomic `claim_welcome_onboarding(p_user_id)` and `release_welcome_onboarding(p_user_id)` database functions remain the duplicate guard. Verify these functions exist in the production database; their definitions are not available in this repository. The `members` columns `onboarding_email_sent`, `onboarding_sent` and `onboarding_sent_at` must exist (the previous implementation already depended on them). No schema is replaced by this repair.
 
-The sender uses the verified auth email, honors the Welcome Email automation toggle, and supplies a stable Resend idempotency key per member as an additional safeguard. Provider idempotency has a limited retention window; the database claim remains necessary beyond it. Only Resend acceptance with an email ID records the sent flags and actual send timestamp. A disabled/rejected send releases its claim without success flags. Uncertain network outcomes or failed post-send database writes retain their claims and require inspection; they must never be blindly retried. Provider acceptance is not proof of inbox delivery.
+The sender uses the verified auth email, honors the Welcome Email automation toggle, and supplies a stable Resend idempotency key per member as an additional safeguard. Provider idempotency has a limited retention window; the database claim remains necessary beyond it. Only Resend acceptance with an email ID records the sent flags and actual send timestamp. A disabled/rejected send releases its claim without success flags. Uncertain network outcomes (including Resend SDK `application_error` results), missing email-ID confirmations, or failed post-send database writes retain their claims and require inspection; they must never be blindly retried. Provider acceptance is not proof of inbox delivery.
 
 ## Recover the two missed welcomes
 
