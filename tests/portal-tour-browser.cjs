@@ -43,8 +43,9 @@ async function main(){
  const base=`http://127.0.0.1:${server.address().port}`
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']})
  try{
-  for(const mobile of [false,true]){
-   const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:1000},extraHTTPHeaders:{'x-test-client':mobile?'mobile':'desktop'}})
+  for(const viewportWidth of [1440,390,768]){
+   const mobile=viewportWidth<=820
+   const context=await browser.newContext({viewport:mobile?{width:viewportWidth,height:844}:{width:1440,height:1000},extraHTTPHeaders:{'x-test-client':String(viewportWidth)}})
    const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message))
    await page.goto(base+'/portal');await page.getByRole('button',{name:'Start Tour',exact:true}).waitFor()
    if(!mobile){await page.getByRole('button',{name:'Maybe Later',exact:true}).click();await page.getByRole('button',{name:'Your tour is here when you’re ready'}).waitFor();await page.reload();await page.getByRole('button',{name:'Your tour is here when you’re ready'}).waitFor();await page.getByRole('button',{name:'Open your Parlor tour and help'}).click()}
@@ -68,6 +69,10 @@ async function main(){
     if(index===3){assert.equal(await page.locator('.parlor-tour-section-highlight').count(),1);assert.equal(await page.getByRole('button',{name:'Explore events',exact:true}).count(),0);await page.getByRole('button',{name:'Next',exact:true}).click();continue}
     const cue=page.getByRole('button',{name:actions[index],exact:true}).filter({hasText:index===4?'Search here':mobile?'Tap here':'Click here'})
     await cue.waitFor()
+    const direction=await cue.evaluate(el=>getComputedStyle(el).flexDirection)
+    const flipped=mobile&&[1,2].includes(index)
+    assert.equal(direction,flipped?'row':'row-reverse','Only writing/forum cues move the arrow right on mobile/tablet')
+    assert.equal(await cue.locator('svg').evaluate(el=>getComputedStyle(el).transform),flipped?'matrix(1, 0, 0, -1, 0, 0)':'matrix(-1, 0, 0, -1, 0, 0)','Arrow points down toward the action')
     const box=await cue.boundingBox();assert.ok(box.y>=0&&box.y+box.height<=(mobile?844:1000),'Cue must stay inside viewport')
     const targetBox=await page.locator(selectors[index]).boundingBox();assert.ok(box.y+box.height<targetBox.y,'Cue belongs above its target')
     if(index===0)await page.screenshot({path:path.join(dir,mobile?'mobile-tour.png':'desktop-tour.png')})
@@ -77,12 +82,12 @@ async function main(){
    }
    await page.getByRole('button',{name:'Finish & explore',exact:true}).click()
    await page.waitForTimeout(150)
-   assert.equal(states.get(mobile?'mobile':'desktop').status,'completed')
+   assert.equal(states.get(String(viewportWidth)).status,'completed')
    assert.ok(page.url().endsWith('/portal/library'))
    assert.equal(errors.length,0,errors.join('\n'))
    await page.goto(base+'/portal');await page.getByRole('button',{name:'Open your Parlor tour and help'}).waitFor();assert.equal(await page.locator('dialog').count(),0)
    await page.getByRole('button',{name:'Open your Parlor tour and help'}).click();await page.getByRole('button',{name:'Restart Tour'}).click();await page.getByRole('button',{name:'Skip Tour',exact:true}).click();await page.waitForTimeout(100)
-   assert.equal(states.get(mobile?'mobile':'desktop').status,'skipped')
+   assert.equal(states.get(String(viewportWidth)).status,'skipped')
    await page.goto(base+'/portal');await page.getByRole('button',{name:'Open your Parlor tour and help'}).waitFor();assert.equal(await page.locator('dialog').count(),0)
    await context.close()
   }

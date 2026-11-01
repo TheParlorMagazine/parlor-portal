@@ -14,7 +14,7 @@ export async function POST(request) {
   const me = await memberOf(db, user.id)
   if (!ROLES.includes(me.role)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
+  const baseUrl = 'https://theparlormagazine.com'
   let retryId = null, sections = {}, supportCopy = '', supportTitle = '', supportBtn1 = '', supportBtn2 = '', announcementOverride = null
   try { const body = await request.json(); retryId = body?.campaignId || null; sections = body?.sections || {}; supportCopy = body?.supportCopy || ''; supportTitle = body?.supportTitle || ''; supportBtn1 = body?.supportBtn1 || ''; supportBtn2 = body?.supportBtn2 || '' ; announcementOverride = body?.announcementOverride || null } catch {}
   if (retryId) {

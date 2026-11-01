@@ -16,7 +16,7 @@ export async function POST(request) {
 
     const { data, error } = await db
       .from('members')
-      .update({ newsletter_subscribed: true })
+      .update({ newsletter_subscribed: true, unsubscribed_at: null })
       .eq('id', user.id)
       .select('id, email, newsletter_subscribed')
       .single()

@@ -1,0 +1,1073 @@
+'use client'
+
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Underline from '@tiptap/extension-underline'
+import Link from '@tiptap/extension-link'
+import Image from '@tiptap/extension-image'
+import TextAlign from '@tiptap/extension-text-align'
+import { confirmDialog, alertDialog } from '../../../lib/confirmDialog'
+import ImageEditor from './ImageEditor'
+import { campaignEmailHtml } from '../../../lib/campaignTemplate'
+import { blocksToEmailHtml } from '../../../lib/campaignRenderer'
+import { footer } from '../../../lib/sendCampaign'
+
+const ff  = "'Source Serif 4', Georgia, serif"
+const ffH = "'Playfair Display', Georgia, serif"
+const PINK = '#f2b8c6'
+const DP   = '#c4364a'
+
+const CAMPAIGN_STATUS = {
+  draft:     { label: 'Draft',     color: '#888',    bg: '#f5f5f5' },
+  scheduled: { label: 'Scheduled', color: '#4a6fd4', bg: 'rgba(160,180,242,0.12)' },
+  sending:   { label: 'Sending',   color: '#d4844a', bg: 'rgba(242,196,110,0.12)' },
+  sent:      { label: 'Sent',      color: '#2d8f5a', bg: 'rgba(110,201,154,0.1)' },
+}
+
+// ── Blocks serialisation ──────────────────────────────────────────
+const MARKER_START = '<!--PARLOR_BLOCKS:'
+const MARKER_END   = ':PARLOR_BLOCKS-->'
+
+function encodeBodyHtml(intro, blocks, introBg) {
+  const meta = JSON.stringify({ intro, blocks, introBg })
+  return MARKER_START + meta + MARKER_END + blocksToEmailHtml(intro, blocks, introBg)
+}
+
+function decodeBodyHtml(html) {
+  if (!html) return { intro: '', blocks: [], introBg: '#ffffff' }
+  const s = html.indexOf(MARKER_START)
+  const e = html.indexOf(MARKER_END)
+  if (s === -1 || e === -1) return { intro: html, blocks: [], introBg: '#ffffff' }
+  try {
+    const parsed = JSON.parse(html.slice(s + MARKER_START.length, e))
+    return { intro: parsed.intro || '', blocks: parsed.blocks || [], introBg: parsed.introBg || '#ffffff' }
+  } catch {
+    return { intro: html, blocks: [], introBg: '#ffffff' }
+  }
+}
+
+const LOGO_MARK = 'https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png'
+const LOGO_TEXT = 'https://res.cloudinary.com/dwytmbczs/image/upload/v1779376345/Heading_2560_x_1000_px_2600_x_1000_px_2650_x_1000_px_3_1_lxgvp5.png'
+
+function fullEmailHtml(subject, intro, blocks, introBg) {
+  const body = blocksToEmailHtml(intro, blocks, introBg)
+  const baseUrl = window.location.origin
+  return campaignEmailHtml(subject, body, footer(null, baseUrl))
+}
+
+function EmailPreviewModal({ subject, intro, blocks, introBg, onClose }) {
+  const html = fullEmailHtml(subject, intro, blocks, introBg)
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column' }} onClick={onClose}>
+      {/* Fake inbox chrome */}
+      <div style={{ background: '#2c2c2e', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {['#ff5f57','#ffbd2e','#28c840'].map(c => <span key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c, display: 'inline-block' }} />)}
+        </div>
+        <div style={{ flex: 1, background: '#3a3a3c', borderRadius: '6px', padding: '5px 14px', fontSize: '12px', color: '#aaa', fontFamily: 'system-ui,sans-serif' }}>
+          {subject || '(no subject)'}
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>✕</button>
+      </div>
+      {/* Email frame */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '24px' }} onClick={e => e.stopPropagation()}>
+        <iframe
+          srcDoc={html}
+          style={{ width: '100%', maxWidth: '680px', display: 'block', margin: '0 auto', border: 'none', borderRadius: '10px', minHeight: '600px', background: '#fff' }}
+          onLoad={e => { e.target.style.height = e.target.contentDocument.body.scrollHeight + 40 + 'px' }}
+          title="Email preview"
+          sandbox="allow-same-origin"
+        />
+      </div>
+    </div>
+  )
+}
+
+// ── Image picker modal ───────────────────────────────────────────
+function ImagePickerModal({ onPick, onClose, supabase, onUpload }) {
+  const [tab, setTab]         = useState('upload')
+  const [imageUrl, setImageUrl] = useState('')
+  const [urlError, setUrlError] = useState('') // 'upload' | 'library'
+  const [dragging, setDragging] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [library, setLibrary]   = useState([])
+  const [libLoading, setLibLoading] = useState(false)
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (tab === 'library' && library.length === 0) {
+      setLibLoading(true)
+      supabase.from('articles')
+        .select('cover_image_url, title')
+        .not('cover_image_url', 'is', null)
+        .order('date_published', { ascending: false })
+        .limit(48)
+        .then(({ data }) => {
+          const seen = new Set()
+          setLibrary((data || []).filter(a => { if (seen.has(a.cover_image_url)) return false; seen.add(a.cover_image_url); return true }))
+          setLibLoading(false)
+        })
+    }
+  }, [tab])
+
+  async function uploadFile(file) {
+    if (!file || !file.type.startsWith('image/')) return
+    setUploading(true)
+    try {
+      const url = await onUpload(file)
+      if (url) onPick(url)
+    } catch { alertDialog('Upload failed') }
+    setUploading(false)
+  }
+
+  const onDrop = e => {
+    e.preventDefault(); setDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) uploadFile(file)
+  }
+
+  const tabBtn = (id, label) => (
+    <button onClick={() => setTab(id)} style={{ padding: '6px 16px', border: 'none', borderBottom: `2px solid ${tab===id ? DP : 'transparent'}`, background: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: ff, color: tab===id ? DP : '#888', fontWeight: tab===id ? '600' : '400' }}>
+      {label}
+    </button>
+  )
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: '#fff', borderRadius: '12px', width: '640px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #f0f0f0' }}>
+          <span style={{ fontFamily: ffH, fontSize: '15px', fontWeight: '700', color: '#0a0a0a' }}>Add Image</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '18px' }}>✕</button>
+        </div>
+        {/* Tabs */}
+        <div style={{ display: 'flex', borderBottom: '1px solid #f0f0f0', padding: '0 20px' }}>
+          {tabBtn('upload', 'Upload')}
+          {tabBtn('library', 'Library')}
+          {tabBtn('url', 'Image URL')}
+        </div>
+        {/* Content */}
+        <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
+          {tab === 'upload' && (
+            <div>
+              {/* Drop zone */}
+              <div
+                onDragOver={e => { e.preventDefault(); setDragging(true) }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={onDrop}
+                onClick={() => inputRef.current?.click()}
+                style={{ border: `2px dashed ${dragging ? DP : '#e0e0e0'}`, borderRadius: '10px', padding: '48px 24px', textAlign: 'center', cursor: 'pointer', background: dragging ? 'rgba(196,54,74,0.04)' : '#fafafa', transition: 'all .15s' }}
+              >
+                <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files[0] && uploadFile(e.target.files[0])} />
+                {uploading ? (
+                  <p style={{ fontFamily: ff, fontSize: '14px', color: '#888', margin: 0 }}>Uploading…</p>
+                ) : (
+                  <>
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto 12px' }}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    <p style={{ fontFamily: ff, fontSize: '14px', color: '#888', margin: '0 0 6px' }}>Drag & drop an image here</p>
+                    <p style={{ fontFamily: ff, fontSize: '12px', color: '#bbb', margin: 0 }}>or click to browse files</p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          {tab === 'url' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <label style={{ fontFamily: ff, fontSize: '13px', fontWeight: '600' }}>
+                Paste an image URL
+              </label>
+              <input
+                type="url"
+                value={imageUrl}
+                onChange={e => { setImageUrl(e.target.value); setUrlError('') }}
+                placeholder="https://res.cloudinary.com/..."
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  fontFamily: ff,
+                  fontSize: '13px'
+                }}
+              />
+              {urlError && (
+                <p style={{ color: '#c4364a', fontSize: '12px', margin: 0 }}>
+                  {urlError}
+                </p>
+              )}
+              <button
+                onClick={() => {
+                  try {
+                    const parsed = new URL(imageUrl.trim())
+                    if (parsed.protocol !== 'https:') throw new Error()
+                    onPick(parsed.href)
+                  } catch {
+                    setUrlError('Please enter a valid HTTPS image URL.')
+                  }
+                }}
+                style={{
+                  background: DP,
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '12px 18px',
+                  cursor: 'pointer',
+                  fontFamily: ff,
+                  fontWeight: '600'
+                }}
+              >
+                Insert Image
+              </button>
+            </div>
+          )}
+          {tab === 'library' && (
+            <div>
+              {libLoading ? (
+                <p style={{ textAlign: 'center', fontFamily: ff, fontSize: '13px', color: '#ccc', padding: '40px 0' }}>Loading…</p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                  {library.map((a, i) => (
+                    <button key={i} onClick={() => onPick(a.cover_image_url)} title={a.title}
+                      style={{ border: '2px solid transparent', borderRadius: '6px', padding: 0, cursor: 'pointer', background: 'none', overflow: 'hidden', aspectRatio: '3/2', transition: 'border-color .12s' }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = PINK}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}>
+                      <img src={a.cover_image_url} alt={a.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// AlignableImage — inline image with float-based text wrap + width control
+// Uses CSS only (no ReactNodeViewRenderer) so drag-to-move and text wrap work natively
+const AlignableImage = Image.extend({
+  inline: true,
+  group: 'inline',
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      align: {
+        default: 'center',
+        parseHTML: el => el.getAttribute('data-align') || 'center',
+        renderHTML: ({ align }) => ({ 'data-align': align }),
+      },
+      width: {
+        default: null,
+        parseHTML: el => el.getAttribute('data-width') ? Number(el.getAttribute('data-width')) : null,
+        renderHTML: ({ align, width }) => {
+          if (!width) return {}
+          const defaultW = align === 'full' ? 100 : align === 'center' ? 60 : 45
+          return { 'data-width': width, style: `width:${width || defaultW}%` }
+        },
+      },
+    }
+  },
+})
+
+const editorCSS = `
+.cp{outline:none;min-height:140px;font-family:Georgia,serif;font-size:15px;line-height:1.75;color:#1a1a1a;caret-color:#c4364a}
+.cp>*+*{margin-top:.8em}.cp p{margin:0 0 .85em}.cp h1{font-family:'Playfair Display',Georgia,serif;font-size:22px;font-weight:700;color:#0a0a0a;margin:1.4em 0 .4em}
+.cp h2{font-family:'Playfair Display',Georgia,serif;font-size:17px;font-weight:700;color:#0a0a0a;margin:1.2em 0 .35em}
+.cp a{color:#7A263A;text-decoration:underline}.cp ul,.cp ol{padding-left:1.6em;margin:.7em 0}.cp strong{font-weight:600}
+.cp img { max-width:100%; height:auto; border-radius:5px; vertical-align:bottom; }
+.cp img[data-align="left"]   { float:left;  margin:4px 18px 12px 0; width:45%; }
+.cp img[data-align="right"]  { float:right; margin:4px 0 12px 18px; width:45%; }
+.cp img[data-align="center"] { display:block; margin:12px auto; width:60%; clear:both; }
+.cp img[data-align="full"]   { display:block; width:100%; margin:12px 0; clear:both; }
+.cp img.ProseMirror-selectednode { outline:2px solid ${PINK}; outline-offset:2px; }
+.cp::after { content:''; display:table; clear:both; }
+`
+
+function IntroEditor({ content, onChange, supabase, onUpload, bg, onBgChange }) {
+  const [showPicker, setShowPicker] = useState(false)
+  const [imgEditing, setImgEditing] = useState(null) // { src }
+  const [dropping, setDropping] = useState(false)
+  const [dropUploading, setDropUploading] = useState(false)
+  const [, forceUpdate] = useState(0)
+  const [dragWidth, setDragWidth] = useState(null) // local slider value while dragging
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({ heading: { levels: [1,2,3] } }),
+      Underline,
+      Link.configure({ openOnClick: false }),
+      AlignableImage,
+    ],
+    content: content || '',
+    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    onSelectionUpdate: () => forceUpdate(n => n + 1),
+    editorProps: {
+      attributes: { class: 'cp' },
+      handleDrop: (view, event) => {
+        const file = event.dataTransfer?.files?.[0]
+        if (!file || !file.type.startsWith('image/')) return false
+        event.preventDefault()
+        setDropping(false)
+        setDropUploading(true)
+        const fd = new FormData()
+        fd.append('file', file)
+        fd.append('folder', 'parlor/email')
+        onUpload(file)
+          .then(url => { if (url) view.dispatch(view.state.tr.replaceSelectionWith(view.state.schema.nodes.image.create({ src: url, 'data-align': 'center' }))) })
+          .catch(() => {})
+          .finally(() => setDropUploading(false))
+        return true
+      },
+      handleDOMEvents: {
+        dragover: (_, e) => { if (e.dataTransfer?.types?.includes('Files')) { e.preventDefault(); setDropping(true) } return false },
+        dragleave: () => { setDropping(false); return false },
+      },
+    },
+  })
+  useEffect(() => {
+    if (editor && content !== undefined && editor.getHTML() !== content)
+      editor.commands.setContent(content || '', false)
+  }, [editor])
+  if (!editor) return null
+
+  const insertImage = () => setShowPicker(true)
+
+  const isImg    = editor.isActive('image')
+  const imgAlign = isImg ? (editor.getAttributes('image').align || 'center') : null
+  const imgWidth = isImg ? (editor.getAttributes('image').width || null) : null
+  const setImgAlign = a => editor.chain().focus().updateAttributes('image', { align: a }).run()
+  const setImgWidth = w => editor.chain().focus().updateAttributes('image', { width: w }).run()
+
+  const ALIGN_OPTS = [
+    { key: 'left', title: 'Wrap left', icon: <svg width="18" height="12" viewBox="0 0 20 14" fill="none"><rect x="0" y="0" width="7" height="14" rx="1" fill="currentColor" opacity=".9"/><line x1="9.5" y1="2" x2="19.5" y2="2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".5"/><line x1="9.5" y1="5.5" x2="19.5" y2="5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".5"/><line x1="9.5" y1="9" x2="19.5" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".5"/><line x1="0.5" y1="12.5" x2="19.5" y2="12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".5"/></svg> },
+    { key: 'center', title: 'Center', icon: <svg width="18" height="12" viewBox="0 0 20 14" fill="none"><line x1="0.5" y1="1" x2="19.5" y2="1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".5"/><rect x="4" y="3.5" width="12" height="7" rx="1" fill="currentColor" opacity=".9"/><line x1="0.5" y1="13" x2="19.5" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".5"/></svg> },
+    { key: 'right', title: 'Wrap right', icon: <svg width="18" height="12" viewBox="0 0 20 14" fill="none"><rect x="13" y="0" width="7" height="14" rx="1" fill="currentColor" opacity=".9"/><line x1="0.5" y1="2" x2="10.5" y2="2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".5"/><line x1="0.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".5"/><line x1="0.5" y1="9" x2="10.5" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".5"/><line x1="0.5" y1="12.5" x2="19.5" y2="12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".5"/></svg> },
+    { key: 'full', title: 'Full width', icon: <svg width="18" height="12" viewBox="0 0 20 14" fill="none"><line x1="0.5" y1="1" x2="19.5" y2="1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".5"/><rect x="0" y="3.5" width="20" height="7" rx="1" fill="currentColor" opacity=".9"/><line x1="0.5" y1="13" x2="19.5" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".5"/></svg> },
+  ]
+
+  const btn = (label, active, fn, children) => (
+    <button key={label} type="button" onMouseDown={e => { e.preventDefault(); fn() }}
+      style={{ padding: '4px 6px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: active ? 'rgba(196,54,74,0.1)' : 'transparent', color: active ? DP : '#666', display: 'inline-flex', alignItems: 'center' }}>
+      {children}
+    </button>
+  )
+  const sep = <span style={{ display: 'inline-block', width: '1px', height: '16px', background: '#e0e0e0', margin: '0 3px', verticalAlign: 'middle' }} />
+
+  return (
+    <div style={{ border: '1px solid #e8e8e8', borderRadius: '8px', overflow: 'hidden', background: '#fff' }}>
+      <style dangerouslySetInnerHTML={{ __html: editorCSS }} />
+      <div style={{ display: 'flex', gap: '1px', padding: '6px 10px', background: '#f8f8f8', borderBottom: '1px solid #eee', flexWrap: 'wrap', alignItems: 'center' }}>
+        {btn('Bold',   editor.isActive('bold'),   () => editor.chain().focus().toggleBold().run(),   <b style={{fontSize:'13px'}}>B</b>)}
+        {btn('Italic', editor.isActive('italic'), () => editor.chain().focus().toggleItalic().run(), <i style={{fontSize:'13px'}}>I</i>)}
+        {sep}
+        {[1,2,3].map(l => btn(`H${l}`, editor.isActive('heading',{level:l}), () => editor.chain().focus().toggleHeading({level:l}).run(), <span style={{fontSize:'11px',fontWeight:'600'}}>H{l}</span>))}
+        {sep}
+        {btn('Link', editor.isActive('link'), () => { const u = window.prompt('URL:',editor.getAttributes('link').href||''); if (u!==null) u.trim() ? editor.chain().focus().setLink({href:u.trim()}).run() : editor.chain().focus().unsetLink().run() },
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>)}
+        {sep}
+        {/* Image insert */}
+        {btn('Insert image', false, insertImage,
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        )}
+        {/* Image controls — shown when an image is selected */}
+        {isImg && <>{sep}
+          {ALIGN_OPTS.map(a => (
+            <button key={a.key} type="button" title={a.title} onMouseDown={e => { e.preventDefault(); setImgAlign(a.key) }}
+              style={{ padding: '3px 5px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: imgAlign === a.key ? PINK : 'transparent', color: '#555', display: 'inline-flex', alignItems: 'center' }}>
+              {a.icon}
+            </button>
+          ))}
+          {sep}
+          <span style={{ fontSize: '10px', color: '#aaa', fontFamily: ff, marginRight: '2px' }}>W</span>
+          <input type="range" min="10" max="100" step="5"
+            value={dragWidth ?? imgWidth ?? (imgAlign === 'full' ? 100 : imgAlign === 'center' ? 60 : 45)}
+            onMouseDown={e => e.stopPropagation()}
+            onChange={e => setDragWidth(Number(e.target.value))}
+            onPointerUp={e => { const w = Number(e.target.value); setDragWidth(null); setImgWidth(w) }}
+            style={{ width: '72px', accentColor: DP, cursor: 'pointer' }} />
+          <span style={{ fontSize: '10px', color: '#888', fontFamily: ff, minWidth: '28px' }}>{dragWidth ?? imgWidth ?? (imgAlign === 'full' ? 100 : imgAlign === 'center' ? 60 : 45)}%</span>
+          {sep}
+          <button type="button" onMouseDown={e => { e.preventDefault(); const src = editor.getAttributes('image').src; if (src) setImgEditing({ src }) }}
+            style={{ padding: '3px 8px', border: `1px solid ${DP}`, borderRadius: '4px', background: 'none', color: DP, cursor: 'pointer', fontSize: '11px', fontFamily: ff, fontWeight: '600' }}>
+            Edit image
+          </button>
+        </>}
+        {onBgChange && <>{sep}
+          <span style={{ fontSize: '10px', color: '#bbb', fontFamily: ff, marginRight: '4px' }}>BG</span>
+          {BLOCK_COLORS.map(c => (
+            <button key={c} type="button" title={c} onMouseDown={e => { e.preventDefault(); onBgChange(c) }}
+              style={{ width: '13px', height: '13px', borderRadius: '50%', background: c, border: (bg || '#ffffff') === c ? `2px solid ${DP}` : '1.5px solid #ddd', cursor: 'pointer', padding: 0, flexShrink: 0 }} />
+          ))}
+        </>}
+      </div>
+      <div
+        style={{ padding: '14px 16px', position: 'relative', transition: 'background .15s', background: dropping ? 'rgba(196,54,74,0.04)' : (bg && bg !== '#ffffff' ? bg : undefined) }}
+      >
+        <EditorContent editor={editor} />
+        {dropping && (
+          <div style={{ position: 'absolute', inset: 0, border: `2px dashed ${DP}`, borderRadius: '4px', pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontFamily: ff, fontSize: '13px', color: DP, background: 'rgba(255,255,255,0.9)', padding: '4px 12px', borderRadius: '4px' }}>Drop to insert image</span>
+          </div>
+        )}
+        {dropUploading && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            <span style={{ fontFamily: ff, fontSize: '13px', color: '#888' }}>Uploading…</span>
+          </div>
+        )}
+      </div>
+      {showPicker && (
+        <ImagePickerModal
+          supabase={supabase} onUpload={onUpload}
+          onPick={url => { editor.chain().focus().setImage({ src: url, align: 'center' }).run(); setShowPicker(false) }}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
+      {imgEditing && (
+        <ImageEditor
+          imageUrl={imgEditing.src}
+          fileName={imgEditing.src.split('/').pop() || 'image.png'}
+          folder="email"
+          supabase={supabase}
+          onSave={newUrl => {
+            editor.chain().focus().updateAttributes('image', { src: newUrl }).run()
+            setImgEditing(null)
+          }}
+          onClose={() => setImgEditing(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Block editor ─────────────────────────────────────────────────
+const BLOCK_COLORS = ['#ffffff','#fdf6f0','#fff5f7','#f5f0ff','#f0f7f0','#0a0a0a','#1a1a2e','#c4364a','#f2b8c6']
+const EMPTY_BLOCK = () => ({ id: crypto.randomUUID(), image: '', eyebrow: '', title: '', body: '', cta_label: '', cta_href: '', bg_color: '#ffffff' })
+
+function BlockBodyEditor({ content, onChange }) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({ heading: { levels: [2, 3] }, blockquote: false, codeBlock: false, horizontalRule: false }),
+      Underline,
+      Link.configure({ openOnClick: false }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+    ],
+    content: content || '',
+    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+  })
+  useEffect(() => {
+    if (editor && content !== undefined && editor.getHTML() !== content)
+      editor.commands.setContent(content || '', false)
+  }, [editor])
+  if (!editor) return null
+
+  const btn = (label, active, fn, children) => (
+    <button key={label} type="button" title={label} onMouseDown={e => { e.preventDefault(); fn() }}
+      style={{ padding: '3px 5px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: active ? 'rgba(196,54,74,0.1)' : 'transparent', color: active ? DP : '#666', display: 'inline-flex', alignItems: 'center', fontSize: '12px' }}>
+      {children}
+    </button>
+  )
+  const sep = <span style={{ display: 'inline-block', width: '1px', height: '14px', background: '#e0e0e0', margin: '0 3px', verticalAlign: 'middle' }} />
+
+  return (
+    <div style={{ border: '1px solid #e8e8e8', borderRadius: '6px', overflow: 'hidden', background: '#fff' }}>
+      <style>{`
+        .bbe h2{font-family:'Playfair Display',Georgia,serif;font-size:17px;font-weight:700;margin:8px 0 4px;line-height:1.2}
+        .bbe h3{font-family:'Playfair Display',Georgia,serif;font-size:14px;font-weight:700;margin:6px 0 3px;line-height:1.2}
+        .bbe p{margin:0 0 6px;font-size:13px;font-family:Georgia,serif;line-height:1.6}
+        .bbe p:last-child{margin-bottom:0}
+        .bbe [data-text-align="left"]{text-align:left}
+        .bbe [data-text-align="center"]{text-align:center}
+        .bbe [data-text-align="right"]{text-align:right}
+        .bbe [data-text-align="justify"]{text-align:justify}
+        .bbe .ProseMirror:focus{outline:none}
+      `}</style>
+      <div style={{ display: 'flex', gap: '1px', padding: '4px 8px', background: '#f8f8f8', borderBottom: '1px solid #eee', alignItems: 'center', flexWrap: 'wrap' }}>
+        {/* Block type */}
+        {btn('Paragraph', !editor.isActive('heading'), () => editor.chain().focus().setParagraph().run(), <span style={{ fontSize: '11px', fontWeight: '600' }}>P</span>)}
+        {btn('H2', editor.isActive('heading', { level: 2 }), () => editor.chain().focus().toggleHeading({ level: 2 }).run(), <span style={{ fontSize: '11px', fontWeight: '700' }}>H2</span>)}
+        {btn('H3', editor.isActive('heading', { level: 3 }), () => editor.chain().focus().toggleHeading({ level: 3 }).run(), <span style={{ fontSize: '11px', fontWeight: '700' }}>H3</span>)}
+        {sep}
+        {/* Inline */}
+        {btn('Bold',   editor.isActive('bold'),   () => editor.chain().focus().toggleBold().run(),   <b style={{ fontSize: '13px' }}>B</b>)}
+        {btn('Italic', editor.isActive('italic'), () => editor.chain().focus().toggleItalic().run(), <i style={{ fontSize: '13px' }}>I</i>)}
+        {btn('Link',   editor.isActive('link'),   () => { const u = window.prompt('URL:', editor.getAttributes('link').href || ''); if (u !== null) u.trim() ? editor.chain().focus().setLink({ href: u.trim() }).run() : editor.chain().focus().unsetLink().run() },
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>)}
+        {sep}
+        {/* Alignment */}
+        {btn('Align left',    editor.isActive({ textAlign: 'left' }),    () => editor.chain().focus().setTextAlign('left').run(),    <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="0" y="3" width="9"  height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="0" y="9" width="7"  height="1.5" rx="1"/></svg>)}
+        {btn('Align center',  editor.isActive({ textAlign: 'center' }),  () => editor.chain().focus().setTextAlign('center').run(),  <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="2" y="3" width="9"  height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="3" y="9" width="7"  height="1.5" rx="1"/></svg>)}
+        {btn('Align right',   editor.isActive({ textAlign: 'right' }),   () => editor.chain().focus().setTextAlign('right').run(),   <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="4" y="3" width="9"  height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="6" y="9" width="7"  height="1.5" rx="1"/></svg>)}
+        {btn('Justify',       editor.isActive({ textAlign: 'justify' }), () => editor.chain().focus().setTextAlign('justify').run(), <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="0" y="3" width="13" height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="0" y="9" width="13" height="1.5" rx="1"/></svg>)}
+      </div>
+      <div className="bbe" style={{ padding: '8px 10px', minHeight: '72px', color: '#0a0a0a' }}>
+        <EditorContent editor={editor} />
+      </div>
+    </div>
+  )
+}
+
+function BlockCard({ block, index, total, onChange, onDelete, onMove, supabase, onUpload }) {
+  const [showPicker, setShowPicker] = useState(false)
+  const [imgEditing, setImgEditing] = useState(false)
+  const inp = { padding: '7px 10px', border: '1px solid #e8e8e8', borderRadius: '6px', fontSize: '13px', fontFamily: ff, color: '#0a0a0a', width: '100%', boxSizing: 'border-box', background: '#fff', outline: 'none' }
+  const lbl = { fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#bbb', fontFamily: ff, display: 'block', marginBottom: '4px' }
+  const f = (key, val) => onChange({ ...block, [key]: val })
+
+  return (
+    <div style={{ background: block.bg_color || '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px', transition: 'background .2s' }}>
+      {/* header row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '11px', fontWeight: '700', color: '#aaa', letterSpacing: '.1em', textTransform: 'uppercase', fontFamily: ff }}>Section {index + 1}</span>
+          {/* Background color swatches */}
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            {BLOCK_COLORS.map(c => (
+              <button key={c} type="button" title={c} onClick={() => f('bg_color', c)}
+                style={{ width: '14px', height: '14px', borderRadius: '50%', background: c, border: (block.bg_color || '#ffffff') === c ? `2px solid ${DP}` : '1.5px solid #ddd', cursor: 'pointer', flexShrink: 0, padding: 0 }} />
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} style={{ padding: '3px 8px', border: '1px solid #eee', borderRadius: '4px', background: 'none', cursor: index === 0 ? 'not-allowed' : 'pointer', color: '#aaa', fontSize: '12px' }}>↑</button>
+          <button type="button" onClick={() => onMove(index, 1)}  disabled={index === total - 1} style={{ padding: '3px 8px', border: '1px solid #eee', borderRadius: '4px', background: 'none', cursor: index === total-1 ? 'not-allowed' : 'pointer', color: '#aaa', fontSize: '12px' }}>↓</button>
+          <button type="button" onClick={onDelete} style={{ padding: '3px 8px', border: '1px solid rgba(224,112,112,0.25)', borderRadius: '4px', background: 'none', cursor: 'pointer', color: '#c04040', fontSize: '12px' }}>✕</button>
+        </div>
+      </div>
+
+      {/* image */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+          <span style={{ ...lbl, marginBottom: 0 }}>Image</span>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {block.image && (
+              <button type="button" onClick={() => setImgEditing(true)}
+                style={{ fontSize: '11px', fontFamily: ff, color: '#555', background: 'none', border: '1px solid #ddd', borderRadius: '5px', padding: '3px 10px', cursor: 'pointer' }}>
+                Edit
+              </button>
+            )}
+            <button type="button" onClick={() => setShowPicker(true)}
+              style={{ fontSize: '11px', fontFamily: ff, color: DP, background: 'none', border: `1px solid ${DP}`, borderRadius: '5px', padding: '3px 10px', cursor: 'pointer' }}>
+              {block.image ? 'Change' : '+ Add image'}
+            </button>
+          </div>
+        </div>
+        {block.image ? (
+          <div style={{ position: 'relative', borderRadius: '6px', overflow: 'hidden' }}>
+            <img src={block.image} alt="" style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }} />
+            <button type="button" onClick={() => f('image', '')}
+              style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '24px', height: '24px', color: '#fff', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              ✕
+            </button>
+          </div>
+        ) : (
+          <div onClick={() => setShowPicker(true)} style={{ border: '2px dashed #e8e8e8', borderRadius: '6px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ccc', fontSize: '13px', fontFamily: ff }}>
+            Click to add image
+          </div>
+        )}
+        {showPicker && (
+          <ImagePickerModal
+            supabase={supabase} onUpload={onUpload}
+            onPick={url => { f('image', url); setShowPicker(false) }}
+            onClose={() => setShowPicker(false)}
+          />
+        )}
+        {imgEditing && block.image && (
+          <ImageEditor
+            imageUrl={block.image}
+            fileName={block.image.split('/').pop() || 'image.png'}
+            folder="email"
+            supabase={supabase}
+            onSave={newUrl => { f('image', newUrl); setImgEditing(false) }}
+            onClose={() => setImgEditing(false)}
+          />
+        )}
+      </div>
+
+      {/* eyebrow + title */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
+        <div>
+          <span style={lbl}>Eyebrow</span>
+          <input value={block.eyebrow} onChange={e => f('eyebrow', e.target.value)} placeholder="e.g. Featured" style={inp} />
+        </div>
+        <div>
+          <span style={lbl}>Title</span>
+          <input value={block.title} onChange={e => f('title', e.target.value)} placeholder="Section headline…" style={inp} />
+        </div>
+      </div>
+
+      {/* body */}
+      <div>
+        <span style={lbl}>Body text</span>
+        <BlockBodyEditor content={block.body} onChange={v => f('body', v)} />
+      </div>
+
+      {/* CTA */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px', padding: '12px', background: 'rgba(242,184,198,0.08)', borderRadius: '7px', border: '1px solid rgba(242,184,198,0.25)' }}>
+        <div>
+          <span style={lbl}>Button label</span>
+          <input value={block.cta_label} onChange={e => f('cta_label', e.target.value)} placeholder="Read more →" style={inp} />
+        </div>
+        <div>
+          <span style={lbl}>Button URL</span>
+          <input value={block.cta_href} onChange={e => f('cta_href', e.target.value)} placeholder="https://theparlormagazine.com/…" style={inp} />
+        </div>
+      </div>
+
+      {/* live preview strip */}
+      {(block.eyebrow || block.title || block.cta_label) && (() => {
+        const dark = ['#0a0a0a','#1a1a2e','#c4364a'].includes(block.bg_color)
+        const bg = block.bg_color || '#fafafa'
+        const tc = dark ? '#fff' : '#0a0a0a'
+        const bc = dark ? 'rgba(255,255,255,0.7)' : '#555'
+        const ec = dark ? '#f2b8c6' : '#7A263A'
+        return (
+          <div style={{ padding: '14px 16px', background: bg, borderRadius: '6px', borderTop: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
+            {block.eyebrow && <p style={{ fontFamily: ff, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.12em', color: ec, margin: '0 0 5px', fontWeight: '700' }}>{block.eyebrow}</p>}
+            {block.title   && <p style={{ fontFamily: ffH, fontSize: '18px', fontWeight: '700', color: tc, margin: '0 0 6px', lineHeight: '1.2' }}>{block.title}</p>}
+            {block.body    && <div dangerouslySetInnerHTML={{ __html: block.body }} style={{ fontFamily: 'Georgia,serif', fontSize: '13px', lineHeight: '1.6', color: bc, margin: '0 0 10px' }} />}
+            {block.cta_label && <span style={{ display: 'inline-block', padding: '7px 18px', background: PINK, color: '#0a0a0a', fontFamily: ff, fontSize: '11px', fontWeight: '700', letterSpacing: '.08em', textTransform: 'uppercase' }}>{block.cta_label}</span>}
+          </div>
+        )
+      })()}
+    </div>
+  )
+}
+
+function BlockEditor({ blocks, onChange, supabase, onUpload }) {
+  const add = () => onChange([...blocks, EMPTY_BLOCK()])
+  const del = i => onChange(blocks.filter((_, idx) => idx !== i))
+  const upd = (i, b) => onChange(blocks.map((x, idx) => idx === i ? b : x))
+  const move = (i, dir) => {
+    const a = [...blocks]
+    const j = i + dir
+    if (j < 0 || j >= a.length) return
+    ;[a[i], a[j]] = [a[j], a[i]]
+    onChange(a)
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {blocks.map((b, i) => (
+        <BlockCard key={b.id} block={b} index={i} total={blocks.length}
+          onChange={nb => upd(i, nb)} onDelete={() => del(i)} onMove={move}
+          supabase={supabase} onUpload={onUpload} />
+      ))}
+      <button type="button" onClick={add}
+        style={{ padding: '10px', border: '1.5px dashed #e0e0e0', borderRadius: '8px', background: 'none', cursor: 'pointer', fontSize: '12px', color: '#aaa', fontFamily: ff, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'border-color .15s, color .15s' }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = PINK; e.currentTarget.style.color = DP }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = '#e0e0e0'; e.currentTarget.style.color = '#aaa' }}>
+        + Add Section
+      </button>
+    </div>
+  )
+}
+
+// ── Campaign builder ──────────────────────────────────────────────
+function CampaignBuilder({ campaign, segments, onSave, onSend, onClose, supabase, onUpload }) {
+  const decoded = decodeBodyHtml(campaign?.body_html)
+
+  const [name,        setName]        = useState(campaign?.name || '')
+  const [subject,     setSubject]     = useState(campaign?.subject || '')
+  const [preview,     setPreview]     = useState(campaign?.preview_text || '')
+  const [introHtml,   setIntroHtml]   = useState(decoded.intro)
+  const [introBg,     setIntroBg]     = useState(decoded.introBg || '#ffffff')
+  const [blocks,      setBlocks]      = useState(decoded.blocks)
+  const [sendTo,      setSendTo]      = useState(campaign?.segment_id || 'all')
+  const [sendMode,    setSendMode]    = useState(campaign?.scheduled_at ? 'scheduled' : 'now')
+  const [scheduledAt, setScheduledAt] = useState(campaign?.scheduled_at ? toLocalInput(campaign.scheduled_at) : '')
+  const [saving,      setSaving]      = useState(false)
+  const [sending,     setSending]     = useState(false)
+  const [previewing,  setPreviewing]  = useState(false)
+const [testOpen, setTestOpen] = useState(false)
+const [testEmail, setTestEmail] = useState('')
+const [testSending, setTestSending] = useState(false)
+  function toLocalInput(iso) {
+    if (!iso) return ''
+    const d = new Date(iso)
+    const pad = n => String(n).padStart(2,'0')
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
+  const [savedCampaign, setSavedCampaign] = useState(campaign || null)
+
+  async function handleSave(statusOverride) {
+    setSaving(true)
+    const body_html = encodeBodyHtml(introHtml, blocks, introBg)
+    const result = await onSave({
+      ...(savedCampaign || {}),
+      name, subject, preview_text: preview, body_html,
+      segment_id: sendTo === 'all' ? null : sendTo,
+      scheduled_at: sendMode === 'scheduled' && scheduledAt ? new Date(scheduledAt).toISOString() : null,
+      status: statusOverride || savedCampaign?.status || 'draft',
+    })
+    if (result) setSavedCampaign(result)
+    setSaving(false)
+  }
+async function handleSendTest() {
+  if (!testEmail.trim() || testSending) return
+
+  setTestSending(true)
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session?.access_token) {
+      throw new Error('Please sign in again.')
+    }
+
+    const res = await fetch('/api/admin/campaigns/send-test', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        to: testEmail.trim(),
+        subject,
+        html: fullEmailHtml(subject, introHtml, blocks, introBg),
+      }),
+    })
+
+    const result = await res.json()
+
+    if (!res.ok) {
+      throw new Error(result.error || 'Test email failed')
+    }
+
+    setTestOpen(false)
+    alertDialog('Test email submitted to Resend!')
+  } catch (error) {
+    alertDialog(error.message || 'Unable to send test email')
+  } finally {
+    setTestSending(false)
+  }
+}
+  async function handleSend() {
+    if (!(await confirmDialog(`Send "${name || subject}" now to ${sendTo === 'all' ? 'all subscribers' : 'selected segment'}?`))) return
+    setSending(true)
+    const body_html = encodeBodyHtml(introHtml, blocks, introBg)
+    const saved = await onSave({
+      ...(savedCampaign || {}), name, subject, preview_text: preview, body_html,
+      segment_id: sendTo === 'all' ? null : sendTo, status: 'sending',
+    })
+    if (saved?.id) await onSend(saved.id)
+    setSending(false)
+    onClose()
+  }
+
+  const inp = { padding: '9px 12px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '13px', fontFamily: ff, color: '#0a0a0a', outline: 'none', boxSizing: 'border-box', width: '100%', background: '#fff' }
+  const label = { fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#aaa', fontFamily: ff, marginBottom: '6px', display: 'block' }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: '#f5f5f5', display: 'flex', flexDirection: 'column', fontFamily: ff }}>
+      {previewing && <EmailPreviewModal subject={subject} intro={introHtml} blocks={blocks} introBg={introBg} onClose={() => setPreviewing(false)} />}
+      {/* Header */}
+{testOpen && (
+  <div style={{
+    position: 'fixed',
+    inset: 0,
+    zIndex: 600,
+    background: 'rgba(0,0,0,0.55)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  }}>
+    <div style={{
+      background: '#fff',
+      borderRadius: '12px',
+      padding: '28px',
+      width: 'min(400px,90vw)',
+      fontFamily: ff
+    }}>
+      <h3>Send Test Email</h3>
+      <p style={{ fontSize: '13px', color: '#777' }}>
+        Only the email address below will receive this test.
+      </p>
+      <input
+        type="email"
+        value={testEmail}
+        onChange={e => setTestEmail(e.target.value)}
+        placeholder="you@example.com"
+        style={{ ...inp, marginBottom: '16px' }}
+      />
+      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+        <button onClick={() => setTestOpen(false)} disabled={testSending}>
+          Cancel
+        </button>
+        <button
+          onClick={handleSendTest}
+          disabled={testSending || !testEmail.trim() || !subject.trim()}
+          style={{
+            background: PINK,
+            border: 'none',
+            borderRadius: '6px',
+            padding: '9px 18px',
+            cursor: 'pointer'
+          }}
+        >
+          {testSending ? 'Sending…' : 'Send Test'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+      <div style={{ height: '52px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', background: '#fff', borderBottom: '1px solid #e8e8e8', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '12px', fontFamily: ff }}>← Back</button>
+          <span style={{ fontSize: '13px', color: '#333', fontWeight: '500' }}>{name || 'New Campaign'}</span>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={() => setPreviewing(true)} style={{ padding: '7px 16px', background: 'none', border: '1px solid #e0e0e0', borderRadius: '6px', color: '#555', fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>
+            Preview
+          </button>
+<button
+  onClick={() => setTestOpen(true)}
+  disabled={!subject.trim()}
+  style={{
+    padding: '7px 16px',
+    background: 'none',
+    border: '1px solid #e0e0e0',
+    borderRadius: '6px',
+    color: '#7A263A',
+    fontSize: '12px',
+    cursor: 'pointer',
+    fontFamily: ff
+  }}
+>
+  Send Test
+</button>
+          <button onClick={() => handleSave()} disabled={saving} style={{ padding: '7px 16px', background: 'none', border: '1px solid #e0e0e0', borderRadius: '6px', color: '#555', fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>
+            {saving ? 'Saving…' : 'Save Draft'}
+          </button>
+          {sendMode === 'scheduled' && scheduledAt && (
+            <button onClick={() => handleSave('scheduled')} disabled={saving} style={{ padding: '7px 16px', background: 'none', border: `1px solid rgba(160,180,242,0.4)`, borderRadius: '6px', color: '#4a6fd4', fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>
+              Schedule
+            </button>
+          )}
+          <button onClick={handleSend} disabled={sending || !subject} style={{ padding: '7px 20px', background: sending || !subject ? '#f5f5f5' : PINK, border: 'none', borderRadius: '6px', color: sending || !subject ? '#bbb' : '#0a0a0a', fontSize: '12px', fontWeight: '600', cursor: sending || !subject ? 'not-allowed' : 'pointer', fontFamily: ff }}>
+            {sending ? 'Sending…' : 'Send Now'}
+          </button>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '32px', maxWidth: '760px', margin: '0 auto', width: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div>
+            <span style={label}>Campaign Name</span>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Internal name…" style={inp} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+            <div>
+              <span style={label}>Subject Line</span>
+              <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Email subject…" style={inp} />
+            </div>
+            <div>
+              <span style={label}>Preview Text</span>
+              <input value={preview} onChange={e => setPreview(e.target.value)} placeholder="Short preview shown in inbox…" style={inp} />
+            </div>
+          </div>
+          <div>
+            <span style={label}>Send To</span>
+            <select value={sendTo} onChange={e => setSendTo(e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
+              <option value="all">All Subscribers</option>
+              {segments.map(s => <option key={s.id} value={s.id}>{s.name} ({s.member_count || 0})</option>)}
+            </select>
+          </div>
+          <div>
+            <span style={label}>Send Time</span>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+              {[['now','Send immediately'],['scheduled','Schedule for later']].map(([v,l]) => (
+                <button key={v} type="button" onClick={() => setSendMode(v)} style={{ padding: '6px 16px', border: `1px solid ${sendMode===v?DP:'#e0e0e0'}`, borderRadius: '20px', background: sendMode===v?'rgba(196,54,74,0.08)':'#fff', color: sendMode===v?DP:'#888', fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>{l}</button>
+              ))}
+            </div>
+            {sendMode === 'scheduled' && (
+              <input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} min={toLocalInput(new Date().toISOString())} style={{ ...inp, width: '260px', accentColor: PINK }} />
+            )}
+          </div>
+
+          {/* Intro text */}
+          <div>
+            <span style={label}>Intro / Body Text</span>
+            <IntroEditor content={introHtml} onChange={setIntroHtml} supabase={supabase} onUpload={onUpload} bg={introBg} onBgChange={setIntroBg} />
+          </div>
+
+          {/* Content sections */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <span style={label}>Content Sections</span>
+              <span style={{ fontSize: '11px', color: '#ccc', fontFamily: ff }}>Each section renders as an image + headline + CTA strip in the email</span>
+            </div>
+            <BlockEditor blocks={blocks} onChange={setBlocks} supabase={supabase} onUpload={onUpload} />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main CampaignsTab ─────────────────────────────────────────────
+export default function CampaignsTab({ supabase }) {
+  const [campaigns, setCampaigns] = useState([])
+  const [segments,  setSegments]  = useState([])
+  const [loading,   setLoading]   = useState(true)
+  const [building,  setBuilding]  = useState(null)
+  const [sending,   setSending]   = useState({})
+  const [deleting,  setDeleting]  = useState({})
+
+  useEffect(() => {
+    Promise.allSettled([
+      supabase.from('email_campaigns').select('*').or('kind.is.null,kind.neq.newsletter').order('created_at', { ascending: false }),
+      supabase.from('email_segments').select('id,name,member_count').order('name'),
+    ]).then(([cRes, sRes]) => {
+      setCampaigns(cRes.status === 'fulfilled' ? (cRes.value.data || []) : [])
+      setSegments(sRes.status === 'fulfilled' ? (sRes.value.data || []) : [])
+      setLoading(false)
+    })
+  }, [])
+
+  async function uploadImage(file) {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('folder', 'parlor/email')
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: fd,
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Upload failed')
+    return json.url
+  }
+
+  async function saveCampaign(data) {
+    const now = new Date().toISOString()
+    const payload = { ...data, updated_at: now }
+    let saved, error
+    if (data.id) {
+      const res = await supabase.from('email_campaigns').update(payload).eq('id', data.id).select().single()
+      saved = res.data; error = res.error
+      if (saved) setCampaigns(prev => prev.map(c => c.id === data.id ? { ...c, ...payload } : c))
+    } else {
+      const res = await supabase.from('email_campaigns').insert({ ...payload, created_at: now }).select().single()
+      saved = res.data; error = res.error
+      if (saved) setCampaigns(prev => [saved, ...prev])
+    }
+    if (error) { alertDialog('Save failed: ' + error.message); return null }
+    return saved
+  }
+
+  async function sendCampaign(id) {
+    setSending(prev => ({ ...prev, [id]: true }))
+    const { data: { session } } = await supabase.auth.getSession()
+
+if (!session?.access_token) {
+  alertDialog('Please sign in again.')
+  setSending(prev => ({ ...prev, [id]: false }))
+  return
+}
+
+const res = await fetch('/api/emails/send-campaign', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${session.access_token}`,
+  },
+  body: JSON.stringify({ campaignId: id }),
+})
+    const json = await res.json()
+    if (res.ok) {
+      setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: 'sent', sent_at: new Date().toISOString(), recipient_count: json.sent } : c))
+    } else {
+      alertDialog('Send failed: ' + (json.error || 'Unknown error'))
+    }
+    setSending(prev => ({ ...prev, [id]: false }))
+  }
+
+  async function deleteCampaign(id) {
+    if (!(await confirmDialog('Delete this campaign?'))) return
+    setDeleting(prev => ({ ...prev, [id]: true }))
+    await supabase.from('email_campaigns').delete().eq('id', id)
+    setCampaigns(prev => prev.filter(c => c.id !== id))
+    setDeleting(prev => ({ ...prev, [id]: false }))
+  }
+
+  function openRate(c)  { return c.recipient_count > 0 ? `${Math.round((c.open_count  / c.recipient_count) * 100)}%` : '—' }
+  function clickRate(c) { return c.recipient_count > 0 ? `${Math.round((c.click_count / c.recipient_count) * 100)}%` : '—' }
+
+  const thStyle = { fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#aaa', fontFamily: ff, padding: '10px 14px', textAlign: 'left', background: '#fafafa', borderBottom: '1px solid #f0f0f0', fontWeight: '500' }
+  const tdStyle = { padding: '12px 14px', fontFamily: ff, verticalAlign: 'middle' }
+
+  return (
+    <>
+      {building !== null && (
+        <CampaignBuilder campaign={building} segments={segments} onSave={saveCampaign} onSend={sendCampaign} onClose={() => setBuilding(null)} supabase={supabase} onUpload={uploadImage} />
+      )}
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
+          <button onClick={() => setBuilding({})} style={{ padding: '8px 18px', background: PINK, border: 'none', borderRadius: '7px', color: '#0a0a0a', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: ff }}>
+            + New Campaign
+          </button>
+        </div>
+        <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', overflow: 'hidden' }}>
+          {loading ? (
+            <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: '#ccc', fontFamily: ff, fontStyle: 'italic' }}>Loading…</div>
+          ) : campaigns.length === 0 ? (
+            <div style={{ padding: '48px', textAlign: 'center', fontSize: '13px', color: '#ccc', fontFamily: ff, fontStyle: 'italic' }}>No campaigns yet. Create your first one.</div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  {['Campaign','Status','Send Date','Recipients','Open Rate','Click Rate',''].map(h => (
+                    <th key={h} style={thStyle}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {campaigns.map((c, i) => {
+                  const sc = CAMPAIGN_STATUS[c.status] || CAMPAIGN_STATUS.draft
+                  return (
+                    <tr key={c.id} style={{ borderBottom: i === campaigns.length-1 ? 'none' : '1px solid #f5f5f5' }}>
+                      <td style={tdStyle}>
+                        <div style={{ fontWeight: '500', color: '#0a0a0a', fontSize: '13px' }}>{c.name || 'Untitled'}</div>
+                        <div style={{ fontSize: '12px', color: '#aaa', marginTop: '1px' }}>{c.subject}</div>
+                      </td>
+                      <td style={tdStyle}><span style={{ padding: '2px 9px', borderRadius: '20px', fontSize: '11px', background: sc.bg, color: sc.color }}>{sc.label}</span></td>
+                      <td style={{ ...tdStyle, fontSize: '12px', color: '#888' }}>
+                        {c.sent_at ? new Date(c.sent_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) :
+                         c.scheduled_at ? new Date(c.scheduled_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '—'}
+                      </td>
+                      <td style={{ ...tdStyle, fontSize: '13px', color: '#333' }}>{c.recipient_count > 0 ? c.recipient_count.toLocaleString() : '—'}</td>
+                      <td style={{ ...tdStyle, fontSize: '13px', color: '#333' }}>{openRate(c)}</td>
+                      <td style={{ ...tdStyle, fontSize: '13px', color: '#333' }}>{clickRate(c)}</td>
+                      <td style={{ ...tdStyle, textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                          {c.status !== 'sent' && (
+                            <button onClick={() => setBuilding(c)} style={{ padding: '5px 12px', background: 'none', border: `1px solid ${PINK}`, borderRadius: '5px', color: DP, fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>Edit</button>
+                          )}
+                          {(c.status === 'draft' || c.status === 'scheduled') && (
+                            <button onClick={() => sendCampaign(c.id)} disabled={!!sending[c.id]} style={{ padding: '5px 12px', background: 'none', border: '1px solid rgba(110,201,154,0.4)', borderRadius: '5px', color: '#2d8f5a', fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>
+                              {sending[c.id] ? '…' : 'Send'}
+                            </button>
+                          )}
+                          <button onClick={() => deleteCampaign(c.id)} disabled={!!deleting[c.id]} style={{ padding: '5px 10px', background: 'none', border: '1px solid rgba(224,112,112,0.2)', borderRadius: '5px', color: '#c04040', fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>
+                            {deleting[c.id] ? '…' : '✕'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}

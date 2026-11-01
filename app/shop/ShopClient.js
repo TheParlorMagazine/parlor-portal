@@ -228,6 +228,7 @@ export default function ShopPage() {
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&family=Alex+Brush&display=swap');
         body { margin: 0; }
         .shop-navbar { position:sticky; top:0; z-index:50; background:${BLACK}; box-shadow:0 6px 20px rgba(0,0,0,0.18); }
+        .shop-mobile-cart { display:none; }
         .shop-fab-cart { position:fixed; bottom:26px; right:26px; z-index:100; width:60px; height:60px; border-radius:50%; background:${BLACK}; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 28px rgba(0,0,0,0.32); opacity:0; transform:translateY(14px) scale(0.9); pointer-events:none; transition:opacity 0.25s ease, transform 0.25s cubic-bezier(.34,1.56,.64,1); }
         .shop-fab-cart.show { opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
         .shop-fab-cart:hover { transform:translateY(0) scale(1.07); }
@@ -296,6 +297,8 @@ export default function ShopPage() {
         .shop-sort-btn.active { background:${BLACK}; color:#fff; }
 
         @media (max-width: 1000px) {
+          .shop-desktop-cart { display:none; }
+          .shop-mobile-cart { display:flex;align-items:center;justify-content:center;position:absolute;top:16px;right:32px;width:44px;height:44px;padding:0;background:none;border:none;color:#fff;cursor:pointer; }
           .shop-topgrid { grid-template-columns:1fr !important; }
           .shop-herogrid { grid-template-columns:1fr !important; }
           .shop-grid { grid-template-columns:repeat(2,1fr); }
@@ -307,7 +310,8 @@ export default function ShopPage() {
       `}</style>
 
       {/* ── Header ─────────────────────────────────────────────── */}
-      <header style={{ background: BLACK }}>
+      <header id="shop-intro" style={{ background: BLACK, position: 'relative' }}>
+        <button type="button" className="shop-mobile-cart" aria-label="Open cart" onClick={openCart}><BagIcon count={uniqueLineCount(cart)} /></button>
         <a href="/" className="shop-back">
           <svg className="shop-back-arrow" width="22" height="16" viewBox="0 0 28 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <line x1="27" y1="12" x2="3" y2="12" /><polyline points="10 19 3 12 10 5" />
@@ -317,7 +321,7 @@ export default function ShopPage() {
         <div className="shop-topgrid" style={{ display: 'grid', gridTemplateColumns: '1.05fr 1fr', gap: 40, padding: '14px 48px 46px' }}>
           <h1 className="shop-welcome">Welcome<br />to The Parlor<br />Shop</h1>
           <div style={{ position: 'relative', paddingTop: 6 }}>
-            <button type="button" aria-label="Open cart" style={{ position: 'absolute', top: -8, right: 0, cursor: 'pointer', background: 'none', border: 'none', padding: 0, color: 'inherit' }} onClick={openCart}><BagIcon count={uniqueLineCount(cart)} /></button>
+            <button type="button" className="shop-desktop-cart" aria-label="Open cart" style={{ position: 'absolute', top: -8, right: 0, cursor: 'pointer', background: 'none', border: 'none', padding: 0, color: 'inherit' }} onClick={openCart}><BagIcon count={uniqueLineCount(cart)} /></button>
             <div style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: 21, color: '#fff', marginBottom: 14, maxWidth: 460 }}>
               Sip a tea. Light a Candle. Fund a revolution.
             </div>
@@ -521,7 +525,7 @@ export default function ShopPage() {
         <BagIcon count={uniqueLineCount(cart)} />
       </button>
 
-      {catalogueLoaded && <ShopTrickOrTreatPopup />}
+      {catalogueLoaded && <ShopTrickOrTreatPopup heroSelector={featured ? '#shop-featured-product' : '#shop-intro'} />}
       <SiteFooter />
     </div>
   )

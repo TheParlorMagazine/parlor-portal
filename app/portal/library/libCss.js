@@ -93,6 +93,9 @@ export const libCss = `
   .lib-detail-body{padding:14px 48px 60px}
   .content-area{background:var(--white);border:1px solid var(--border);border-radius:11px;overflow:hidden}
   .content-reader{padding:28px 32px;font-family:'thermal-variable',Georgia,serif;font-size:17px;line-height:1.9;color:var(--ink)}
+  .content-reader a,.content-reader a:visited{color:#7A263A !important;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px}
+  .content-reader a *{color:inherit !important}
+  .content-reader a:hover,.content-reader a:focus-visible{color:#5c1c2b !important}
   .content-reader p{margin-bottom:1.1em}
   .content-reader p:first-child::first-letter{font-size:3.2em;font-weight:600;float:left;line-height:0.75;padding:0.1em 0.12em 0 0;color:#000}
   .content-reader img{max-width:100%;height:auto;border-radius:6px}

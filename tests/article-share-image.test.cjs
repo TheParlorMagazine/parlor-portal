@@ -45,3 +45,21 @@ test('cover artwork renders with long titles and live writer credit', async () =
     fs.writeFileSync('/tmp/parlor-article-cover-preview.png', png)
   } finally { global.fetch = originalFetch }
 })
+
+test('WebP cover artwork produces a valid PNG card', async () => {
+  const api = await route('app/api/admin/article-share-card/route.js')
+  global.cardUser = {id:'user'}; global.cardRole = 'admin'
+  global.cardDB = database({title:'Against the Cloud',cover_image_url:'https://res.cloudinary.com/test/cover.webp'})
+  const originalFetch=global.fetch
+  global.fetch=async()=>new Response(fs.readFileSync('public/hil-13.webp'),{headers:{'content-type':'image/webp'}})
+  try {const response=await api.POST(request({article_id:'article'}));const png=Buffer.from(await response.arrayBuffer());assert.equal(png.readUInt32BE(16),1200)} finally {global.fetch=originalFetch}
+})
+
+test('corrupt cover bytes fall back to a text card instead of failing rendering', async () => {
+  const api=await route('app/api/admin/article-share-card/route.js')
+  global.cardUser={id:'user'};global.cardRole='admin'
+  global.cardDB=database({title:'Against the Cloud',cover_image_url:'https://res.cloudinary.com/test/broken.png'})
+  const originalFetch=global.fetch
+  global.fetch=async()=>new Response('broken image',{headers:{'content-type':'image/png'}})
+  try {const response=await api.POST(request({article_id:'article'}));assert.equal(response.status,200);const png=Buffer.from(await response.arrayBuffer());assert.equal(png.readUInt32BE(16),1200)} finally {global.fetch=originalFetch}
+})

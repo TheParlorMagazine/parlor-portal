@@ -1,3 +1,5 @@
+import LiveSessionTracker from './_components/LiveSessionTracker'
+import SubscriberSiteTracker from './_components/SubscriberSiteTracker'
 import PageViewTracker from './_components/PageViewTracker'
 import RecoveryRedirect from './_components/RecoveryRedirect'
 import CartDrawer from './_components/CartDrawer'
@@ -8,7 +10,7 @@ import PortalTour from './_components/portal-tour/PortalTour'
 export const metadata = {
   title: 'The Parlor',
   description: 'Independent ideas, shared conversations, and a place to belong. Explore The Parlor Magazine.',
-  metadataBase: new URL('https://www.theparlormagazine.com'),
+  metadataBase: new URL('https://theparlormagazine.com'),
   icons: {
     icon: [{ url: 'https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png', type: 'image/png', sizes: '200x200' }],
     apple: 'https://res.cloudinary.com/dwytmbczs/image/upload/v1777313271/Copy_of_The_Parlour_200_x_200_px_q3d7jv.png',
@@ -30,6 +32,8 @@ export default function RootLayout({ children }) {
       <body>
         <RecoveryRedirect />
         <PageViewTracker />
+        <LiveSessionTracker />
+        <SubscriberSiteTracker />
         {children}
         <ShopStateSync />
         <CartDrawer />

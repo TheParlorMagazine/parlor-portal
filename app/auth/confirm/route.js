@@ -7,9 +7,15 @@ export async function GET(request) {
   const token_hash = url.searchParams.get('token_hash')
   const type = url.searchParams.get('type')
 
-  const response = NextResponse.redirect(
-    new URL('/', url.origin)
-  )
+  // Verification links carry the specific intent; never guess from another tab.
+  let destination = '/'
+  const intended = url.searchParams.get('returnTo') || url.searchParams.get('redirect_to')
+  try {
+    let target = new URL(intended || '/', url.origin)
+    if (target.origin === url.origin && target.pathname === '/auth/callback') target = new URL(target.searchParams.get('returnTo') || '/', url.origin)
+    if (target.origin === url.origin && !target.pathname.startsWith('/auth/') && !String(intended).includes('\\')) destination = target.pathname + target.search + target.hash
+  } catch {}
+  const response = NextResponse.redirect(new URL(destination, url.origin))
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -37,12 +43,18 @@ export async function GET(request) {
     if (!error) {
       if (data?.user) {
         try {
+          const { notifyAdminFreeSignup } = await import('../../../lib/adminNotifications')
+          await notifyAdminFreeSignup(data.user, { provider: 'email' })
+        } catch (error) { console.error('Admin signup notification failed:', error.message) }
+
+        try {
           const { sendNewMemberWelcome, isAfterOnboardingLaunch } =
             await import('../../../lib/onboarding')
 
           if (isAfterOnboardingLaunch(data.user)) {
             await sendNewMemberWelcome(data.user, {
-              newRegistration: true
+              newRegistration: true,
+              verifiedEmailConfirmation: true
             })
           }
         } catch (onboardingError) {

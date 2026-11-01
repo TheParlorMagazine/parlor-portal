@@ -1,0 +1,510 @@
+'use client'
+
+import { useEffect, useRef } from 'react'
+
+const layers = [
+  {
+    name: 'Settee and gramophone',
+    file: 'sette and gramaphone.png',
+    x: 336, y: 487, w: 555, h: 312,
+  },
+  {
+    name: 'Woman reading The Parlor',
+    file: 'Victorian Woman Reading The Parlor 1@2x.png',
+    x: 0, y: 463, w: 601, h: 549,
+  },
+  {
+    name: 'Woman reading a book',
+    file: 'woman reading a book.png',
+    x: 891, y: 351, w: 299, h: 448,
+  },
+  {
+    name: 'Tea table and chairs',
+    file: 'tabnle and chairs.png',
+    x: 976, y: 579, w: 476, h: 318,
+  },
+]
+
+export default function MissionRoom() {
+  const roomRef = useRef(null)
+
+  useEffect(() => {
+    const room = roomRef.current
+    if (!room) return
+
+    let animationContext
+    let cancelled = false
+
+    async function initializeAnimation() {
+      const { gsap } = await import('gsap')
+      const { ScrollTrigger } = await import('gsap/ScrollTrigger')
+
+      if (cancelled) return
+
+      gsap.registerPlugin(ScrollTrigger)
+
+      animationContext = gsap.context(() => {
+        const viewport = room.parentElement
+        const gradient = viewport.querySelector('.parlor-opening-gradient')
+        const eyebrow = viewport.querySelector('.parlor-mission-label')
+        const heading = viewport.querySelector('.parlor-mission-caption h1')
+        const subtitle = viewport.querySelector('.parlor-mission-caption p')
+        const dimmer = room.querySelector('.parlor-room-dimmer')
+        const scrollCue = viewport.querySelector('.parlor-scroll-cue')
+        const storyCue = viewport.querySelector('.parlor-story-scroll-cue')
+        const storyOne = viewport.querySelector('.parlor-story-one')
+
+        gsap.set(room, {
+          scale: 1,
+          xPercent: 0,
+          transformOrigin: 'center center',
+        })
+
+        // Opening sequence plays automatically, independent of scrolling.
+        const intro = gsap.timeline({ delay: 0.35 })
+
+        intro
+          .to(gradient, {
+            opacity: 1,
+            duration: 1.2,
+            ease: 'power2.inOut',
+          })
+          .to(heading, {
+            opacity: 1,
+            filter: 'blur(0px)',
+            duration: 1.8,
+            ease: 'power2.out',
+          })
+          .to([eyebrow, subtitle], {
+            opacity: 1,
+            duration: 0.9,
+            ease: 'power2.out',
+          }, '-=0.25')
+          .to(scrollCue, {
+            opacity: 1,
+            duration: 0.8,
+            ease: 'power2.out',
+          }, '>-0.1')
+
+        // Scrolling controls the camera, not the opening title reveal.
+        const camera = gsap.timeline({
+          scrollTrigger: {
+            trigger: viewport,
+            start: 'top top',
+            end: '+=3200',
+            scrub: 1,
+            pin: viewport,
+            anticipatePin: 1,
+            invalidateOnRefresh: true,
+          },
+        })
+
+        camera
+          .to({}, { duration: 0.6 })
+          .to([heading, eyebrow, subtitle, gradient, scrollCue], {
+            opacity: 0,
+            duration: 0.6,
+            ease: 'none',
+          })
+          .to(room, {
+            scale: 1.55,
+            xPercent: 24,
+            duration: 2,
+            ease: 'none',
+          })
+          .to(dimmer, {
+            opacity: 1,
+            duration: 1,
+            ease: 'none',
+          }, '<+=0.6')
+          .to({}, { duration: 2.5 })
+
+        // The story plays on its own once the camera reaches the woman.
+        const lines = storyOne.querySelectorAll('.parlor-story-line')
+        const emphasis = storyOne.querySelector('.parlor-story-emphasis')
+
+        gsap.set(lines, { opacity: 0, y: 14 })
+        gsap.set(emphasis, { opacity: 0, y: 14 })
+
+        const storyAnimation = gsap.timeline({
+          paused: true,
+          onStart: () => {
+            gsap.set(storyOne, { autoAlpha: 1 })
+          },
+        })
+
+        storyAnimation
+          .to(lines[0], {
+            opacity: 1, y: 0, duration: 0.8, ease: 'power2.out',
+          })
+          .to(lines[1], {
+            opacity: 1, y: 0, duration: 0.8, ease: 'power2.out',
+          }, '-=0.15')
+          .to(emphasis, {
+            opacity: 1,
+            y: 0,
+            textShadow: '0 0 24px rgba(255,185,220,1), 0 0 65px rgba(255,130,195,0.95)',
+            duration: 1.1,
+            ease: 'power2.out',
+          }, '+=0.35')
+          .to(emphasis, {
+            textShadow: '0 0 16px rgba(255,175,210,0.5)',
+            duration: 1,
+          })
+          .to([lines[2], lines[3], lines[4]], {
+            opacity: 1,
+            y: 0,
+            duration: 0.85,
+            stagger: 0.65,
+            ease: 'power2.out',
+          }, '+=0.2')
+          .to(storyCue, {
+            opacity: 1,
+            duration: 0.8,
+            ease: 'power2.out',
+          }, '+=0.6')
+
+        let storyStarted = false
+
+        // Start the timed story when the camera has reached the woman.
+        // Use the timeline's actual progress rather than a guessed
+        // percentage of the entire ScrollTrigger distance.
+        camera.eventCallback('onUpdate', () => {
+          if (!storyStarted && camera.progress() >= 0.68) {
+            storyStarted = true
+            gsap.set(storyOne, {
+              visibility: 'visible',
+              opacity: 1,
+            })
+            storyAnimation.play(0)
+          }
+        })
+
+      }, room.parentElement)
+    }
+
+    initializeAnimation()
+
+    return () => {
+      cancelled = true
+      if (animationContext) animationContext.revert()
+    }
+  }, [])
+
+  return (
+    <div className="parlor-room-viewport">
+      <div
+        ref={roomRef}
+        className="parlor-room-canvas"
+        role="img"
+        aria-label="An illustrated Victorian parlor with women reading, a settee, a gramophone, and a tea table"
+      >
+        <img
+          className="parlor-room-background"
+          src="/mission-room/the%20room.png"
+          alt=""
+        />
+
+        {layers.map(layer => (
+          <img
+            key={layer.name}
+            className="parlor-room-layer"
+            src={`/mission-room/${encodeURIComponent(layer.file)}`}
+            alt=""
+            style={{
+              left: `${(layer.x / 1536) * 100}%`,
+              top: `${(layer.y / 1024) * 100}%`,
+              width: `${(layer.w / 1536) * 100}%`,
+              height: `${(layer.h / 1024) * 100}%`,
+              zIndex: layer.name === 'Woman reading The Parlor' ? 4 : 1,
+            }}
+          />
+        ))}
+
+        <div className="parlor-room-dimmer" aria-hidden="true" />
+      </div>
+
+      
+
+      <div className="parlor-scroll-cue" aria-hidden="true">
+        <span>SCROLL TO EXPLORE</span>
+        <svg viewBox="0 0 24 36" fill="none">
+          <path d="M12 2V31M3 22L12 31L21 22"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+
+      <div className="parlor-scroll-cue parlor-story-scroll-cue" aria-hidden="true">
+        <span>SCROLL TO EXPLORE</span>
+        <svg viewBox="0 0 24 36" fill="none">
+          <path d="M12 2V31M3 22L12 31L21 22"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+
+      <section className="parlor-story-one" aria-label="Our mission introduction">
+        <p>
+          <span className="parlor-story-line">The world doesn't need another publication</span>
+          <span className="parlor-story-line">telling us everything is broken.</span>
+        </p>
+        <p className="parlor-story-emphasis">We know.</p>
+        <p>
+          <span className="parlor-story-line">What we need are better questions,</span>
+          <span className="parlor-story-line">sharper conversations, and a little more</span>
+          <span className="parlor-story-line">imagination about what comes next.</span>
+        </p>
+      </section>
+
+      <div className="parlor-opening-gradient" aria-hidden="true" />
+
+      <div className="parlor-mission-caption">
+        <span className="parlor-mission-label">OUR MISSION</span>
+        <h1>A Room of Our Own.<br />With Sharp Furniture.</h1>
+        <p>Independent journalism for a world worth reimagining.</p>
+      </div>
+
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Alex+Brush&display=swap');
+      `}</style>
+
+      <style jsx>{`
+        .parlor-scroll-cue {
+          position: absolute;
+          z-index: 8;
+          bottom: 4%;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.65rem;
+          color: #fff8f3;
+          opacity: 0;
+          pointer-events: none;
+          text-shadow: 0 2px 10px rgba(20, 10, 18, 0.8);
+        }
+
+        .parlor-scroll-cue.parlor-story-scroll-cue {
+          top: calc(50% + 260px);
+          right: 7%;
+          bottom: auto;
+          left: auto;
+          width: min(38%, 520px);
+          transform: none;
+          align-items: flex-start;
+        }
+
+        .parlor-scroll-cue span {
+          font-family: Georgia, serif;
+          font-size: 0.7rem;
+          font-weight: 700;
+          letter-spacing: 0.22em;
+          white-space: nowrap;
+        }
+
+        .parlor-scroll-cue svg {
+          width: 22px;
+          height: 36px;
+          animation: parlor-arrow-pulse 1.8s ease-in-out infinite;
+          filter: drop-shadow(0 2px 5px rgba(20, 10, 18, 0.6));
+        }
+
+        @keyframes parlor-arrow-pulse {
+          0%, 100% {
+            transform: translateY(0);
+            opacity: 0.55;
+          }
+          50% {
+            transform: translateY(9px);
+            opacity: 1;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .parlor-scroll-cue svg {
+            animation: none;
+          }
+        }
+
+        .parlor-story-one {
+          position: absolute;
+          z-index: 7;
+          top: 50%;
+          right: 7%;
+          width: min(38%, 520px);
+          transform: translateY(-50%);
+          opacity: 0;
+          visibility: hidden;
+          color: #fff8f3;
+          font-family: Georgia, serif;
+          font-size: clamp(1.15rem, 1.7vw, 1.6rem);
+          line-height: 1.65;
+          text-shadow: 0 2px 16px rgba(20, 10, 18, 0.85);
+          pointer-events: none;
+        }
+
+        .parlor-story-one p {
+          margin: 0 0 1.25rem;
+        }
+
+        .parlor-story-one .parlor-story-line {
+          display: block;
+          opacity: 0;
+        }
+
+        .parlor-story-one .parlor-story-emphasis {
+          color: #ffb8d2;
+          font-family: 'Alex Brush', cursive;
+          font-style: normal;
+          font-size: clamp(4.5rem, 7vw, 8rem);
+          font-weight: 400;
+          line-height: 1.1;
+          margin: 1.5rem 0 1.75rem;
+          text-shadow: 0 0 16px rgba(255, 175, 210, 0.55);
+        }
+
+        .parlor-story-one .parlor-story-emphasis {
+          filter: drop-shadow(0 0 0px rgba(255, 175, 210, 0));
+        }
+
+        @media (max-width: 767px) {
+          .parlor-story-one {
+            right: 7%;
+            width: 86%;
+            font-size: 1rem;
+          }
+        }
+
+        .parlor-opening-gradient {
+          position: absolute;
+          inset: 0;
+          z-index: 4;
+          pointer-events: none;
+          opacity: 0;
+          background: linear-gradient(
+            90deg,
+            rgba(28, 13, 25, 0.04) 10%,
+            rgba(28, 13, 25, 0.48) 45%,
+            rgba(28, 13, 25, 0.88) 100%
+          );
+        }
+
+        .parlor-mission-caption {
+          position: absolute;
+          z-index: 5;
+          top: 50%;
+          right: 7%;
+          width: min(42%, 590px);
+          transform: translateY(-50%);
+          color: #fff8f3;
+          text-align: left;
+          pointer-events: none;
+        }
+
+        .parlor-mission-label {
+          display: block;
+          opacity: 0;
+          color: #f3b4c8;
+          font-family: Georgia, serif;
+          font-size: clamp(0.85rem, 1.1vw, 1.1rem);
+          font-weight: 700;
+          letter-spacing: 0.24em;
+          margin-bottom: 1.25rem;
+          text-shadow: 0 2px 12px rgba(35, 15, 25, 0.5);
+        }
+
+        .parlor-mission-caption h1 {
+          font-family: 'Alex Brush', cursive;
+          font-size: clamp(3.5rem, 5.5vw, 6.5rem);
+          line-height: 0.95;
+          font-weight: 400;
+          margin: 0 0 1.5rem;
+          opacity: 0;
+          filter: blur(12px);
+          text-shadow: 0 0 22px rgba(255, 240, 245, 0.55);
+        }
+
+        .parlor-mission-caption p {
+          font-size: clamp(1rem, 1.3vw, 1.3rem);
+          line-height: 1.6;
+          margin: 0;
+          opacity: 0;
+          text-shadow: 0 2px 12px rgba(20, 10, 18, 0.65);
+        }
+
+        @media (max-width: 767px) {
+          .parlor-mission-caption {
+            right: 7%;
+            left: 7%;
+            top: 50%;
+            width: auto;
+            text-align: center;
+          }
+
+          .parlor-mission-caption h1 {
+            font-size: clamp(3rem, 11vw, 5rem);
+          }
+        }
+
+        .parlor-room-viewport {
+          position: relative;
+          width: 100%;
+          height: 100vh;
+          height: 100svh;
+          overflow: hidden;
+          background: #e9c9cf;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .parlor-room-canvas {
+          position: relative;
+          width: max(100vw, 150svh);
+          flex: 0 0 auto;
+          aspect-ratio: 3 / 2;
+          overflow: hidden;
+          transform-origin: center center;
+        }
+
+        .parlor-room-background {
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: fill;
+        }
+
+        .parlor-room-dimmer {
+          position: absolute;
+          inset: 0;
+          z-index: 3;
+          background: rgba(24, 12, 20, 0.7);
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .parlor-room-layer {
+          position: absolute;
+          object-fit: fill;
+          pointer-events: none;
+        }
+
+        @media (max-width: 767px) {
+          .parlor-room-canvas {
+            width: 170%;
+            max-width: none;
+            transform: translateX(-20%);
+          }
+        }
+      `}</style>
+    </div>
+  )
+}

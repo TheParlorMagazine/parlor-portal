@@ -14,9 +14,9 @@ try:
  for _ in range(100):
   try:sql('select 1');break
   except RuntimeError:time.sleep(.1)
- sql('create role anon;create role authenticated;create role service_role;create table members(id uuid primary key);create table email_campaigns(id uuid primary key,open_count integer default 0,click_count integer default 0);')
- migration=(root/'supabase/migrations/20261025190000_campaign_engagement_tracking.sql').read_text();sql(migration);sql(migration)
- sql(f"insert into members values('{uid(1)}'),('{uid(2)}');insert into email_campaigns(id) values('{uid(10)}'),('{uid(11)}'),('{uid(12)}');update email_campaigns set engagement_tracking_enabled=true where id in('{uid(10)}','{uid(11)}');")
+ sql('create role anon;create role authenticated;create role service_role;create table members(id uuid primary key,full_name text,email text,newsletter_subscribed boolean,unsubscribed_at timestamptz);create table email_campaigns(id uuid primary key,open_count integer default 0,click_count integer default 0);')
+ migration=(root/'supabase/migrations/20261026140000_campaign_engagement_tracking.sql').read_text();sql(migration);sql(migration)
+ sql(f"insert into members(id) values('{uid(1)}'),('{uid(2)}');insert into email_campaigns(id) values('{uid(10)}'),('{uid(11)}'),('{uid(12)}');update email_campaigns set engagement_tracking_enabled=true where id in('{uid(10)}','{uid(11)}');")
  event('early-open','email-one','email.opened');event('early-open','email-one','email.opened')
  assert stats(10)['accepted_count']==0
  sql(f"insert into campaign_email_deliveries values('email-one','{uid(10)}','{uid(1)}',now()),('email-two','{uid(10)}','{uid(2)}',now()),('email-other','{uid(11)}','{uid(1)}',now());")
@@ -27,6 +27,27 @@ try:
  with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:list(pool.map(lambda _:event('same-retry','email-one','email.clicked','https://example.invalid/shop'),range(6)))
  assert stats(10)['total_click_count']==3 and stats(10)['click_count']==1
  assert not stats(12)['tracked'] and stats(12)['accepted_count']==0
+ sql(f"update members set full_name='Reader One',email='reader@example.test' where id='{uid(1)}';")
+ def activity(f='all'):
+  return json.loads(sql(f"select coalesce(json_agg(s),'[]'::json) from campaign_subscriber_activity('{uid(10)}',0,'{f}') s"))
+ assert len(activity())==2 and len(activity('clicked'))==1 and activity('clicked')[0]['email']=='reader@example.test'
+ assert activity('clicked')[0]['clicks']==3 and len(activity('clicked')[0]['links'])==2
+ assert len(activity('unsubscribed'))==0
+ assert sql(f"select unsubscribe_email_member('{uid(1)}','{uid(10)}');")=='t'
+ assert len(activity('unsubscribed'))==1
+ assert sql(f"select count(*) from email_subscription_events where member_id='{uid(1)}' and event_type='unsubscribed'")=='1'
+ sql(f"select unsubscribe_email_member('{uid(1)}','{uid(10)}');")
+ assert sql(f"select count(*) from email_subscription_events where member_id='{uid(1)}'")=='1'
+ sql(f"update members set newsletter_subscribed=true,unsubscribed_at=null where id='{uid(1)}';")
+ assert sql(f"select count(*) from email_subscription_events where member_id='{uid(1)}' and event_type='subscribed'")=='1'
+ sql(f"update members set newsletter_subscribed=false,unsubscribed_at=now() where id='{uid(2)}';")
+ assert sql(f"select source from email_subscription_events where member_id='{uid(2)}'")=='preferences'
+ # The member update and its event roll back together.
+ before=sql('select count(*) from email_subscription_events')
+ sql(f"begin;update members set newsletter_subscribed=true,unsubscribed_at=null where id='{uid(2)}';rollback;")
+ assert sql('select count(*) from email_subscription_events')==before
+ assert len(activity('unsubscribed'))==1 # unrelated preference does not acquire campaign attribution
+ assert sql("select has_function_privilege('authenticated','campaign_subscriber_activity(uuid,integer,text)','execute');select has_table_privilege('anon','email_subscription_events','select');select has_function_privilege('authenticated','unsubscribe_email_member(uuid,uuid)','execute');")=='f\nf\nf'
  sql(f"delete from members where id='{uid(1)}';")
  assert stats(10)['open_count']==1 and stats(10)['click_count']==1
  assert sql("select has_table_privilege('anon','campaign_email_events','select');select has_table_privilege('authenticated','campaign_email_deliveries','select');select has_function_privilege('anon','campaign_tracking_stats(uuid[])','execute');")=='f\nf\nf'

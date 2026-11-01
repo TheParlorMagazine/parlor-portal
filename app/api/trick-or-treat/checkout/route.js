@@ -1,3 +1,6 @@
+import { checkoutOrigin } from '../../../../lib/checkoutOrigin'
+import { createReservedCheckout } from '../../../../lib/checkoutReservations'
+import { encodeShopSnapshot, snapshotShopProduct } from '../../../../lib/shopSnapshot'
 import { requireShopUser } from '../../../../lib/shopAuth'
 import { ensureStripeCustomer } from '../../../../lib/stripeCustomer'
 import Stripe from 'stripe'
@@ -9,15 +12,16 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 export async function POST(request) {
   const user = await requireShopUser(request)
   if (!user) return Response.json({ error: 'Sign in or create an account before checkout.' }, { status: 401 })
+  if (!user.email_confirmed_at) return Response.json({error:'Verify your email before purchasing.'},{status:403})
   let body = {}; try { body = await request.json() } catch {}
-  const { treatIds, collectionId, successUrl, cancelUrl } = body
+  const { treatIds, collectionId, successUrl, cancelUrl, requestId } = body
 
   if (!Array.isArray(treatIds) || !treatIds.length || !collectionId || !successUrl || !cancelUrl) {
     return Response.json({ error: 'treatIds, collectionId, successUrl and cancelUrl are required' }, { status: 400 })
   }
 
   const db = serviceClient()
-  const origin = new URL(request.url).origin
+  const origin = checkoutOrigin(request)
   let cancel
   try { cancel = new URL(cancelUrl, origin) } catch { return Response.json({ error: 'Invalid return URL' }, { status: 400 }) }
   if (cancel.origin !== origin) return Response.json({ error: 'Checkout must return to this site.' }, { status: 400 })
@@ -36,7 +40,7 @@ export async function POST(request) {
   // 2. Validate selected treats — they must exist, be active, and have stock
   const { data: treats, error: tErr } = await db
     .from('tot_treats')
-    .select('id, name, stock, house_id, product_id, shop_products(id, name, images, ships_to)')
+    .select('id, name, stock, house_id, product_id, shop_products(*)')
     .in('id', treatIds)
     .eq('active', true)
   if (tErr) return Response.json({ error: tErr.message }, { status: 500 })
@@ -57,7 +61,7 @@ export async function POST(request) {
   // 3. Load standalone products (always-included items like the tote)
   const { data: standaloneRows, error: standaloneError } = await db
     .from('tot_collection_products')
-    .select('product_id, shop_products(id, name, images, ships_to)')
+    .select('product_id, shop_products(*)')
     .eq('collection_id', collectionId)
     .order('sort_order')
 
@@ -68,7 +72,7 @@ export async function POST(request) {
   const currency = currencyForRequest(request)
   const bundlePrice = { price: collection.price, price_eur: collection.price_eur, price_gbp: collection.price_gbp }
   const amount = Math.round(priceForCurrency(bundlePrice, currency) * 100)
-  if (!amount) return Response.json({ error: 'Bundle price not configured for this currency' }, { status: 400 })
+  if (!Number.isSafeInteger(amount) || amount<=0) return Response.json({ error: 'Bundle price not configured for this currency' }, { status: 400 })
 
   const treatNames = (treats || []).map(t => t.shop_products?.name || t.name).join(', ')
   const standaloneNames = standalone.map(r => r.shop_products?.name || '').filter(Boolean).join(', ')
@@ -84,9 +88,25 @@ export async function POST(request) {
     else if (Array.isArray(product.ships_to) && product.ships_to.length) allowedCountries = allowedCountries.filter(c => product.ships_to.includes(c))
   }
   if (!allowedCountries.length) return Response.json({ error: 'These items do not share a delivery destination.' }, { status: 400 })
+  let snapshot, packing
+  try {
+    packing = [...treats.map(t => t.shop_products ? snapshotShopProduct(t.shop_products, 1, null, 'Trick-or-Treat bundle') : {product_name:t.name,quantity:1,fulfillment:'manual',bundle_name:'Trick-or-Treat bundle'}), ...standalone.map(r => snapshotShopProduct(r.shop_products, 1, null, 'Trick-or-Treat bundle'))]
+    const demand = new Map()
+    for (const part of packing) {
+      if (part.fulfillment === 'printify' && (!part.printify_product_id || !Number.isSafeInteger(Number(part.printify_variant_id)) || Number(part.printify_variant_id)<1)) throw new Error('A product is not ready to ship.')
+      if (part.product_id) demand.set(part.product_id, (demand.get(part.product_id) || 0) + part.quantity)
+    }
+    for (const product of [...treats.map(t => t.shop_products), ...standalone.map(r => r.shop_products)].filter(Boolean)) {
+      if (product.external_url || product.fulfillment === 'external') throw new Error('A selected product must be purchased from its partner shop.')
+      const variant = product.variants?.find(v => String(v.printify_variant_id) === String(product.printify_variant_id)) || product.variants?.[0]
+      if ((product.inventory != null && product.inventory < demand.get(product.id)) || (variant?.inventory != null && variant.inventory < demand.get(product.id))) throw new Error('A selected product is out of stock.')
+    }
+    snapshot = encodeShopSnapshot(packing)
+  } catch (error) { return Response.json({error:error.message}, {status:400}) }
   const customer = await ensureStripeCustomer(db, stripe, user.id)
   if (!customer) return Response.json({ error: 'Your billing account could not be linked.' }, { status: 409 })
-  const session = await stripe.checkout.sessions.create({
+  try {
+  const session = await createReservedCheckout({db,stripe,userId:user.id,requestId,kind:'tot_bundle',inventory:packing.filter(p=>p.product_id).map(p=>({product_id:p.product_id,quantity:p.quantity,variant_id:p.printify_variant_id || null})),treatIds,params:{
     mode: 'payment',
     line_items: [{
       quantity: 1,
@@ -116,12 +136,14 @@ export async function POST(request) {
       treat_ids: treatIds.join(','),
       standalone_product_ids: standalone.map(r => r.product_id).join(','),
       userId: user.id,
+      ...snapshot,
     },
     shipping_address_collection: {
       allowed_countries: allowedCountries,
     },
     phone_number_collection: { enabled: true },
-  })
+  }})
 
   return Response.json({ url: session.url })
+  } catch(error) {return Response.json({error:error.message},{status:409})}
 }

@@ -57,6 +57,8 @@ export default function LibraryDetailPage() {
   const item = data?.item
   const themes = data?.themes || []
   const related = data?.related || []
+  const editorNote = item?.editor_note?.trim()
+  const previewDescription = item?.subtitle?.trim() || item?.meta_description?.trim()
   const readTime = item?.reading_time_minutes ? `${item.reading_time_minutes} min read` : null
 
   return (
@@ -116,11 +118,11 @@ export default function LibraryDetailPage() {
                   {item.theme && <div className="theme-tag"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5"/></svg>{item.theme}</div>}
                   <div className="lib-detail-title">{item.title}</div>
                   <div className="lib-detail-author">{[item.author_name, readTime].filter(Boolean).join(' · ')}</div>
-                  {item.editor_note && (
+                  {(editorNote || previewDescription) && (
                     <div className="editorial-note">
-                      <div className="editorial-label">Editor's note</div>
-                      <div className="editorial-text">{item.editor_note}</div>
-                      <div className="editorial-sig">— Parlor Editors{monthYear(item.date_published) ? `, ${monthYear(item.date_published)}` : ''}</div>
+                      {editorNote && <div className="editorial-label">Editor's note</div>}
+                      <div className="editorial-text">{editorNote || previewDescription}</div>
+                      {editorNote && <div className="editorial-sig">— Parlor Editors{monthYear(item.date_published) ? `, ${monthYear(item.date_published)}` : ''}</div>}
                     </div>
                   )}
                 </div>

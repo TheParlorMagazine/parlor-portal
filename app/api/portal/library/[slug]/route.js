@@ -1,6 +1,6 @@
 import { requireUser, serviceClient } from '../../../../../lib/apiAuth'
 
-const FIELDS = 'slug, title, subtitle, author_name, author_photo_url, cover_image_url, category, article_category, theme, tags, body, excerpt, editor_note, discussion_prompt, date_published, reading_time_minutes, paywall_type, plan_access, is_new, thumbnail_style'
+const FIELDS = 'slug, title, subtitle, meta_description, author_name, author_photo_url, cover_image_url, category, article_category, theme, tags, body, excerpt, editor_note, discussion_prompt, date_published, reading_time_minutes, paywall_type, plan_access, is_new, thumbnail_style'
 
 export async function GET(request, { params }) {
   const user = await requireUser(request)

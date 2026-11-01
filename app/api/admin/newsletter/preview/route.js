@@ -12,7 +12,7 @@ export async function GET(request) {
   const me = await memberOf(db, user.id)
   if (!ROLES.includes(me.role)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
+  const baseUrl = 'https://theparlormagazine.com'
   const sp = new URL(request.url).searchParams
   const sections = {}
   for (const key of ['announcement', 'issuPromo', 'issueArticles', 'articles', 'featuredEvent', 'otherEvents', 'shopAd', 'support']) {

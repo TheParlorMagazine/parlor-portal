@@ -3,6 +3,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from 'react-simple-maps'
 import { scaleLinear } from 'd3-scale'
+import PageSpeedPanel from './PageSpeedPanel'
+import ReportingPanel from './ReportingPanel'
+import { overviewCsv, pageHealthCsv, connectedReportCsv, reportZip } from '../../../lib/analyticsExport'
 
 const ff   = "'Source Serif 4', Georgia, serif"
 const ffH  = "'Playfair Display', Georgia, serif"
@@ -307,6 +310,12 @@ function generateReport({ year, yearData, memberCount, paidCount }) {
 
 // ── Main ──────────────────────────────────────────────────────
 export default function AnalyticsSection({ supabase }) {
+  const [reportType, setReportType] = useState('overview')
+  const [pageHealthReport, setPageHealthReport] = useState(null)
+  const [connectedReports, setConnectedReports] = useState({})
+  const [activeSource, setActiveSource] = useState('googleAds')
+  const storeReport = useCallback(report => setConnectedReports(previous => ({ ...previous, [report.source]: report })), [])
+  const connectedFile = report => ({ name: `${report.source}-${report.start}-${report.end}.csv`, content: connectedReportCsv(report) })
   const now          = new Date()
   const years        = getAvailableYears()
   const [selectedYear, setSelectedYear]   = useState(now.getFullYear())
@@ -331,7 +340,7 @@ export default function AnalyticsSection({ supabase }) {
   }, [supabase])
 
   const processViews = useCallback((views, articles, ym) => {
-    if (!views?.length) return { totalViews: 0, uniqueVisitors: 0, dailySessions: [], topArticles: [], topReferrers: [], byDevice: [], byCountry: [], newVsReturning: { new: 0, returning: 0 }, loaded: true }
+    if (!views?.length) return { period: ym, totalViews: 0, uniqueVisitors: 0, dailySessions: [], topArticles: [], topReferrers: [], byDevice: [], byCountry: [], newVsReturning: { new: 0, returning: 0 }, loaded: true }
     const slugToTitle    = Object.fromEntries((articles || []).map(a => [a.slug, a.title]))
     const uniqueVisitors = new Set(views.map(v => v.visitor_id)).size
     const totalViews     = views.length
@@ -359,7 +368,7 @@ export default function AnalyticsSection({ supabase }) {
     const visitorCounts = {}
     views.forEach(v => { if (v.visitor_id) visitorCounts[v.visitor_id] = (visitorCounts[v.visitor_id] || 0) + 1 })
     const returning = Object.values(visitorCounts).filter(c => c > 1).length
-    return { totalViews, uniqueVisitors, dailySessions, topArticles, topReferrers, byDevice, byCountry, newVsReturning: { new: uniqueVisitors - returning, returning }, loaded: true }
+    return { period: ym, totalViews, uniqueVisitors, dailySessions, topArticles, topReferrers, byDevice, byCountry, newVsReturning: { new: uniqueVisitors - returning, returning }, loaded: true }
   }, [])
 
   const load = useCallback((year, month) => {
@@ -394,6 +403,33 @@ export default function AnalyticsSection({ supabase }) {
 
   const ym = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`
   const noData = data.loaded && data.totalViews === 0
+
+  const exportSource = reportType === 'paid' ? activeSource : reportType
+  const overviewReady = data.loaded && data.period === ym
+  const availableFiles = () => [
+    ...Object.values(connectedReports).map(connectedFile),
+    ...(overviewReady ? [{ name: `website-overview-${ym}.csv`, content: overviewCsv(data, ym) }] : []),
+    ...(pageHealthReport ? [{ name: `page-health-${pageHealthReport.strategy}-${pageHealthReport.auditedAt.slice(0, 10)}.csv`, content: pageHealthCsv(pageHealthReport) }] : []),
+  ]
+  function downloadFile(content, filename, type) {
+    const url = URL.createObjectURL(new Blob([content], { type }))
+    const link = document.createElement('a')
+    link.href = url; link.download = filename; document.body.appendChild(link); link.click(); link.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+  function exportReport(action) {
+    if (action === 'pdf') { handleDownloadReport(); return }
+    if (action === 'zip') {
+      const files = availableFiles()
+      if (files.length) downloadFile(reportZip(files), `parlor-reports-${ym}.zip`, 'application/zip')
+      return
+    }
+    const file = reportType === 'overview'
+      ? (overviewReady ? { name: `website-overview-${ym}.csv`, content: overviewCsv(data, ym) } : null)
+      : reportType !== 'page-health' ? (connectedReports[exportSource] ? connectedFile(connectedReports[exportSource]) : null)
+      : (pageHealthReport ? { name: `page-health-${pageHealthReport.strategy}-${pageHealthReport.auditedAt.slice(0, 10)}.csv`, content: pageHealthCsv(pageHealthReport) } : null)
+    if (file) downloadFile(file.content, file.name, 'text/csv;charset=utf-8')
+  }
 
   const handleRightClick = (e) => {
     e.preventDefault()
@@ -441,12 +477,24 @@ export default function AnalyticsSection({ supabase }) {
           <div>
             <h1 style={{ fontFamily: ffH, fontSize: '26px', fontWeight: '700', color: '#0a0a0a', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Analytics</h1>
             <div style={{ fontSize: '13px', color: '#aaa', fontFamily: ff }}>
-              {MONTHS_FULL[selectedMonth]} {selectedYear} · right-click to download annual report
+              {reportType === 'overview' ? `${MONTHS_FULL[selectedMonth]} ${selectedYear} · right-click to download annual report` : reportType === 'page-health' ? 'Current page health · on-demand audits' : 'Connected reporting · select a source and reporting dates'}
             </div>
           </div>
 
-          {/* Year pills — clicking expands months below */}
-          <div style={{ display: 'flex', gap: '4px' }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', maxWidth: '100%' }}>
+            <label style={{ fontSize: 12, color: '#777' }}>Report{' '}
+              <select aria-label="Analytics report" value={reportType} onChange={e => setReportType(e.target.value)} style={{ padding: '8px 10px', border: '1px solid #ddd', borderRadius: 6, background: '#fff', fontFamily: ff }}>
+                <option value="overview">Website overview</option><option value="page-health">Page health</option><option value="search">Search &amp; SEO</option><option value="ga4">GA4 acquisition</option><option value="merchant">Product visibility</option><option value="paid">Paid marketing</option>
+              </select>
+            </label>
+            <select aria-label="Export analytics" value="" onChange={e => exportReport(e.target.value)} style={{ padding: '8px 10px', border: '1px solid #ddd', borderRadius: 6, background: '#fff', fontFamily: ff }}>
+              <option value="" disabled>Export…</option>
+              <option value="csv" disabled={reportType === 'overview' ? !overviewReady : reportType === 'page-health' ? !pageHealthReport : !connectedReports[exportSource]}>Current report — CSV</option>
+              <option value="zip" disabled={!overviewReady && !pageHealthReport && !Object.keys(connectedReports).length}>Available reports — ZIP</option>
+              <option value="pdf">Website annual report — PDF</option>
+            </select>
+          </div>
+          {reportType === 'overview' && <div style={{ display: 'flex', gap: '4px' }}>
             {years.filter(y => y >= 2025).map(y => (
               <button key={y}
                 onClick={() => {
@@ -461,11 +509,11 @@ export default function AnalyticsSection({ supabase }) {
                 {y}
               </button>
             ))}
-          </div>
+          </div>}
         </div>
 
         {/* Month pills — shown below, attached to selected year */}
-        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '12px' }}>
+        {reportType === 'overview' && <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '12px' }}>
           {MONTHS.map((m, i) => {
             // Don't show future months
             if (selectedYear === now.getFullYear() && i > now.getMonth()) return null
@@ -479,9 +527,10 @@ export default function AnalyticsSection({ supabase }) {
               </button>
             )
           })}
-        </div>
+        </div>}
       </div>
 
+      {!['overview', 'page-health'].includes(reportType) ? <ReportingPanel key={reportType} supabase={supabase} view={reportType} reports={connectedReports} onReport={storeReport} paidSource={activeSource} onSource={setActiveSource} /> : reportType === 'page-health' ? <PageSpeedPanel supabase={supabase} initialReport={pageHealthReport} onReport={setPageHealthReport} /> : <>
       {noData && (
         <div style={{ background: '#f9f9f9', border: '1px solid #e8e8e8', borderRadius: '8px', padding: '20px', textAlign: 'center', fontSize: '13px', color: '#aaa', fontFamily: ff, fontStyle: 'italic', marginBottom: '20px' }}>
           No data for {MONTHS_FULL[selectedMonth]} {selectedYear}.
@@ -548,6 +597,7 @@ export default function AnalyticsSection({ supabase }) {
           </>
         )}
       </SectionBox>
+      </>}
     </div>
   )
 }

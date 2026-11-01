@@ -28,7 +28,8 @@ export async function GET(request) {
   const ids = (orders || []).map(o => o.id)
   let byOrder = {}
   if (ids.length) {
-    const { data: items } = await db.from('order_items').select('*').in('order_id', ids)
+    const { data: items, error: itemError } = await db.from('order_items').select('*').in('order_id', ids)
+    if (itemError) return Response.json({ error: 'Order items could not be loaded.' }, { status: 503 })
     for (const it of items || []) (byOrder[it.order_id] ||= []).push(it)
   }
   const out = (orders || []).map(o => ({
@@ -38,7 +39,7 @@ export async function GET(request) {
     members: undefined,
     items: byOrder[o.id] || [],
   }))
-  return Response.json({ orders: out })
+  return Response.json({ orders: out }, { headers: { 'Cache-Control': 'private, no-store' } })
 }
 
 // POST → create a manual order (e.g. an order placed outside Stripe). Body:
@@ -124,13 +125,18 @@ export async function PATCH(request) {
   return Response.json({ order })
 }
 
-// DELETE → remove an order (?id=). Items cascade.
+// DELETE → remove manual orders only. Paid order records are idempotency keys.
 export async function DELETE(request) {
   const g = await gate(request); if (g.error) return g.error
   const { db } = g
   const id = new URL(request.url).searchParams.get('id')
   if (!id) return Response.json({ error: 'Missing id' }, { status: 400 })
-  const { error } = await db.from('orders').delete().eq('id', id)
+  const { data: existing, error: lookupError } = await db.from('orders').select('id,stripe_session_id').eq('id', id).maybeSingle()
+  if (lookupError) return Response.json({error:'Order could not be checked.'}, {status:503})
+  if (!existing) return Response.json({error:'Not found'}, {status:404})
+  if (existing.stripe_session_id) return Response.json({error:'Paid orders must be retained to prevent duplicate fulfillment. Cancel this order instead.'}, {status:409})
+  const { data: deleted, error } = await db.from('orders').delete().eq('id', id).is('stripe_session_id', null).select('id').maybeSingle()
   if (error) return Response.json({ error: error.message }, { status: 500 })
+  if (!deleted) return Response.json({error:'Order was not deleted.'}, {status:409})
   return Response.json({ ok: true })
 }

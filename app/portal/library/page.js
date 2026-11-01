@@ -20,6 +20,7 @@ function matches(item, q) {
 
 function Card({ a }) {
   const cover = a.cover_image_url
+  const description = a.subtitle || a.meta_description
   const paid = a.paywall_type === 'paywall'
   return (
     <a className="lib-card" href={a.slug ? `/portal/library/${a.slug}` : '#'}>
@@ -39,7 +40,7 @@ function Card({ a }) {
         <div className="card-type"><div className="type-dot td-essay" /><span className="tc-essay">{a.article_category || 'Article'}</span></div>
         <div className="card-title">{a.title}</div>
         {a.author_name && <div className="card-author">{a.author_name}</div>}
-        {a.excerpt && <div className="card-note">{a.excerpt}</div>}
+        {description && <div className="card-note">{description}</div>}
       </div>
     </a>
   )

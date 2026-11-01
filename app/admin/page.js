@@ -228,7 +228,8 @@ function FeedIcon({ type }) {
 // ── Dashboard Home ────────────────────────────────────────────
 function DashboardHome({ supabase, setActiveSection }) {
   const [subExpanded, setSubExpanded] = useState(false)
-  const [pvStats, setPvStats] = useState({ pageViews: null, sessions: null, topPath: null, topSource: null })
+  const [liveSessionsCount,setLiveSessionsCount] = useState(null)
+  const [pvStats, setPvStats] = useState({ pageViews: null, topPath: null, topSource: null })
   const [newsletterCount, setNewsletterCount] = useState(null)
   const [data, setData] = useState({
     recentArticles: [], scheduledArticles: [],
@@ -266,15 +267,13 @@ function DashboardHome({ supabase, setActiveSection }) {
 
       // Analytics strip
       if (pv.length) {
-        const fiveMinAgo = new Date(Date.now() - 300000).toISOString()
-        const sessions   = pv.filter(v => v.created_at > fiveMinAgo).length
         const pathCounts = {}
         pv.forEach(v => { if (v.page_path) pathCounts[v.page_path] = (pathCounts[v.page_path] || 0) + 1 })
         const topPath   = Object.entries(pathCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null
         const refCounts = {}
         pv.forEach(v => { if (v.referrer) { try { const h = new URL(v.referrer).hostname; refCounts[h] = (refCounts[h] || 0) + 1 } catch {} } })
         const topSource = Object.entries(refCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Direct'
-        setPvStats({ pageViews: pv.length, sessions, topPath, topSource })
+        setPvStats({ pageViews: pv.length, topPath, topSource })
       }
     })
 
@@ -359,7 +358,7 @@ function DashboardHome({ supabase, setActiveSection }) {
       </div>
 
       {/* ── 0. Live Visitors ── */}
-      <LiveVisitors supabase={supabase} />
+      <LiveVisitors supabase={supabase} onCount={setLiveSessionsCount} />
 
       {/* ── 1. Subscriber Overview (collapsible) ── */}
       <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', marginBottom: '14px', overflow: 'hidden' }}>
@@ -409,12 +408,15 @@ function DashboardHome({ supabase, setActiveSection }) {
       {/* ── 2. Analytics Strip ── */}
       <div style={{ display: 'flex', background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', marginBottom: '24px', overflow: 'hidden' }}>
         {[
-          { label: 'Active Sessions',   value: pvStats.sessions ?? '—', tag: pvStats.sessions !== null ? 'live' : null, tagColor: '#2d8f5a', tagBg: 'rgba(110,201,154,0.12)' },
+          { label: 'Active Sessions',   value: liveSessionsCount ?? '—', tag: liveSessionsCount !== null ? 'live' : null, tagColor: '#2d8f5a', tagBg: 'rgba(110,201,154,0.12)' },
           { label: 'Page Views Today',  value: pvStats.pageViews ?? '—' },
           { label: 'Top Article Today', value: pvStats.topPath ? pvStats.topPath.split('/').filter(Boolean).pop() || pvStats.topPath : '—' },
           { label: 'Top Traffic Source',value: pvStats.topSource || '—' },
         ].map((s, i) => (
-          <div key={s.label} style={{ flex: 1, padding: '14px 16px', borderRight: '1px solid #f5f5f5' }}>
+          <div key={s.label} role={s.label === 'Active Sessions' ? 'button' : undefined} tabIndex={s.label === 'Active Sessions' ? 0 : undefined} aria-label={s.label === 'Active Sessions' ? 'View active sessions' : undefined}
+            onClick={s.label === 'Active Sessions' ? () => window.dispatchEvent(new Event('parlor-live-sessions-open')) : undefined}
+            onKeyDown={e => { if (s.label === 'Active Sessions' && ['Enter',' '].includes(e.key)) { e.preventDefault(); window.dispatchEvent(new Event('parlor-live-sessions-open')) } }}
+            style={{ flex: 1, padding: '14px 16px', borderRight: '1px solid #f5f5f5', cursor: s.label === 'Active Sessions' ? 'pointer' : 'default' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
               <span style={{ fontSize: '20px', fontWeight: '700', color: '#0a0a0a', fontFamily: ffH, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.value}</span>
               {s.tag && <span style={{ fontSize: '9px', background: s.tagBg, color: s.tagColor, padding: '1px 5px', borderRadius: '3px', textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>{s.tag}</span>}

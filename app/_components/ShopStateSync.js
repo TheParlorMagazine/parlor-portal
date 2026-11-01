@@ -41,7 +41,7 @@ export default function ShopStateSync() {
         // Wishlist: union of product ids. Cart: keep local if this device has one,
         // otherwise adopt the saved cart.
         const mergedWish = [...new Set([...localWish, ...serverWish])]
-        const mergedCart = localCart.length ? localCart : serverCart
+        const mergedCart = localCart.length || localStorage.getItem('parlorCartInitialized') === '1' ? localCart : serverCart
         if (JSON.stringify(mergedWish) !== JSON.stringify(localWish)) writeWish(mergedWish)
         if (JSON.stringify(mergedCart) !== JSON.stringify(localCart)) writeCart(mergedCart)
       } catch {}

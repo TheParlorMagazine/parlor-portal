@@ -49,7 +49,10 @@ function SignupForm() {
       setPasswordSetup(true); setSuccess(true); return
     }
     if (error) throw error
-    if (data?.session) { router.push(returnTo); return }
+    if (data?.session) {
+      try { await fetch('/api/auth/onboarding', { method: 'POST', headers: { Authorization: `Bearer ${data.session.access_token}` } }) } catch {}
+      router.push(returnTo); return
+    }
     setSuccess(true)
   } catch (error) { setError(error.message || 'Could not create your account. Please try again.') }
   finally { setLoading(false) }

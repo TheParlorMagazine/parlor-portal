@@ -38,40 +38,14 @@ async function getCountry() {
   }
 }
 
-const PING_INTERVAL = 30000 // 30 seconds
 
 export default function PageViewTracker() {
   const pathname    = usePathname()
   const lastPath    = useRef(null)
-  const pingRef     = useRef(null)
   const visitorRef  = useRef(null)
   const sessionRef  = useRef(null)
   const countryRef  = useRef(null)
   const supabase    = createClient()
-
-  // Upsert active session (called on load + every 30s)
-  async function pingSession(page, country) {
-    if (!visitorRef.current) return
-    try {
-      await supabase.from('active_sessions').upsert({
-        visitor_id:   visitorRef.current,
-        session_id:   sessionRef.current,
-        current_page: page,
-        country:      country,
-        device_type:  getDeviceType(),
-        referrer:     document.referrer || null,
-        last_seen:    new Date().toISOString(),
-      }, { onConflict: 'visitor_id' })
-    } catch {}
-  }
-
-  // Remove session when visitor leaves
-  async function removeSession() {
-    if (!visitorRef.current) return
-    try {
-      await supabase.from('active_sessions').delete().eq('visitor_id', visitorRef.current)
-    } catch {}
-  }
 
   useEffect(() => {
     if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard') || pathname.startsWith('/portal')) return
@@ -98,28 +72,12 @@ export default function PageViewTracker() {
           })
         }
 
-        // Upsert active session immediately
-        await pingSession(pathname, countryRef.current)
-
-        // Keep session alive every 30s
-        clearInterval(pingRef.current)
-        pingRef.current = setInterval(() => {
-          pingSession(pathname, countryRef.current)
-        }, PING_INTERVAL)
 
       } catch {}
     }
 
     init()
 
-    // Clean up on unmount / tab close
-    const handleUnload = () => removeSession()
-    window.addEventListener('beforeunload', handleUnload)
-
-    return () => {
-      window.removeEventListener('beforeunload', handleUnload)
-      clearInterval(pingRef.current)
-    }
   }, [pathname])
 
   return null

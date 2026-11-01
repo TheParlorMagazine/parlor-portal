@@ -42,8 +42,8 @@ export async function POST(request) {
       html,
     })
 
-    if (error) {
-      return Response.json({ error: error.message }, { status: 502 })
+    if (error || !data?.id) {
+      return Response.json({ error: error?.message || 'Resend did not confirm acceptance of the test email.' }, { status: 502 })
     }
 
     return Response.json({ ok: true, id: data?.id })
