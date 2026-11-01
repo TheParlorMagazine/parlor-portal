@@ -74,6 +74,10 @@ export default function NewsletterTab({ supabase }) {
   const [sendReview, setSendReview] = useState(false)
   const [retryCampaignId, setRetryCampaignId] = useState(null)
   const [msg, setMsg]             = useState('')
+  const [testOpen, setTestOpen] = useState(false)
+  const [testEmail, setTestEmail] = useState('')
+  const [testSending, setTestSending] = useState(false)
+  const [testMessage, setTestMessage] = useState('')
 
   // Issue promo fields (saved to DB)
   const [intro, setIntro]             = useState('')
@@ -136,15 +140,17 @@ export default function NewsletterTab({ supabase }) {
     if (activeSupportBtn1)  params.set('supportBtn1',  activeSupportBtn1)
     if (activeSupportBtn2)  params.set('supportBtn2',  activeSupportBtn2)
     if (annOverride) {
-      if (annOverride.title) params.set('annTitle', annOverride.title)
-      if (annOverride.text)  params.set('annText',  annOverride.text)
-      if (annOverride.url)   params.set('annUrl',   annOverride.url)
-      if (annOverride.img)   params.set('annImg',   annOverride.img)
-      if (annOverride.btn)   params.set('annBtn',   annOverride.btn)
+      if (annOverride.title != null) params.set('annTitle', annOverride.title)
+      if (annOverride.text != null)  params.set('annText',  annOverride.text)
+      if (annOverride.url != null)   params.set('annUrl',   annOverride.url)
+      if (annOverride.img != null)   params.set('annImg',   annOverride.img)
+      if (annOverride.btn != null)   params.set('annBtn',   annOverride.btn)
     }
+    let preview = null
     try {
       const res = await fetch(`/api/admin/newsletter/preview?${params}`, { headers: { Authorization: `Bearer ${await token()}` } })
       const d = await res.json()
+      preview = res.ok ? d : null
       setData(res.ok ? d : { error: d.error })
       if (res.ok) {
         setIntro(d.issueIntro || '')
@@ -167,6 +173,7 @@ export default function NewsletterTab({ supabase }) {
       }
     } catch { setData({ error: 'Could not load the preview.' }) }
     setLoading(false)
+    return preview
   }, [token, sections, supportCopy, supportTitle, supportBtn1, supportBtn2])
 
   // Keep loadRef current so the announcement debounce always uses the latest load (with current sections)
@@ -237,8 +244,30 @@ export default function NewsletterTab({ supabase }) {
     if (key === 'shopAd' && opening) loadShopProducts()
   }
 
+  async function sendTest(event) {
+    event.preventDefault()
+    if (testSending || sending || !testEmail.trim()) return
+    setTestSending(true); setTestMessage('')
+    try {
+      // Render the current controls through the same live preview, including
+      // edits whose debounced preview refresh has not run yet.
+      const preview = await load(sections, supportCopy, { title: announcementTitle, text: announcement, url: announcementUrl, img: announcementImg, btn: announcementBtn }, supportTitle, supportBtn1, supportBtn2)
+      if (!preview?.html || !preview.subject || preview.empty) throw new Error('No newsletter preview is available to test. Refresh the newsletter and try again.')
+      const accessToken = await token()
+      if (!accessToken) throw new Error('Please sign in again.')
+      const response = await fetch('/api/admin/campaigns/send-test', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ to: testEmail.trim(), subject: preview.subject, html: preview.html }),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.ok || !result.id) throw new Error(result.error || 'Could not confirm the test email was accepted.')
+      setTestMessage(`Test accepted by Resend for ${testEmail.trim()}. Check that inbox; delivery is not yet confirmed.`)
+    } catch (error) { setTestMessage(error.message || 'Could not send the test email.') }
+    finally { setTestSending(false) }
+  }
+
   async function sendNow() {
-    if (sendReview || sending) return
+    if (sendReview || sending || testSending) return
     if (!(await confirmDialog(retryCampaignId ? 'Retry the saved newsletter? This uses the version saved with the failed attempt.' : `Send the newsletter to ${data?.recipientCount ?? 'all'} subscribers now?`))) return
     setSending(true); setMsg('')
     try {
@@ -372,13 +401,29 @@ export default function NewsletterTab({ supabase }) {
             This is a <strong>living template</strong> — it always shows your latest 2 articles, the featured event, and upcoming events. It goes out <strong>every other week</strong>, alternating with the Bi-weekly Digest; you'll get a nudge to review &amp; send. You can also send it now.
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', maxWidth: '100%' }}>
           <button onClick={() => load()} disabled={loading} style={{ padding: '8px 16px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '7px', color: '#555', fontSize: '13px', cursor: 'pointer', fontFamily: ff }}>↻ Refresh</button>
-          <button onClick={sendNow} disabled={sending || loading || data?.empty || sendReview} title={data?.empty ? 'No content to send yet' : ''} style={{ padding: '8px 18px', background: (sending || data?.empty) ? '#ccc' : PINK, border: 'none', borderRadius: '7px', color: '#0a0a0a', fontSize: '13px', fontWeight: 600, cursor: (sending || data?.empty) ? 'default' : 'pointer', fontFamily: ff }}>
+          <button onClick={() => { setTestOpen(true); setTestMessage('') }} disabled={sending || testSending || loading || !data?.html || data?.empty || !!data?.error} style={{ padding: '8px 16px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: 7, color: DP, fontFamily: ff, cursor: 'pointer' }}>Send Test</button>
+          <button onClick={sendNow} disabled={sending || testSending || loading || data?.empty || sendReview} title={data?.empty ? 'No content to send yet' : ''} style={{ padding: '8px 18px', background: (sending || data?.empty) ? '#ccc' : PINK, border: 'none', borderRadius: '7px', color: '#0a0a0a', fontSize: '13px', fontWeight: 600, cursor: (sending || data?.empty) ? 'default' : 'pointer', fontFamily: ff }}>
             {sending ? 'Sending…' : sendReview ? 'Review required' : retryCampaignId ? 'Retry saved newsletter' : 'Send to subscribers now'}
           </button>
         </div>
       </div>
+
+      {testOpen && <div role="dialog" aria-modal="true" aria-labelledby="newsletter-test-title" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <form onSubmit={sendTest} style={{ background: '#fff', borderRadius: 12, padding: 24, width: 'min(400px, 100%)', boxSizing: 'border-box' }}>
+          <h3 id="newsletter-test-title" style={{ marginTop: 0 }}>Send Test Email</h3>
+          <p style={{ fontSize: 13, color: '#666' }}>Only this address will receive the current newsletter. The subject starts with [TEST]. This does not send to subscribers or change the newsletter schedule. The test’s unsubscribe link is inactive.</p>
+          <label style={{ fontSize: 13 }}>Test recipient
+            <input autoFocus type="email" required maxLength={254} disabled={testSending} value={testEmail} onChange={e => setTestEmail(e.target.value)} placeholder="you@example.com" style={{ ...inputSt, marginTop: 6 }} />
+          </label>
+          {testMessage && <p role="status" style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{testMessage}</p>}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 18 }}>
+            <button type="button" disabled={testSending} onClick={() => setTestOpen(false)} style={{ padding: '8px 14px', border: '1px solid #ddd', background: '#fff', borderRadius: 6 }}>Close</button>
+            <button type="submit" disabled={testSending || sending || !testEmail.trim()} style={{ padding: '8px 14px', border: 0, background: PINK, borderRadius: 6 }}>{testSending ? 'Sending test…' : 'Send Test'}</button>
+          </div>
+        </form>
+      </div>}
 
       {/* Summary chips */}
       {data && !data.error && (

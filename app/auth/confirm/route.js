@@ -53,7 +53,8 @@ export async function GET(request) {
 
           if (isAfterOnboardingLaunch(data.user)) {
             await sendNewMemberWelcome(data.user, {
-              newRegistration: true
+              newRegistration: true,
+              verifiedEmailConfirmation: true
             })
           }
         } catch (onboardingError) {

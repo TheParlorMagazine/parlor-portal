@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import SubscriberRecentActivity from './SubscriberRecentActivity'
 import { subscriberStatus } from '../../../lib/subscriberStatus'
 import { isPaidPlan } from '../../../lib/plans'
+import { hasWelcomeBeenSent } from '../../../lib/onboardingStatus'
 
 // Match a member's plan against the filter dropdown. Plan values are real names
 // ("Reader's Circle", "Printing Press") — not the literal "paid"/"print" options.
@@ -62,6 +63,26 @@ function SubscriberProfile({ member, onClose, onUpdate, supabase }) {
   const [notes, setNotes] = useState(member.notes || '')
   const [savingNote, setSavingNote] = useState(false)
   const [timeline, setTimeline] = useState([])
+  const [sendingWelcome, setSendingWelcome] = useState(false)
+  const [welcomeNotice, setWelcomeNotice] = useState('')
+  const [welcomeAccepted, setWelcomeAccepted] = useState(false)
+
+  async function recoverWelcome() {
+    if (!window.confirm('Send a welcome email to this subscriber? Check Resend first to confirm no welcome email was already sent.')) return
+    setSendingWelcome(true); setWelcomeNotice('')
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData?.session?.access_token
+      if (!token) throw new Error('Sign in again to send a welcome email.')
+      const response = await fetch('/api/admin/subscribers/onboarding', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ memberId: member.id }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not send the welcome email.')
+      setWelcomeAccepted(true)
+      setWelcomeNotice(result.sent ? 'Welcome email accepted by Resend and recorded. Delivery can be checked in Resend.' : 'A welcome email is already recorded. No new email was sent.')
+      onUpdate({ ...member, onboarding_email_sent: true, onboarding_sent: true, ...(result.onboardingSentAt ? { onboarding_sent_at: result.onboardingSentAt } : {}) })
+    } catch (error) { setWelcomeNotice(error.message) }
+    finally { setSendingWelcome(false) }
+  }
 
   useEffect(() => {
     // Build synthetic timeline from available data
@@ -86,7 +107,7 @@ function SubscriberProfile({ member, onClose, onUpdate, supabase }) {
           })
         }
       })
-  }, [member.id])
+  }, [member.id, member.onboarding_sent_at])
 
   async function saveNote() {
     if (!note.trim()) return
@@ -166,7 +187,7 @@ function SubscriberProfile({ member, onClose, onUpdate, supabase }) {
                   { label: 'Plan', value: plan || 'Free' },
                   { label: 'Status', value: status },
                   { label: 'Last active', value: member.last_active || member.last_sign_in_at ? new Date(member.last_active || member.last_sign_in_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' },
-                  { label: 'Onboarding sent', value: member.onboarding_sent ? 'Yes' : member.onboarding_sent_at ? 'Yes' : '—' },
+                  { label: 'Onboarding sent', value: hasWelcomeBeenSent(member) ? 'Yes' : 'Not recorded' },
                   { label: 'Last page visited', value: member.last_page || member.last_visited_page || '—' },
                 ].map(({ label, value }) => (
                   <div key={label} style={{ background: '#f9f9f9', borderRadius: '7px', padding: '12px 14px' }}>
@@ -175,6 +196,9 @@ function SubscriberProfile({ member, onClose, onUpdate, supabase }) {
                   </div>
                 ))}
               </div>
+
+              {!hasWelcomeBeenSent(member) && !welcomeAccepted && <button type="button" disabled={sendingWelcome} onClick={recoverWelcome} style={{ ...inputStyle, marginBottom: 12, cursor: 'pointer' }}>{sendingWelcome ? 'Sending welcome…' : 'Send missed welcome email'}</button>}
+              {welcomeNotice && <p role="status" style={{ fontSize: 13 }}>{welcomeNotice}</p>}
 
               {/* Actions */}
               <div style={{ marginBottom: '24px' }}>
@@ -348,7 +372,7 @@ export default function SubscribersSection({ supabase }) {
         subscriberStatus(m),
         m.joined_at ? new Date(m.joined_at).toLocaleDateString('en-US') : '',
         m.last_active ? new Date(m.last_active).toLocaleDateString('en-US') : '',
-        m.onboarding_sent || m.onboarding_sent_at ? 'Yes' : 'No',
+        hasWelcomeBeenSent(m) ? 'Yes' : 'No',
       ]),
     ]
     const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -529,7 +553,7 @@ export default function SubscribersSection({ supabase }) {
                         : <span style={{ color: '#bbb' }}>—</span>}
                     </td>
                     <td style={{ ...tdStyle, fontSize: '12px' }}>
-                      {m.onboarding_sent || m.onboarding_sent_at
+                      {hasWelcomeBeenSent(m)
                         ? <span style={{ color: '#2d8f5a' }}>✓ Sent</span>
                         : <span style={{ color: '#bbb' }}>—</span>}
                     </td>
