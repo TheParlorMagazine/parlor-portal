@@ -55,3 +55,16 @@ test('newsletter image destinations support full URLs and website paths without 
   const {html}=module.buildNewsletter({shopProducts:[{id:'trio',name:'Print Trio',images:['https://res.cloudinary.com/demo/image/upload/trio.png'],external_url:'javascript:alert(1)'}]})
   assert.match(html,/href="https:\/\/theparlormagazine.com\/shop\/trio"/);assert.doesNotMatch(html,/javascript:/)
 })
+
+test('announcement transparency matches its pink block and links only when a destination is provided',async()=>{
+  const module=await newsletter(),original='https://res.cloudinary.com/demo/image/upload/v123/trick-or-treat.png'
+  for(const url of ['/trick-or-treat','']){
+    const issue={id:'issue',newsletter_announcement_title:'Trick or Treat at The Parlor',newsletter_announcement_img:original,newsletter_announcement_url:url}
+    const {html}=module.buildNewsletter({issue,sections:{issuPromo:false}})
+    assert.match(html,/src="https:\/\/res.cloudinary.com\/demo\/image\/upload\/b_rgb:fdf0f3,f_jpg\/v123\/trick-or-treat.png"/)
+    assert.match(html,/background-color:#fdf0f3;" alt="Trick or Treat at The Parlor"/)
+    if(url)assert.match(html,/<a href="https:\/\/theparlormagazine.com\/trick-or-treat"[^>]*><img/)
+    else assert.doesNotMatch(html,/<a[^>]*><img[^>]*class="ann-img"/)
+    assert.equal(issue.newsletter_announcement_img,original)
+  }
+})
