@@ -268,7 +268,7 @@ export default function NewsletterTab({ supabase }) {
 
   async function sendNow() {
     if (sendReview || sending || testSending) return
-    if (!(await confirmDialog(retryCampaignId ? 'Retry the saved newsletter? This uses the version saved with the failed attempt.' : `Send the newsletter to ${data?.recipientCount ?? 'all'} subscribers now?`))) return
+    if (!(await confirmDialog(retryCampaignId ? 'Retry the saved newsletter? This uses the version saved with the failed attempt.' : `Send the newsletter to ${data?.recipientCount ?? 'all'} active subscribers now?`))) return
     setSending(true); setMsg('')
     try {
       const res = await fetch('/api/admin/newsletter/send', {
@@ -428,7 +428,7 @@ export default function NewsletterTab({ supabase }) {
       {/* Summary chips */}
       {data && !data.error && (
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14, fontSize: '12.5px', color: '#555' }}>
-          <span style={{ ...card, padding: '6px 12px' }}><strong>{data.recipientCount ?? '—'}</strong> subscribers</span>
+          <span style={{ ...card, padding: '6px 12px' }}><strong>{data.recipientCount ?? '—'}</strong> active subscribers</span>
           {data.issueTitle && <span style={{ ...card, padding: '6px 12px' }}>Issue: <strong>{data.issueTitle}</strong> ({data.issueArticleCount})</span>}
           <span style={{ ...card, padding: '6px 12px' }}><strong>{data.articleCount}</strong> articles total</span>
           <span style={{ ...card, padding: '6px 12px' }}>{data.featured ? `Featured: ${data.featuredTitle}` : 'No featured event'}</span>
