@@ -74,6 +74,7 @@ export default function SiteFooter() {
           <span>© {new Date().getFullYear()} The Parlor Magazine. All rights reserved.</span>
           <span style={{display:'flex',gap:'20px'}}>
             <a href="/privacy" className="footer-link" style={{marginBottom:0}}>Privacy</a>
+            <button type="button" data-cookie-preferences className="footer-link" style={{marginBottom:0,padding:0,border:0,background:"none",cursor:"pointer"}}>Cookie preferences</button>
             <a href="/terms" className="footer-link" style={{marginBottom:0}}>Terms</a>
           </span>
         </div>

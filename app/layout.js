@@ -1,6 +1,4 @@
-import LiveSessionTracker from './_components/LiveSessionTracker'
-import SubscriberSiteTracker from './_components/SubscriberSiteTracker'
-import PageViewTracker from './_components/PageViewTracker'
+import ConsentAnalytics from './_components/ConsentAnalytics'
 import RecoveryRedirect from './_components/RecoveryRedirect'
 import CartDrawer from './_components/CartDrawer'
 import ShopStateSync from './_components/ShopStateSync'
@@ -31,9 +29,7 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <RecoveryRedirect />
-        <PageViewTracker />
-        <LiveSessionTracker />
-        <SubscriberSiteTracker />
+        <ConsentAnalytics />
         {children}
         <ShopStateSync />
         <CartDrawer />

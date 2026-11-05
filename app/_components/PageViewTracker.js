@@ -50,12 +50,15 @@ export default function PageViewTracker() {
   useEffect(() => {
     if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard') || pathname.startsWith('/portal')) return
 
+    let live=true
     async function init() {
+      if(window.ParlorConsent?.analytics()!==true)return
       try {
         visitorRef.current = getOrCreate('parlor_visitor_id', uuid)
         sessionRef.current = getOrCreate('parlor_session_id', uuid)
         countryRef.current = await getCountry()
 
+        if(!live || window.ParlorConsent?.analytics()!==true)return
         // Log page view
         if (pathname !== lastPath.current) {
           lastPath.current = pathname
@@ -77,6 +80,7 @@ export default function PageViewTracker() {
     }
 
     init()
+    return()=>{live=false}
 
   }, [pathname])
 

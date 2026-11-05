@@ -4,7 +4,7 @@
   window.__parlorLivePresence=true
   const instanceId=crypto.randomUUID()
   let token=null,busy=false,queued=false,generation=0
-  const optedOut=()=>navigator.doNotTrack==='1' || window.doNotTrack==='1' || navigator.globalPrivacyControl
+  const optedOut=()=>window.ParlorConsent?.analytics()!==true || navigator.doNotTrack==='1' || window.doNotTrack==='1' || navigator.globalPrivacyControl
   const allowed=()=>!/^\/(?:admin|dashboard|api)(?:\/|$)/i.test(location.pathname)
   const post=body=>fetch('/api/live-session',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
   function end(){
@@ -22,6 +22,8 @@
     }catch{}
     finally{busy=false;if(queued){queued=false;queueMicrotask(ping)}}
   }
+  window.addEventListener('parlor-consent-change',ping)
+  window.addEventListener('parlor-consent-ready',ping)
   window.addEventListener('parlor-live-route',ping)
   window.addEventListener('parlor-live-auth',()=>setTimeout(ping,0))
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')ping()})

@@ -11,7 +11,7 @@ export default function SubscriberSiteTracker(){
     if(!path)return
     const sb=createClient();let live=true,session=null
     function send(type,target=null){
-      if(!session?.access_token || !live)return
+      if(!session?.access_token || !live || window.ParlorConsent?.analytics()!==true)return
       try{fetch('/api/member-activity',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:JSON.stringify({event_id:crypto.randomUUID(),type,path,target})}).catch(()=>{})}catch{}
     }
     function identify(next){
