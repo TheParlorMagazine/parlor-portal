@@ -1,3 +1,5 @@
+import Script from 'next/script'
+import { googleConsentBootstrap } from '../lib/googleConsent'
 import ConsentAnalytics from './_components/ConsentAnalytics'
 import RecoveryRedirect from './_components/RecoveryRedirect'
 import CartDrawer from './_components/CartDrawer'
@@ -19,6 +21,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
+        <Script id="parlor-google-consent-defaults" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: googleConsentBootstrap }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Image hosts — open the connection early so covers/hero load sooner. */}
