@@ -20,7 +20,6 @@ export default function ReportingPanel({ supabase, view, reports, onReport, paid
   const [connections, setConnections] = useState([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [developerEmail,setDeveloperEmail] = useState('')
   const [registered,setRegistered] = useState(false)
   const [registrationNeeded,setRegistrationNeeded] = useState(false)
   const today = new Date().toISOString().slice(0, 10)
@@ -60,7 +59,11 @@ export default function ReportingPanel({ supabase, view, reports, onReport, paid
     finally { setBusy(false) }
   }
   async function register(event) {
-    event.preventDefault();setBusy(true);setError('')
+    event.preventDefault()
+    // Browser autofill/password managers may not fire React's change event.
+    // Read the displayed field before disabling the form for submission.
+    const developerEmail=String(new FormData(event.currentTarget).get('developerEmail') || '').trim()
+    setBusy(true);setError('')
     try {
       const response=await fetch('/api/admin/reporting/merchant-registration',{method:'POST',headers:await headers(),body:JSON.stringify({developerEmail,confirm:true})})
       const data=await response.json()
@@ -95,7 +98,7 @@ export default function ReportingPanel({ supabase, view, reports, onReport, paid
       {source==='merchant' && registrationNeeded && <form onSubmit={register} style={{marginTop:18,padding:16,border:'1px solid #f0e5e8',borderRadius:7,background:'#faf8f8'}}>
         <h3 style={{fontFamily:headingFont,margin:'0 0 8px',fontSize:16}}>Register Merchant API project</h3>
         <p style={paragraph}>This links the Cloud project behind your saved reporting credentials to the configured Merchant Center account. Google adds the contact email below for API notifications and may grant it API developer access. Use a human Google Account email you control.</p>
-        <label style={{...field,maxWidth:360,marginTop:12}}><span style={label}>Developer contact email</span><input type="email" required maxLength={254} value={developerEmail} disabled={busy} onChange={e=>setDeveloperEmail(e.target.value)} style={control}/></label>
+        <label style={{...field,maxWidth:360,marginTop:12}}><span style={label}>Developer contact email</span><input type="email" name="developerEmail" autoComplete="email" required maxLength={254} disabled={busy} style={control}/></label>
         <button type="submit" disabled={busy} style={{...control,width:'auto',marginTop:12,background:'#0a0a0a',color:'#fff',cursor:'pointer'}}>{busy?'Registering…':'Register project with Merchant Center'}</button>
       </form>}
       {source==='merchant' && registered && <p role="status" style={{...paragraph,marginTop:14,color:'#2d8f5a'}}>Project registration confirmed. Click Load report to check reporting access.</p>}
