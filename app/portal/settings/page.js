@@ -1,4 +1,5 @@
 'use client'
+import { trackConversion } from '../../../lib/trackConversion'
 
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
@@ -172,11 +173,16 @@ function Settings() {
     const next = !news
     setNews(next)
     const { data: { session } } = await supabase.auth.getSession()
-    await fetch('/api/portal/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ newsletter_subscribed: next }),
-    }).catch(() => setNews(!next))
+    try {
+      const response = await fetch('/api/portal/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ newsletter_subscribed: next }),
+      })
+      if (!response.ok) throw new Error('Subscription was not saved')
+      const result = await response.json()
+      if (next && result.member?.newsletter_subscribed === true) trackConversion({key:`newsletter:${session.user.id}`,name:'newsletter_signup',params:{method:'account_settings'}})
+    } catch { setNews(!next) }
   }
 
   return (

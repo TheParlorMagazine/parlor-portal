@@ -29,6 +29,7 @@ export async function POST(request) {
     const success = new URL(successUrl || '/portal/subscriptions', origin)
     const cancel = new URL(cancelUrl || '/plans', origin)
     if (success.origin !== origin || cancel.origin !== origin) return Response.json({ error: 'Checkout must return to this site.' }, { status: 400 })
+    success.searchParams.set('checkout_session_id', '{CHECKOUT_SESSION_ID}')
     const db = serviceClient()
     const { data: member, error: memberError } = await db.from('members').select('id').eq('id', user.id).single()
     if (memberError || !member) return Response.json({ error: 'Your account is not ready for checkout. Please sign in again or contact us.' }, { status: 409 })
@@ -42,7 +43,7 @@ export async function POST(request) {
     const params = {
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: success.toString(),
+      success_url: success.toString().replace('%7BCHECKOUT_SESSION_ID%7D','{CHECKOUT_SESSION_ID}'),
       cancel_url: cancel.toString(),
       client_reference_id: user.id,
       customer: customerId,

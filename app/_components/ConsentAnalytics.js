@@ -1,7 +1,8 @@
 'use client'
 import Script from 'next/script'
-import { useEffect,useRef,useState } from 'react'
+import { Suspense,useEffect,useRef,useState } from 'react'
 import { usePathname } from 'next/navigation'
+import GoogleConversionTracker from './GoogleConversionTracker'
 import PageViewTracker from './PageViewTracker'
 import LiveSessionTracker from './LiveSessionTracker'
 import SubscriberSiteTracker from './SubscriberSiteTracker'
@@ -15,7 +16,7 @@ export default function ConsentAnalytics(){
   useEffect(()=>{const sync=()=>window.ParlorConsent?.setPage(pathname);sync();window.addEventListener('parlor-consent-ready',sync);return()=>window.removeEventListener('parlor-consent-ready',sync)},[pathname])
   useEffect(()=>{const refresh=()=>{const accepted=window.ParlorConsent?.analytics()===true;setAllowed(accepted);if(window.__parlorGoogleConsent && consent.current!==(accepted?'granted':'denied')){consent.current=accepted?'granted':'denied';window.gtag('consent','update',{analytics_storage:consent.current,ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied'})}};refresh();window.addEventListener('parlor-consent-ready',refresh);window.addEventListener('parlor-consent-change',refresh);return()=>{window.removeEventListener('parlor-consent-ready',refresh);window.removeEventListener('parlor-consent-change',refresh)}},[])
   useEffect(()=>{
-    if(!publicPage)return
+    if(/^\/(?:admin|dashboard)(?:\/|$)/i.test(pathname)||(!publicPage&&!allowed))return
     const analyticsId=/^G-[A-Z0-9]+$/.test(id)?id:null
     if(navigator.doNotTrack==='1'||window.doNotTrack==='1'||navigator.globalPrivacyControl)return
     initializeGoogleConsent(window)
@@ -26,8 +27,8 @@ export default function ConsentAnalytics(){
     window.dataLayer=window.dataLayer||[]
     window.gtag=window.gtag||function(){window.dataLayer.push(arguments)}
     // Bootstrap with the Ads ID so an unavailable GA4 stream cannot break both tags.
-    if(!loaded.current){loaded.current=true;window.gtag('js',new Date());window.gtag('config',adsId,{page_location:location.origin+pathname,page_referrer:'',allow_ad_personalization_signals:false});if(analyticsId)window.gtag('config',analyticsId,{send_page_view:false,page_location:location.origin+pathname,page_referrer:'',allow_google_signals:false,allow_ad_personalization_signals:false});const script=document.createElement('script');script.async=true;script.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(adsId);script.id='parlor-ga4';document.head.append(script)}
-    if(analyticsId&&last.current!==pathname){last.current=pathname;window.gtag('event','page_view',{send_to:id,page_location:location.origin+pathname,page_referrer:'',page_title:document.title})}
+    if(!loaded.current){loaded.current=true;window.gtag('js',new Date());window.gtag('config',adsId,{send_page_view:publicPage,page_location:location.origin+(publicPage?pathname:'/'),page_referrer:'',allow_ad_personalization_signals:false});if(analyticsId)window.gtag('config',analyticsId,{send_page_view:false,page_location:location.origin+pathname,page_referrer:'',allow_google_signals:false,allow_ad_personalization_signals:false});const script=document.createElement('script');script.async=true;script.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(adsId);script.id='parlor-ga4';document.head.append(script)}
+    if(publicPage&&analyticsId&&last.current!==pathname){last.current=pathname;window.gtag('event','page_view',{send_to:id,page_location:location.origin+pathname,page_referrer:'',page_title:document.title})}
   },[allowed,pathname,id,publicPage])
-  return <><Script src="/cookie-consent.js" strategy="afterInteractive" />{allowed&&<><PageViewTracker/><LiveSessionTracker/><SubscriberSiteTracker/></>}</>
+  return <><Script src="/cookie-consent.js" strategy="afterInteractive" />{allowed&&<><Suspense fallback={null}><GoogleConversionTracker/></Suspense><PageViewTracker/><LiveSessionTracker/><SubscriberSiteTracker/></>}</>
 }
