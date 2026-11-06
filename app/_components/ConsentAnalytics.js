@@ -11,6 +11,7 @@ export default function ConsentAnalytics(){
   const id=process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ''
   const adsId='AW-17582286057'
   const publicPage=!/^\/(?:admin|dashboard|auth|login|signup|logout|reset-password|forgot-password|checkout|portal)(?:\/|$)/i.test(pathname)
+  useEffect(()=>{const sync=()=>window.ParlorConsent?.setPage(pathname);sync();window.addEventListener('parlor-consent-ready',sync);return()=>window.removeEventListener('parlor-consent-ready',sync)},[pathname])
   useEffect(()=>{const refresh=()=>setAllowed(window.ParlorConsent?.analytics()===true);refresh();window.addEventListener('parlor-consent-ready',refresh);window.addEventListener('parlor-consent-change',refresh);return()=>{window.removeEventListener('parlor-consent-ready',refresh);window.removeEventListener('parlor-consent-change',refresh)}},[])
   useEffect(()=>{
     if(!allowed||!publicPage)return
