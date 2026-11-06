@@ -20,6 +20,9 @@ export default function ReportingPanel({ supabase, view, reports, onReport, paid
   const [connections, setConnections] = useState([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [developerEmail,setDeveloperEmail] = useState('')
+  const [registered,setRegistered] = useState(false)
+  const [registrationNeeded,setRegistrationNeeded] = useState(false)
   const today = new Date().toISOString().slice(0, 10)
   const [start, setStart] = useState(today.slice(0, 8) + '01')
   const [end, setEnd] = useState(today)
@@ -29,7 +32,7 @@ export default function ReportingPanel({ supabase, view, reports, onReport, paid
     if (!data?.session?.access_token) throw Error('Sign in again to view reports.')
     return { Authorization: `Bearer ${data.session.access_token}`, 'Content-Type': 'application/json' }
   }
-  useEffect(() => { setError('') }, [source])
+  useEffect(() => { setError('');setRegistered(false);setRegistrationNeeded(false) }, [source])
   useEffect(() => {
     let active = true
     ;(async () => {
@@ -50,10 +53,20 @@ export default function ReportingPanel({ supabase, view, reports, onReport, paid
       const response = await fetch('/api/admin/reporting', { method: 'POST', headers: await headers(), body: JSON.stringify({ source: requested, start, end }) })
       let data
       try { data = await response.json() } catch { throw Error('The report did not finish. Try again later.') }
-      if (!response.ok) throw Error(data.error || 'Could not load the report.')
+      if (!response.ok) {if(requested==='merchant' && /requires Merchant API developer registration/.test(data.error || ''))setRegistrationNeeded(true);throw Error(data.error || 'Could not load the report.')}
+      setRegistrationNeeded(false)
       onReport(data.report)
     } catch (err) { setError(`${names[requested]}: ${err.message}`) }
     finally { setBusy(false) }
+  }
+  async function register(event) {
+    event.preventDefault();setBusy(true);setError('')
+    try {
+      const response=await fetch('/api/admin/reporting/merchant-registration',{method:'POST',headers:await headers(),body:JSON.stringify({developerEmail,confirm:true})})
+      const data=await response.json()
+      if(!response.ok || !data.registered)throw Error(data.error || 'Registration could not be confirmed. Retry the report before attempting registration again.')
+      setRegistered(true);setRegistrationNeeded(false)
+    } catch(err){setError(err.message)} finally{setBusy(false)}
   }
   return <section aria-labelledby="connected-report-heading" style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, minWidth: 0, fontFamily: font, fontSize: 13, lineHeight: 1.6, color: '#555', overflow: 'hidden' }}>
     <div style={{ padding: '16px 18px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
@@ -79,6 +92,13 @@ export default function ReportingPanel({ supabase, view, reports, onReport, paid
         <button type="submit" disabled={busy || !connection?.configured} style={{ height: 38, padding: '8px 16px', border: '1px solid', borderColor: busy || !connection?.configured ? '#e8e8e8' : '#0a0a0a', borderRadius: 6, background: busy || !connection?.configured ? '#f5f5f5' : '#0a0a0a', color: busy || !connection?.configured ? '#aaa' : '#fff', fontFamily: font, fontSize: 13, fontWeight: 500, lineHeight: '20px', cursor: busy || !connection?.configured ? 'default' : 'pointer' }}>{busy ? 'Loading…' : 'Load report'}</button>
       </form>
       {connection?.configured && !report && !error && <p style={{ ...paragraph, fontSize: 12, marginTop: 12 }}>Load a report to verify account access and see results for your selected dates.</p>}
+      {source==='merchant' && registrationNeeded && <form onSubmit={register} style={{marginTop:18,padding:16,border:'1px solid #f0e5e8',borderRadius:7,background:'#faf8f8'}}>
+        <h3 style={{fontFamily:headingFont,margin:'0 0 8px',fontSize:16}}>Register Merchant API project</h3>
+        <p style={paragraph}>This links the Cloud project behind your saved reporting credentials to the configured Merchant Center account. Google adds the contact email below for API notifications and may grant it API developer access. Use a human Google Account email you control.</p>
+        <label style={{...field,maxWidth:360,marginTop:12}}><span style={label}>Developer contact email</span><input type="email" required maxLength={254} value={developerEmail} disabled={busy} onChange={e=>setDeveloperEmail(e.target.value)} style={control}/></label>
+        <button type="submit" disabled={busy} style={{...control,width:'auto',marginTop:12,background:'#0a0a0a',color:'#fff',cursor:'pointer'}}>{busy?'Registering…':'Register project with Merchant Center'}</button>
+      </form>}
+      {source==='merchant' && registered && <p role="status" style={{...paragraph,marginTop:14,color:'#2d8f5a'}}>Project registration confirmed. Click Load report to check reporting access.</p>}
       {error && <p role="alert" style={{ ...paragraph, color: '#a02035', marginTop: 14 }}>{error}</p>}
       {report && <div style={{ marginTop: 20, minWidth: 0 }}>
         <p style={{ ...paragraph, fontSize: 12 }}>{report.name} · {report.start} – {report.end} · retrieved {new Date(report.fetchedAt).toLocaleString()}</p>

@@ -7,7 +7,7 @@ let modules
 async function load() {
   if (!modules) modules = (async () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'reporting-')), result = {}
-    for (const [name, entry] of Object.entries({ helper: 'lib/reporting.js', route: 'app/api/admin/reporting/route.js', csv: 'lib/analyticsExport.js' })) {
+    for (const [name, entry] of Object.entries({ helper: 'lib/reporting.js', route: 'app/api/admin/reporting/route.js', registration: 'app/api/admin/reporting/merchant-registration/route.js', csv: 'lib/analyticsExport.js' })) {
       const file = path.join(directory, name + '.cjs')
       await build({ entryPoints: [entry], outfile: file, bundle: true, platform: 'node', format: 'cjs', plugins: [{ name: 'auth', setup(b) { b.onResolve({ filter: /lib\/apiAuth$/ }, a => ({ path: a.path, namespace: 'mock' })); b.onLoad({ filter: /.*/, namespace: 'mock' }, () => ({ contents: 'export const requireUser=async()=>global.reportingUser;export const serviceClient=()=>({});export const memberOf=async()=>({role:global.reportingRole});' })) } }] })
       result[name] = require(file)
@@ -150,5 +150,15 @@ test('Merchant access failures identify setup causes without echoing private Goo
  global.fetch=async url=>url.includes('oauth2')?Response.json({access_token:'private-token'}):Response.json({error:{message,details:[{reason,metadata:{token:'private-token',email:'private@example.test'}}]}},{status:403})
  await assert.rejects(h.loadReport('merchant','2026-01-01','2026-01-31'),e=>{assert.match(e.message,expected);assert.doesNotMatch(e.message,/private-token|private@example|5666998773/);return true})
  }global.fetch=async url=>url.includes('oauth2')?Response.json({access_token:'private-token'}):new Response('private-token',{status:403});await assert.rejects(h.loadReport('merchant','2026-01-01','2026-01-31'),/Merchant API denied access/)
+ }finally{global.fetch=previous;for(const k of Object.keys(process.env))if(!(k in oldEnv))delete process.env[k];Object.assign(process.env,oldEnv)}
+})
+
+test('Merchant registration is admin-only, requires explicit confirmation and never runs on report reads',async()=>{
+ const{registration:r}=await load(),previous=global.fetch;let calls=0;global.fetch=async()=>{calls++;throw Error('Must not reach Google')}
+ try{for(const[user,role,status]of[[null,'admin',401],[{id:'reader'},'member',403],[{id:'admin'},'admin',400]]){global.reportingUser=user;global.reportingRole=role;const response=await r.POST(post({developerEmail:'owner@example.test'}));assert.equal(response.status,status);assert.match(response.headers.get('cache-control'),/no-store/)}assert.equal(calls,0)}finally{global.fetch=previous}
+})
+test('Merchant registration uses saved project credentials and account ID, with a human contact and sanitized success',async()=>{
+ const{helper:h,registration:r}=await load(),previous=global.fetch,oldEnv={...process.env},calls=[];const{privateKey}=generateKeyPairSync('rsa',{modulusLength:2048});Object.assign(process.env,{GOOGLE_REPORTING_SERVICE_ACCOUNT_JSON:JSON.stringify({client_email:'service@example.test',private_key:privateKey.export({type:'pkcs8',format:'pem'})}),GOOGLE_MERCHANT_ACCOUNT_ID:'5666998773'});global.reportingUser={id:'admin'};global.reportingRole='admin'
+ try{global.fetch=async(url,options)=>{calls.push({url,options});return url.includes('oauth2')?Response.json({access_token:'private-token'}):Response.json({name:'private-provider-result',gcpIds:['private-project']})};for(const email of['','bad','x@project.iam.gserviceaccount.com'])await assert.rejects(h.registerMerchantProject(email),e=>e.status===400);assert.equal(calls.length,0);const response=await r.POST(post({confirm:true,developerEmail:'owner@example.test',accountId:'999',projectId:'override'}));assert.equal(response.status,200);assert.deepEqual(await response.json(),{registered:true});assert.equal(calls[1].url,'https://merchantapi.googleapis.com/accounts/v1/accounts/5666998773/developerRegistration:registerGcp');assert.deepEqual(JSON.parse(calls[1].options.body),{developerEmail:'owner@example.test'});assert.equal(calls[1].options.headers.Authorization,'Bearer private-token')
  }finally{global.fetch=previous;for(const k of Object.keys(process.env))if(!(k in oldEnv))delete process.env[k];Object.assign(process.env,oldEnv)}
 })
