@@ -119,13 +119,14 @@ test('Google Ads and Merchant reporting use server account IDs, preserve currenc
         assert.equal(options.headers['developer-token'],'secret-developer-token')
         return Response.json({results:[{campaign:{name:'Campaign'},customer:{currencyCode:'EUR'},metrics:{costMicros:'2500000',clicks:'5',impressions:'200',conversions:1,conversionsValue:15}}],nextPageToken:'more'})
       }
+      if(body.query.includes('FROM non_product_performance_view'))return Response.json({results:[]})
       assert.match(body.query,/marketing_method = 'ORGANIC'/)
       return Response.json({results:[{productPerformanceView:{date:{year:2026,month:1,day:2},clicks:'2',impressions:'20',clickThroughRate:.1}}],nextPageToken:'more'})
     }
     const ads=await h.loadReport('googleAds','2026-01-01','2026-01-31')
     assert.equal(ads.rows[0][4],2.5);assert.equal(ads.rows[0][1],'EUR');assert.match(ads.note,/More campaigns/)
     const merchant=await h.loadReport('merchant','2026-01-01','2026-01-31')
-    assert.deepEqual(merchant.rows[0],['2026-01-02','2','20',.1]);assert.match(merchant.note,/Additional rows/)
+    assert.deepEqual(merchant.rows[0],['Product free listings','2026-01-02','2','20',.1]);assert.match(merchant.note,/Additional product free listings rows/)
     assert.doesNotMatch(JSON.stringify([ads,merchant]),/secret-token|secret-developer-token/)
   }finally{global.fetch=previous;for(const k of Object.keys(process.env))if(!(k in oldEnv))delete process.env[k];Object.assign(process.env,oldEnv)}
 })
@@ -160,5 +161,11 @@ test('Merchant registration is admin-only, requires explicit confirmation and ne
 test('Merchant registration uses saved project credentials and account ID, with a human contact and sanitized success',async()=>{
  const{helper:h,registration:r}=await load(),previous=global.fetch,oldEnv={...process.env},calls=[];const{privateKey}=generateKeyPairSync('rsa',{modulusLength:2048});Object.assign(process.env,{GOOGLE_REPORTING_SERVICE_ACCOUNT_JSON:JSON.stringify({client_email:'service@example.test',private_key:privateKey.export({type:'pkcs8',format:'pem'})}),GOOGLE_MERCHANT_ACCOUNT_ID:'5666998773'});global.reportingUser={id:'admin'};global.reportingRole='admin'
  try{global.fetch=async(url,options)=>{calls.push({url,options});return url.includes('oauth2')?Response.json({access_token:'private-token'}):Response.json({name:'private-provider-result',gcpIds:['private-project']})};for(const email of['','bad','x@project.iam.gserviceaccount.com'])await assert.rejects(h.registerMerchantProject(email),e=>e.status===400);assert.equal(calls.length,0);const response=await r.POST(post({confirm:true,developerEmail:'lindsey@theparlormagazine.com',accountId:'999',projectId:'override'}));assert.equal(response.status,200);assert.deepEqual(await response.json(),{registered:true});assert.equal(calls[1].url,'https://merchantapi.googleapis.com/accounts/v1/accounts/5666998773/developerRegistration:registerGcp');assert.deepEqual(JSON.parse(calls[1].options.body),{developerEmail:'lindsey@theparlormagazine.com'});assert.equal(calls[1].options.headers.Authorization,'Bearer private-token')
+ }finally{global.fetch=previous;for(const k of Object.keys(process.env))if(!(k in oldEnv))delete process.env[k];Object.assign(process.env,oldEnv)}
+})
+
+test('Merchant separates non-product activity from free listings and identifies the configured account',async()=>{
+ const{helper:h}=await load(),previous=global.fetch,oldEnv={...process.env};const{privateKey}=generateKeyPairSync('rsa',{modulusLength:2048});Object.assign(process.env,{GOOGLE_REPORTING_SERVICE_ACCOUNT_JSON:JSON.stringify({client_email:'service@example.test',private_key:privateKey.export({type:'pkcs8',format:'pem'})}),GOOGLE_MERCHANT_ACCOUNT_ID:'5666998773'});let mode='store'
+ try{global.fetch=async(url,options)=>{if(url.includes('oauth2'))return Response.json({access_token:'private-token'});assert.match(url,/accounts\/5666998773\/reports:search/);const query=JSON.parse(options.body).query;assert.match(query,/2026-10-09/);if(query.includes('FROM non_product_performance_view')){if(mode==='denied')return Response.json({error:{}},{status:403});if(mode==='bad')return Response.json({results:[{unexpected:true}]});return Response.json({results:[{nonProductPerformanceView:{date:{year:2026,month:10,day:15},clicks:'33',impressions:'330',clickThroughRate:.1}}]})}assert.match(query,/marketing_method = 'ORGANIC'/);return Response.json({})};let report=await h.loadReport('merchant','2026-10-09','2026-11-06');assert.deepEqual(report.rows,[['Store links and images','2026-10-15','33','330',.1]]);assert.match(report.note,/Merchant account 5666998773/);assert.doesNotMatch(report.note,/private-token/);mode='denied';report=await h.loadReport('merchant','2026-10-09','2026-11-06');assert.match(report.note,/partial report/);assert.equal(report.partial,true);mode='bad';await assert.rejects(h.loadReport('merchant','2026-10-09','2026-11-06'),/unexpected Merchant report row/)
  }finally{global.fetch=previous;for(const k of Object.keys(process.env))if(!(k in oldEnv))delete process.env[k];Object.assign(process.env,oldEnv)}
 })

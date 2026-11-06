@@ -7,7 +7,7 @@ const providers = { search: 'Google Search Console', ga4: 'Google Analytics 4', 
 const descriptions = {
   search: 'Search visibility, clicks and page performance from Google.',
   ga4: 'Traffic sources, engagement and tracked key events.',
-  merchant: 'Organic product visibility and shopping performance.',
+  merchant: 'Free product listings, store links and image performance from Google.',
   paid: 'Campaign performance from your connected advertising accounts.',
 }
 const control = { width: '100%', minWidth: 0, height: 38, boxSizing: 'border-box', padding: '8px 12px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: 6, color: '#333', fontFamily: font, fontSize: 13, lineHeight: '20px' }
@@ -77,8 +77,8 @@ export default function ReportingPanel({ supabase, view, reports, onReport, paid
         <h2 id="connected-report-heading" style={{ margin: '0 0 4px', fontFamily: headingFont, fontSize: 18, fontWeight: 600, lineHeight: 1.3, color: '#0a0a0a' }}>{view === 'paid' ? 'Paid marketing campaigns' : names[source]}</h2>
         <p style={paragraph}>{descriptions[view]}</p>
       </div>
-      <span role="status" style={{ padding: '3px 9px', borderRadius: 20, background: report ? '#edf7f0' : '#f5f5f5', color: report ? '#2d8f5a' : '#888', fontSize: 11, lineHeight: '18px', whiteSpace: 'nowrap' }}>
-        {connection ? connection.configured ? report ? 'Report loaded' : 'Ready to load' : 'Setup required' : 'Checking connection…'}
+      <span role="status" style={{ padding: '3px 9px', borderRadius: 20, background: report?.partial ? '#fff6e5' : report ? '#edf7f0' : '#f5f5f5', color: report?.partial ? '#946200' : report ? '#2d8f5a' : '#888', fontSize: 11, lineHeight: '18px', whiteSpace: 'nowrap' }}>
+        {connection ? connection.configured ? report ? report.partial ? 'Partial report' : 'Report loaded' : 'Ready to load' : 'Setup required' : 'Checking connection…'}
       </span>
     </div>
     <div style={{ padding: 18 }}>
@@ -106,7 +106,7 @@ export default function ReportingPanel({ supabase, view, reports, onReport, paid
       {report && <div style={{ marginTop: 20, minWidth: 0 }}>
         <p style={{ ...paragraph, fontSize: 12 }}>{report.name} · {report.start} – {report.end} · retrieved {new Date(report.fetchedAt).toLocaleString()}</p>
         <p style={{ ...paragraph, fontSize: 12, margin: '6px 0 14px' }}>{report.note}</p>
-        {report.rows.length ? <div style={{ overflowX: 'auto', border: '1px solid #eee', borderRadius: 7 }}><table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: font, fontSize: 13, lineHeight: 1.6 }}><thead><tr>{report.columns.map(c => <th key={c} style={{ textAlign: 'left', padding: '10px 12px', background: '#fafafa', borderBottom: '1px solid #eee', fontFamily: font, fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.08em', color: '#999', whiteSpace: 'nowrap' }}>{c}</th>)}</tr></thead><tbody>{report.rows.map((row, i) => <tr key={i}>{row.map((value, j) => <td key={j} style={{ padding: '10px 12px', borderBottom: i < report.rows.length - 1 ? '1px solid #f2f2f2' : 'none', color: '#555', overflowWrap: 'anywhere' }}>{value ?? '—'}</td>)}</tr>)}</tbody></table></div> : <p style={{ ...paragraph, padding: 16, background: '#fafafa', borderRadius: 7 }}>No rows returned for this period.</p>}
+        {report.rows.length ? <div style={{ overflowX: 'auto', border: '1px solid #eee', borderRadius: 7 }}><table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: font, fontSize: 13, lineHeight: 1.6 }}><thead><tr>{report.columns.map(c => <th key={c} style={{ textAlign: 'left', padding: '10px 12px', background: '#fafafa', borderBottom: '1px solid #eee', fontFamily: font, fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.08em', color: '#999', whiteSpace: 'nowrap' }}>{c}</th>)}</tr></thead><tbody>{report.rows.map((row, i) => <tr key={i}>{row.map((value, j) => <td key={j} style={{ padding: '10px 12px', borderBottom: i < report.rows.length - 1 ? '1px solid #f2f2f2' : 'none', color: '#555', overflowWrap: 'anywhere' }}>{value ?? '—'}</td>)}</tr>)}</tbody></table></div> : <p style={{ ...paragraph, padding: 16, background: '#fafafa', borderRadius: 7 }}>{report.partial ? 'No rows from the available sources. Some report data could not be retrieved; retry later.' : 'No rows returned for this period.'}</p>}
       </div>}
       {view === 'paid' && <p style={{ ...paragraph, fontSize: 12, marginTop: 18, paddingTop: 12, borderTop: '1px solid #f0f0f0' }}>Platforms use different attribution windows. Their conversions may overlap; spend and conversions are not combined across platforms or currencies.</p>}
     </div>
