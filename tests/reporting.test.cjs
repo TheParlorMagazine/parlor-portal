@@ -141,3 +141,14 @@ test('provider timeouts return retry guidance without exposing credentials',asyn
     assert.equal(response.status,504);assert.match((await response.json()).error,/Try again later/)
   }finally{global.fetch=previous;for(const k of Object.keys(process.env))if(!(k in oldEnv))delete process.env[k];Object.assign(process.env,oldEnv)}
 })
+
+test('Merchant access failures identify setup causes without echoing private Google error details',async()=>{
+ const {helper:h}=await load(),previous=global.fetch,oldEnv={...process.env}
+ const{privateKey}=generateKeyPairSync('rsa',{modulusLength:2048})
+ Object.assign(process.env,{GOOGLE_REPORTING_SERVICE_ACCOUNT_JSON:JSON.stringify({client_email:'test@example.test',private_key:privateKey.export({type:'pkcs8',format:'pem'})}),GOOGLE_MERCHANT_ACCOUNT_ID:'5666998773'})
+ try{for(const[reason,message,expected]of[['SERVICE_DISABLED','private-token',/Enable Merchant API/],['ACCESS_TOKEN_SCOPE_INSUFFICIENT','private-token',/authorization scope/],['DEVELOPER_REGISTRATION_REQUIRED','private-token',/developer registration/],['UNKNOWN','The GCP project must be registered. private-token',/developer registration/],['UNKNOWN','private-token',/Merchant API denied access/]]){
+ global.fetch=async url=>url.includes('oauth2')?Response.json({access_token:'private-token'}):Response.json({error:{message,details:[{reason,metadata:{token:'private-token',email:'private@example.test'}}]}},{status:403})
+ await assert.rejects(h.loadReport('merchant','2026-01-01','2026-01-31'),e=>{assert.match(e.message,expected);assert.doesNotMatch(e.message,/private-token|private@example|5666998773/);return true})
+ }global.fetch=async url=>url.includes('oauth2')?Response.json({access_token:'private-token'}):new Response('private-token',{status:403});await assert.rejects(h.loadReport('merchant','2026-01-01','2026-01-31'),/Merchant API denied access/)
+ }finally{global.fetch=previous;for(const k of Object.keys(process.env))if(!(k in oldEnv))delete process.env[k];Object.assign(process.env,oldEnv)}
+})
