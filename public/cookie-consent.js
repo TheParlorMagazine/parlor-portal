@@ -28,7 +28,15 @@
   function syncPage(){if(adminPage()){box.hidden=true;reopen.hidden=true}else if(!read())show();else{box.hidden=true;reopen.hidden=false}}
   // Follow the actual banner height as content wraps and mobile cards expand.
   const banners=new Set(),resize=new ResizeObserver(positionButton)
-  function positionButton(){let bottom=12;for(const banner of banners){const rect=banner.getBoundingClientRect();if(rect.width&&rect.height&&getComputedStyle(banner).visibility!=='hidden'&&rect.top<innerHeight&&rect.bottom>0)bottom=Math.max(bottom,innerHeight-rect.top+12)}const value=Math.ceil(bottom)+'px';if(reopen.style.getPropertyValue('--parlor-cookie-bottom')!==value)reopen.style.setProperty('--parlor-cookie-bottom',value)}
+  function positionButton(){let bottom=12;for(const banner of banners){const rect=banner.getBoundingClientRect();if(rect.width&&rect.height&&getComputedStyle(banner).visibility!=='hidden'&&rect.top<innerHeight&&rect.bottom>0)bottom=Math.max(bottom,innerHeight-rect.top+12)}const value=Math.ceil(bottom)+'px';if(reopen.style.getPropertyValue('--parlor-cookie-bottom')!==value)reopen.style.setProperty('--parlor-cookie-bottom',value)
+    // Keep the shop card above the visible cookie button, including when a
+    // bottom ribbon raises that button or its text wraps at a different size.
+    const button=reopen.getBoundingClientRect()
+    const popupBottom=!reopen.hidden&&button.height?Math.ceil(innerHeight-button.top+12)+'px':'16px'
+    const root=document.documentElement
+    if(root.style.getPropertyValue('--parlor-shop-popup-bottom')!==popupBottom)root.style.setProperty('--parlor-shop-popup-bottom',popupBottom)
+  }
+  resize.observe(reopen)
   function scanBanners(){const current=new Set(document.querySelectorAll('.ribbon,.sub-ribbon'));for(const banner of banners)if(!current.has(banner)){resize.unobserve(banner);banners.delete(banner)}for(const banner of current)if(!banners.has(banner)){banners.add(banner);resize.observe(banner)}positionButton()}
   new MutationObserver(scanBanners).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','hidden']})
   window.addEventListener('resize',positionButton)

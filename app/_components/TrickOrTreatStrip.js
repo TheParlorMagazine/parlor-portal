@@ -392,7 +392,7 @@ export default function TrickOrTreatStrip({
       `}</style>
 
       {shopPopup && <style>{`
-        .tot-strip.tot-shop-popup{left:16px;top:auto;bottom:16px;width:280px;min-width:0;max-width:280px;justify-content:flex-end}
+        .tot-strip.tot-shop-popup{left:16px;top:auto;bottom:var(--parlor-shop-popup-bottom,16px);width:280px;min-width:0;max-width:280px;justify-content:flex-end}
         .tot-shop-popup .tot-inner{margin:0;box-shadow:0 8px 30px rgba(0,0,0,.2);padding-top:24px}
         .tot-shop-popup .tot-street{height:190px}
         .tot-shop-dismiss{position:absolute;right:7px;top:6px;z-index:30;width:28px;height:28px;border:1px solid rgba(242,184,198,.45);border-radius:50%;background:#111;color:#f2b8c6;font-size:22px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
