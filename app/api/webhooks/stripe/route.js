@@ -82,6 +82,7 @@ async function handleSubscriptionCheckout(session, eventId) {
     plan_id: planInfo.plan_id,
     stripe_customer_id: session.customer,
     stripe_subscription_id: session.subscription,
+    subscription_status: 'active',
     billing_source: 'stripe',   // billed through Stripe (vs. 'wix' migrations)
   }
   // If a shipping address was collected (Printing Press / physical), save it so
@@ -143,7 +144,7 @@ async function handleInvoicePaymentSucceeded(invoice) {
   const supabase = getSupabase()
   const { error } = await supabase
     .from('members')
-    .update({ plan: planInfo.plan, plan_id: planInfo.plan_id, billing_source: 'stripe', stripe_subscription_id: invoice.subscription })
+    .update({ plan: planInfo.plan, plan_id: planInfo.plan_id, subscription_status: 'active', billing_source: 'stripe', stripe_subscription_id: invoice.subscription })
     .eq('stripe_customer_id', invoice.customer)
     .eq('stripe_subscription_id', subscription.id)
 
@@ -206,6 +207,7 @@ async function handleSubscriptionCanceled(subscription, eventId) {
       plan: null,
       plan_id: null,
       stripe_subscription_id: null,
+      subscription_status: 'churned',
     })
     .eq('stripe_customer_id', subscription.customer)
     .eq('stripe_subscription_id', subscription.id)
