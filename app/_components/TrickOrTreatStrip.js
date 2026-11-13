@@ -14,6 +14,7 @@ export default function TrickOrTreatStrip({
   bottomSelector = 'main > *:nth-child(4)',
   bottomBar = false,
   shopPopup = false,
+  copy = null,
   onDismiss,
   onVisibilityChange,
 }) {
@@ -433,9 +434,11 @@ export default function TrickOrTreatStrip({
           />
         )}
 
+        {copy?.kicker&&<p style={{padding:'6px 12px 0',margin:0,color:'#f2b8c6',fontSize:12}}>{copy.kicker}</p>}
+        {copy?.message&&<p style={{padding:'8px 12px',margin:0,color:'#f2b8c6',fontSize:13,whiteSpace:'pre-line'}}>{copy.message}</p>}
         {/* Bottom: label + slots + CTA */}
         <div className="tot-mob-bottom">
-          <div className="tot-mob-label">Trick or Treat<br/>at The Parlor</div>
+          <div className="tot-mob-label">{copy?.headline||<>Trick or Treat<br/>at The Parlor</>}</div>
           <div className="tot-mob-slots">
             {[0,1,2,3].map(i => (
               <div key={i} ref={el => slotsMobRef.current[i] = el}
@@ -444,15 +447,17 @@ export default function TrickOrTreatStrip({
               </div>
             ))}
           </div>
-          <a href={href} className="tot-mob-cta">Join the fun →</a>
+          <a href={href} className="tot-mob-cta">{copy?.cta_label||'Join the fun →'}</a>
         </div>
       </div>
 
       {/* Desktop sidebar — hidden in bottomBar mode */}
       {!bottomBar && <div className={`tot-strip${shopPopup ? ' tot-shop-popup' : ''}${visible ? ' shown' : ' hidden'}`} aria-hidden={!visible}>
         {shopPopup && <button type="button" className="tot-shop-dismiss" onClick={onDismiss} aria-label="Dismiss shop Trick or Treat banner">×</button>}
-        <a href={href} className="tot-inner" ref={innerRef} title="Trick or Treat at The Parlor">
-          <div className="tot-label">Trick or Treat at<br/>The Parlor</div>
+        <a href={href} className="tot-inner" ref={innerRef} title={copy?.headline||'Trick or Treat at The Parlor'}>
+          <div className="tot-label">{copy?.headline||<>Trick or Treat at<br/>The Parlor</>}</div>
+          {copy?.kicker&&<p style={{textAlign:'center',fontSize:12}}>{copy.kicker}</p>}
+          {copy?.message&&<p style={{fontSize:14,lineHeight:1.5,whiteSpace:'pre-line',margin:'0 0 12px'}}>{copy.message}</p>}
 
           <div className="tot-slots">
             {[0,1,2,3].map(i => (
@@ -488,7 +493,7 @@ export default function TrickOrTreatStrip({
             />
           )}
 
-          <span className="tot-cta">Join the fun →</span>
+          <span className="tot-cta">{copy?.cta_label||'Join the fun →'}</span>
         </a>
       </div>}
     </>

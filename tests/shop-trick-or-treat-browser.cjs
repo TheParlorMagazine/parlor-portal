@@ -6,8 +6,8 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']})
  try{for(const width of [1440,390]){
   const ctx=await browser.newContext({viewport:{width,height:900}}),page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message))
-  await page.route('http://local.test/**',r=>r.fulfill(r.request().url().endsWith('/api/trick-or-treat')?{json:{houses:[]}}:{contentType:'text/html',body:'<div id="root"></div>'}))
-  async function load(url){await page.goto('http://local.test'+url);await page.addScriptTag({path:out})}
+  await page.route('http://local.test/**',r=>r.fulfill(r.request().url().includes('/api/announcements/shop-popup')?{json:{announcement:{active:true}}}:r.request().url().endsWith('/api/trick-or-treat')?{json:{houses:[]}}:{contentType:'text/html',body:'<div id="root"></div>'}))
+  async function load(url){await page.goto('http://local.test'+url);await page.addScriptTag({path:out});await page.locator('#shop-featured-product').waitFor()}
   await load('/shop');await page.locator('.tot-shop-popup').waitFor({state:'attached'})
   if(width>1100){await page.locator('.tot-shop-popup.shown').waitFor();const box=await page.locator('.tot-shop-popup').boundingBox();assert.equal(box.x,16);assert.equal(Math.round(box.y+box.height),884);assert.equal(box.width,280)
    await page.evaluate(()=>localStorage.setItem('parlor_cookie_consent',JSON.stringify({version:1,analytics:false,savedAt:Date.now()})))

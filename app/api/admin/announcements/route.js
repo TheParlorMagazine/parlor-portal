@@ -1,3 +1,4 @@
+import { SHOP_POPUP_PLACEMENT,validateShopPopup } from '../../../../lib/shopPopup'
 import { requireUser, serviceClient, memberOf } from '../../../../lib/apiAuth'
 
 const ROLES = ['admin', 'editor', 'social_admin']
@@ -16,7 +17,7 @@ const FIELDS = ['kicker', 'headline', 'message', 'cta_label', 'cta_href', 'type'
 const NEWER = ['image_url', 'placement']
 async function saveResilient(query, patch, buildRetry) {
   let { data, error } = await query(patch)
-  if (error && NEWER.some(c => new RegExp(c).test(error.message || ''))) {
+  if (error && patch.placement !== SHOP_POPUP_PLACEMENT && NEWER.some(c => new RegExp(c).test(error.message || ''))) {
     const rest = { ...patch }; NEWER.forEach(c => delete rest[c])
     const r = await buildRetry(rest); data = r.data; error = r.error
   }
@@ -43,6 +44,12 @@ export async function POST(request) {
   const g = await gate(request); if (g.error) return g.error
   let b = {}; try { b = await request.json() } catch {}
   const patch = { ...pick(b), type: pick(b).type || 'general' }
+  try{validateShopPopup(patch)}catch(error){return Response.json({error:error.message},{status:400})}
+  if(patch.placement===SHOP_POPUP_PLACEMENT){
+    const existing=await g.db.from('announcements').select('id').eq('placement',SHOP_POPUP_PLACEMENT).order('sort',{ascending:true}).order('created_at',{ascending:false}).limit(1)
+    if(existing.error)return Response.json({error:'Shop popup could not be checked.'},{status:503})
+    if(existing.data?.[0]){const result=await g.db.from('announcements').update(patch).eq('id',existing.data[0].id).select().single();return Response.json(result.error?{error:'Shop popup could not be saved.'}:{announcement:result.data},{status:result.error?503:200})}
+  }
   const { data, error } = await saveResilient(
     p => g.db.from('announcements').insert(p).select().single(),
     patch,
@@ -58,6 +65,11 @@ export async function PATCH(request) {
   let b = {}; try { b = await request.json() } catch {}
   if (!b.id) return Response.json({ error: 'id required' }, { status: 400 })
   const patch = pick(b)
+  // Validate persisted placement too, including partial updates from the toggle.
+  const existing=await g.db.from('announcements').select('placement').eq('id',b.id).single()
+  if(existing.error)return Response.json({error:'Announcement could not be checked.'},{status:503})
+  if(existing.data?.placement===SHOP_POPUP_PLACEMENT)patch.placement=SHOP_POPUP_PLACEMENT
+  try{validateShopPopup({...patch,placement:patch.placement||existing.data?.placement})}catch(error){return Response.json({error:error.message},{status:400})}
   if (!Object.keys(patch).length) return Response.json({ ok: true })
   const { data, error } = await saveResilient(
     p => g.db.from('announcements').update(p).eq('id', b.id).select().single(),

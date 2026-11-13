@@ -17,7 +17,7 @@ export async function GET() {
   }
   if (error) return Response.json({ announcements: [] })
   const live = (data || []).filter(a =>
-    (a.placement || 'ribbon') !== 'homepage' &&
+    (a.placement || 'ribbon') !== 'homepage' && a.placement !== 'shop_popup' &&
     (!a.starts_at || a.starts_at <= nowISO) && (!a.ends_at || a.ends_at >= nowISO)
   )
   return Response.json({ announcements: live })

@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { uploadToCloudinary, isDuplicateUpload } from '../../../lib/uploadImage'
 import { confirmDialog } from '../../../lib/confirmDialog'
+import AnnouncementMediaEditor from './AnnouncementMediaEditor'
+import { DEFAULT_SHOP_POPUP,SHOP_POPUP_PLACEMENT,popupMedia,encodePopupMedia,validateShopPopup } from '../../../lib/shopPopup'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -31,6 +33,7 @@ const PLACEMENT_LABELS = {
   competition: 'footer banner',
   popup: 'popup',
   article_sidebar: 'article sidebar',
+  shop_popup: 'shop popup',
 }
 const PLACEMENT_DESC = {
   ribbon: 'Shown in the floating footer ribbon. Active ones rotate in order.',
@@ -39,6 +42,7 @@ const PLACEMENT_DESC = {
   competition: 'Full-width footer banner above the site footer. Headline can use \\n for line breaks. Submissions-close date is derived from "Show until".',
   popup: 'First-load popup, shown once per session. Include an image for best impact.',
   article_sidebar: 'Fixed left strip shown on article pages on wide screens. Used for seasonal campaigns like Trick or Treat.',
+  shop_popup: 'The floating shop card above Cookie preferences. Keep the Trick-or-Treat animation or replace it with images, GIFs and videos.',
 }
 
 function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon', onClose, onSaved }) {
@@ -49,6 +53,9 @@ function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon',
     starts_at: toLocalInput(item?.starts_at), ends_at: toLocalInput(item?.ends_at),
     placement: item?.placement || defaultPlacement, image_url: item?.image_url || '',
   })
+  const isShop=f.placement===SHOP_POPUP_PLACEMENT
+  const [mediaItems,setMediaItems]=useState(()=>popupMedia(item?.image_url))
+  const [mediaMode,setMediaMode]=useState(()=>popupMedia(item?.image_url).length?'custom':'animation')
   const isHome = f.placement === 'homepage'
   const isPopup = f.placement === 'popup'
   const isCopyable = f.placement === 'homepage' || f.placement === 'competition'
@@ -76,12 +83,14 @@ function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon',
   async function save() {
     if (!f.kicker.trim() && !f.headline.trim() && !f.message.trim()) { setMsg('Add at least a kicker, headline, or message.'); return }
     setBusy(true); setMsg(null)
+    try {
     const base = {
       ...f,
       sort: Number(f.sort) || 0,
       starts_at: f.starts_at ? new Date(f.starts_at).toISOString() : null,
       ends_at: f.ends_at ? new Date(f.ends_at).toISOString() : null,
     }
+    if(isShop){base.image_url=mediaMode==='custom'?encodePopupMedia(mediaItems):null;try{if(mediaMode==='custom'&&!mediaItems.length)throw Error('Add media or choose the original animation.');validateShopPopup(base)}catch(error){setBusy(false);setMsg(error.message);return}}
     const payload = { ...base }
     if (item?.id) payload.id = item.id
     const tok = await token()
@@ -94,11 +103,12 @@ function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon',
     }
     setBusy(false)
     onSaved(); onClose()
+    }catch{setMsg('The announcement could not be saved. Please try again.')}finally{setBusy(false)}
   }
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(26,23,16,0.5)', zIndex: 200, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 20px', overflowY: 'auto' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 13, width: 620, maxWidth: '96vw', padding: 26, fontFamily: ff }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 13, width: 620, maxWidth: '96vw', boxSizing:'border-box', padding: 26, fontFamily: ff }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <div style={{ fontFamily: ffH, fontSize: 22, fontWeight: 700 }}>{item?.id ? 'Edit' : 'New'} {PLACEMENT_LABELS[f.placement] || 'announcement'}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, color: '#999', cursor: 'pointer' }}>×</button>
@@ -139,6 +149,8 @@ function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon',
           </>
         )}
 
+        {isShop&&<><div style={label}>Popup visuals</div><select aria-label="Popup visuals" value={mediaMode} onChange={e=>setMediaMode(e.target.value)} style={input}><option value="animation">Original Trick-or-Treat animation</option><option value="custom">Custom images, GIFs and videos</option></select>{mediaMode==='custom'&&<AnnouncementMediaEditor items={mediaItems} onChange={setMediaItems} onBusy={setUploading}/>}</>}
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div><div style={label}>Button label</div><input value={f.cta_label} onChange={e => set('cta_label', e.target.value)} placeholder="Become a paid subscriber" style={input} /></div>
           <div><div style={label}>Button link</div><input value={f.cta_href} onChange={e => set('cta_href', e.target.value)} placeholder="/plans" style={input} /></div>
@@ -164,7 +176,7 @@ function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon',
         {msg && <p style={{ color: DP, fontSize: 13, marginTop: 12 }}>{msg}</p>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
           <button onClick={onClose} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '9px 18px', fontFamily: ff, fontSize: 13, cursor: 'pointer', color: '#555' }}>Cancel</button>
-          <button onClick={save} disabled={busy} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontFamily: ff, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{busy ? 'Saving…' : 'Save announcement'}</button>
+          <button onClick={save} disabled={busy||uploading} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontFamily: ff, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{busy ? 'Saving…' : 'Save announcement'}</button>
         </div>
       </div>
     </div>
@@ -175,6 +187,8 @@ export default function AnnouncementsSection({ supabase }) {
   const token = async () => { const { data: { session } } = await supabase.auth.getSession(); return session?.access_token }
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError,setLoadError]=useState('')
+  const [toggling,setToggling]=useState(false)
   const [editing, setEditing] = useState(undefined) // undefined=closed, null=new, obj=edit
   const [tab, setTab] = useState('ribbon') // 'ribbon' | 'homepage'
 
@@ -185,20 +199,27 @@ export default function AnnouncementsSection({ supabase }) {
     competition: a => a.placement === 'competition',
     popup: a => a.placement === 'popup',
     article_sidebar: a => a.placement === 'article_sidebar',
+    shop_popup: a => a.placement === SHOP_POPUP_PLACEMENT,
   }
-  const shown = items.filter(PLACEMENT_MATCH[tab] || (() => false))
+  const displayItems=items.some(a=>a.placement===SHOP_POPUP_PLACEMENT)?items:[...items,{...DEFAULT_SHOP_POPUP,_shopDefault:true}]
+  const shown = displayItems.filter(PLACEMENT_MATCH[tab] || (() => false))
 
   async function load() {
     try {
       const res = await fetch('/api/admin/announcements', { headers: { Authorization: `Bearer ${await token()}` } })
-      const d = await res.json(); setItems(d.announcements || [])
-    } catch {} finally { setLoading(false) }
+      const d = await res.json();if(!res.ok)throw Error(d.error||'Announcements could not be loaded.');setItems(d.announcements || []);setLoadError('')
+    } catch(error) {setLoadError(error.message)} finally { setLoading(false) }
   }
   useEffect(() => { load() }, [])
 
   async function toggleActive(a) {
-    await fetch('/api/admin/announcements', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ id: a.id, active: !a.active }) })
-    load()
+    setToggling(true);setLoadError('')
+    try{
+      const payload=a._shopDefault?{...DEFAULT_SHOP_POPUP,active:!a.active}:{id:a.id,active:!a.active}
+      const response=await fetch('/api/admin/announcements',{method:a._shopDefault?'POST':'PATCH',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await token()}`},body:JSON.stringify(payload)})
+      const result=await response.json();if(!response.ok)throw Error(result.error||'The popup could not be updated.')
+      await load()
+    }catch(error){setLoadError(error.message)}finally{setToggling(false)}
   }
   async function del(id) {
     if (!(await confirmDialog('Delete this announcement?'))) return
@@ -208,7 +229,7 @@ export default function AnnouncementsSection({ supabase }) {
 
   return (
     <div style={{ fontFamily: ff }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap:'wrap', gap:12, alignItems: 'flex-end', marginBottom: 14 }}>
         <div>
           <h1 style={{ fontFamily: ffH, fontSize: 30, fontWeight: 700, margin: 0 }}>Announcements</h1>
           <p style={{ color: '#777', fontSize: 14, margin: '4px 0 0' }}>{
@@ -216,19 +237,20 @@ export default function AnnouncementsSection({ supabase }) {
             tab === 'top_bar' ? 'Slim bar above the nav that dismisses on click. Only the first active item shows.' :
             tab === 'competition' ? 'Full-width footer banner above the site footer. Only the first active item shows.' :
             tab === 'popup' ? 'First-load popup shown once per session per item. Only the first active item shows.' :
+            tab === SHOP_POPUP_PLACEMENT ? PLACEMENT_DESC.shop_popup :
             tab === 'article_sidebar' ? 'Fixed left strip shown on article pages (wide screens only). Used for seasonal campaigns.' :
             'The floating footer ribbon — issue launches, events, fundraisers, and campaigns. Active ones rotate in sort order.'
           }</p>
         </div>
-        <button onClick={() => setEditing(null)} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontFamily: ff, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          + New {tab === 'homepage' ? 'banner' : tab === 'top_bar' ? 'top bar' : tab === 'competition' ? 'footer banner' : tab === 'popup' ? 'popup' : tab === 'article_sidebar' ? 'sidebar strip' : 'ribbon item'}
+        <button disabled={loading||(tab===SHOP_POPUP_PLACEMENT&&!!loadError)} onClick={() => setEditing(tab===SHOP_POPUP_PLACEMENT?shown[0]:null)} style={{ background: '#0a0a0a', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontFamily: ff, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          {tab===SHOP_POPUP_PLACEMENT?'Edit shop popup':<>+ New {tab === 'homepage' ? 'banner' : tab === 'top_bar' ? 'top bar' : tab === 'competition' ? 'footer banner' : tab === 'popup' ? 'popup' : tab === 'article_sidebar' ? 'sidebar strip' : 'ribbon item'}</>}
         </button>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, borderBottom: `1px solid ${BORDER}`, marginBottom: 4 }}>
-        {[['ribbon', 'Footer ribbon'], ['homepage', 'Hero banner'], ['top_bar', 'Top bar'], ['competition', 'Footer banner'], ['popup', 'Popup'], ['article_sidebar', 'Article sidebar']].map(([v, l]) => {
-          const count = items.filter(PLACEMENT_MATCH[v] || (() => false)).length
+      <div style={{ display: 'flex', gap: 6, flexWrap:'wrap', borderBottom: `1px solid ${BORDER}`, marginBottom: 4 }}>
+        {[['ribbon', 'Footer ribbon'], ['homepage', 'Hero banner'], ['top_bar', 'Top bar'], ['competition', 'Footer banner'], ['popup', 'Popup'], ['article_sidebar', 'Article sidebar'], ['shop_popup','Shop popup']].map(([v, l]) => {
+          const count = displayItems.filter(PLACEMENT_MATCH[v] || (() => false)).length
           const on = tab === v
           return (
             <button key={v} onClick={() => setTab(v)} style={{ background: 'none', border: 'none', borderBottom: `2px solid ${on ? '#0a0a0a' : 'transparent'}`, padding: '9px 4px', marginBottom: -1, fontFamily: ff, fontSize: 14, fontWeight: on ? 700 : 500, color: on ? '#1a1a1a' : '#999', cursor: 'pointer' }}>
@@ -238,21 +260,22 @@ export default function AnnouncementsSection({ supabase }) {
         })}
       </div>
 
+      {loadError&&<p role="alert" style={{color:DP}}>{loadError} <button type="button" onClick={load}>Retry loading</button></p>}
       {loading ? <p style={{ color: '#888', marginTop: 24 }}>Loading…</p> : shown.length === 0 ? (
         <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, background: '#faf8f6', padding: 30, textAlign: 'center', color: '#888', marginTop: 20 }}>{`No ${PLACEMENT_LABELS[tab] || 'announcements'} yet. Add one above.`}</div>
       ) : (
         <div style={{ marginTop: 20, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
           {shown.map((a, i) => (
-            <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderTop: i ? `1px solid ${BORDER}` : 'none', background: a.active ? '#fff' : '#fafafa' }}>
+            <div key={a.id||'shop-popup-default'} style={{ display: 'flex',flexWrap:'wrap', alignItems: 'center', gap: 14, padding: '14px 16px', borderTop: i ? `1px solid ${BORDER}` : 'none', background: a.active ? '#fff' : '#fafafa' }}>
               <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#fff', background: TYPE_COLOR[a.type] || '#666', borderRadius: 20, padding: '3px 9px', flexShrink: 0 }}>{a.type}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: ffH, fontSize: 15, fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.kicker || a.headline || a.message || '(untitled)'}</div>
                 <div style={{ fontSize: 12.5, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{[a.headline, a.message].filter(Boolean).join(' · ') || '—'}</div>
               </div>
               <span style={{ fontSize: 11.5, color: '#aaa', flexShrink: 0 }}>sort {a.sort}</span>
-              <button onClick={() => toggleActive(a)} title={a.active ? 'Active — click to hide' : 'Hidden — click to show'} style={{ flexShrink: 0, cursor: 'pointer', border: `1px solid ${a.active ? '#2d8f5a' : BORDER}`, background: a.active ? '#e8f6ee' : '#fff', color: a.active ? '#2d8f5a' : '#999', borderRadius: 20, padding: '4px 12px', fontFamily: ff, fontSize: 12 }}>{a.active ? 'Active' : 'Hidden'}</button>
+              <button disabled={toggling||(!!loadError&&a._shopDefault)} onClick={() => toggleActive(a)} title={a.active ? 'Active — click to hide' : 'Hidden — click to show'} style={{ flexShrink: 0, cursor: 'pointer', border: `1px solid ${a.active ? '#2d8f5a' : BORDER}`, background: a.active ? '#e8f6ee' : '#fff', color: a.active ? '#2d8f5a' : '#999', borderRadius: 20, padding: '4px 12px', fontFamily: ff, fontSize: 12 }}>{a.active ? 'Active' : 'Hidden'}</button>
               <button onClick={() => setEditing(a)} style={{ flexShrink: 0, background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontFamily: ff }}>Edit</button>
-              <button onClick={() => del(a.id)} style={{ flexShrink: 0, background: 'none', border: '1px solid rgba(224,112,112,0.25)', borderRadius: 6, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontFamily: ff, color: '#c04040' }}>Delete</button>
+              {a.placement!==SHOP_POPUP_PLACEMENT&&<button onClick={() => del(a.id)} style={{ flexShrink: 0, background: 'none', border: '1px solid rgba(224,112,112,0.25)', borderRadius: 6, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontFamily: ff, color: '#c04040' }}>Delete</button>}
             </div>
           ))}
         </div>
