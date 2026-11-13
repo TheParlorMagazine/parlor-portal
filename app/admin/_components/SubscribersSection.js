@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import SubscriberRecentActivity from './SubscriberRecentActivity'
+import SubscriberActions from './SubscriberActions'
 import { subscriberStatus } from '../../../lib/subscriberStatus'
 import { isPaidPlan } from '../../../lib/plans'
 import { hasWelcomeBeenSent } from '../../../lib/onboardingStatus'
@@ -62,6 +63,7 @@ function SubscriberProfile({ member, onClose, onUpdate, supabase }) {
   const [note, setNote] = useState('')
   const [notes, setNotes] = useState(member.notes || '')
   const [savingNote, setSavingNote] = useState(false)
+  const [noteError,setNoteError] = useState('')
   const [timeline, setTimeline] = useState([])
   const [sendingWelcome, setSendingWelcome] = useState(false)
   const [welcomeNotice, setWelcomeNotice] = useState('')
@@ -113,10 +115,12 @@ function SubscriberProfile({ member, onClose, onUpdate, supabase }) {
     if (!note.trim()) return
     setSavingNote(true)
     const combined = notes ? `${notes}\n\n${new Date().toLocaleDateString('en-US')}: ${note}` : `${new Date().toLocaleDateString('en-US')}: ${note}`
-    await supabase.from('members').update({ notes: combined }).eq('id', member.id)
+    setNoteError('')
+    const {data:updated,error}=await supabase.from('members').update({ notes: combined }).eq('id', member.id).select('*').single()
+    if(error||!updated){setNoteError('The note could not be saved. Please try again.');setSavingNote(false);return}
     setNotes(combined)
     setNote('')
-    onUpdate({ ...member, notes: combined })
+    onUpdate(updated)
     setSavingNote(false)
   }
 
@@ -200,27 +204,12 @@ function SubscriberProfile({ member, onClose, onUpdate, supabase }) {
               {!hasWelcomeBeenSent(member) && !welcomeAccepted && <button type="button" disabled={sendingWelcome} onClick={recoverWelcome} style={{ ...inputStyle, marginBottom: 12, cursor: 'pointer' }}>{sendingWelcome ? 'Sending welcome…' : 'Send missed welcome email'}</button>}
               {welcomeNotice && <p role="status" style={{ fontSize: 13 }}>{welcomeNotice}</p>}
 
-              {/* Actions */}
-              <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#aaa', marginBottom: '10px' }}>Actions</div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {[
-                    { label: 'Upgrade plan', color: '#2d8f5a', bg: 'rgba(110,201,154,0.1)', border: 'rgba(110,201,154,0.3)' },
-                    { label: 'Downgrade plan', color: '#888', bg: '#f5f5f5', border: '#e0e0e0' },
-                    { label: 'Cancel subscription', color: '#c04040', bg: 'rgba(224,112,112,0.08)', border: 'rgba(224,112,112,0.2)' },
-                    { label: 'Issue refund', color: '#4a6fd4', bg: 'rgba(160,180,242,0.1)', border: 'rgba(160,180,242,0.3)' },
-                    { label: 'Remove subscriber', color: '#c04040', bg: 'rgba(224,112,112,0.06)', border: 'rgba(224,112,112,0.15)' },
-                  ].map(({ label, color, bg, border }) => (
-                    <button key={label} type="button" style={{ padding: '7px 14px', background: bg, border: `1px solid ${border}`, borderRadius: '6px', color, fontSize: '12px', cursor: 'pointer', fontFamily: ff }}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <SubscriberActions key={member.id} member={member} supabase={supabase} onUpdate={onUpdate} />
 
               {/* Notes */}
               <div>
                 <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#aaa', marginBottom: '10px' }}>Notes</div>
+                {noteError && <p role="alert" style={{color:'#a02035',fontSize:13}}>{noteError}</p>}
                 {notes && (
                   <div style={{ background: '#f9f9f9', borderRadius: '7px', padding: '12px 14px', marginBottom: '10px', fontSize: '13px', color: '#444', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
                     {notes}
