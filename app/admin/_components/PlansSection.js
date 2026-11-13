@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { hasEndedPaidMembership } from '../../../lib/plans'
 
 const ff  = "'Source Serif 4', Georgia, serif"
 const ffH = "'Playfair Display', Georgia, serif"
@@ -58,11 +59,6 @@ export default function PlansSection({ supabase, plan: planKey }) {
   const plan = PLAN_DEFS[planKey] || PLAN_DEFS.circle
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
-  const [loadError,setLoadError]=useState('')
-  const [unassigned,setUnassigned]=useState([])
-  const [repairId,setRepairId]=useState('')
-  const [repairBusy,setRepairBusy]=useState(false)
-  const [refreshVersion,setRefreshVersion]=useState(0)
   const [editing, setEditing] = useState(false)
   // editable plan display data (falls back to static defaults until loaded)
   const [data, setData] = useState({ label: plan.label, price: plan.price, description: plan.desc, perks: plan.perks })
@@ -106,32 +102,27 @@ export default function PlansSection({ supabase, plan: planKey }) {
   }
 
   useEffect(() => {
-    let live=true
-    setLoading(true);setLoadError('')
-    ;(async()=>{try{
-      const response=await fetch('/api/admin/plans/subscribers?key='+plan.key,{headers:{Authorization:`Bearer ${await token()}`}})
-      const result=await response.json()
-      if(!response.ok)throw Error(result.error||'Subscriber history could not be loaded.')
-      if(live){setMembers(result.members||[]);setUnassigned(result.unassigned||[])}
-    }catch(error){if(live){setLoadError(error.message);setMembers([])}}finally{if(live)setLoading(false)}})()
-    return()=>{live=false}
-  }, [planKey,refreshVersion])
+    setLoading(true)
+    const full = 'id,full_name,email,joined_at,subscription_status,billing_source,stripe_subscription_id,stripe_customer_id'
+    const base = 'id,full_name,email,joined_at,subscription_status'
+    supabase.from('members').select(full).in('plan', plan.matchValues).order('joined_at', { ascending: false })
+      .then(async ({ data, error }) => {
+        // Fall back if the billing columns aren't deployed yet (pre-migration).
+        if (error) {
+          const r = await supabase.from('members').select(base).in('plan', plan.matchValues).order('joined_at', { ascending: false })
+          setMembers(r.data || [])
+        } else setMembers(data || [])
+        setLoading(false)
+      })
+  }, [planKey])
 
-  async function repairHistory(event){
-    event.preventDefault();setRepairBusy(true);setLoadError('')
-    try{
-      const response=await fetch('/api/admin/plans/subscribers',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await token()}`},body:JSON.stringify({key:plan.key,memberId:repairId,confirm:true})})
-      const result=await response.json();if(!response.ok)throw Error(result.error||'Historical membership could not be saved.')
-      setRepairId('');setRefreshVersion(v=>v+1)
-    }catch(error){setLoadError(error.message)}finally{setRepairBusy(false)}
-  }
-  const active=members.filter(m=>['active','trialing'].includes(m.plan_status)).length
-  const churned=members.filter(m=>m.plan_status==='churned').length
+  const active  = members.filter(m => !hasEndedPaidMembership(m) && (!m.subscription_status || ['active','trialing'].includes(m.subscription_status))).length
+  const churned = members.filter(hasEndedPaidMembership).length
 
   // MRR uses each member's REAL price: Wix-managed migrations pay the Wix rate,
   // everyone else the in-app (display) price.
   const mrr = members
-    .filter(m => ['active','trialing'].includes(m.plan_status))
+    .filter(m => !hasEndedPaidMembership(m) && (!m.subscription_status || ['active','trialing'].includes(m.subscription_status)))
     .reduce((sum, m) => sum + monthlyPrice(m.billing_source === 'wix' ? (plan.wixPrice || data.price) : data.price), 0)
   const wixCount = members.filter(m => m.billing_source === 'wix').length
 
@@ -188,7 +179,7 @@ export default function PlansSection({ supabase, plan: planKey }) {
           { label: 'MRR (est.)',        value: `$${Math.round(mrr).toLocaleString()}`, color: plan.color },
         ].map(s => (
           <div key={s.label} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', padding: '16px 18px' }}>
-            <div style={{ fontSize: '22px', fontWeight: '700', color: s.color || '#0a0a0a', fontFamily: ffH, lineHeight: 1 }}>{loading||loadError?'—':s.value}</div>
+            <div style={{ fontSize: '22px', fontWeight: '700', color: s.color || '#0a0a0a', fontFamily: ffH, lineHeight: 1 }}>{s.value}</div>
             <div style={{ fontSize: '11px', color: '#aaa', marginTop: '5px', fontFamily: ff, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{s.label}</div>
           </div>
         ))}
@@ -212,20 +203,12 @@ export default function PlansSection({ supabase, plan: planKey }) {
         </div>
       </div>
 
-      {loadError&&<p role="alert" style={{color:DARK_PINK,fontFamily:ff}}>{loadError}</p>}
-      {!loadError&&unassigned.length>0&&<form onSubmit={repairHistory} style={{padding:18,marginBottom:24,border:'1px solid #e8e8e8',borderRadius:10,fontFamily:ff}}>
-        <h3 style={{marginTop:0,fontFamily:ffH}}>Restore a missing former subscriber</h3>
-        <p>Older cancellations may have cleared the plan before history was saved. Select a person you know previously had {data.label}. This records history only and does not change access, billing or newsletter preferences.</p>
-        <label>Former subscriber <select required value={repairId} onChange={e=>setRepairId(e.target.value)} style={inputStyle}><option value="">Choose a former subscriber…</option>{unassigned.map(m=><option key={m.id} value={m.id}>{m.full_name||m.email}</option>)}</select></label>
-        <label style={{display:'block',margin:'12px 0'}}><input type="checkbox" required disabled={repairBusy}/> I confirm this person previously subscribed to {data.label}.</label>
-        <button type="submit" disabled={repairBusy||!repairId} style={{...inputStyle,width:'auto',cursor:'pointer'}}>{repairBusy?'Saving…':'Record former membership'}</button>
-      </form>}
       {/* Subscriber list */}
       <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#aaa', fontFamily: ff, marginBottom: '10px' }}>
         Subscribers ({loading ? '…' : members.length})
       </div>
       <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: '10px', overflow: 'hidden' }}>
-        {loadError ? <div style={{padding:24}}>Subscriber history unavailable.</div> : loading ? (
+        {loading ? (
           <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#ccc', fontFamily: ff, fontStyle: 'italic' }}>Loading…</div>
         ) : members.length === 0 ? (
           <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#ccc', fontFamily: ff, fontStyle: 'italic' }}>No subscribers on this plan yet.</div>
@@ -243,8 +226,8 @@ export default function PlansSection({ supabase, plan: planKey }) {
               {members.map((m, i) => {
                 const name  = m.name || m.full_name || null
                 const email = m.email || null
-                const status   = m.plan_status || 'active'
-                const isActive = ['active','trialing'].includes(status)
+                const status   = hasEndedPaidMembership(m) ? 'churned' : m.subscription_status || 'active'
+                const isActive = !hasEndedPaidMembership(m) && (!m.subscription_status || ['active','trialing'].includes(m.subscription_status))
                 const onWix    = m.billing_source === 'wix'
                 const hasStripe = !!(m.stripe_subscription_id || m.stripe_customer_id)
                 return (

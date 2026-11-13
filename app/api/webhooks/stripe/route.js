@@ -185,7 +185,7 @@ async function handleSubscriptionCanceled(subscription, eventId) {
   // Read the existing plan before clearing it.
   const { data: existing, error: readError } = await supabase
     .from('members')
-    .select('full_name, plan, stripe_subscription_id, billing_source')
+    .select('full_name, plan, subscription_status, stripe_subscription_id, billing_source')
     .eq('stripe_customer_id', subscription.customer)
     .maybeSingle()
 
@@ -198,13 +198,13 @@ async function handleSubscriptionCanceled(subscription, eventId) {
   if (!existing || (existing.stripe_subscription_id && existing.stripe_subscription_id !== subscription.id)) return
   // A replay after clearing this Stripe subscription may still need to retry
   // an explicitly rejected receipt. Never clear a replacement/external plan.
-  if (!existing.stripe_subscription_id && (existing.billing_source !== 'stripe' || existing.plan)) return
+  if (!existing.stripe_subscription_id && (existing.billing_source !== 'stripe' || (existing.plan && existing.subscription_status !== 'churned'))) return
   const previousPlan = PLANS[subscription.items?.data?.[0]?.price?.id]?.plan || existing.plan || 'your subscription'
 
   const { data: member, error } = existing.stripe_subscription_id ? await supabase
     .from('members')
     .update({
-      plan: null,
+      plan: existing.plan,
       plan_id: null,
       stripe_subscription_id: null,
       subscription_status: 'churned',

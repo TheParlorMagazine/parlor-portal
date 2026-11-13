@@ -1,9 +1,10 @@
+import { hasEndedPaidMembership } from '../../../../lib/plans'
 import { requireUser, serviceClient } from '../../../../lib/apiAuth'
 
 const PRINTING_PRESS_ID = 'c666f321-47e5-40c1-bc2a-565a2f52f64d'
 
 function isPrintSubscriber(m) {
-  return m?.plan_id === PRINTING_PRESS_ID || (m?.plan && /printing press/i.test(m.plan))
+  return !hasEndedPaidMembership(m) && (m?.plan_id === PRINTING_PRESS_ID || (m?.plan && /printing press/i.test(m.plan)))
 }
 
 // GET → the member's print-delivery view: are they a print subscriber, the
@@ -13,7 +14,7 @@ export async function GET(request) {
   if (!user) return Response.json({ error: 'Not signed in' }, { status: 401 })
 
   const db = serviceClient()
-  const { data: member } = await db.from('members').select('plan, plan_id').eq('id', user.id).single()
+  const { data: member } = await db.from('members').select('plan, plan_id, subscription_status').eq('id', user.id).single()
   const subscriber = isPrintSubscriber(member)
   if (!subscriber) return Response.json({ subscriber: false, upcoming: [], shipments: [] })
 

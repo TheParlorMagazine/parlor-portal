@@ -1,5 +1,6 @@
 'use client'
 
+import { hasEndedPaidMembership } from '../../../lib/plans'
 import { useEffect, useState, useCallback } from 'react'
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from 'react-simple-maps'
 import { scaleLinear } from 'd3-scale'
@@ -341,9 +342,9 @@ export default function AnalyticsSection({ supabase }) {
 
   // Load member stats once
   useEffect(() => {
-    supabase.from('members').select('id, plan', { count: 'exact' }).then(({ data: members }) => {
+    supabase.from('members').select('id, plan, subscription_status', { count: 'exact' }).then(({ data: members }) => {
       const total = (members || []).filter(m => m.role !== 'admin' && !((m.email||'').endsWith('@theparlormagazine.com'))).length
-      const paid  = (members || []).filter(m => ["Reader's Circle",'Printing Press','circle','press'].includes(m.plan)).length
+      const paid  = (members || []).filter(m => ["Reader's Circle",'Printing Press','circle','press'].includes(m.plan) && !hasEndedPaidMembership(m)).length
       setMemberStats({ total, paid })
     })
   }, [supabase])

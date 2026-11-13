@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import SubscriberRecentActivity from './SubscriberRecentActivity'
 import SubscriberActions from './SubscriberActions'
 import { subscriberStatus } from '../../../lib/subscriberStatus'
-import { isPaidPlan } from '../../../lib/plans'
+import { isPaidPlan, hasEndedPaidMembership } from '../../../lib/plans'
 import { hasWelcomeBeenSent } from '../../../lib/onboardingStatus'
 
 // Match a member's plan against the filter dropdown. Plan values are real names
@@ -406,7 +406,7 @@ export default function SubscribersSection({ supabase }) {
         <div>
           <h1 style={{ fontFamily: ffH, fontSize: '26px', fontWeight: '700', color: '#0a0a0a', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Subscribers</h1>
           <div style={{ fontSize: '13px', color: '#888', fontFamily: ff }}>
-            {loading ? '…' : `${all.length} total · ${all.filter(m => isPaidPlan(m.plan)).length} paid`}
+            {loading ? '…' : `${all.length} total · ${all.filter(m => isPaidPlan(m.plan) && !hasEndedPaidMembership(m)).length} paid`}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>

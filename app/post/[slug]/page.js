@@ -152,7 +152,7 @@ export default async function ArticlePage({ params, searchParams }) {
   let isPaidSubscriber = false
   if (userId) {
     const supabaseAdmin = createClient()
-    const { data: memberRow } = await supabaseAdmin.from('members').select('plan, role').eq('id', userId).single()
+    const { data: memberRow } = await supabaseAdmin.from('members').select('plan, role, subscription_status').eq('id', userId).single()
     isPaidSubscriber = hasPaidAccess(memberRow)
   }
 

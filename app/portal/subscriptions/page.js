@@ -1,4 +1,5 @@
 'use client'
+import { hasEndedPaidMembership } from '../../../lib/plans'
 
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
@@ -62,7 +63,7 @@ function Subscriptions() {
   const { symbol } = useCurrency()
   const m = ctx?.member || {}
   const hasBilling = !!m.stripe_customer_id
-  const planName = m.plan || 'Free'
+  const planName = hasEndedPaidMembership(m) ? 'Free' : m.plan || 'Free'
 
   const [sub, setSub] = useState(undefined) // undefined=loading, null=none, {…}=active
   const [busy, setBusy] = useState('')
@@ -262,7 +263,7 @@ function Subscriptions() {
         <p className="pg-card-note">Upgrade or start a membership.</p>
         <div className="sub-plans">
           {PLANS.map(p => {
-            const isCurrent = m.plan_id === p.id || (m.plan && m.plan.includes(p.label))
+            const isCurrent = !hasEndedPaidMembership(m) && (m.plan_id === p.id || (m.plan && m.plan.includes(p.label)))
             return (
               <div key={p.id} className={`sub-plan${isCurrent ? ' current' : ''}`}>
                 {isCurrent && <span className="sub-current-tag">Current plan</span>}

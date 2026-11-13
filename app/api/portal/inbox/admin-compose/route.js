@@ -1,3 +1,4 @@
+import { hasEndedPaidMembership } from '../../../../../lib/plans'
 import { requireUser, serviceClient, memberOf } from '../../../../../lib/apiAuth'
 import { notifyMember } from '../../../../../lib/notify'
 
@@ -7,9 +8,9 @@ import { notifyMember } from '../../../../../lib/notify'
 function isPaidPlan(p) { return /reader|printing/i.test(p || '') }
 function inAudience(m, audience) {
   if (audience === 'all') return true
-  if (audience === 'readers_circle') return /reader/i.test(m.plan || '')
-  if (audience === 'printing_press') return /printing/i.test(m.plan || '')
-  if (audience === 'free') return !isPaidPlan(m.plan)
+  if (audience === 'readers_circle') return !hasEndedPaidMembership(m) && /reader/i.test(m.plan || '')
+  if (audience === 'printing_press') return !hasEndedPaidMembership(m) && /printing/i.test(m.plan || '')
+  if (audience === 'free') return hasEndedPaidMembership(m) || !isPaidPlan(m.plan)
   return false
 }
 
@@ -31,13 +32,13 @@ export async function GET(request) {
   }
 
   // No query — return segment counts for the composer chips
-  const { data: all } = await db.from('members').select('id, plan, role').eq('deactivated', false)
+  const { data: all } = await db.from('members').select('id, plan, role, subscription_status').eq('deactivated', false)
   const eligible = (all || []).filter(m => m.id !== user.id && m.role !== 'admin')
   const segments = [
     { key: 'all', label: 'All members', count: eligible.length },
-    { key: 'readers_circle', label: "Reader's Circle", count: eligible.filter(m => /reader/i.test(m.plan || '')).length },
-    { key: 'printing_press', label: 'Printing Press', count: eligible.filter(m => /printing/i.test(m.plan || '')).length },
-    { key: 'free', label: 'Free subscribers', count: eligible.filter(m => !isPaidPlan(m.plan)).length },
+    { key: 'readers_circle', label: "Reader's Circle", count: eligible.filter(m => !hasEndedPaidMembership(m) && /reader/i.test(m.plan || '')).length },
+    { key: 'printing_press', label: 'Printing Press', count: eligible.filter(m => !hasEndedPaidMembership(m) && /printing/i.test(m.plan || '')).length },
+    { key: 'free', label: 'Free subscribers', count: eligible.filter(m => hasEndedPaidMembership(m) || !isPaidPlan(m.plan)).length },
   ]
   return Response.json({ segments })
 }
@@ -63,7 +64,7 @@ export async function POST(request) {
     const { data } = await db.from('members').select('id, full_name').eq('id', memberId).single()
     if (data) recipients = [data]
   } else {
-    const { data } = await db.from('members').select('id, full_name, plan, role').eq('deactivated', false)
+    const { data } = await db.from('members').select('id, full_name, plan, role, subscription_status').eq('deactivated', false)
     recipients = (data || []).filter(m => m.id !== user.id && m.role !== 'admin' && inAudience(m, audience))
   }
   if (!recipients.length) return Response.json({ error: 'No recipients' }, { status: 400 })
