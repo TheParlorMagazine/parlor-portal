@@ -3,16 +3,17 @@
 import { useEffect, useState } from 'react'
 import { selectBonesProducts } from '../../lib/bonesProducts'
 
-export default function BonesCoffeeBanner({ visible }) {
+export default function BonesCoffeeBanner({ visible, products: suppliedProducts, headline='Bones Coffee Favorites', kicker='', message='', ctaLabel='From the Parlor Shop', ctaHref='/shop', embedded=false }) {
   const [products, setProducts] = useState([])
   useEffect(() => {
+    if(suppliedProducts!==undefined){setProducts(suppliedProducts);return}
     const controller = new AbortController()
     fetch('/api/shop/products', { signal: controller.signal }).then(response => {
       if (!response.ok) throw new Error('Catalogue unavailable')
       return response.json()
     }).then(data => setProducts(selectBonesProducts(data.products || []))).catch(() => {})
     return () => controller.abort()
-  }, [])
+  }, [suppliedProducts])
   if (!products.length) return null
   return <>
     <style>{`
@@ -39,11 +40,17 @@ export default function BonesCoffeeBanner({ visible }) {
         .bones-name{font-size:10px;line-height:1.1;height:22px}
         .bones-buy{font-size:10px;padding:4px 9px}
       }
+      .bones-banner.bones-embedded{position:static;transform:none;width:100%;max-width:none;opacity:1;visibility:inherit;pointer-events:inherit;margin:0}
+      .bones-banner.bones-embedded.bones-many .bones-tiles{flex:none;grid-auto-rows:auto}
+      .bones-banner.bones-embedded.bones-many .bones-tile img{height:140px;flex:none}
+      @media(max-width:1100px){.bones-banner.bones-embedded{border-radius:12px;max-height:600px}}
       @media(prefers-reduced-motion:reduce){.bones-banner{transition:none}}
     `}</style>
-    <aside className={`bones-banner${visible ? ' shown' : ''}`} aria-label="Bones Coffee products" aria-hidden={!visible}>
-      <h2 className="bones-heading">Bones Coffee Favorites</h2>
-      <a className="bones-shop-link" href="/shop">From the Parlor Shop</a>
+    <aside className={`bones-banner${embedded?' bones-embedded':''}${products.length>3?' bones-many':''}${visible ? ' shown' : ''}`} aria-label="Bones Coffee products" aria-hidden={!embedded&&!visible}>
+      {kicker&&<div style={{textAlign:'center',fontFamily:'Georgia,serif',fontSize:12,marginBottom:8}}>{kicker}</div>}
+      <h2 className="bones-heading">{headline}</h2>
+      {message&&<p style={{fontFamily:'Georgia,serif',fontSize:13,lineHeight:1.5,whiteSpace:'pre-line'}}>{message}</p>}
+      <a className="bones-shop-link" href={ctaHref}>{ctaLabel}</a>
       <div className="bones-tiles">{products.map(product => <a key={product.id} className="bones-tile" href={`/shop/${encodeURIComponent(product.id)}`} aria-label={`Buy now: ${product.name}`}>
         {product.images?.[0] && <img src={product.images[0]} alt={product.name} />}
         <span className="bones-name">{product.name}</span>

@@ -1,3 +1,5 @@
+import { SIDEBAR_PLACEMENT } from '../../../../lib/articleSidebars'
+import { saveArticleSidebar } from '../../../../lib/saveArticleSidebar'
 import { SHOP_POPUP_PLACEMENT,validateShopPopup } from '../../../../lib/shopPopup'
 import { requireUser, serviceClient, memberOf } from '../../../../lib/apiAuth'
 
@@ -17,7 +19,7 @@ const FIELDS = ['kicker', 'headline', 'message', 'cta_label', 'cta_href', 'type'
 const NEWER = ['image_url', 'placement']
 async function saveResilient(query, patch, buildRetry) {
   let { data, error } = await query(patch)
-  if (error && patch.placement !== SHOP_POPUP_PLACEMENT && NEWER.some(c => new RegExp(c).test(error.message || ''))) {
+  if (error && patch.placement !== SHOP_POPUP_PLACEMENT && patch.placement !== SIDEBAR_PLACEMENT && NEWER.some(c => new RegExp(c).test(error.message || ''))) {
     const rest = { ...patch }; NEWER.forEach(c => delete rest[c])
     const r = await buildRetry(rest); data = r.data; error = r.error
   }
@@ -43,6 +45,7 @@ export async function GET(request) {
 export async function POST(request) {
   const g = await gate(request); if (g.error) return g.error
   let b = {}; try { b = await request.json() } catch {}
+  if(b.placement===SIDEBAR_PLACEMENT){const result=await saveArticleSidebar(g.db,b);return Response.json(result.error?{error:result.error}:{announcement:result.announcement},{status:result.status})}
   const patch = { ...pick(b), type: pick(b).type || 'general' }
   try{validateShopPopup(patch)}catch(error){return Response.json({error:error.message},{status:400})}
   if(patch.placement===SHOP_POPUP_PLACEMENT){
@@ -66,8 +69,9 @@ export async function PATCH(request) {
   if (!b.id) return Response.json({ error: 'id required' }, { status: 400 })
   const patch = pick(b)
   // Validate persisted placement too, including partial updates from the toggle.
-  const existing=await g.db.from('announcements').select('placement').eq('id',b.id).single()
+  const existing=await g.db.from('announcements').select('*').eq('id',b.id).single()
   if(existing.error)return Response.json({error:'Announcement could not be checked.'},{status:503})
+  if(existing.data?.placement===SIDEBAR_PLACEMENT||b.placement===SIDEBAR_PLACEMENT){const result=await saveArticleSidebar(g.db,{...b,placement:SIDEBAR_PLACEMENT});return Response.json(result.error?{error:result.error}:{announcement:result.announcement},{status:result.status})}
   if(existing.data?.placement===SHOP_POPUP_PLACEMENT)patch.placement=SHOP_POPUP_PLACEMENT
   try{validateShopPopup({...patch,placement:patch.placement||existing.data?.placement})}catch(error){return Response.json({error:error.message},{status:400})}
   if (!Object.keys(patch).length) return Response.json({ ok: true })
@@ -87,6 +91,9 @@ export async function DELETE(request) {
   const g = await gate(request); if (g.error) return g.error
   let b = {}; try { b = await request.json() } catch {}
   if (!b.id) return Response.json({ error: 'id required' }, { status: 400 })
+  const row=await g.db.from('announcements').select('*').eq('id',b.id).single()
+  if(row.error)return Response.json({error:'Announcement could not be checked.'},{status:503})
+  if(row.data?.placement===SIDEBAR_PLACEMENT){const result=await saveArticleSidebar(g.db,{id:b.id,placement:SIDEBAR_PLACEMENT,active:false});return Response.json(result.error?{error:result.error}:{ok:true},{status:result.status})}
   const { error } = await g.db.from('announcements').delete().eq('id', b.id)
   if (error) return Response.json({ error: error.message }, { status: 500 })
   return Response.json({ ok: true })

@@ -31,7 +31,7 @@ export default function SubscribeRibbon() {
       .then(({ data }) => {
         if (!data) return
         const live = a => (!a.starts_at || a.starts_at <= nowISO) && (!a.ends_at || a.ends_at >= nowISO)
-        const ribbon = data.filter(a => (a.placement || 'ribbon') !== 'homepage' && a.placement !== 'shop_popup' && live(a))
+        const ribbon = data.filter(a => (a.placement || 'ribbon') !== 'homepage' && a.placement !== 'shop_popup' && a.placement !== 'article_sidebar' && live(a))
         if (ribbon.length) setAnnouncements(ribbon)
       })
   }, [])

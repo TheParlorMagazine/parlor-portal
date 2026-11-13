@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from 'react'
 import { uploadToCloudinary, isDuplicateUpload } from '../../../lib/uploadImage'
 import { confirmDialog } from '../../../lib/confirmDialog'
 import AnnouncementMediaEditor from './AnnouncementMediaEditor'
+import ArticleSidebarEditor from './ArticleSidebarEditor'
+import { SIDEBAR_PLACEMENT,sidebarSlots,sidebarConfig } from '../../../lib/articleSidebars'
 import { DEFAULT_SHOP_POPUP,SHOP_POPUP_PLACEMENT,popupMedia,encodePopupMedia,validateShopPopup } from '../../../lib/shopPopup'
 
 const ff  = "'Source Serif 4', Georgia, serif"
@@ -201,7 +203,10 @@ export default function AnnouncementsSection({ supabase }) {
     article_sidebar: a => a.placement === 'article_sidebar',
     shop_popup: a => a.placement === SHOP_POPUP_PLACEMENT,
   }
-  const displayItems=items.some(a=>a.placement===SHOP_POPUP_PLACEMENT)?items:[...items,{...DEFAULT_SHOP_POPUP,_shopDefault:true}]
+  const baseItems=items.filter(a=>a.placement!==SIDEBAR_PLACEMENT)
+  const withShop=baseItems.some(a=>a.placement===SHOP_POPUP_PLACEMENT)?baseItems:[...baseItems,{...DEFAULT_SHOP_POPUP,_shopDefault:true}]
+  const sideSlots=sidebarSlots(items.filter(a=>a.placement===SIDEBAR_PLACEMENT))
+  const displayItems=[...withShop,...sideSlots]
   const shown = displayItems.filter(PLACEMENT_MATCH[tab] || (() => false))
 
   async function load() {
@@ -215,8 +220,8 @@ export default function AnnouncementsSection({ supabase }) {
   async function toggleActive(a) {
     setToggling(true);setLoadError('')
     try{
-      const payload=a._shopDefault?{...DEFAULT_SHOP_POPUP,active:!a.active}:{id:a.id,active:!a.active}
-      const response=await fetch('/api/admin/announcements',{method:a._shopDefault?'POST':'PATCH',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await token()}`},body:JSON.stringify(payload)})
+      const payload=a.placement===SIDEBAR_PLACEMENT?{...a,active:!a.active}:a._shopDefault?{...DEFAULT_SHOP_POPUP,active:!a.active}:{id:a.id,active:!a.active}
+      const response=await fetch('/api/admin/announcements',{method:a._shopDefault||a._virtual?'POST':'PATCH',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await token()}`},body:JSON.stringify(payload)})
       const result=await response.json();if(!response.ok)throw Error(result.error||'The popup could not be updated.')
       await load()
     }catch(error){setLoadError(error.message)}finally{setToggling(false)}
@@ -238,7 +243,7 @@ export default function AnnouncementsSection({ supabase }) {
             tab === 'competition' ? 'Full-width footer banner above the site footer. Only the first active item shows.' :
             tab === 'popup' ? 'First-load popup shown once per session per item. Only the first active item shows.' :
             tab === SHOP_POPUP_PLACEMENT ? PLACEMENT_DESC.shop_popup :
-            tab === 'article_sidebar' ? 'Fixed left strip shown on article pages (wide screens only). Used for seasonal campaigns.' :
+            tab === 'article_sidebar' ? 'Announcement or store banner, on the left or right. One active sidebar per side.' :
             'The floating footer ribbon — issue launches, events, fundraisers, and campaigns. Active ones rotate in sort order.'
           }</p>
         </div>
@@ -266,22 +271,22 @@ export default function AnnouncementsSection({ supabase }) {
       ) : (
         <div style={{ marginTop: 20, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
           {shown.map((a, i) => (
-            <div key={a.id||'shop-popup-default'} style={{ display: 'flex',flexWrap:'wrap', alignItems: 'center', gap: 14, padding: '14px 16px', borderTop: i ? `1px solid ${BORDER}` : 'none', background: a.active ? '#fff' : '#fafafa' }}>
+            <div key={a.id||'shop-popup-default'} data-sidebar-side={a.placement===SIDEBAR_PLACEMENT?sidebarConfig(a).side:undefined} style={{ display: 'flex',flexWrap:'wrap', alignItems: 'center', gap: 14, padding: '14px 16px', borderTop: i ? `1px solid ${BORDER}` : 'none', background: a.active ? '#fff' : '#fafafa' }}>
               <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#fff', background: TYPE_COLOR[a.type] || '#666', borderRadius: 20, padding: '3px 9px', flexShrink: 0 }}>{a.type}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: ffH, fontSize: 15, fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.kicker || a.headline || a.message || '(untitled)'}</div>
+                <div style={{ fontFamily: ffH, fontSize: 15, fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.kicker || a.headline || a.message || '(untitled)'}{a.placement===SIDEBAR_PLACEMENT&&<span style={{fontFamily:ff,fontSize:12,fontWeight:400,color:'#888'}}> · {sidebarConfig(a).side} · {sidebarConfig(a).format==='store'?'Store banner':'Announcement'}</span>}</div>
                 <div style={{ fontSize: 12.5, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{[a.headline, a.message].filter(Boolean).join(' · ') || '—'}</div>
               </div>
               <span style={{ fontSize: 11.5, color: '#aaa', flexShrink: 0 }}>sort {a.sort}</span>
               <button disabled={toggling||(!!loadError&&a._shopDefault)} onClick={() => toggleActive(a)} title={a.active ? 'Active — click to hide' : 'Hidden — click to show'} style={{ flexShrink: 0, cursor: 'pointer', border: `1px solid ${a.active ? '#2d8f5a' : BORDER}`, background: a.active ? '#e8f6ee' : '#fff', color: a.active ? '#2d8f5a' : '#999', borderRadius: 20, padding: '4px 12px', fontFamily: ff, fontSize: 12 }}>{a.active ? 'Active' : 'Hidden'}</button>
               <button onClick={() => setEditing(a)} style={{ flexShrink: 0, background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontFamily: ff }}>Edit</button>
-              {a.placement!==SHOP_POPUP_PLACEMENT&&<button onClick={() => del(a.id)} style={{ flexShrink: 0, background: 'none', border: '1px solid rgba(224,112,112,0.25)', borderRadius: 6, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontFamily: ff, color: '#c04040' }}>Delete</button>}
+              {![SHOP_POPUP_PLACEMENT,SIDEBAR_PLACEMENT].includes(a.placement)&&<button onClick={() => del(a.id)} style={{ flexShrink: 0, background: 'none', border: '1px solid rgba(224,112,112,0.25)', borderRadius: 6, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontFamily: ff, color: '#c04040' }}>Delete</button>}
             </div>
           ))}
         </div>
       )}
 
-      {editing !== undefined && <AnnouncementModal token={token} item={editing} defaultPlacement={tab} supabase={supabase} onClose={() => setEditing(undefined)} onSaved={load} />}
+      {editing !== undefined && (tab===SIDEBAR_PLACEMENT?<ArticleSidebarEditor item={editing} slots={sideSlots} token={token} onClose={()=>setEditing(undefined)} onSaved={load}/>:<AnnouncementModal token={token} item={editing} defaultPlacement={tab} supabase={supabase} onClose={() => setEditing(undefined)} onSaved={load} />)}
     </div>
   )
 }

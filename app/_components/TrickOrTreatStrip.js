@@ -15,6 +15,7 @@ export default function TrickOrTreatStrip({
   bottomBar = false,
   shopPopup = false,
   copy = null,
+  embedded = false,
   onDismiss,
   onVisibilityChange,
 }) {
@@ -45,7 +46,7 @@ export default function TrickOrTreatStrip({
   const slotCounterRef = useRef(0)
   const isMobileRef    = useRef(false)
 
-  const visible = shopPopup ? (!shopMobile || heroGone) : heroGone && (bottomBar || !bottomReached)
+  const visible = embedded || (shopPopup ? (!shopMobile || heroGone) : heroGone && (bottomBar || !bottomReached))
 
   useEffect(() => { onVisibilityChange?.(mounted && visible) }, [mounted, visible, onVisibilityChange])
 
@@ -392,6 +393,7 @@ export default function TrickOrTreatStrip({
         }
       `}</style>
 
+      {embedded&&<style>{`.tot-strip.tot-embedded{position:static;display:flex!important;width:100%;min-width:0;max-width:none;pointer-events:auto}.tot-embedded .tot-inner{margin:0}.article-sidebar .tot-mob{display:none!important}`}</style>}
       {shopPopup && <style>{`
         .tot-strip.tot-shop-popup{left:16px;top:auto;bottom:var(--parlor-shop-popup-bottom,16px);width:280px;min-width:0;max-width:280px;justify-content:flex-end}
         .tot-shop-popup .tot-inner{margin:0;box-shadow:0 8px 30px rgba(0,0,0,.2);padding-top:24px}
@@ -438,7 +440,7 @@ export default function TrickOrTreatStrip({
         {copy?.message&&<p style={{padding:'8px 12px',margin:0,color:'#f2b8c6',fontSize:13,whiteSpace:'pre-line'}}>{copy.message}</p>}
         {/* Bottom: label + slots + CTA */}
         <div className="tot-mob-bottom">
-          <div className="tot-mob-label">{copy?.headline||<>Trick or Treat<br/>at The Parlor</>}</div>
+          <div className="tot-mob-label">{copy?.headline&&copy.headline!=='Trick or Treat at The Parlor'?copy.headline:<>Trick or Treat<br/>at The Parlor</>}</div>
           <div className="tot-mob-slots">
             {[0,1,2,3].map(i => (
               <div key={i} ref={el => slotsMobRef.current[i] = el}
@@ -452,10 +454,10 @@ export default function TrickOrTreatStrip({
       </div>
 
       {/* Desktop sidebar — hidden in bottomBar mode */}
-      {!bottomBar && <div className={`tot-strip${shopPopup ? ' tot-shop-popup' : ''}${visible ? ' shown' : ' hidden'}`} aria-hidden={!visible}>
+      {!bottomBar && <div className={`tot-strip${embedded?' tot-embedded':''}${shopPopup ? ' tot-shop-popup' : ''}${visible ? ' shown' : ' hidden'}`} aria-hidden={!visible}>
         {shopPopup && <button type="button" className="tot-shop-dismiss" onClick={onDismiss} aria-label="Dismiss shop Trick or Treat banner">×</button>}
         <a href={href} className="tot-inner" ref={innerRef} title={copy?.headline||'Trick or Treat at The Parlor'}>
-          <div className="tot-label">{copy?.headline||<>Trick or Treat at<br/>The Parlor</>}</div>
+          <div className="tot-label">{copy?.headline&&copy.headline!=='Trick or Treat at The Parlor'?copy.headline:<>Trick or Treat at<br/>The Parlor</>}</div>
           {copy?.kicker&&<p style={{textAlign:'center',fontSize:12}}>{copy.kicker}</p>}
           {copy?.message&&<p style={{fontSize:14,lineHeight:1.5,whiteSpace:'pre-line',margin:'0 0 12px'}}>{copy.message}</p>}
 
