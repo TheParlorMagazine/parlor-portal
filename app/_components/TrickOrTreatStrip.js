@@ -173,7 +173,7 @@ export default function TrickOrTreatStrip({
   if (!mounted) return null
 
   // In bottomBar mode always use the MobFlyElement (clipped to container)
-  const mob = isMobileRef.current || bottomBar
+  const mob = !embedded && (isMobileRef.current || bottomBar)
 
   return (
     <>
@@ -393,7 +393,7 @@ export default function TrickOrTreatStrip({
         }
       `}</style>
 
-      {embedded&&<style>{`.tot-strip.tot-embedded{position:static;display:flex!important;width:100%;min-width:0;max-width:none;pointer-events:auto}.tot-embedded .tot-inner{margin:0}.article-sidebar .tot-mob{display:none!important}`}</style>}
+      {embedded&&<style>{`.tot-strip.tot-embedded{position:static;display:flex!important;width:100%;min-width:0;max-width:none;pointer-events:auto}.tot-embedded .tot-inner{margin:0}.tot-embedded-mobile{display:none!important}`}</style>}
       {shopPopup && <style>{`
         .tot-strip.tot-shop-popup{left:16px;top:auto;bottom:var(--parlor-shop-popup-bottom,16px);width:280px;min-width:0;max-width:280px;justify-content:flex-end}
         .tot-shop-popup .tot-inner{margin:0;box-shadow:0 8px 30px rgba(0,0,0,.2);padding-top:24px}
@@ -406,7 +406,7 @@ export default function TrickOrTreatStrip({
       `}</style>}
 
       {/* Mobile / bottom-bar strip — two rows: scene on top, label+slots+button below */}
-      <div className={`tot-mob${shopPopup ? ' tot-shop-mobile' : ''}${bottomBar ? ' tot-bottom-bar' : ''}${visible ? ' shown' : ' hidden'}`}
+      <div className={`tot-mob${embedded?' tot-embedded-mobile':''}${shopPopup ? ' tot-shop-mobile' : ''}${bottomBar ? ' tot-bottom-bar' : ''}${visible ? ' shown' : ' hidden'}`}
            aria-hidden={!visible} ref={mobContainerRef}>
         {shopPopup && <button type="button" className="tot-shop-dismiss" onClick={onDismiss} aria-label="Dismiss shop Trick or Treat banner">×</button>}
         {/* Top: animated house scene */}
