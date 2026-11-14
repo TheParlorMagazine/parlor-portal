@@ -159,18 +159,20 @@ export default function CartDrawer() {
 
   // Live shipping quote.
   useEffect(() => {
-    if (!open || !cartGroups.length) { setShipping(null); return }
+    if (!open || !loaded || !cartGroups.length) { setShipping(null); setShipError(''); setShipLoading(false); return }
     let alive = true; setShipping(null); setShipError(''); setShipLoading(true)
-    fetch('/api/shop/shipping', {
+    const controller = new AbortController()
+    const timer = setTimeout(() => fetch('/api/shop/shipping', {
+      signal: controller.signal,
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null, bundle_picks: g.meta?.bundle_picks ?? null, single_pick: g.meta?.single_pick ?? null })), country: effCountry, state: addr.state || '', address: addr }),
     }).then(async r => {
       const d = await r.json()
       if (!r.ok || d.error || typeof d.amount !== 'number' || !Number.isFinite(d.amount) || d.amount < 0) throw new Error(d.error || 'Shipping rate unavailable. Please try again.')
       return d
-    }).then(d => { if (alive) { setShipping(d); setShipLoading(false) } }).catch(error => { if (alive) { setShipping(null); setShipError(error.message || 'Shipping rate unavailable. Please try again.'); setShipLoading(false) } })
-    return () => { alive = false }
-  }, [open, cart, effCountry, addr.name, addr.line1, addr.line2, addr.city, addr.zip, addr.state]) // eslint-disable-line react-hooks/exhaustive-deps
+    }).then(d => { if (alive) { setShipping(d); setShipLoading(false) } }).catch(error => { if (alive) { setShipping(null); setShipError(error.message || 'Shipping rate unavailable. Please try again.'); setShipLoading(false) } }), 350)
+    return () => { alive = false; clearTimeout(timer); controller.abort() }
+  }, [open, loaded, cart, effCountry, addr.line1, addr.line2, addr.city, addr.zip, addr.state]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function checkout() {
     if (!loaded || !cartGroups.length || checkingOut || checkoutStarted.current) return
