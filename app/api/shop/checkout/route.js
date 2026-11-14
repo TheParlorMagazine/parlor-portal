@@ -44,7 +44,10 @@ export async function POST(request) {
   // Live Printify shipping quote for the chosen country (same-numeral in the
   // billing currency). Lock Stripe's address collection to that country so the
   // quote we charge matches where it ships.
-  const quote = await quoteCartShipping(db, prepared.shippingItems, shipCountry, address?.state, new Map(prepared.shippingItems.map(i => [i.id, i.resolvedProduct])), address)
+  let quote
+  try {
+  quote = await quoteCartShipping(db, prepared.shippingItems, shipCountry, address?.state, new Map(prepared.shippingItems.map(i => [i.id, i.resolvedProduct])), address)
+  } catch (error) { return Response.json({ error: error.message }, { status: 422 }) }
   const allowed = SHIP_COUNTRIES.includes(shipCountry) ? [shipCountry] : SHIP_COUNTRIES
 
   // If the customer pre-filled their address in-app, pass it on the payment intent
