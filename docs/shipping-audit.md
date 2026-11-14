@@ -38,3 +38,11 @@ The packaging menu uses a site-styled accessible combobox, including keyboard na
 Buy-one mode now requires an explicit individual selection before adding to cart. Cart quantity increments preserve the complete selection metadata; configurable wishlist items route to the selector and configurable products are excluded from one-click suggestions. Incomplete entries from older carts display a replace link and cannot submit an ambiguous checkout. Bundle mode respects the requested bundle quantity.
 
 US state autofill values such as Virginia and Virginia (VA) normalize to VA for Shippo (origin/destination) and Printify quotes. Shippo authentication failures, rejected shipment details, timeouts, connection failures, malformed responses and empty rates retain distinct messages. Server diagnostics record status or a fixed failure category, never raw provider bodies, addresses or credentials. The actual production Shippo failure remains unconfirmed: the tests use mocked provider responses; live hosting logs are required to distinguish the cause.
+
+## Deployed connection check
+
+Admin → Products → Check Shippo connection runs an authenticated, staff-only GET to Shippo's carrier account list. It uses the deployed SHIPPO_API_KEY and reports only presence of the five origin configuration fields, token mode (not its value), upstream HTTP status, and active-carrier count. It never creates shipments, purchases labels, changes credentials, or returns carrier credential objects/addresses. Responses are no-store.
+
+Results distinguish missing_key, authentication_failed, missing_origin, no_active_carriers, timeout, connection_failed, provider_error and connected. A connected result verifies credential/carrier access, not destination-specific rate availability. The cart's separate quote errors and hosting logs remain necessary for shipment rejection details.
+
+During this audit, the managed coding environment had no Shippo or Netlify credentials. Attempts to reach the public storefront and provider documentation were denied by its restricted outbound host policy (proxy HTTP 403), before reaching either service. This is an environment restriction, not evidence that production Shippo authentication fails. No live provider test was possible from this workspace.

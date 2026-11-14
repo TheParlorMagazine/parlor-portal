@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { uploadToCloudinary, isDuplicateUpload } from '../../../lib/uploadImage'
 import { confirmDialog } from '../../../lib/confirmDialog'
+import ShippoConnectionCheck from './ShippoConnectionCheck'
 import PackagingSelect from './PackagingSelect'
 import BundlesSection from './BundlesSection'
 import CuratedCollectionsSection from './CuratedCollectionsSection'
@@ -550,6 +551,7 @@ export default function ShopProductsSection({ supabase }) {
       </div>
       <p style={{ color: '#888', fontSize: 13.5, margin: '0 0 18px' }}>Manage everything on <a href="/shop" target="_blank" style={{ color: DP }}>the storefront</a>. Products marked <em>Printify</em> are fulfilled print-on-demand. Right-click a product to edit, move, or delete it.</p>
 
+      <ShippoConnectionCheck token={token} />
       {/* Category chips: filter + delete-if-empty + add */}
       <div style={{ display: 'flex', gap: 8, marginBottom: err ? 8 : 18, flexWrap: 'wrap', alignItems: 'center' }}>
         <button onClick={() => setFilter('all')} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${filter === 'all' ? BLACK : BORDER}`, background: filter === 'all' ? BLACK : '#fff', color: filter === 'all' ? '#fff' : '#666', fontFamily: ff, fontSize: 13, cursor: 'pointer' }}>All</button>
