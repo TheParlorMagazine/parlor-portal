@@ -6,16 +6,16 @@ import { DEFAULT_SHOP_POPUP,popupIsLive,popupDismissKey,popupMedia,safePopupUrl 
 export default function ShopTrickOrTreatPopup({heroSelector='#shop-featured-product'}){
  const [announcement,setAnnouncement]=useState(null),[dismissed,setDismissed]=useState(false)
  useEffect(()=>{
-  let live=true
-  async function load(){try{
+  let live=true,requestVersion=0
+  async function load(){const version=++requestVersion;try{
    const response=await fetch('/api/announcements/shop-popup',{cache:'no-store'})
    if(!response.ok)throw Error('Popup unavailable')
    const result=await response.json();if(!result.announcement)throw Error('Popup unavailable')
    const item={...DEFAULT_SHOP_POPUP,...result.announcement}
    item.cta_href=safePopupUrl(item.cta_href,{link:true})||DEFAULT_SHOP_POPUP.cta_href
    let hidden=false;try{hidden=sessionStorage.getItem(popupDismissKey(item))==='1'}catch{}
-   if(live){setAnnouncement(item);setDismissed(hidden)}
-  }catch{if(live)setAnnouncement(null)}}
+   if(live&&version===requestVersion){setAnnouncement(item);setDismissed(hidden)}
+  }catch{if(live&&version===requestVersion)setAnnouncement(null)}}
   load();window.addEventListener('focus',load)
   return()=>{live=false;window.removeEventListener('focus',load)}
  },[])
