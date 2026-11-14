@@ -159,13 +159,17 @@ export default function CartDrawer() {
   // Live shipping quote.
   useEffect(() => {
     if (!open || !cartGroups.length) { setShipping(null); return }
-    let alive = true; setShipLoading(true)
+    let alive = true; setShipping(null); setShipLoading(true)
     fetch('/api/shop/shipping', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items: cartGroups.map(g => ({ id: g.product.id, qty: g.qty, printify_variant_id: g.variant?.printify_variant_id ?? null, bundle_unit_price: g.meta?.bundle_unit_price ?? null, bundle_picks: g.meta?.bundle_picks ?? null, single_pick: g.meta?.single_pick ?? null })), country: effCountry, state: addr.state || '', address: addr }),
-    }).then(r => r.json()).then(d => { if (alive) { setShipping(d); setShipLoading(false) } }).catch(() => { if (alive) setShipLoading(false) })
+    }).then(async r => {
+      const d = await r.json()
+      if (!r.ok || d.error || typeof d.amount !== 'number' || !Number.isFinite(d.amount) || d.amount < 0) throw new Error('Shipping quote unavailable')
+      return d
+    }).then(d => { if (alive) { setShipping(d); setShipLoading(false) } }).catch(() => { if (alive) { setShipping(null); setShipLoading(false) } })
     return () => { alive = false }
-  }, [open, cart, effCountry, addr.state]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, cart, effCountry, addr.name, addr.line1, addr.line2, addr.city, addr.zip, addr.state]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function checkout() {
     if (!loaded || !cartGroups.length || checkingOut || checkoutStarted.current) return
@@ -334,10 +338,10 @@ export default function CartDrawer() {
                   <span style={{ fontSize: 11, background: '#f0faf4', color: '#2d7a4f', border: '1px solid #c6e8d2', borderRadius: 10, padding: '1px 7px' }}>combined</span>
                 )}
               </span>
-              <span>{shipLoading ? '…' : shipping ? (shipping.amount > 0 ? fmtPrice(shipping.amount, symbol) : 'Free') : '—'}</span>
+              <span>{shipLoading ? '…' : shipping ? (shipping.amount > 0 ? fmtPrice(shipping.amount, symbol) : 'Free') : 'Calculated at checkout'}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: BODY, fontSize: 16, fontWeight: 700, marginBottom: 14, paddingTop: 8, borderTop: '1px solid #f0f0f0' }}>
-              <span>Total</span><span>{fmtPrice(cartTotal + (shipping?.amount || 0), symbol)}</span>
+              <span>{shipping && !shipLoading ? 'Total' : 'Subtotal before shipping'}</span><span>{fmtPrice(cartTotal + (!shipLoading && shipping ? shipping.amount : 0), symbol)}</span>
             </div>
             {/* Free shipping progress for self-fulfilled items */}
             {hasManualItems && (
