@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { uploadToCloudinary, isDuplicateUpload } from '../../../lib/uploadImage'
 import { confirmDialog } from '../../../lib/confirmDialog'
-import { PACKAGE_SIZES } from '../../../lib/shopPackaging'
+import PackagingSelect from './PackagingSelect'
 import BundlesSection from './BundlesSection'
 import CuratedCollectionsSection from './CuratedCollectionsSection'
 
@@ -64,7 +64,7 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
 
   async function save() {
     if (!f.name.trim()) { setErr('Name is required'); return }
-    if (f.fulfillment === 'manual' && !f.bundle_config && !f.packaging_size) { setErr('Choose a packaging size for this self-fulfilled product.'); return }
+    if (f.fulfillment === 'manual' && !f.packaging_size) { setErr('Choose a packaging size for this self-fulfilled product.'); return }
     setSaving(true); setErr('')
     const payload = { ...f, price: f.price === '' ? 0 : f.price, bundle_config: f.bundle_config || null }
     if (item?.id) payload.id = item.id
@@ -156,14 +156,11 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
           <option value="printify">Printify (print-on-demand)</option>
           <option value="external">External link (e.g. Wix)</option>
         </select>
-        {f.fulfillment === 'manual' && !f.bundle_config && (
+        {f.fulfillment === 'manual' && (
           <>
             <label htmlFor="product-packaging-size" style={{ ...label, display: 'block' }}>Packaging size</label>
-            <select id="product-packaging-size" value={f.packaging_size} onChange={e => set('packaging_size', e.target.value)} style={{ ...input, cursor: 'pointer' }}>
-              <option value="">Choose packaging size…</option>
-              {PACKAGE_SIZES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-            </select>
-            <div style={{ fontSize: 12, color: '#777', marginTop: 6 }}>Choose the package needed for one item. Orders and bundles combine component weights and use larger boxes or multiple parcels when needed. Enter the shipping weight including this item’s share of packing materials.</div>
+            <PackagingSelect value={f.packaging_size} onChange={value => set('packaging_size', value)} />
+            <div style={{ fontSize: 12, color: '#777', marginTop: 6 }}>{f.bundle_config ? 'Choose the package for one complete bundle. Set shipping weights on its included products; their weights are added together. Printify items ship separately.' : 'Choose the package needed for one item. Multi-item orders use larger boxes or multiple parcels when needed.'} Enter the shipping weight including this item’s share of packing materials.</div>
           </>
         )}
         {f.fulfillment === 'printify' && (

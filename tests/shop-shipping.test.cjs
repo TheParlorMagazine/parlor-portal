@@ -1,6 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs')
 const id=n=>`00000000-0000-0000-0000-${String(n).padStart(12,'0')}`
-async function fixture({weight=3,packaging='small', printify=false, configured=true, printifyRate=250, env={},response={rates:[{amount:'7.25',currency:'USD',provider:'USPS'}]},ok=true}={}) {
+async function fixture({weight=3,packaging='small', printify=false, configured=true, printifyRate=250, parentPackaging=null, env={},response={rates:[{amount:'7.25',currency:'USD',provider:'USPS'}]},ok=true}={}) {
  const requests=[], printifyRequests=[]
  const context=vm.createContext({AbortSignal,console:{error(){}},process:{env:{SHIPPO_API_KEY:'test',SHIP_FROM_STREET:'Test street',SHIP_FROM_CITY:'Test city',SHIP_FROM_STATE:'VA',SHIP_FROM_ZIP:'22026',SHIP_FROM_COUNTRY:'US',...env}},fetch:async(url,opts)=>{requests.push(JSON.parse(opts.body));return {ok,status:ok?200:401,json:async()=>response}}})
  async function load(file){const m=new vm.SourceTextModule(fs.readFileSync(file,'utf8'),{context});await m.link(async spec=>{
@@ -11,6 +11,7 @@ async function fixture({weight=3,packaging='small', printify=false, configured=t
  });await m.evaluate();return m}
  const shipping=(await load('lib/shopShipping.js')).namespace,prepare=(await load('lib/prepareShopCart.js')).namespace
  const products=[{id:id(1),name:'A',price:8,weight_oz:weight,packaging_size:packaging,fulfillment:'manual',active:true},{id:id(2),name:'B',price:12,weight_oz:printify?null:5,packaging_size:printify?null:'small',fulfillment:printify?'printify':'manual',printify_product_id:printify?'provider-product':null,printify_variant_id:printify?7:null,active:true}]
+ products.push({id:id(4),name:'Pick bundle',price:20,active:true,fulfillment:'manual',packaging_size:parentPackaging,bundle_config:{qty:2,price:20,product_ids:[id(1),id(2)]}})
  const bundle={id:id(3),name:'Bundle',price:20,active:true,shop_bundle_items:[{quantity:2,shop_products:products[0]},{quantity:1,shop_products:products[1]}]}
  const db={from(table){const q={ids:[],select(){return q},in(k,v){q.ids=v;return q},eq(){return q},then(resolve){return Promise.resolve({data:(table==='shop_bundles'?[bundle]:products).filter(p=>q.ids.includes(p.id))}).then(resolve)}};return q}}
  async function quote(items){const p=await prepare.prepareShopCart(db,items,'usd','US');return shipping.quoteCartShipping(db,p.shippingItems,'US','VA',new Map(p.shippingItems.map(i=>[i.id,i.resolvedProduct])),{line1:'Test street',city:'Test city',zip:'22026'})}
@@ -28,3 +29,6 @@ test('Printify-only orders do not call Shippo or require manual packaging or wei
 test('mixed bundles send only self-fulfilled weight to Shippo and only provider products to Printify',async()=>{const f=await fixture({printify:true});const q=await f.quote([{id:id(3),qty:2}]);assert.equal(q.cents,975);assert.equal(f.requests[0].parcels.reduce((s,p)=>s+Number(p.weight),0),12);assert.equal(f.printifyRequests[0].length,1);assert.equal(f.printifyRequests[0][0].quantity,2)})
 test('manual free shipping cannot waive Printify fees',async()=>{const f=await fixture({printify:true});const q=await f.quote([{id:id(1),qty:13},{id:id(2),qty:1}]);assert.equal(q.cents,250);assert.equal(q.manualShipFree,true);assert.equal(f.requests.length,0);assert.equal(f.printifyRequests.length,1)})
 test('Printify configuration failures and invalid rates never fall back to Shippo',async()=>{for(const options of [{configured:false},{printifyRate:undefined},{printifyRate:NaN}]){const f=await fixture({printify:true,...options, ...(options.printifyRate===undefined && options.configured!==false?{printifyRate:null}:{})});await assert.rejects(f.quote([{id:id(2),qty:1}]),/Printify/);assert.equal(f.requests.length,0)}})
+
+test('existing pick-bundle packaging quotes aggregate component weight in the selected package',async()=>{const f=await fixture({parentPackaging:'medium'});const q=await f.quote([{id:id(4),qty:1,bundle_picks:[id(1),id(2)]}]);assert.equal(f.requests[0].parcels[0].length,'30');assert.equal(f.requests[0].parcels[0].weight,'8');assert.equal(q.cents,725)})
+test('mixed pick bundles exclude Printify weight from the parent packaging',async()=>{const f=await fixture({parentPackaging:'small',printify:true});const q=await f.quote([{id:id(4),qty:1,bundle_picks:[id(1),id(2)]}]);assert.equal(f.requests[0].parcels[0].weight,'3');assert.equal(f.requests[0].parcels[0].length,'15');assert.equal(q.cents,975)})

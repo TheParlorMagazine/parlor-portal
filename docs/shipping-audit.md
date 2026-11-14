@@ -28,3 +28,7 @@ No live Shippo requests, purchases, labels or production records were created du
 Reviewed against main 86a1d29. No Git merge conflicts. All 317 unit/API tests, production build, and browser checks for announcement media, sidebar slots, original banners, stale refreshes, shop popup controls, cookie spacing/consent, packaging, cart navigation/purchase cleanup passed. Added a cart quote browser check covering delayed catalogue load, API errors, paid/zero quotes and debounced address refreshes. Fixed first-open quotes not refreshing after catalogue load and cancelled superseded requests.
 
 Release gate remains open: this workspace cannot verify/apply the production database migration or assign packaging to live manual products. Do not merge into an auto-deploying main branch until those prerequisites are confirmed. No production configuration, secrets or product data changed during review.
+
+## Existing product editor follow-up
+
+The packaging menu uses a site-styled accessible combobox, including keyboard navigation, type-to-search, Escape and outside-click dismissal. It is available for existing manual products even with pick-your-own bundles enabled. A pick-bundle parent's saved packaging describes one whole bundle: quoting groups its manual components into that package and adds their individual weights. Multiple bundle quantities retain their total weight. Printify components remain separate. Individual picks inherit the parent packaging selection when configured. No further migration is needed.
