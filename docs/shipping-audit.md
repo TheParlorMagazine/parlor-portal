@@ -1,6 +1,6 @@
 # Cart shipping audit
 
-Pending on fix/announcement-media-fields. Packaging adds one nullable product column through 20261114170000_shop_packaging_size.sql; apply it before deploying this branch.
+Packaging adds one nullable product column through 20261114170000_shop_packaging_size.sql. The user confirmed applying this migration before the initial merge to main.
 
 Verified: prepareShopCart expands fixed bundles and selected-product bundles into their stored components, including component quantity and bundle quantity. quoteCartShipping adds their weights and submits ounces to Shippo. A regression test checks two 11-ounce bundles plus one 3-ounce item produces a 25-ounce request.
 
@@ -27,7 +27,7 @@ No live Shippo requests, purchases, labels or production records were created du
 
 Reviewed against main 86a1d29. No Git merge conflicts. All 317 unit/API tests, production build, and browser checks for announcement media, sidebar slots, original banners, stale refreshes, shop popup controls, cookie spacing/consent, packaging, cart navigation/purchase cleanup passed. Added a cart quote browser check covering delayed catalogue load, API errors, paid/zero quotes and debounced address refreshes. Fixed first-open quotes not refreshing after catalogue load and cancelled superseded requests.
 
-Release gate remains open: this workspace cannot verify/apply the production database migration or assign packaging to live manual products. Do not merge into an auto-deploying main branch until those prerequisites are confirmed. No production configuration, secrets or product data changed during review.
+The initial release gate was resolved when the user confirmed applying the migration and authorized deployment so packaging could be assigned in the dashboard. This workspace has not changed production secrets or product data. Manual products still need valid packaging and weight to return quotes.
 
 ## Existing product editor follow-up
 
