@@ -160,7 +160,7 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
           <>
             <label htmlFor="product-packaging-size" style={{ ...label, display: 'block' }}>Packaging size</label>
             <PackagingSelect value={f.packaging_size} onChange={value => set('packaging_size', value)} />
-            <div style={{ fontSize: 12, color: '#777', marginTop: 6 }}>{f.bundle_config ? 'Choose the package for one complete bundle. Set shipping weights on its included products; their weights are added together. Printify items ship separately.' : 'Choose the package needed for one item. Multi-item orders use larger boxes or multiple parcels when needed.'} Enter the shipping weight including this item’s share of packing materials.</div>
+            <div style={{ fontSize: 12, color: '#777', marginTop: 6 }}>{f.bundle_config ? 'Choose the package and shipping weight for ONE item. A two-item bundle sends two packages at that weight to Shippo; buying two bundles sends four. Printify items ship separately.' : 'Choose the package needed for one item. Multi-item orders use larger boxes or multiple parcels when needed.'} Enter the shipping weight including this item’s share of packing materials.</div>
           </>
         )}
         {f.fulfillment === 'printify' && (
