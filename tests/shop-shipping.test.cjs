@@ -1,11 +1,12 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs')
 const id=n=>`00000000-0000-0000-0000-${String(n).padStart(12,'0')}`
-async function fixture({weight=3,packaging='small', printify=false, configured=true, printifyRate=250, parentPackaging=null, parentWeight=2.4, env={},response={rates:[{amount:'7.25',currency:'USD',provider:'USPS'}]},ok=true}={}) {
+async function fixture({weight=3,packaging='small', printify=false, configured=true, printifyRate=250, parentPackaging=null, parentWeight=2.4, region='VA', status=401, env={},response={rates:[{amount:'7.25',currency:'USD',provider:'USPS'}]},ok=true}={}) {
  const requests=[], printifyRequests=[]
- const context=vm.createContext({AbortSignal,console:{error(){}},process:{env:{SHIPPO_API_KEY:'test',SHIP_FROM_STREET:'Test street',SHIP_FROM_CITY:'Test city',SHIP_FROM_STATE:'VA',SHIP_FROM_ZIP:'22026',SHIP_FROM_COUNTRY:'US',...env}},fetch:async(url,opts)=>{requests.push(JSON.parse(opts.body));return {ok,status:ok?200:401,json:async()=>response}}})
+ const context=vm.createContext({AbortSignal,console:{error(){}},process:{env:{SHIPPO_API_KEY:'test',SHIP_FROM_STREET:'Test street',SHIP_FROM_CITY:'Test city',SHIP_FROM_STATE:'VA',SHIP_FROM_ZIP:'22026',SHIP_FROM_COUNTRY:'US',...env}},fetch:async(url,opts)=>{requests.push(JSON.parse(opts.body));return {ok,status:ok?200:status,json:async()=>response}}})
  async function load(file){const m=new vm.SourceTextModule(fs.readFileSync(file,'utf8'),{context});await m.link(async spec=>{
   if(spec==='./shopSnapshot')return load('lib/shopSnapshot.js')
   if(spec==='./shopPackaging')return load('lib/shopPackaging.js')
+  if(spec==='./shippingRegion')return load('lib/shippingRegion.js')
   const values=spec==='./geo'?{priceForCurrency:p=>p.price}:{printifyConfigured:()=>configured,resolveShopId:async()=>'shop',calcShipping:async(shop,lines)=>{printifyRequests.push(lines);return {standard:printifyRate}}}
   return new vm.SyntheticModule(Object.keys(values),function(){for(const[k,v]of Object.entries(values))this.setExport(k,v)},{context})
  });await m.evaluate();return m}
@@ -14,13 +15,13 @@ async function fixture({weight=3,packaging='small', printify=false, configured=t
  products.push({id:id(4),name:'Pick bundle',price:20,active:true,fulfillment:'manual',packaging_size:parentPackaging,weight_oz:parentWeight,bundle_config:{qty:2,price:20,product_ids:[id(1),id(2)]}})
  const bundle={id:id(3),name:'Bundle',price:20,active:true,shop_bundle_items:[{quantity:2,shop_products:products[0]},{quantity:1,shop_products:products[1]}]}
  const db={from(table){const q={ids:[],select(){return q},in(k,v){q.ids=v;return q},eq(){return q},then(resolve){return Promise.resolve({data:(table==='shop_bundles'?[bundle]:products).filter(p=>q.ids.includes(p.id))}).then(resolve)}};return q}}
- async function quote(items){const p=await prepare.prepareShopCart(db,items,'usd','US');return shipping.quoteCartShipping(db,p.shippingItems,'US','VA',new Map(p.shippingItems.map(i=>[i.id,i.resolvedProduct])),{line1:'Test street',city:'Test city',zip:'22026'})}
+ async function quote(items){const p=await prepare.prepareShopCart(db,items,'usd','US');return shipping.quoteCartShipping(db,p.shippingItems,'US',region,new Map(p.shippingItems.map(i=>[i.id,i.resolvedProduct])),{line1:'Test street',city:'Test city',zip:'22026'})}
  return {quote,requests,printifyRequests}
 }
 test('Shippo receives sum of component weights including bundle and cart quantities',async()=>{const f=await fixture();const q=await f.quote([{id:id(3),qty:2},{id:id(1),qty:1}]);assert.equal(f.requests[0].parcels.reduce((s,p)=>s+Number(p.weight),0),25);assert.equal(f.requests[0].parcels[0].mass_unit,'oz');assert.equal(q.cents,725)})
 test('missing item weights cannot silently become eight ounces',async()=>{const f=await fixture({weight:null});await assert.rejects(f.quote([{id:id(1),qty:1}]),/shipping weight/);assert.equal(f.requests.length,0)})
 test('missing Shippo configuration cannot become a flat charge',async()=>{const f=await fixture({env:{SHIPPO_API_KEY:''}});await assert.rejects(f.quote([{id:id(1),qty:1}]),/temporarily unavailable/);assert.equal(f.requests.length,0)})
-test('Shippo failures and malformed rates cannot become free or fallback shipping',async()=>{for(const options of [{ok:false},{response:{rates:[]}},{response:{rates:[{amount:'NaN',currency:'USD'}]}}]){const f=await fixture(options);await assert.rejects(f.quote([{id:id(1),qty:1}]),/rate/);}})
+test('Shippo failures and malformed rates cannot become free or fallback shipping',async()=>{for(const options of [{ok:false},{response:{rates:[]}},{response:{rates:[{amount:'NaN',currency:'USD'}]}}]){const f=await fixture(options);await assert.rejects(f.quote([{id:id(1),qty:1}]),/rate|authenticate/);}})
 
 test('selected package supplies exact parcel dimensions',async()=>{for(const [packaging,dims] of [['small',['15','10','10']],['medium',['30','22','15']],['large',['45','35','25']],['media',['30.48','22.86','1.27']]]){const f=await fixture({packaging});await f.quote([{id:id(1),qty:1}]);const p=f.requests[0].parcels[0];assert.deepEqual([p.length,p.width,p.height],dims);assert.equal(p.distance_unit,'cm')}})
 test('multiple small items promote to a larger box; large items split parcels without losing weight',async()=>{let f=await fixture();await f.quote([{id:id(1),qty:2}]);assert.equal(f.requests[0].parcels[0].length,'30');assert.equal(f.requests[0].parcels[0].weight,'6');f=await fixture({packaging:'large'});await f.quote([{id:id(1),qty:2}]);assert.equal(f.requests[0].parcels.length,2);assert.equal(f.requests[0].parcels.reduce((s,p)=>s+Number(p.weight),0),6)})
@@ -34,3 +35,6 @@ test('two-item pick bundle sends two single-item packages and doubles the config
 test('mixed pick bundles exclude Printify weight from the parent packaging',async()=>{const f=await fixture({parentPackaging:'small',printify:true});const q=await f.quote([{id:id(4),qty:1,bundle_picks:[id(1),id(2)]}]);assert.equal(f.requests[0].parcels.length,1);assert.equal(f.requests[0].parcels[0].weight,'2.4');assert.equal(f.requests[0].parcels[0].length,'15');assert.equal(q.cents,975)})
 
 test('two two-item bundles send four packages, while an individual pick sends one',async()=>{for(const [items,count] of [[[{id:id(4),qty:2,bundle_picks:[id(1),id(2)]}],4],[[{id:id(4),qty:1,single_pick:id(1)}],1]]){const f=await fixture({parentPackaging:'small'});await f.quote(items);assert.equal(f.requests[0].parcels.length,count);assert.ok(f.requests[0].parcels.every(p=>p.length==='15'&&p.width==='10'&&p.height==='10'&&p.weight==='2.4'));assert.equal(f.printifyRequests.length,0)}})
+
+test('US state autofill labels normalize to the carrier code',async()=>{for(const region of ['VA','va','Virginia','Virginia (VA)']){const f=await fixture({region});await f.quote([{id:id(1),qty:1}]);assert.equal(f.requests[0].address_to.state,'VA')}})
+test('Shippo rejection categories remain actionable instead of one generic error',async()=>{for(const [status,message] of [[401,/authenticate/],[403,/authenticate/],[400,/shipment details/],[422,/shipment details/],[503,/temporarily unavailable/]]){const f=await fixture({ok:false,status});await assert.rejects(f.quote([{id:id(1),qty:1}]),message)}})

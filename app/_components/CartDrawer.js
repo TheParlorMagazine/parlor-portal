@@ -108,6 +108,7 @@ export default function CartDrawer() {
       return { key: lineKey(id, vid, meta), product, variant, meta, qty, unit }
     }).filter(Boolean)
   }, [cart, products, bundles])
+  const needsSelection = cartGroups.some(g => g.product.bundle_config && !g.meta?.single_pick && !g.meta?.bundle_picks?.length)
   const cartTotal = cartGroups.reduce((s, g) => s + g.unit * g.qty, 0)
 
   // Group cart lines by print_provider_id (Printify) or '__manual__' (self-fulfilled).
@@ -143,13 +144,13 @@ export default function CartDrawer() {
     if (!hasManualItems || manualShipFree) return []
     const inCart = new Set(cartGroups.map(g => g.product.id))
     return products
-      .filter(p => (p.fulfillment === 'manual' || (!p.fulfillment && !p.print_provider_id)) && !inCart.has(p.id) && p.price > 0)
+      .filter(p => (p.fulfillment === 'manual' || (!p.fulfillment && !p.print_provider_id)) && !p.bundle_config && !inCart.has(p.id) && p.price > 0)
       .sort((a, b) => a.price - b.price)
       .slice(0, 3)
   }, [products, cartGroups, hasManualItems, manualShipFree])
 
-  const addLine = (product, variant) => cartAdd(product.id, variant?.printify_variant_id ?? null)
-  const moveToCart = p => { const v = variantsOf(p)[0]; cartAdd(p.id, v?.printify_variant_id ?? null); setTab('cart') }
+  const addLine = (product, variant, meta) => cartAdd(product.id, variant?.printify_variant_id ?? null, meta)
+  const moveToCart = p => { if (p.bundle_config) { window.location.href = `/shop/${p.id}`; return } const v = variantsOf(p)[0]; cartAdd(p.id, v?.printify_variant_id ?? null); setTab('cart') }
 
   // US-only validation: any product with ships_to === 'us_only' can't ship internationally.
   const hasUsOnly = cartGroups.some(g => g.product.ships_to === 'us_only')
@@ -160,6 +161,7 @@ export default function CartDrawer() {
   // Live shipping quote.
   useEffect(() => {
     if (!open || !loaded || !cartGroups.length) { setShipping(null); setShipError(''); setShipLoading(false); return }
+    if (needsSelection) { setShipping(null); setShipLoading(false); setShipError('Choose an individual item or complete your bundle selection.'); return }
     let alive = true; setShipping(null); setShipError(''); setShipLoading(true)
     const controller = new AbortController()
     const timer = setTimeout(() => fetch('/api/shop/shipping', {
@@ -172,11 +174,11 @@ export default function CartDrawer() {
       return d
     }).then(d => { if (alive) { setShipping(d); setShipLoading(false) } }).catch(error => { if (alive) { setShipping(null); setShipError(error.message || 'Shipping rate unavailable. Please try again.'); setShipLoading(false) } }), 350)
     return () => { alive = false; clearTimeout(timer); controller.abort() }
-  }, [open, loaded, cart, effCountry, addr.line1, addr.line2, addr.city, addr.zip, addr.state]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, loaded, needsSelection, cart, effCountry, addr.line1, addr.line2, addr.city, addr.zip, addr.state]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function checkout() {
     if (!loaded || !cartGroups.length || checkingOut || checkoutStarted.current) return
-    if (usOnlyError) return
+    if (usOnlyError || needsSelection) return
     if (!addr.line1.trim() || !addr.city.trim() || !addr.zip.trim() || !addr.country.trim()) { setAddrOpen(true); setAddrError(true); return }
     checkoutStarted.current = true
     setCheckingOut(true)
@@ -232,7 +234,7 @@ export default function CartDrawer() {
                     <a href={`/shop/${p.id}`} style={{ display: 'block', fontFamily: DISPLAY, fontSize: 15, color: '#1a1a1a', textDecoration: 'none' }}>{p.name}</a>
                     <div style={{ fontFamily: BODY, fontSize: 13, color: '#888' }}>{fmtPrice(unit, symbol)}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
-                      <button onClick={() => moveToCart(p)} style={{ background: BLACK, color: '#fff', border: 'none', borderRadius: 20, padding: '6px 14px', fontFamily: BODY, fontSize: 12.5, cursor: 'pointer' }}>Move to cart</button>
+                      <button onClick={() => moveToCart(p)} style={{ background: BLACK, color: '#fff', border: 'none', borderRadius: 20, padding: '6px 14px', fontFamily: BODY, fontSize: 12.5, cursor: 'pointer' }}>{p.bundle_config ? 'Choose an item' : 'Move to cart'}</button>
                       <button onClick={() => wish.remove(p.id)} style={{ background: 'none', border: 'none', color: '#b99', fontSize: 12.5, cursor: 'pointer', fontFamily: BODY }}>Remove</button>
                     </div>
                   </div>
@@ -271,10 +273,11 @@ export default function CartDrawer() {
                         : meta?.bundle_picks_names?.length
                           ? <div style={{ fontFamily: BODY, fontSize: 12, color: '#888', marginTop: 2 }}>{meta.bundle_picks_names.join(' · ')}</div>
                           : p._isBundle ? (p.description && <div style={{ fontFamily: BODY, fontSize: 12.5, color: '#888' }}>{p.description}</div>) : (variant?.name || p.variant) ? <div style={{ fontFamily: BODY, fontSize: 12.5, color: '#888' }}>{variant?.name || p.variant}</div> : null}
+                      {p.bundle_config && !meta?.single_pick && !meta?.bundle_picks?.length && <a href={`/shop/${p.id}`} onClick={() => removeAll(key)} style={{ color: '#a3324c', display: 'block', marginTop: 6 }}>Replace with an individual item or bundle items</a>}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
                         <button onClick={() => dec(key)} style={qtyBtn}>−</button>
                         <span style={{ fontFamily: BODY, fontSize: 14, minWidth: 18, textAlign: 'center' }}>{qty}</span>
-                        <button onClick={() => p._isBundle ? cartAdd(p.id, null) : addLine(p, variant)} style={qtyBtn}>+</button>
+                        <button onClick={() => p._isBundle ? cartAdd(p.id, null) : addLine(p, variant, meta)} style={qtyBtn}>+</button>
                         <button onClick={() => removeAll(key)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#b99', fontSize: 12.5, cursor: 'pointer', fontFamily: BODY }}>Remove</button>
                       </div>
                     </div>
@@ -386,7 +389,7 @@ export default function CartDrawer() {
               </div>
             )}
 
-            <button onClick={checkout} disabled={checkingOut || !!usOnlyError} style={{ width: '100%', background: BLACK, color: '#fff', border: 'none', borderRadius: 26, padding: '14px 0', fontFamily: BODY, fontSize: 15, letterSpacing: '0.03em', cursor: (checkingOut || usOnlyError) ? 'default' : 'pointer', opacity: (checkingOut || usOnlyError || !addr.line1.trim() || !addr.city.trim() || !addr.zip.trim() || !addr.country.trim()) ? 0.6 : 1 }}>
+            <button onClick={checkout} disabled={checkingOut || !!usOnlyError || needsSelection} style={{ width: '100%', background: BLACK, color: '#fff', border: 'none', borderRadius: 26, padding: '14px 0', fontFamily: BODY, fontSize: 15, letterSpacing: '0.03em', cursor: (checkingOut || usOnlyError || needsSelection) ? 'default' : 'pointer', opacity: (checkingOut || usOnlyError || needsSelection || !addr.line1.trim() || !addr.city.trim() || !addr.zip.trim() || !addr.country.trim()) ? 0.6 : 1 }}>
               {checkingOut ? 'Redirecting…' : user ? 'Checkout' : 'Sign in to check out'}
             </button>
             {!user && <div style={{ fontFamily: BODY, fontSize: 11.5, color: '#999', textAlign: 'center', marginTop: 8 }}>Create a free account or sign in to order and track delivery. No paid membership is required.</div>}

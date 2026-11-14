@@ -32,3 +32,9 @@ The initial release gate was resolved when the user confirmed applying the migra
 ## Existing product editor follow-up
 
 The packaging menu uses a site-styled accessible combobox, including keyboard navigation, type-to-search, Escape and outside-click dismissal. It is available for existing manual products even with pick-your-own bundles enabled. A pick-bundle parent's saved packaging and weight describe ONE item. Each selected manual item inherits those settings (falling back to component weight only when the parent weight is unset). Two selected items submit two parcels to Shippo, each at the configured item weight; two two-item bundles submit four. Individual picks use one package per quantity. Fixed bundles also preserve one package per component unit. Printify components never enter Shippo parcels. No further migration is needed.
+
+## Single-item selection and provider diagnostics
+
+Buy-one mode now requires an explicit individual selection before adding to cart. Cart quantity increments preserve the complete selection metadata; configurable wishlist items route to the selector and configurable products are excluded from one-click suggestions. Incomplete entries from older carts display a replace link and cannot submit an ambiguous checkout. Bundle mode respects the requested bundle quantity.
+
+US state autofill values such as Virginia and Virginia (VA) normalize to VA for Shippo (origin/destination) and Printify quotes. Shippo authentication failures, rejected shipment details, timeouts, connection failures, malformed responses and empty rates retain distinct messages. Server diagnostics record status or a fixed failure category, never raw provider bodies, addresses or credentials. The actual production Shippo failure remains unconfirmed: the tests use mocked provider responses; live hosting logs are required to distinguish the cause.

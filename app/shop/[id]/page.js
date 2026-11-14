@@ -162,11 +162,12 @@ export default function ProductPage({ params }) {
       for (let i = 0; i < qty; i++) add(bundle.id, null)
       setAdded(true); openCart(); return
     }
+    if (bundleConfig && (purchaseMode === 'bundle' ? !bundlePicksFilled : !singlePick)) return
     if (purchaseMode === 'bundle' && bundleConfig) {
       // Add the bundle product itself (active) as one cart line; picks stored in meta for fulfillment
       const picks = bundlePicks.slice(0, bundleQty).filter(Boolean)
       const pickNames = picks.map(pid => bundleProducts.find(p => p.id === pid)?.name || '')
-      add(product.id, null, { bundle_picks: picks, bundle_picks_names: pickNames, bundle_price: bundlePrice })
+      for (let i = 0; i < qty; i++) add(product.id, null, { bundle_picks: picks, bundle_picks_names: pickNames, bundle_price: bundlePrice })
       setAdded(true); openCart(); return
     }
     // "Buy one" from a bundle product — add bundle product with single_pick meta
@@ -434,7 +435,7 @@ export default function ProductPage({ params }) {
                   {/* If this is a bundle product in "Buy one" mode, show item picker with image switching */}
                   {bundleConfig && bundleProducts.length > 0 && (
                     <div style={{ marginBottom: 22 }}>
-                      <div style={{ fontFamily: BODY, fontSize: 13, color: '#5a3d44', marginBottom: 10 }}>Choose a print:</div>
+                      <div style={{ fontFamily: BODY, fontSize: 13, color: '#5a3d44', marginBottom: 10 }}>Choose one item:</div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8, marginBottom: 12 }}>
                         {bundleProducts.map(p => {
                           const img = p.images?.[0]
@@ -475,8 +476,8 @@ export default function ProductPage({ params }) {
 
               <div style={{ display: 'flex', gap: 14, alignItems: 'stretch', maxWidth: 460 }}>
                 <button className="pdp-add" onClick={addToCart}
-                  disabled={bundleConfig && purchaseMode === 'bundle' && !bundlePicksFilled}
-                  style={{ opacity: bundleConfig && purchaseMode === 'bundle' && !bundlePicksFilled ? 0.45 : 1 }}>
+                  disabled={!!bundleConfig && (purchaseMode === 'bundle' ? !bundlePicksFilled : !singlePick)}
+                  style={{ opacity: bundleConfig && (purchaseMode === 'bundle' ? !bundlePicksFilled : !singlePick) ? 0.45 : 1 }}>
                   {bundleConfig && purchaseMode === 'bundle' ? `Add Bundle — ${symbol}${bundlePrice}` : 'Add to Cart'}
                 </button>
                 <button onClick={() => wish.toggle(product.id)} aria-label={wish.has(product.id) ? 'Remove from wishlist' : 'Add to wishlist'} title="Wishlist"
