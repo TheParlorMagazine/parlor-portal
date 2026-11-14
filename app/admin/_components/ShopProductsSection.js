@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { uploadToCloudinary, isDuplicateUpload } from '../../../lib/uploadImage'
 import { confirmDialog } from '../../../lib/confirmDialog'
+import { PACKAGE_SIZES } from '../../../lib/shopPackaging'
 import BundlesSection from './BundlesSection'
 import CuratedCollectionsSection from './CuratedCollectionsSection'
 
@@ -27,6 +28,7 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
     sku: item?.sku || '', inventory: item?.inventory ?? '', weight_oz: item?.weight_oz ?? '', sort: item?.sort ?? 0,
     fulfillment: item?.fulfillment || 'manual', external_url: item?.external_url || '',
     ships_to: item?.ships_to || 'worldwide',
+    packaging_size: item?.packaging_size || '',
     printify_product_id: item?.printify_product_id || '', printify_shop_id: item?.printify_shop_id || '',
     active: item?.active ?? true, featured: item?.featured ?? false,
     featured_blurb: item?.featured_blurb || '',
@@ -62,6 +64,7 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
 
   async function save() {
     if (!f.name.trim()) { setErr('Name is required'); return }
+    if (f.fulfillment === 'manual' && !f.bundle_config && !f.packaging_size) { setErr('Choose a packaging size for this self-fulfilled product.'); return }
     setSaving(true); setErr('')
     const payload = { ...f, price: f.price === '' ? 0 : f.price, bundle_config: f.bundle_config || null }
     if (item?.id) payload.id = item.id
@@ -153,6 +156,16 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
           <option value="printify">Printify (print-on-demand)</option>
           <option value="external">External link (e.g. Wix)</option>
         </select>
+        {f.fulfillment === 'manual' && !f.bundle_config && (
+          <>
+            <label htmlFor="product-packaging-size" style={{ ...label, display: 'block' }}>Packaging size</label>
+            <select id="product-packaging-size" value={f.packaging_size} onChange={e => set('packaging_size', e.target.value)} style={{ ...input, cursor: 'pointer' }}>
+              <option value="">Choose packaging size…</option>
+              {PACKAGE_SIZES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+            <div style={{ fontSize: 12, color: '#777', marginTop: 6 }}>Choose the package needed for one item. Orders and bundles combine component weights and use larger boxes or multiple parcels when needed. Enter the shipping weight including this item’s share of packing materials.</div>
+          </>
+        )}
         {f.fulfillment === 'printify' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 4, padding: 12, background: '#faf6f7', borderRadius: 8, border: `1px solid ${BORDER}` }}>
             <div><div style={label}>Printify product ID</div><input value={f.printify_product_id} onChange={e => set('printify_product_id', e.target.value)} style={input} /></div>

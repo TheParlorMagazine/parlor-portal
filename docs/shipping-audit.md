@@ -1,6 +1,6 @@
 # Cart shipping audit
 
-Pending on fix/announcement-media-fields; no database migration.
+Pending on fix/announcement-media-fields. Packaging adds one nullable product column through 20261114170000_shop_packaging_size.sql; apply it before deploying this branch.
 
 Verified: prepareShopCart expands fixed bundles and selected-product bundles into their stored components, including component quantity and bundle quantity. quoteCartShipping adds their weights and submits ounces to Shippo. A regression test checks two 11-ounce bundles plus one 3-ounce item produces a 25-ounce request.
 
@@ -14,10 +14,11 @@ Fixed:
 
 Remaining limitations/configuration to check before release:
 - Live product weights and Shippo environment values were unavailable in this workspace. The exact production failure is unconfirmed. Cart now exposes the server error; Shippo HTTP failures log status only, without credentials or addresses.
-- Parcel dimensions remain hardcoded to 12 x 9 x 0.5 inches for every manual shipment. Weight totals alone do not guarantee accurate rates for bulky goods. Actual packaging dimensions need to be specified before replacing these values.
+- Manual products now select Small (15 × 10 × 10 cm), Medium (30 × 22 × 15 cm), Large (45 × 35 × 25 cm), or Media (12 × 9 × 0.5 in). Metric box sizes are authoritative because the supplied inch equivalents differed. Existing products remain unassigned until reviewed; they never silently become magazine mailers.
+- Combined manual shipments use conservative rectangular packing of the selected single-item packages, rotate them to fit, promote to larger boxes and split into multiple large parcels when necessary. Every parcel carries only its assigned manual-item weight. Media mailers are used only for one item. This is a packing estimate, not a guarantee of physical fit: use the quoted package dimensions when fulfilling and include packing materials in stored shipping weights. A metric Medium box is slightly smaller than the specified Media mailer in length and width, so multiple media items may promote to Large.
 - Shippo USD amounts are reused numerically for EUR/GBP under the existing shop currency policy; this is not an exchange-rate conversion.
 - Existing manual free-shipping threshold remains 100 in the billing currency.
-- Existing Printify flat fallback remains separate from Shippo handling.
+- Provider isolation is tested for manual-only, Printify-only, mixed bundles, and the manual free-shipping threshold. Printify receives only provider product IDs/variants/quantities and needs no manual package/weight. Shippo receives only manual parcels. Their rates are added for mixed carts; the manual free threshold never waives Printify fees. Printify failures or missing configuration now stop checkout instead of falling back to a flat charge or entering Shippo.
 - Existing Issues-category preference for Media Mail needs business review against carrier eligibility for actual publication contents.
 
 No live Shippo requests, purchases, labels or production records were created during tests.

@@ -1,0 +1,14 @@
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict')
+const esbuild=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chromium}=require('/tmp/parlor-tour-validation/node_modules/playwright-core')
+async function main(){const root=process.cwd(),dir=fs.mkdtempSync(path.join(os.tmpdir(),'packaging-'));let browser
+try{const component=root+'/app/admin/_components/ShopProductsSection.js'
+fs.writeFileSync(dir+'/entry.jsx',`import React from 'react';import{createRoot}from'react-dom/client';import{ProductModal}from ${JSON.stringify(component)};window.renderProduct=(item)=>createRoot(document.getElementById('root')).render(<ProductModal item={item} token={async()=> 'test'} onClose={()=>{}} onSaved={()=>{window.saved=true}}/>);window.renderProduct({id:'test',name:'Magazine',price:10,weight_oz:4,fulfillment:'manual',packaging_size:'media'});`)
+await esbuild.build({entryPoints:[dir+'/entry.jsx'],bundle:true,outfile:dir+'/bundle.js',loader:{'.js':'jsx'},jsx:'automatic',nodePaths:[root+'/node_modules'],plugins:[{name:'modal-export',setup(b){b.onLoad({filter:/ShopProductsSection\.js$/},()=>({contents:fs.readFileSync(component,'utf8')+'\nexport {ProductModal}',loader:'jsx',resolveDir:path.dirname(component)}))}}]})
+browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']})
+for(const width of [1440,390]){const page=await browser.newPage({viewport:{width,height:900}});let saved
+await page.route('**/*',async route=>{if(route.request().method()==='PATCH'){saved=route.request().postDataJSON();return route.fulfill({json:{product:saved}})}return route.fulfill({contentType:'text/html',body:'<div id="root"></div>'})})
+await page.goto('http://parlor.test');await page.addScriptTag({path:dir+'/bundle.js'});const packaging=page.getByLabel('Packaging size');await packaging.waitFor();assert.equal(await packaging.inputValue(),'media');assert.equal(await packaging.locator('option').count(),5)
+const fulfillment=page.locator('select').filter({has:page.locator('option[value="manual"]')});await fulfillment.selectOption('printify');await assert.doesNotReject(async()=>assert.equal(await packaging.count(),0));await fulfillment.selectOption('external');assert.equal(await packaging.count(),0);await fulfillment.selectOption('manual');assert.equal(await packaging.inputValue(),'media');await packaging.selectOption('medium');await page.getByRole('button',{name:'Save product',exact:true}).click();await page.waitForFunction(()=>window.saved);assert.equal(saved.packaging_size,'medium');assert.equal(saved.fulfillment,'manual');await page.close()}
+console.log('PASS: desktop/mobile packaging prefill, four sizes, fulfillment visibility and save payload.')
+}finally{if(browser)await browser.close();fs.rmSync(dir,{recursive:true,force:true})}}
+main().catch(e=>{console.error(e);process.exitCode=1})

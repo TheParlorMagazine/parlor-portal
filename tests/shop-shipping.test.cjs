@@ -1,21 +1,30 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs')
 const id=n=>`00000000-0000-0000-0000-${String(n).padStart(12,'0')}`
-async function fixture({weight=3,env={},response={rates:[{amount:'7.25',currency:'USD',provider:'USPS'}]},ok=true}={}) {
- const requests=[]
+async function fixture({weight=3,packaging='small', printify=false, configured=true, printifyRate=250, env={},response={rates:[{amount:'7.25',currency:'USD',provider:'USPS'}]},ok=true}={}) {
+ const requests=[], printifyRequests=[]
  const context=vm.createContext({AbortSignal,console:{error(){}},process:{env:{SHIPPO_API_KEY:'test',SHIP_FROM_STREET:'Test street',SHIP_FROM_CITY:'Test city',SHIP_FROM_STATE:'VA',SHIP_FROM_ZIP:'22026',SHIP_FROM_COUNTRY:'US',...env}},fetch:async(url,opts)=>{requests.push(JSON.parse(opts.body));return {ok,status:ok?200:401,json:async()=>response}}})
  async function load(file){const m=new vm.SourceTextModule(fs.readFileSync(file,'utf8'),{context});await m.link(async spec=>{
   if(spec==='./shopSnapshot')return load('lib/shopSnapshot.js')
-  const values=spec==='./geo'?{priceForCurrency:p=>p.price}:{printifyConfigured:()=>false,resolveShopId:async()=>'',calcShipping:async()=>({standard:500})}
+  if(spec==='./shopPackaging')return load('lib/shopPackaging.js')
+  const values=spec==='./geo'?{priceForCurrency:p=>p.price}:{printifyConfigured:()=>configured,resolveShopId:async()=>'shop',calcShipping:async(shop,lines)=>{printifyRequests.push(lines);return {standard:printifyRate}}}
   return new vm.SyntheticModule(Object.keys(values),function(){for(const[k,v]of Object.entries(values))this.setExport(k,v)},{context})
  });await m.evaluate();return m}
  const shipping=(await load('lib/shopShipping.js')).namespace,prepare=(await load('lib/prepareShopCart.js')).namespace
- const products=[{id:id(1),name:'A',price:8,weight_oz:weight,fulfillment:'manual',active:true},{id:id(2),name:'B',price:12,weight_oz:5,fulfillment:'manual',active:true}]
+ const products=[{id:id(1),name:'A',price:8,weight_oz:weight,packaging_size:packaging,fulfillment:'manual',active:true},{id:id(2),name:'B',price:12,weight_oz:printify?null:5,packaging_size:printify?null:'small',fulfillment:printify?'printify':'manual',printify_product_id:printify?'provider-product':null,printify_variant_id:printify?7:null,active:true}]
  const bundle={id:id(3),name:'Bundle',price:20,active:true,shop_bundle_items:[{quantity:2,shop_products:products[0]},{quantity:1,shop_products:products[1]}]}
  const db={from(table){const q={ids:[],select(){return q},in(k,v){q.ids=v;return q},eq(){return q},then(resolve){return Promise.resolve({data:(table==='shop_bundles'?[bundle]:products).filter(p=>q.ids.includes(p.id))}).then(resolve)}};return q}}
  async function quote(items){const p=await prepare.prepareShopCart(db,items,'usd','US');return shipping.quoteCartShipping(db,p.shippingItems,'US','VA',new Map(p.shippingItems.map(i=>[i.id,i.resolvedProduct])),{line1:'Test street',city:'Test city',zip:'22026'})}
- return {quote,requests}
+ return {quote,requests,printifyRequests}
 }
 test('Shippo receives sum of component weights including bundle and cart quantities',async()=>{const f=await fixture();const q=await f.quote([{id:id(3),qty:2},{id:id(1),qty:1}]);assert.equal(f.requests[0].parcels[0].weight,'25');assert.equal(f.requests[0].parcels[0].mass_unit,'oz');assert.equal(q.cents,725)})
 test('missing item weights cannot silently become eight ounces',async()=>{const f=await fixture({weight:null});await assert.rejects(f.quote([{id:id(1),qty:1}]),/shipping weight/);assert.equal(f.requests.length,0)})
 test('missing Shippo configuration cannot become a flat charge',async()=>{const f=await fixture({env:{SHIPPO_API_KEY:''}});await assert.rejects(f.quote([{id:id(1),qty:1}]),/temporarily unavailable/);assert.equal(f.requests.length,0)})
 test('Shippo failures and malformed rates cannot become free or fallback shipping',async()=>{for(const options of [{ok:false},{response:{rates:[]}},{response:{rates:[{amount:'NaN',currency:'USD'}]}}]){const f=await fixture(options);await assert.rejects(f.quote([{id:id(1),qty:1}]),/rate/);}})
+
+test('selected package supplies exact parcel dimensions',async()=>{for(const [packaging,dims] of [['small',['15','10','10']],['medium',['30','22','15']],['large',['45','35','25']],['media',['30.48','22.86','1.27']]]){const f=await fixture({packaging});await f.quote([{id:id(1),qty:1}]);const p=f.requests[0].parcels[0];assert.deepEqual([p.length,p.width,p.height],dims);assert.equal(p.distance_unit,'cm')}})
+test('multiple small items promote to a larger box; large items split parcels without losing weight',async()=>{let f=await fixture();await f.quote([{id:id(1),qty:2}]);assert.equal(f.requests[0].parcels[0].length,'30');assert.equal(f.requests[0].parcels[0].weight,'6');f=await fixture({packaging:'large'});await f.quote([{id:id(1),qty:2}]);assert.equal(f.requests[0].parcels.length,2);assert.equal(f.requests[0].parcels.reduce((s,p)=>s+Number(p.weight),0),6)})
+test('missing packaging is actionable rather than an assumed mailer',async()=>{const f=await fixture({packaging:null});await assert.rejects(f.quote([{id:id(1),qty:1}]),/packaging size/);assert.equal(f.requests.length,0)})
+test('Printify-only orders do not call Shippo or require manual packaging or weight',async()=>{const f=await fixture({printify:true,env:{SHIPPO_API_KEY:''}});const q=await f.quote([{id:id(2),qty:2}]);assert.equal(q.cents,250);assert.equal(f.requests.length,0);assert.equal(f.printifyRequests[0][0].product_id,'provider-product');assert.equal(f.printifyRequests[0][0].quantity,2)})
+test('mixed bundles send only self-fulfilled weight to Shippo and only provider products to Printify',async()=>{const f=await fixture({printify:true});const q=await f.quote([{id:id(3),qty:2}]);assert.equal(q.cents,975);assert.equal(f.requests[0].parcels.reduce((s,p)=>s+Number(p.weight),0),12);assert.equal(f.printifyRequests[0].length,1);assert.equal(f.printifyRequests[0][0].quantity,2)})
+test('manual free shipping cannot waive Printify fees',async()=>{const f=await fixture({printify:true});const q=await f.quote([{id:id(1),qty:13},{id:id(2),qty:1}]);assert.equal(q.cents,250);assert.equal(q.manualShipFree,true);assert.equal(f.requests.length,0);assert.equal(f.printifyRequests.length,1)})
+test('Printify configuration failures and invalid rates never fall back to Shippo',async()=>{for(const options of [{configured:false},{printifyRate:undefined},{printifyRate:NaN}]){const f=await fixture({printify:true,...options, ...(options.printifyRate===undefined && options.configured!==false?{printifyRate:null}:{})});await assert.rejects(f.quote([{id:id(2),qty:1}]),/Printify/);assert.equal(f.requests.length,0)}})

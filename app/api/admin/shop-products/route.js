@@ -1,3 +1,4 @@
+import { packageSize } from '../../../../lib/shopPackaging'
 import { requireUser, serviceClient, memberOf } from '../../../../lib/apiAuth'
 
 const ROLES = ['admin', 'editor']
@@ -11,7 +12,7 @@ async function gate(request) {
   return { db, user }
 }
 
-const STRINGS = ['name', 'variant', 'description', 'category', 'tint', 'sku', 'fulfillment', 'external_url', 'stripe_price_id', 'printify_shop_id', 'printify_product_id', 'featured_blurb', 'ships_to']
+const STRINGS = ['name', 'variant', 'description', 'category', 'tint', 'sku', 'fulfillment', 'external_url', 'stripe_price_id', 'printify_shop_id', 'printify_product_id', 'featured_blurb', 'ships_to', 'packaging_size']
 const NUMBERS = ['price', 'price_eur', 'price_gbp', 'sort', 'inventory', 'printify_variant_id', 'weight_oz']
 const BOOLS = ['active', 'featured']
 
@@ -43,6 +44,7 @@ export async function GET(request) {
 export async function POST(request) {
   const g = await gate(request); if (g.error) return g.error
   let b = {}; try { b = await request.json() } catch {}
+  if (b.packaging_size != null && b.packaging_size !== '' && !packageSize(b.packaging_size)) return Response.json({ error: 'Invalid packaging size' }, { status: 400 })
   const patch = pick(b)
   if (!patch.name) return Response.json({ error: 'name required' }, { status: 400 })
   const { data, error } = await g.db.from('shop_products').insert(patch).select().single()
@@ -62,6 +64,7 @@ export async function PATCH(request) {
   const g = await gate(request); if (g.error) return g.error
   let b = {}; try { b = await request.json() } catch {}
   if (!b.id) return Response.json({ error: 'id required' }, { status: 400 })
+  if (b.packaging_size != null && b.packaging_size !== '' && !packageSize(b.packaging_size)) return Response.json({ error: 'Invalid packaging size' }, { status: 400 })
   const patch = pick(b)
   const { data, error } = await g.db.from('shop_products').update(patch).eq('id', b.id).select().single()
   if (error) return Response.json({ error: error.message }, { status: 500 })
