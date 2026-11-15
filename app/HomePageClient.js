@@ -2004,8 +2004,9 @@ export default function HomePageClient({ initial = {} }) {
                     </span>
                     <div className="ribbon-mob-marquee">
                       {[0, 1].map(i => <span key={i} className="ribbon-mob-marquee-copy" aria-hidden={i === 1 ? true : undefined}>
-                        {ribbonData.headline && <em>{ribbonData.headline} · </em>}
-                        {ribbonData.message || ribbonData.kicker}
+                        {ribbonData.kicker}
+                        {ribbonData.kicker && ribbonData.headline && ' — '}
+                        {ribbonData.headline && <em>{ribbonData.headline}</em>}
                         <span aria-hidden="true"> · </span>
                       </span>)}
                     </div>
