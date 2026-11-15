@@ -2,9 +2,9 @@
 import TrickOrTreatStrip from './TrickOrTreatStrip'
 import BonesCoffeeBanner from './BonesCoffeeBanner'
 import { safePopupUrl } from '../../lib/shopPopup'
-export default function ArticleSidebarCard({item,visible}){
+export default function ArticleSidebarCard({item,visible,mobileSlot}){
  const {config}=item,store=config.format==='store',href=safePopupUrl(item.cta_href)||'/shop'
- return <aside className={`article-sidebar article-sidebar-${config.side} article-sidebar-${config.format}${!store&&config.legacy_animation?' article-sidebar-original-animation':''}${visible?' shown':''}`} data-side={config.side} aria-label={`${config.side==='left'?'Left':'Right'} article sidebar`}>
+ return <aside className={`article-sidebar article-sidebar-${config.side} article-sidebar-${config.format}${!store&&config.legacy_animation?' article-sidebar-original-animation':''}${visible?' shown':''}`} data-side={config.side} data-mobile-slot={mobileSlot} aria-label={`${config.side==='left'?'Left':'Right'} article sidebar`}>
   {store?<BonesCoffeeBanner embedded visible={visible} products={item.products||[]} headline={item.headline} kicker={item.kicker||''} message={item.message||''} ctaLabel={item.cta_label||'From the Parlor Shop'} ctaHref={href}/>:config.legacy_animation?<TrickOrTreatStrip embedded copy={item} href={safePopupUrl(item.cta_href)||'/trick-or-treat'}/>:<div className="article-sidebar-card">
    {item.kicker&&<div className="article-sidebar-kicker">{item.kicker}</div>}
    <h2>{item.headline}</h2>

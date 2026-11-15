@@ -136,6 +136,28 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
     return () => window.removeEventListener('resize', updateNavArrows)
   }, [])
 
+  useEffect(() => {
+    const nav = navScrollRef.current
+    if (!nav || !activeCategory) return
+    let disposed = false
+    function revealActiveVertical() {
+      if (disposed) return
+      const active = nav.querySelector('[aria-current="page"]')
+      if (active && nav.scrollWidth > nav.clientWidth + 1) {
+        const viewport = nav.getBoundingClientRect()
+        const item = active.getBoundingClientRect()
+        // Scroll only this horizontal menu; preserve the article's scroll position.
+        nav.scrollLeft += item.left - viewport.left - (nav.clientWidth - item.width) / 2
+      }
+      updateNavArrows()
+    }
+    revealActiveVertical()
+    const observer = new ResizeObserver(revealActiveVertical)
+    observer.observe(nav)
+    if (document.fonts?.ready) document.fonts.ready.then(revealActiveVertical)
+    return () => { disposed = true; observer.disconnect() }
+  }, [activeCategory])
+
   return (
     <>
       <style>{`
@@ -490,6 +512,7 @@ export default function SiteHeader({ hideOnScroll = false, activeCategory = null
                   key={link}
                   href={`/${link.toLowerCase().replace(/ & /g,'-').replace(/ /g,'-')}`}
                   className={`header-section-link${isActive ? ' active' : ''}`}
+                  aria-current={isActive ? 'page' : undefined}
                 >
                   {link}
                 </a>

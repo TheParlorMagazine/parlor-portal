@@ -12,19 +12,14 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
   if(width>1100){await page.locator('.tot-shop-popup.shown').waitFor();const box=await page.locator('.tot-shop-popup').boundingBox();assert.equal(box.x,16);assert.equal(Math.round(box.y+box.height),884);assert.equal(box.width,280)
    await page.evaluate(()=>localStorage.setItem('parlor_cookie_consent',JSON.stringify({version:1,analytics:false,savedAt:Date.now()})))
    await page.addScriptTag({path:path.join(process.cwd(),'public/cookie-consent.js')})
-   const separated=()=>{const popup=document.querySelector('.tot-shop-popup').getBoundingClientRect(),button=document.querySelector('.parlor-cookie-reopen').getBoundingClientRect();return Math.abs(button.top-popup.bottom-12)<1}
-   await page.waitForFunction(separated)
-   await page.evaluate(()=>{const ribbon=document.createElement('div');ribbon.className='ribbon';ribbon.style.cssText='position:fixed;bottom:0;left:0;width:100%;height:80px';document.body.append(ribbon)})
-   await page.waitForFunction(()=>parseInt(document.querySelector('.parlor-cookie-reopen').style.getPropertyValue('--parlor-cookie-bottom'))>=92)
-   await page.waitForFunction(separated)
-   await page.evaluate(()=>document.querySelector('.ribbon').remove())
-   await page.waitForFunction(separated)
+   assert.equal(await page.locator('.parlor-cookie-reopen').count(),0)
+   const popup=await page.locator('.tot-shop-popup').boundingBox();assert.equal(Math.round(popup.y+popup.height),884)
   }
   else{await page.locator('.tot-shop-mobile.hidden').waitFor({state:'attached'});await page.evaluate(()=>window.scrollTo(0,1100));await page.locator('.tot-shop-mobile.shown').waitFor();await page.waitForFunction(()=>Math.round(document.querySelector('.tot-shop-mobile').getBoundingClientRect().y)===0)}
   const close=page.locator(width>1100?'.tot-shop-popup .tot-shop-dismiss':'.tot-shop-mobile .tot-shop-dismiss');await close.click();assert.equal(page.url(),'http://local.test/shop');assert.equal(await page.locator('.tot-shop-popup').count(),0)
   await load('/shop');assert.equal(await page.locator('.tot-shop-popup').count(),0)
   await load('/article');await page.evaluate(()=>window.scrollTo(0,1100));await page.locator(width>1100?'.tot-strip.shown':'.tot-mob.shown').waitFor();assert.equal(await page.getByRole('button',{name:'Dismiss shop Trick or Treat banner'}).count(),0);assert.equal(await page.locator('.tot-shop-popup').count(),0)
   assert.deepEqual(errors,[]);await ctx.close()
- }console.log('PASS desktop popup stacks 12px above cookie preferences and follows ribbon changes; original desktop placement, mobile scroll trigger, session dismissal, and original article banner unaffected')}
+ }console.log('PASS desktop popup retains its bottom spacing without a floating cookie button; original desktop placement, mobile scroll trigger, session dismissal, and original article banner unaffected')}
  finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1})

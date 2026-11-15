@@ -490,6 +490,7 @@ export default function HomePageClient({ initial = {} }) {
         const cards = Array.from(document.querySelectorAll('#slides .card'))
         if (!cards.length) return
         cards.forEach(c => c.style.height = 'auto')
+        if (window.matchMedia('(max-width: 599px)').matches) return
         let maxH = 0
         cards.forEach(c => { maxH = Math.max(maxH, c.offsetHeight) })
         cards.forEach(c => c.style.height = maxH + 'px')
@@ -554,6 +555,8 @@ export default function HomePageClient({ initial = {} }) {
       waitImagesAndEqualize()
 
       swiperInstance = new window.Swiper('#carousel', {
+        enabled: false,
+        breakpoints: { 600: { enabled: true } },
         slidesPerView: 'auto',
         spaceBetween: 24,
         speed: 380,
@@ -1524,6 +1527,17 @@ export default function HomePageClient({ initial = {} }) {
           .ribbon-mob-bar-kicker { font-size: 13px; }
           .ribbon-mob-bar-headline { font-size: 21px; }
           .ribbon-mob-bar-cta { font-size: 14px; padding: 10px 18px; }
+        }
+        @media (max-width: 599px) {
+          .ribbon-mob-bar-text { display: none; }
+          .ribbon-mob-bar { justify-content: center; }
+          .carousel-section .carousel-header { padding: 0 20px; }
+          #carousel { padding: 18px 20px 28px !important; touch-action: pan-y; }
+          #carousel .swiper-wrapper { display: flex; flex-direction: column; gap: 24px; transform: none !important; width: 100% !important; height: auto !important; }
+          #carousel .swiper-slide { width: 100% !important; margin: 0 !important; padding: 0; height: auto; }
+          #carousel .card { height: auto !important; text-align: left; }
+          #carousel .excerpt { display: block; overflow: visible; }
+          #carousel .fade-edge, #carousel .swiper-button-prev, #carousel .swiper-button-next { display: none !important; }
         }
       `}</style>
 

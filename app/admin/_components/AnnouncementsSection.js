@@ -44,7 +44,7 @@ const PLACEMENT_DESC = {
   competition: 'Full-width footer banner above the site footer. Headline can use \\n for line breaks. Submissions-close date is derived from "Show until".',
   popup: 'First-load popup, shown once per session. Include an image for best impact.',
   article_sidebar: 'Fixed left strip shown on article pages on wide screens. Used for seasonal campaigns like Trick or Treat.',
-  shop_popup: 'The floating shop card above Cookie preferences. Keep the Trick-or-Treat animation or replace it with images, GIFs and videos.',
+  shop_popup: 'The floating shop card near the bottom of the page. Keep the Trick-or-Treat animation or replace it with images, GIFs and videos.',
 }
 
 function AnnouncementModal({ token, item, supabase, defaultPlacement = 'ribbon', onClose, onSaved }) {
