@@ -1535,7 +1535,8 @@ export default function HomePageClient({ initial = {} }) {
           .ribbon-mob-marquee { display: flex; width: max-content; animation: ribbon-marquee 32s linear infinite; }
           .ribbon-mob-marquee-copy[aria-hidden] { display: inline; }
           .ribbon-mob-marquee-copy { flex: none; padding-right: 32px; white-space: nowrap; }
-          .ribbon-mob-marquee-copy em { font-family: 'Playfair Display', Georgia, serif; color: #7a2531; }
+          .ribbon-mob-marquee-copy strong { font-weight: 800; }
+          .ribbon-mob-marquee-copy em { font-family: 'Alex Brush', cursive; font-size: 26px; font-weight: 400; font-style: normal; line-height: 1.3; color: #7a2531; }
           .ribbon-mob-bar:hover .ribbon-mob-marquee, .ribbon-mob-bar:focus-within .ribbon-mob-marquee { animation-play-state: paused; }
           .ribbon-mob-bar-cta { max-width: 56%; white-space: normal; text-align: center; }
           @keyframes ribbon-marquee { to { transform: translateX(-50%); } }
@@ -2004,8 +2005,8 @@ export default function HomePageClient({ initial = {} }) {
                     </span>
                     <div className="ribbon-mob-marquee">
                       {[0, 1].map(i => <span key={i} className="ribbon-mob-marquee-copy" aria-hidden={i === 1 ? true : undefined}>
-                        {ribbonData.kicker}
-                        {ribbonData.kicker && ribbonData.headline && ' — '}
+                        {ribbonData.kicker && <strong>{ribbonData.kicker}</strong>}
+                        {ribbonData.kicker && ribbonData.headline && ' · '}
                         {ribbonData.headline && <em>{ribbonData.headline}</em>}
                         <span aria-hidden="true"> · </span>
                       </span>)}
