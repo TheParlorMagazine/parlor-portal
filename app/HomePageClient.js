@@ -1025,6 +1025,7 @@ export default function HomePageClient({ initial = {} }) {
         .issue-hero-sub-wrap { position: relative; display: block; width: fit-content; max-width: 44ch; margin: clamp(16px,2.4vh,26px) 0 0; }
         .issue-hero-sub-fill { display: none; }
         .issue-hero-sub { margin: 0; font-family: 'Source Serif 4', Georgia, serif; font-size: clamp(15px,1.15vw,17px); line-height: 1.6; color: #fff; opacity: 0; text-shadow: 0 1px 8px rgba(0,0,0,0.4); }
+        .issue-hero-accent--new-line { display: block; }
         .issue-hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(30px,3.9vw,62px); font-weight: 700; color: var(--white); line-height: 1.06; margin: 0; letter-spacing: -0.01em; text-shadow: 0 2px 20px rgba(0,0,0,0.6); max-width: 22ch; }
         .issue-hero-accent { font-style: italic; color: var(--pink); }
         /* Read more button inline with text */
@@ -1534,7 +1535,7 @@ export default function HomePageClient({ initial = {} }) {
           .ribbon-mob-bar-text { display: block; flex: 1; min-width: 0; overflow: hidden; text-overflow: clip; }
           .ribbon-mob-marquee { display: flex; width: max-content; animation: ribbon-marquee 32s linear infinite; }
           .ribbon-mob-marquee-copy[aria-hidden] { display: inline; }
-          .ribbon-mob-marquee-copy { flex: none; padding-right: 32px; white-space: nowrap; }
+          .ribbon-mob-marquee-copy { flex: none; padding-right: 0; white-space: nowrap; }
           .ribbon-mob-marquee-copy strong { font-weight: 800; }
           .ribbon-mob-marquee-copy em { font-family: 'Alex Brush', cursive; font-size: 26px; font-weight: 400; font-style: normal; line-height: 1.3; color: #7a2531; }
           .ribbon-mob-bar:hover .ribbon-mob-marquee, .ribbon-mob-bar:focus-within .ribbon-mob-marquee { animation-play-state: paused; }
@@ -1763,7 +1764,8 @@ export default function HomePageClient({ initial = {} }) {
                 <h1 className="issue-hero-title">
                   {(() => {
                     const { head, tail } = splitHeadTail(s.title)
-                    return <>{head}{head ? ' ' : null}<em className="issue-hero-accent">{tail}</em></>
+                    const breakBeforeAccent = /^kantamanto is not a dumping ground[.!?]?$/i.test((s.title || '').trim())
+                    return <>{head}{head ? ' ' : null}<em className={`issue-hero-accent${breakBeforeAccent ? ' issue-hero-accent--new-line' : ''}`}>{tail}</em></>
                   })()}
                 </h1>
                 <a href={s.url} className="issue-hero-btn issue-hero-btn-head">Read more</a>
