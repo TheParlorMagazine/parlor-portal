@@ -482,17 +482,15 @@ export default function NewsletterTab({ supabase }) {
                     <input value={announcementTitle} onChange={e => setAnnouncementTitle(e.target.value)}
                       placeholder="e.g. We're turning one 🎉"
                       style={{ ...inputSt, marginBottom: 8 }} />
-                    <label style={labelSt}>Image (optional)</label>
-                    <ImageZone
+                    <label style={{ ...labelSt, marginTop: 8 }}>Announcement text</label>
+                    <NewsletterAnnouncementEditor value={announcement} onChange={setAnnouncement} image={announcementImg} onImageChange={setAnnouncementImg} imagePicker={<ImageZone
                       value={announcementImg} onChange={setAnnouncementImg} onUpload={uploadAnnImg}
                       uploading={annImgUploading} dragOver={annImgDragOver}
                       onDragOver={e => { e.preventDefault(); setAnnImgDragOver(true) }}
                       onDragLeave={() => setAnnImgDragOver(false)}
                       onDrop={e => { e.preventDefault(); setAnnImgDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) uploadAnnImg(f) }}
                       inputId="nl-ann-img-input" pickerKey="announcement" onOpenMedia={openMediaPicker}
-                    />
-                    <label style={{ ...labelSt, marginTop: 8 }}>Announcement text</label>
-                    <NewsletterAnnouncementEditor value={announcement} onChange={setAnnouncement} />
+                    />} />
                     <label style={{ ...labelSt, marginTop: 8 }}>CTA link URL (optional)</label>
                     <input value={announcementUrl} onChange={e => setAnnouncementUrl(e.target.value)}
                       placeholder="https://…" style={inputSt} />
