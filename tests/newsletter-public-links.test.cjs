@@ -55,15 +55,14 @@ test('newsletter image destinations support full URLs and website paths without 
   assert.match(html,/href="https:\/\/theparlormagazine.com\/shop\/trio"/);assert.doesNotMatch(html,/javascript:/)
 })
 
-test('announcement transparency matches its pink block and links only when a destination is provided',async()=>{
+test('announcement transparency matches its pink block and images link to their original regardless of the CTA',async()=>{
   const module=await newsletter(),original='https://nxpwcdtduxsorbzoajbm.supabase.co/storage/v1/object/public/Media/announcements/tote.webp'
   for(const url of ['/trick-or-treat','']){
     const issue={id:'issue',newsletter_announcement_title:'Trick or Treat at The Parlor',newsletter_announcement_img:original,newsletter_announcement_url:url}
     const {html}=module.buildNewsletter({issue,sections:{issuPromo:false}})
     assert.match(html,/src="https:\/\/theparlormagazine.com\/email-art\/fdf0f3\/[^"]+"/)
     assert.match(html,/background-color:#fdf0f3;" alt="Trick or Treat at The Parlor"/)
-    if(url)assert.match(html,/<a href="https:\/\/theparlormagazine.com\/trick-or-treat"[^>]*><img/)
-    else assert.doesNotMatch(html,/<a[^>]*><img[^>]*class="ann-img"/)
+    assert.ok(html.includes('<a href="'+original+'" target="_blank"'));if(url)assert.match(html,/href="https:\/\/theparlormagazine.com\/trick-or-treat"/)
     assert.equal(issue.newsletter_announcement_img,original)
   }
 })
