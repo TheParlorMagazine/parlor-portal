@@ -4,10 +4,9 @@ const fs=require('node:fs')
 const vm=require('node:vm')
 
 async function newsletter(){
-  const context=vm.createContext({URL,URLSearchParams})
-  const module=new vm.SourceTextModule(fs.readFileSync('lib/newsletter.js','utf8'),{context})
-  await module.link(async spec=>{const images=new vm.SourceTextModule(fs.readFileSync(spec==='./emailImages'?'lib/emailImages.js':'lib/campaignEmailStyles.js','utf8'),{context});await images.link(()=>{});return images});await module.evaluate()
-  return module.namespace
+  const os=require('node:os'),path=require('node:path'),{build}=require('/tmp/parlor-tour-validation/node_modules/esbuild')
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'newsletter-links-')),file=path.join(dir,'newsletter.cjs')
+  try { await build({entryPoints:['lib/newsletter.js'],outfile:file,bundle:true,platform:'node',format:'cjs'});return require(file) } finally { fs.rmSync(dir,{recursive:true,force:true}) }
 }
 
 test('newsletter article and issue links use the public domain despite a deployment base URL',async()=>{

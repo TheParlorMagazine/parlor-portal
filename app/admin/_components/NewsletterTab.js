@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import NewsletterAnnouncementEditor from './NewsletterAnnouncementEditor'
 import { confirmDialog } from '../../../lib/confirmDialog'
 import { uploadToCloudinary } from '../../../lib/uploadImage'
 
@@ -491,9 +492,7 @@ export default function NewsletterTab({ supabase }) {
                       inputId="nl-ann-img-input" pickerKey="announcement" onOpenMedia={openMediaPicker}
                     />
                     <label style={{ ...labelSt, marginTop: 8 }}>Announcement text</label>
-                    <textarea value={announcement} onChange={e => setAnnouncement(e.target.value)} rows={3}
-                      placeholder="e.g. Our spring fundraiser is live — help us reach $5k by April 30."
-                      style={{ ...inputSt, fontSize: '14px', resize: 'vertical' }} />
+                    <NewsletterAnnouncementEditor value={announcement} onChange={setAnnouncement} />
                     <label style={{ ...labelSt, marginTop: 8 }}>CTA link URL (optional)</label>
                     <input value={announcementUrl} onChange={e => setAnnouncementUrl(e.target.value)}
                       placeholder="https://…" style={inputSt} />
