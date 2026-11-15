@@ -10,7 +10,7 @@ import { confirmDialog } from '../../../../lib/confirmDialog'
 
 // ── Editor NodeView ───────────────────────────────────────────
 // Renders the album images in their actual layout, scaled for the editor.
-function AlbumLayoutPreview({ layout, images }) {
+export function AlbumLayoutPreview({ layout, images }) {
   const capStyle = { fontSize: '10px', color: '#999', fontStyle: 'italic', lineHeight: 1.35, margin: '4px 2px 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }
   const imgBase = { width: '100%', display: 'block', borderRadius: '4px', background: '#e0e0e0' }
 
@@ -158,7 +158,7 @@ const selInputStyle = {
   outline: 'none', boxSizing: 'border-box',
 }
 
-export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImages, mode = 'insert' }) {
+export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImages, mode = 'insert', allowedLayouts = null }) {
   const supabase = createClient()
   const isEditing = mode === 'edit'
   const [folder, setFolder] = useState('body')
@@ -170,6 +170,7 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
   ) // [{ src, alt, caption }]
   const [isDragOver, setIsDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const [contextMenu, setContextMenu] = useState(null) // { x, y, file }
   const [editingFile, setEditingFile] = useState(null) // { file, newName }
   const [editingImage, setEditingImage] = useState(null) // file
@@ -207,15 +208,17 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
   async function uploadFiles(fileList) {
     const imageFiles = Array.from(fileList).filter(f => f.type.startsWith('image/'))
     if (!imageFiles.length) return
-    setUploading(true)
-    const pairs = await Promise.all(imageFiles.map(async file => ({ name: file.name, url: await uploadToCloudinary(file, 'parlor/articles') })))
-    const validPairs = pairs.filter(p => p.url)
-    setFiles(prev => [...validPairs.map(p => ({ name: p.name, _cloudinaryUrl: p.url })), ...prev])
-    setSelected(prev => {
-      const added = validPairs.filter(p => !prev.find(s => s.src === p.url)).map(p => ({ src: p.url, alt: '', caption: '' }))
-      return [...prev, ...added]
-    })
-    setUploading(false)
+    setUploading(true); setUploadError('')
+    try {
+      const pairs = await Promise.all(imageFiles.map(async file => ({ name: file.name, url: await uploadToCloudinary(file, 'parlor/articles') })))
+      const validPairs = pairs.filter(p => p.url)
+      setFiles(prev => [...validPairs.map(p => ({ name: p.name, _cloudinaryUrl: p.url })), ...prev])
+      setSelected(prev => {
+        const added = validPairs.filter(p => !prev.find(s => s.src === p.url)).map(p => ({ src: p.url, alt: '', caption: '' }))
+        return [...prev, ...added]
+      })
+    } catch { setUploadError('Image upload failed. Your selected images are preserved; please retry.') }
+    finally { setUploading(false) }
   }
 
   function getUrl(file) {
@@ -288,7 +291,7 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', borderBottom: '1px solid rgba(255,255,255,0.04)', flexShrink: 0, gap: '16px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.1em', flexShrink: 0 }}>Layout</span>
-            {LAYOUTS.map(l => (
+            {LAYOUTS.filter(l => !allowedLayouts || allowedLayouts.includes(l.key)).map(l => (
               <button key={l.key} type="button" onClick={() => setLayout(l.key)} style={{ padding: '4px 12px', border: 'none', borderRadius: '20px', cursor: 'pointer', fontSize: '11px', background: layout === l.key ? 'rgba(242,184,198,0.18)' : 'rgba(255,255,255,0.05)', color: layout === l.key ? '#f2b8c6' : '#666', fontFamily: "'Source Serif 4', Georgia, serif" }}>
                 {l.label}
               </button>
@@ -318,6 +321,7 @@ export function AlbumInsertModal({ onInsert, onClose, initialLayout, initialImag
                 <span style={{ color: '#f2b8c6', fontSize: '13px', fontWeight: '600' }}>Drop to upload</span>
               </div>
             )}
+            {uploadError && <p role="alert" style={{ color: '#f2b8c6', fontSize: 12 }}>{uploadError}</p>}
             {uploading && (
               <div style={{ textAlign: 'center', padding: '12px 0', color: '#f2b8c6', fontSize: '12px' }}>Uploading…</div>
             )}

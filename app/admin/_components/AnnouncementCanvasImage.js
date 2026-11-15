@@ -12,7 +12,7 @@ function CanvasImage({ node, selected, updateAttributes, deleteNode, editor, get
   </NodeViewWrapper>
 }
 export const AnnouncementImage = Image.extend({
-  addAttributes() { return { ...this.parent?.(), align:{default:'full',parseHTML:el=>['left','right'].includes(el.getAttribute('data-align'))?el.getAttribute('data-align'):'full',renderHTML:attrs=>({'data-align':attrs.align,'data-announcement-image':'1'})} } },
+  addAttributes() { return { ...this.parent?.(), owned:{default:false,parseHTML:el=>el.getAttribute('data-announcement-owned')==='1',renderHTML:attrs=>attrs.owned?{'data-announcement-owned':'1'}:{}}, align:{default:'full',parseHTML:el=>['left','right'].includes(el.getAttribute('data-align'))?el.getAttribute('data-align'):'full',renderHTML:attrs=>({'data-align':attrs.align,'data-announcement-image':'1'})} } },
   parseHTML() { return [{tag:'img[data-announcement-image="1"]'}] },
   addNodeView() { return ReactNodeViewRenderer(CanvasImage) },
 })
