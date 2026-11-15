@@ -1425,6 +1425,7 @@ export default function HomePageClient({ initial = {} }) {
             padding: 11px 50px 11px 18px;
             gap: 10px;
           }
+          .ribbon-mob-marquee { display: none; }
           .ribbon-mob-bar-text {
             flex: 1; min-width: 0; overflow: hidden;
             white-space: nowrap; text-overflow: ellipsis;
@@ -1529,8 +1530,20 @@ export default function HomePageClient({ initial = {} }) {
           .ribbon-mob-bar-cta { font-size: 14px; padding: 10px 18px; }
         }
         @media (max-width: 599px) {
-          .ribbon-mob-bar-text { display: none; }
-          .ribbon-mob-bar { justify-content: center; }
+          .ribbon-mob-static { display: none; }
+          .ribbon-mob-bar-text { display: block; flex: 1; min-width: 0; overflow: hidden; text-overflow: clip; }
+          .ribbon-mob-marquee { display: flex; width: max-content; animation: ribbon-marquee 32s linear infinite; }
+          .ribbon-mob-marquee-copy[aria-hidden] { display: inline; }
+          .ribbon-mob-marquee-copy { flex: none; padding-right: 32px; white-space: nowrap; }
+          .ribbon-mob-marquee-copy em { font-family: 'Playfair Display', Georgia, serif; color: #7a2531; }
+          .ribbon-mob-bar:hover .ribbon-mob-marquee, .ribbon-mob-bar:focus-within .ribbon-mob-marquee { animation-play-state: paused; }
+          .ribbon-mob-bar-cta { max-width: 56%; white-space: normal; text-align: center; }
+          @keyframes ribbon-marquee { to { transform: translateX(-50%); } }
+          @media (prefers-reduced-motion: reduce) {
+            .ribbon-mob-marquee { animation: none; width: auto; }
+            .ribbon-mob-marquee-copy { white-space: normal; padding-right: 0; }
+            .ribbon-mob-marquee-copy[aria-hidden] { display: none; }
+          }
           .carousel-section .carousel-header { padding: 0 20px; }
           #carousel { padding: 18px 20px 28px !important; touch-action: pan-y; }
           #carousel .swiper-wrapper { display: flex; flex-direction: column; gap: 24px; transform: none !important; width: 100% !important; height: auto !important; }
@@ -1939,7 +1952,6 @@ export default function HomePageClient({ initial = {} }) {
 
       {/* ── RIBBON ── (admin-managed announcements, rotating) */}
       {(() => {
-        const marqueeText = [ribbonData.kicker, ribbonData.headline, ribbonData.message].filter(Boolean).join(' · ')
         return (
           <div className={`ribbon${ribbonScrolling ? ' scrolling' : ''}${uiHidden ? ' ui-hidden' : ''}`}>
             {/* Desktop: 3-column grid */}
@@ -1986,8 +1998,17 @@ export default function HomePageClient({ initial = {} }) {
               {ribbonCollapsed && (
                 <div className="ribbon-mob-bar">
                   <div className="ribbon-mob-bar-text">
-                    {ribbonData.kicker && <span className="ribbon-mob-bar-kicker">{ribbonData.kicker}</span>}
-                    {ribbonData.headline && <span className="ribbon-mob-bar-headline">{ribbonData.headline}</span>}
+                    <span className="ribbon-mob-static">
+                      {ribbonData.kicker && <span className="ribbon-mob-bar-kicker">{ribbonData.kicker}</span>}
+                      {ribbonData.headline && <span className="ribbon-mob-bar-headline">{ribbonData.headline}</span>}
+                    </span>
+                    <div className="ribbon-mob-marquee">
+                      {[0, 1].map(i => <span key={i} className="ribbon-mob-marquee-copy" aria-hidden={i === 1 ? true : undefined}>
+                        {ribbonData.headline && <em>{ribbonData.headline} · </em>}
+                        {ribbonData.message || ribbonData.kicker}
+                        <span aria-hidden="true"> · </span>
+                      </span>)}
+                    </div>
                   </div>
                   {ribbonData.cta_label && (
                     <a href={ribbonData.cta_href || '#'} className="ribbon-mob-bar-cta">{ribbonData.cta_label}</a>
