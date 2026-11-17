@@ -20,7 +20,7 @@ export default async function WriterProfile({ params }) {
     <article className="founder-profile">
       <a className="founder-back" href="/about/people#contributing-writers">← Contributing Writers</a>
       <div className="founder-profile-grid">
-        {writer.photo_url ? <img src={writer.photo_url} alt={writer.name} /> : <span className="writer-initial" aria-hidden="true">{writer.name.slice(0, 1)}</span>}
+        {writer.photo_url ? <img className="writer-portrait" src={writer.photo_url} alt={writer.name} /> : <span className="writer-initial" aria-hidden="true">{writer.name.slice(0, 1)}</span>}
         <div><p className="about-label">Contributing Writer</p><h2>{writer.name}</h2>
           <div className="founder-biography">{biographyParagraphs(writer.bio).map((p, i) => <p key={i}>{p}</p>)}</div>
         </div>
