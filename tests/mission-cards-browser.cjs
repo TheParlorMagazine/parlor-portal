@@ -20,12 +20,23 @@ const groups = [
     for (const width of [390, 768, 1440]) {
       const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' }), errors = []
       page.on('pageerror', e => errors.push(e.message))
-      await page.route('**/*', route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#f5dfe5"/></svg>' }))
+      await page.route('**/*', route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800"><rect width="600" height="800" fill="#f5dfe5"/></svg>' }))
       await page.setContent(`<style>body{margin:0}${fs.readFileSync('app/about/_components/about.css', 'utf8')}</style><div id="root"></div>`)
       await page.addScriptTag({ path: out })
       await page.locator('.mission-article-card').last().waitFor()
       assert.equal(await page.locator('.mission-article-card').count(), 8)
       assert.equal(await page.locator('#collective .founding-team-card').count(), 2)
+      for (const portrait of await page.locator('.founding-team-card > img').all()) {
+        await portrait.scrollIntoViewIfNeeded()
+        await portrait.evaluate(e => e.decode())
+        const dimensions = await portrait.evaluate(e => ({
+          width: e.getBoundingClientRect().width, height: e.getBoundingClientRect().height,
+          ratio: e.naturalWidth / e.naturalHeight, fit: getComputedStyle(e).objectFit,
+        }))
+        assert.equal(dimensions.fit, 'contain')
+        assert.ok(Math.abs(dimensions.width / dimensions.height - dimensions.ratio) < .01, 'Founder artwork retains its full natural proportions')
+      }
+
       assert.equal(await page.getByRole('link', { name: 'Read more about Lindsey Brock Morales' }).getAttribute('href'), '/about/people/lindsey-brock-morales')
       assert.equal(await page.getByRole('link', { name: 'Read more about Alexandria Turnley' }).getAttribute('href'), '/about/people/alexandria-turnley')
       assert.equal(await page.locator('.mission-article-card[href="/post/occupied-minnesota-inside-the-resistance-to-operation-metro-surge"] span').innerText(), 'Occupied Minnesota')

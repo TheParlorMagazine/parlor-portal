@@ -19,7 +19,7 @@ const { build } = require('/tmp/parlor-tour-validation/node_modules/esbuild'), {
       await page.locator('.founder-profile').waitFor()
       if (slug === 'lindsey-brock-morales') {
         assert.equal(await page.locator('.founder-profile h2').innerText(), 'Lindsey Brock Morales')
-        assert.match(await page.locator('.founder-biography').innerText(), /Existing Lindsey writer biography fixture/)
+        assert.match(await page.locator('.founder-biography').innerText(), /In addition to her work at The Parlor, Lindsey works as a product engineer/)
       } else {
         assert.equal(await page.locator('.founder-profile h2').innerText(), 'Alexandria Turnley')
         assert.match(await page.locator('.founder-biography').innerText(), /Durham Nativity School/)
@@ -33,6 +33,6 @@ const { build } = require('/tmp/parlor-tour-validation/node_modules/esbuild'), {
       assert.deepEqual(errors, [])
       await page.close()
     }
-    console.log('PASS founder profiles on desktop/mobile: existing Lindsey bio reuse, sourced Alexandria bio, headshots, People navigation and no personal contact details or overflow (local CMS/image fixtures).')
+    console.log('PASS founder profiles on desktop/mobile: approved Lindsey bio, sourced Alexandria bio, headshots, People navigation and no personal contact details or overflow (local CMS/image fixtures).')
   } finally { await browser.close(); fs.rmSync(dir, { recursive: true, force: true }) }
 })().catch(e => { console.error(e); process.exitCode = 1 })
