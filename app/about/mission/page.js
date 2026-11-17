@@ -1,4 +1,5 @@
 import AboutShell from '../_components/AboutShell'
+import FoundingTeamCards from '../_components/FoundingTeamCards'
 import MissionArticleCards from '../_components/MissionArticleCards'
 import { getMissionArticles } from '../../../lib/missionArticles'
 
@@ -29,7 +30,10 @@ export default async function MissionPage() {
             <p>We are a digital community and publication that explores how political, economic, and cultural systems shape everyday life—and how communities are organizing to change them.</p>
             <p>Our editorial perspective is feminist, intersectional, anticolonial, and progressive. We examine the structures that concentrate wealth and power, and take seriously the work of people building alternatives rooted in care, ecological regeneration, and collective self-determination.</p>
             <p>We approach this work through rigorous inquiry, thoughtful disagreement, and attention to whose knowledge and experiences are represented.</p>
-            <img className="mission-purpose-image" src="https://res.cloudinary.com/dwytmbczs/image/upload/v1794410362/parlor/articles/file_hgptzh.webp" alt="" loading="lazy" decoding="async" />
+            <figure className="mission-purpose-figure">
+              <img className="mission-purpose-image" src="https://res.cloudinary.com/dwytmbczs/image/upload/v1794410362/parlor/articles/file_hgptzh.webp" alt="Demonstrators holding a sign reading ‘Abajo el neocolonialismo’." loading="lazy" decoding="async" />
+              <figcaption>San Juan (PUERTO RICO), 28/3/2026. The Parlor Magazine/Thaïs Llorca<br />From the article <a href="/post/cabo-rojo-no-se-vende-cabo-rojo-is-not-for-sale">Cabo Rojo is not for Sale</a>.</figcaption>
+            </figure>
           </div>
         </div></section>
         <section className="mission-row" id="focus"><div data-reveal>
@@ -49,6 +53,7 @@ export default async function MissionPage() {
             <p>The Parlor is made possible by a collective of artists, writers, and nonprofit professionals who volunteer their time and skills to produce the publication and support its community programs.</p>
             <p>Our founding team members all work full time, balancing their commitment to The Parlor with caregiving, personal, and other life responsibilities.</p>
             <p>At present, no member of our founding team receives a salary for this work. Building the resources to compensate this labor fairly is an important long-term ambition.</p>
+            <div className="mission-founding-team"><h3>Our Founding Team</h3><FoundingTeamCards /></div>
           </div>
         </div></section>
         <section className="mission-row" id="funding"><div data-reveal>

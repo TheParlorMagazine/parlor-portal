@@ -5,7 +5,7 @@ const { chromium } = require('/tmp/parlor-tour-validation/node_modules/playwrigh
 const groups = [
   ['the-battle-for-the-southwest', 'occupied-minnesota-inside-the-resistance-to-operation-metro-surge'],
   ['following-the-foodways', 'layers-of-paint-and-purpose'],
-  ['holding-space-lib-lula-books-co', 'somalisota'],
+  ['holding-space-lib-lula-books-co', 'building-damsel'],
   ['who-gets-to-save-the-planet', 'growing-something-that-lasts'],
 ]
 ;(async () => {
@@ -25,6 +25,10 @@ const groups = [
       await page.addScriptTag({ path: out })
       await page.locator('.mission-article-card').last().waitFor()
       assert.equal(await page.locator('.mission-article-card').count(), 8)
+      assert.equal(await page.locator('#collective .founding-team-card').count(), 2)
+      assert.equal(await page.getByRole('link', { name: 'Read more about Lindsey Brock Morales' }).getAttribute('href'), '/about/people/lindsey-brock-morales')
+      assert.equal(await page.getByRole('link', { name: 'Read more about Alexandria Turnley' }).getAttribute('href'), '/about/people/alexandria-turnley')
+      assert.equal(await page.locator('.mission-article-card[href="/post/occupied-minnesota-inside-the-resistance-to-operation-metro-surge"] span').innerText(), 'Occupied Minnesota')
       const areas = page.locator('.mission-areas > div')
       for (let i = 0; i < 4; i++) {
         const area = areas.nth(i), cards = area.locator('.mission-article-card')
@@ -33,8 +37,10 @@ const groups = [
         assert.equal(await cards.first().locator('img').evaluate(e => getComputedStyle(e).objectFit), 'cover')
       }
       const image = page.locator('.mission-purpose-image')
-      assert.match(await image.evaluate(e => e.previousElementSibling.textContent), /^We approach this work/)
+      assert.match(await page.locator('.mission-purpose-figure').evaluate(e => e.previousElementSibling.textContent), /^We approach this work/)
       assert.equal(await image.evaluate(e => getComputedStyle(e).objectFit), 'contain')
+      assert.match(await page.locator('.mission-purpose-figure figcaption').innerText(), /The Parlor Magazine\/Thaïs Llorca/)
+      assert.equal(await page.locator('.mission-purpose-figure figcaption a').getAttribute('href'), '/post/cabo-rojo-no-se-vende-cabo-rojo-is-not-for-sale')
       assert.equal(await page.locator('.about-home').evaluate(e => getComputedStyle(e).fontSize), '13px')
       await page.locator('.about-home').hover()
       assert.equal(await page.locator('.about-home').evaluate(e => getComputedStyle(e).color), 'rgb(26, 26, 26)')

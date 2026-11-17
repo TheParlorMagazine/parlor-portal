@@ -4,7 +4,7 @@ export default function MissionArticleCards({ articles = [] }) {
     {articles.map(article => <li key={article.slug}>
       <a href={article.href} className="mission-article-card">
         {article.image && <img src={article.image} alt="" loading="lazy" decoding="async" />}
-        <span>{article.title}</span>
+        <span>{article.slug === 'occupied-minnesota-inside-the-resistance-to-operation-metro-surge' ? 'Occupied Minnesota' : article.title}</span>
       </a>
     </li>)}
   </ul>
