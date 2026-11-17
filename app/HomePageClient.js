@@ -42,6 +42,7 @@ const NAV_LINKS = ["Work & Wealth", "Society & Culture", "World & Politics", "Pe
 
 const ABOUT_LINKS = [
   { label: "Our Mission", href: "/about/mission" },
+  { label: "Editorial Standards", href: "/about/editorial-standards" },
   { label: "People of The Parlor", href: "/about/people" },
   { label: "Contact Us", href: "/contact" },
 ]
