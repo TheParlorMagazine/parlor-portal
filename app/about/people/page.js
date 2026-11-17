@@ -1,18 +1,19 @@
 import AboutShell from '../_components/AboutShell'
-import FoundingTeamCards from '../_components/FoundingTeamCards'
+import { getContributingWriters } from '../../../lib/contributingWriters'
+import PeopleSections from '../_components/PeopleSections'
 
 export const metadata = {
   title: 'The People of The Parlor | The Parlor',
-  description: 'Meet the founding team behind The Parlor, an independent feminist publication and digital community.',
+  description: 'Meet the founding team and contributing writers behind The Parlor, an independent feminist publication and digital community.',
   alternates: { canonical: 'https://theparlormagazine.com/about/people' },
 }
-export default function PeoplePage() {
+export const dynamic = 'force-dynamic'
+export default async function PeoplePage() {
+  let writers = [], writersUnavailable = false
+  try { writers = await getContributingWriters() } catch { writersUnavailable = true }
   return <AboutShell activePage="/about/people">
     <section className="people-content">
-      <h2>The People of The Parlor</h2>
-      <p>The Parlor is made possible by a collective of artists, writers, and nonprofit professionals who volunteer their time and skills to produce the publication and support its community programs.</p>
-      <h3>Our Founding Team</h3>
-      <FoundingTeamCards />
+      <PeopleSections writers={writers.map(({ id, name, slug, photo_url }) => ({ id, name, slug, photo_url }))} writersUnavailable={writersUnavailable} />
     </section>
   </AboutShell>
 }

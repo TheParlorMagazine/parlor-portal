@@ -1,0 +1,56 @@
+// Local CMS fixtures exercise actual components without requiring production credentials.
+const fs = require('fs'), assert = require('assert/strict')
+const { build } = require('/tmp/parlor-tour-validation/node_modules/esbuild')
+const { chromium } = require('/tmp/parlor-tour-validation/node_modules/playwright-core')
+const writers = [{ id: '1', name: 'José Rivera', slug: 'jose-rivera', photo_url: null, bio: '<p>Community reporter.</p><script>window.bad=true</script>' }, { id: '2', name: 'Alice Smith', slug: 'alice-smith', photo_url: null, bio: '' }]
+;(async () => {
+  await build({ stdin: { resolveDir: process.cwd(), loader: 'jsx', contents: `import React from 'react';import{createRoot}from'react-dom/client';import People from './app/about/_components/PeopleSections';import Profile from './app/about/people/writers/[slug]/page';const root=createRoot(document.getElementById('root'));if(window.showProfile)Profile({params:Promise.resolve({slug:window.profileSlug||'jose-rivera'})}).then(p=>root.render(p)).catch(e=>{document.getElementById('root').textContent=e.message});else root.render(<People writers={${JSON.stringify(writers)}}/>);` }, bundle: true, outfile: '/tmp/writer-directory-browser.js', loader: { '.js': 'jsx', '.css': 'empty' }, jsx: 'automatic', plugins: [{ name: 'cms', setup(b) {
+    // React cache is server-only; the browser fixture runs the actual server page without request memoization.
+    b.onLoad({ filter: /contributingWriters\.js$/ }, a => ({ contents: fs.readFileSync(a.path, 'utf8').replace("import { cache } from 'react'", 'const cache = fn => fn'), loader: 'js' }))
+    b.onResolve({ filter: /apiAuth$/ }, () => ({ path: 'cms', namespace: 'fixture' }))
+    b.onResolve({ filter: /^next\/navigation$/ }, () => ({ path: 'navigation', namespace: 'fixture' }))
+    b.onLoad({ filter: /.*/, namespace: 'fixture' }, a => ({ contents: a.path === 'navigation' ? `export function notFound(){throw Error('404')}` : `export function serviceClient(){return {from(table){const q={select(){return q},order(){return q},range(){return q},eq(){return q},lte(){return q},abortSignal:async()=>({data:table==='writers'?${JSON.stringify(writers)}:[{slug:'published-story',title:'Published Story',cover_image_url:null}]})};return q}}}` }))
+  } }] })
+  const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', args: ['--no-sandbox'] })
+  try {
+    for (const width of [390, 768, 1440]) {
+      const p = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' }), errors = []
+      p.on('pageerror', e => errors.push(e.message))
+      await p.route('**/*', r => r.abort())
+      const setup = async (profile, slug) => {
+        await p.setContent(`<style>body{margin:0}${fs.readFileSync('app/about/_components/about.css', 'utf8')}</style><main class="people-content"><div id="root"></div></main>`)
+        await p.evaluate(({profile,slug}) => { window.showProfile=profile; window.profileSlug=slug }, {profile,slug})
+        await p.addScriptTag({ path: '/tmp/writer-directory-browser.js' })
+      }
+      await setup(false)
+      await p.getByRole('button', { name: 'Contributing Writers', exact: true }).click().catch(async e => { console.error({ errors, body: await p.locator('body').innerText() }); throw e })
+      assert.equal(await p.locator('.writer-card:visible').count(), 2)
+      const search = p.getByLabel('Find a contributing writer')
+      await search.fill('jose')
+      assert.equal(await p.locator('.writer-card:visible').count(), 1)
+      assert.equal(await p.locator('#writer-name-suggestions option').getAttribute('value'), 'José Rivera')
+      assert.equal(await p.locator('.writer-card:visible').getAttribute('href'), '/about/people/writers/jose-rivera')
+      await search.fill('nobody'); assert.equal(await p.locator('.writer-card:visible').count(), 0)
+      await search.fill(''); assert.equal(await p.locator('.writer-card:visible').count(), 2)
+      await p.getByRole('button', { name: 'Founding Team', exact: true }).click()
+      assert.equal(await p.locator('.founding-team-card:visible').count(), 2)
+      await setup(false)
+      await p.getByRole('button', { name: 'Contributing Writers', exact: true }).click()
+      await setup(false)
+      await p.locator('#people-contributing-writers').waitFor({ state: 'visible' })
+      assert.equal(await p.getByRole('button', { name: 'Contributing Writers', exact: true }).getAttribute('aria-pressed'), 'true')
+      await setup(true)
+      await p.locator('.founder-profile').waitFor()
+      assert.equal(await p.locator('.founder-profile h2').innerText(), 'José Rivera')
+      assert.equal(await p.locator('.founder-biography').innerText(), 'Community reporter.')
+      assert.equal(await p.evaluate(() => window.bad), undefined)
+      assert.equal(await p.getByRole('link', { name: 'Published Story' }).getAttribute('href'), '/post/published-story')
+      assert.equal(await p.locator('.founder-back').getAttribute('href'), '/about/people#contributing-writers')
+      assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+      assert.deepEqual(errors, [])
+      await setup(true, 'missing-writer'); await p.getByText('404', { exact: true }).waitFor()
+      await p.close()
+    }
+    console.log('PASS writer directory/profile at mobile, tablet and desktop: autocomplete, accent-insensitive filtering, cards, safe bios, article links and unknown-profile handling.')
+  } finally { await browser.close() }
+})().catch(e => { console.error(e); process.exitCode = 1 })
