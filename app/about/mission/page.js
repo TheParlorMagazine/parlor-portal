@@ -1,4 +1,6 @@
 import AboutShell from '../_components/AboutShell'
+import MissionArticleCards from '../_components/MissionArticleCards'
+import { getMissionArticles } from '../../../lib/missionArticles'
 
 export const metadata = {
   title: 'Our Mission | The Parlor',
@@ -9,7 +11,10 @@ export const metadata = {
 const chapters = [['purpose', 'Our purpose'], ['focus', 'Our focus'], ['collective', 'Our collective'], ['funding', 'Our funding']]
 const tinyNews = <a href="https://tinynewsco.org/" target="_blank" rel="noopener noreferrer">Tiny News Collective</a>
 
-export default function MissionPage() {
+export const revalidate = 3600
+
+export default async function MissionPage() {
+  const focusArticles = await getMissionArticles()
   return <AboutShell activePage="/about/mission">
     <div className="mission-chapters">
       <aside className="mission-index" aria-label="On this page">
@@ -24,16 +29,17 @@ export default function MissionPage() {
             <p>We are a digital community and publication that explores how political, economic, and cultural systems shape everyday life—and how communities are organizing to change them.</p>
             <p>Our editorial perspective is feminist, intersectional, anticolonial, and progressive. We examine the structures that concentrate wealth and power, and take seriously the work of people building alternatives rooted in care, ecological regeneration, and collective self-determination.</p>
             <p>We approach this work through rigorous inquiry, thoughtful disagreement, and attention to whose knowledge and experiences are represented.</p>
+            <img className="mission-purpose-image" src="https://res.cloudinary.com/dwytmbczs/image/upload/v1794410362/parlor/articles/file_hgptzh.webp" alt="" loading="lazy" decoding="async" />
           </div>
         </div></section>
         <section className="mission-row" id="focus"><div data-reveal>
           <p className="about-label">02 / Our focus</p>
           <h2>The movements and models shaping what comes next.</h2>
           <div className="mission-areas">
-            <div><h3>Movements against empire</h3><p>Global movements confronting colonial legacies, imperial power, and extractive systems, and advancing solidarity and self-determination.</p></div>
-            <div><h3>Local and cooperative economies</h3><p>Small businesses, independent commerce, cooperatives, and economic models that sustain local livelihoods and communities.</p></div>
-            <div><h3>Third spaces and collective life</h3><p>The places and practices that make connection possible: gathering spaces, cultural work, mutual aid, and community-led initiatives.</p></div>
-            <div><h3>Regenerative futures</h3><p>How people are restoring relationships with land, resources, and one another while building within, around, and beyond existing systems.</p></div>
+            <div><h3>Movements against empire</h3><p>Global movements confronting colonial legacies, imperial power, and extractive systems, and advancing solidarity and self-determination.</p><MissionArticleCards articles={focusArticles[0]} /></div>
+            <div><h3>Local and cooperative economies</h3><p>Small businesses, independent commerce, cooperatives, and economic models that sustain local livelihoods and communities.</p><MissionArticleCards articles={focusArticles[1]} /></div>
+            <div><h3>Third spaces and collective life</h3><p>The places and practices that make connection possible: gathering spaces, cultural work, mutual aid, and community-led initiatives.</p><MissionArticleCards articles={focusArticles[2]} /></div>
+            <div><h3>Regenerative futures</h3><p>How people are restoring relationships with land, resources, and one another while building within, around, and beyond existing systems.</p><MissionArticleCards articles={focusArticles[3]} /></div>
           </div>
         </div></section>
         <section className="mission-row" id="collective"><div data-reveal>

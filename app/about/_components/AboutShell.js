@@ -100,7 +100,10 @@ export default function AboutShell({ activePage, children }) {
       <div className="about-hero">
         <div className="about-art" aria-hidden="true" />
         <div className="about-hero-inner">
-          <a className="about-home" href="/">← Home</a>
+          <a className="about-home" href="/">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
+            Home
+          </a>
           <h1>Independent journalism.<br />Collective possibility.</h1>
           <p>The Parlor is an independent feminist publication examining power, culture, and the ways people are building more equitable and regenerative futures.</p>
         </div>
