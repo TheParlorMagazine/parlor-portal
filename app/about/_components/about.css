@@ -84,3 +84,5 @@
 .writer-card>.writer-portrait,.founder-profile-grid>.writer-portrait{aspect-ratio:1;height:auto;border-radius:50%;object-fit:cover}.writer-initial{border-radius:50%}
 
 .writer-search-field{position:relative}.writer-search-icon{position:absolute;right:16px;top:15px;pointer-events:none;color:#6a6a6a}.writer-search input::placeholder{color:#9a9a9a}.writer-search input::-webkit-search-cancel-button{display:none}.writer-suggestions{position:absolute;top:100%;left:0;right:0;z-index:10;margin:4px 0 0;padding:0;list-style:none;background:#fff;border:1px solid #dfcbd1;box-shadow:0 8px 20px #241d1f14}.writer-suggestions li{padding:10px 20px;cursor:pointer;font-size:15px}.writer-suggestions li:hover,.writer-suggestions li[aria-selected="true"]{background:#f5dfe5}
+
+.writer-suggestions li{display:flex;align-items:center;gap:12px}.writer-suggestion-avatar{display:block;width:32px;height:32px;flex:none;border-radius:50%;object-fit:cover}.writer-suggestion-initial{display:grid;place-items:center;background:#f5dfe5;color:#84364c;font-size:15px}

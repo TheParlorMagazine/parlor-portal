@@ -30,7 +30,11 @@ export default function WriterDirectory({ writers = [], unavailable = false }) {
         <svg className="writer-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
         {open && <ul id="writer-name-suggestions" className="writer-suggestions" role="listbox" aria-label="Writer name suggestions">
           {suggestions.map((w, i) => <li key={w.id} id={`writer-suggestion-${i}`} role="option" aria-selected={active === i}
-            onMouseDown={e => e.preventDefault()} onClick={() => choose(w.name)}>{w.name}</li>)}
+            onMouseDown={e => e.preventDefault()} onClick={() => choose(w.name)}>
+              {w.photo_url ? <img className="writer-suggestion-avatar" src={w.photo_url} alt="" width="32" height="32" decoding="async" />
+                : <span className="writer-suggestion-avatar writer-suggestion-initial" aria-hidden="true">{w.name.slice(0, 1)}</span>}
+              <span>{w.name}</span>
+            </li>)}
         </ul>}
       </div>
     </div>
