@@ -8,6 +8,10 @@ const nextConfig = {
   allowedDevOrigins: ['192.168.178.113'],
   async redirects() {
     return [
+      // Temporary destinations while these Borderlands articles are rebuilt.
+      { source: '/borderlands-of-identity/a-body-interrupted', destination: '/borderlands-of-identity', permanent: false },
+      { source: '/borderlands-of-identity/where-the-heart-draws-its-lines', destination: '/borderlands-of-identity', permanent: false },
+      { source: '/borderlands-of-identity/nothing-dramatic-happens-at-the-border', destination: '/borderlands-of-identity', permanent: false },
       { source: '/donate', destination: '/buy-us-a-birthday-gift', permanent: true },
       { source: '/world-we-are-building', destination: '/issue/dfcbace2-9956-4669-8e63-a475aa371a80', permanent: false },
       { source: '/the-world-we-are-building', destination: '/issue/dfcbace2-9956-4669-8e63-a475aa371a80', permanent: false },

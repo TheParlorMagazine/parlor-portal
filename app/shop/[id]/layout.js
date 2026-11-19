@@ -5,6 +5,13 @@ import { SHOPPING_PRODUCT_FIELDS, SHOP_PRODUCT_ID, productStructuredData } from 
 
 export const dynamic = 'force-dynamic'
 
+// Declare the same clean product URL regardless of tracking/query parameters.
+export async function generateMetadata({ params }) {
+  const { id } = await params
+  if (!SHOP_PRODUCT_ID.test(id)) return {}
+  return { alternates: { canonical: `https://theparlormagazine.com/shop/${id}` } }
+}
+
 export default async function ProductLayout({ children, params }) {
   const { id } = await params
   let schema = null

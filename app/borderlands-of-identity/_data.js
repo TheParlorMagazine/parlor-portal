@@ -117,7 +117,7 @@ export const SECTIONS = [
         dek:
           'Diagnosed with Parkinson’s disease at fifty, the writer confronts not only the loss of physical control but a profound crisis of identity. Set against pandemic-era medical delays in southern Italy, this essay traces how illness reshaped her autonomy, faith, and sense of womanhood.',
         isLive: true,
-        url: 'https://www.theparlormagazine.com/borderlands-of-identity/a-body-interrupted/',
+        url: '/borderlands-of-identity',
       },
       {
         title: 'Defying the Gravity of Age',
@@ -207,7 +207,7 @@ export const SECTIONS = [
         dek:
           'Set along the India–Pakistan border in Jammu and Kashmir, this reported essay traces how Partition continues to shape everyday life decades after the violence of 1947. By focusing on ordinary moments rather than spectacle, it shows how borders endure through repetition, silence, and the slow erosion of belonging.',
         isLive: true,
-        url: 'https://www.theparlormagazine.com/borderlands-of-identity/nothing-dramatic-happens-at-the-border/',
+        url: '/borderlands-of-identity',
       },
       {
         title: 'No Memorial',
@@ -248,7 +248,7 @@ export const SECTIONS = [
         dek:
           'As a mother faces cancer, the writer reflects on queerness, estrangement, and return—asking how the borders we build to survive can later become paths back to love.',
         isLive: true,
-        url: 'https://www.theparlormagazine.com/borderlands-of-identity/where-the-heart-draws-its-lines/',
+        url: '/borderlands-of-identity',
       },
       {
         title:
