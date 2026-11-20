@@ -12,13 +12,13 @@ export const metadata = {
     siteName: 'The Parlor Magazine',
     title: 'The Parlor Magazine',
     description: 'Independent ideas, shared conversations, and a place to belong.',
-    images: [{ url: '/parlor-social-card.png', width: 1200, height: 630, alt: 'Happy first birthday, The Parlor — an illustrated Victorian birthday tea party beside a pastel pink panel.' }],
+    images: [{ url: '/parlor-website-thumbnail.png', width: 1200, height: 630, alt: 'The Parlor — Independent journalism. Collective possibility.' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'The Parlor Magazine',
     description: 'Independent ideas, shared conversations, and a place to belong.',
-    images: ['/parlor-social-card.png'],
+    images: ['/parlor-website-thumbnail.png'],
   },
 }
 
@@ -43,11 +43,11 @@ const structuredData = {
     {
       '@type': 'ImageObject',
       '@id': 'https://theparlormagazine.com/#homepage-image',
-      url: 'https://theparlormagazine.com/parlor-social-card.png',
-      contentUrl: 'https://theparlormagazine.com/parlor-social-card.png',
+      url: 'https://theparlormagazine.com/parlor-website-thumbnail.png',
+      contentUrl: 'https://theparlormagazine.com/parlor-website-thumbnail.png',
       width: 1200,
       height: 630,
-      caption: 'Happy first birthday, The Parlor — an illustrated Victorian birthday tea party beside a pastel pink panel.',
+      caption: 'The Parlor — Independent journalism. Collective possibility.',
     },
     {
       '@type': 'WebPage',
