@@ -1,0 +1,91 @@
+.section {
+  display: grid;
+  gap: 18px;
+  max-width: 1100px;
+  color: #0a0a0a;
+  --film-card-border: #e8e8e8;
+  --film-muted: #666;
+  --film-accent: #813d52;
+  --film-tint: #fcf5f7;
+}
+
+.section h1,
+.section h2,
+.section h3 {
+  font-family: 'Playfair Display', Georgia, serif;
+  margin: 0;
+}
+
+.section h1 { font-size: 30px; }
+.section h2 { font-size: 21px; }
+.section h3 { font-size: 18px; }
+.section p { margin: 5px 0 0; color: var(--film-muted); line-height: 1.5; }
+
+.heading,
+.trailerControls {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.badge {
+  background: var(--film-tint);
+  border-radius: 20px;
+  color: var(--film-accent);
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.metric,
+.card {
+  border: 1px solid var(--film-card-border);
+  border-radius: 12px;
+  background: white;
+  padding: 18px;
+}
+
+.metric { display: flex; flex-direction: column-reverse; gap: 5px; }
+.metric dt, .costs dt { color: var(--film-muted); }
+.metric dd, .costs dd { margin: 0; font-weight: 700; }
+.metric dd { font-family: 'Playfair Display', Georgia, serif; font-size: 28px; }
+
+.screening { margin-top: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--film-card-border); }
+
+.costs { display: grid; gap: 12px; margin: 16px 0; }
+.costs > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; }
+
+.callout { padding: 14px; border: 1px solid #eed9df; border-radius: 8px; background: var(--film-tint); }
+.callout strong { color: var(--film-accent); }
+.section .note { margin-top: 12px; font-size: 13px; }
+
+.trailerForm { margin: 12px 0; }
+.trailerControls { justify-content: flex-start; align-items: stretch; margin-top: 5px; }
+.trailerControls input,
+.trailerControls button {
+  border: 1px solid var(--film-card-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font: inherit;
+}
+.trailerControls input { flex: 1 1 260px; min-width: 0; }
+.trailerControls button { background: #0a0a0a; color: white; cursor: pointer; }
+.trailerControls button[type='button'] { background: white; color: #0a0a0a; }
+.section .error { color: #9b2940; }
+.trailer { max-width: 640px; }
+
+.empty {
+  margin-top: 14px;
+  padding: 24px 8px 10px;
+  border-top: 1px solid var(--film-card-border);
+  text-align: center;
+  color: var(--film-muted);
+}

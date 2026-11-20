@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import FilmTrailer, { getTrailerEmbed } from '../../_components/FilmTrailer'
 import PortalShell from '../_components/PortalShell'
 import styles from './filmClub.module.css'
 
@@ -14,6 +15,7 @@ const film = {
   flex: 'December 12–19 · View at your convenience',
   deadline: 'December 10 · 7:00 PM ET',
   price: '$9.99',
+  trailerUrl: null,
 }
 
 const sections = [
@@ -35,6 +37,17 @@ function FilmBanner() {
       <h2>{film.title}</h2>
       <p>{film.subtitle}</p>
     </div>
+  )
+}
+
+function TrailerCard() {
+  return (
+    <section className={styles.card}>
+      <h2>Trailer</h2>
+      <div className={styles.trailerPlayer}>
+        <FilmTrailer src={getTrailerEmbed(film.trailerUrl)} title={film.title} />
+      </div>
+    </section>
   )
 }
 
@@ -113,6 +126,7 @@ function FilmClub() {
               </div>
             </section>
             <div className={styles.stack}>
+              <TrailerCard />
               <section className={styles.card}>
                 <h2>{isPaid ? 'Complimentary viewing' : 'Public screening tickets'}</h2>
                 <p>{isPaid ? 'Paid members can RSVP for complimentary viewing.' : `Free members can buy a ${film.price} screening ticket. Discussions are open to all registered members.`}</p>
@@ -162,24 +176,27 @@ function FilmClub() {
                 <p>Viewing windows depend on the provider’s licensing terms.</p>
               </fieldset>
             </section>
-            <section className={styles.card}>
-              <h2>{isPaid ? 'Your member reservation' : 'Public screening ticket'}</h2>
-              {isPaid ? (
-                <>
-                  <p>Paid subscribers receive complimentary access when they RSVP.</p>
-                  <button className={styles.primary} onClick={() => {
-                    setRsvp(!rsvp)
-                    setNotice(rsvp ? 'Demo RSVP cancelled.' : 'Demo RSVP confirmed.')
-                  }}>{rsvp ? 'Cancel demo RSVP' : 'RSVP for free'}</button>
-                  <p>{rsvp ? 'Demo RSVP confirmed · Viewing access pending' : 'RSVP required for complimentary viewing'}</p>
-                </>
-              ) : (
-                <>
-                  <p>Free members can purchase a {film.price} screening ticket through the external provider.</p>
-                  <button className={styles.primary} onClick={() => setNotice('Demo checkout. This button would open the screening provider’s ticket page.')}>Purchase ticket · External provider</button>
-                </>
-              )}
-            </section>
+            <div className={styles.stack}>
+              <TrailerCard />
+              <section className={styles.card}>
+                <h2>{isPaid ? 'Your member reservation' : 'Public screening ticket'}</h2>
+                {isPaid ? (
+                  <>
+                    <p>Paid subscribers receive complimentary access when they RSVP.</p>
+                    <button className={styles.primary} onClick={() => {
+                      setRsvp(!rsvp)
+                      setNotice(rsvp ? 'Demo RSVP cancelled.' : 'Demo RSVP confirmed.')
+                    }}>{rsvp ? 'Cancel demo RSVP' : 'RSVP for free'}</button>
+                    <p>{rsvp ? 'Demo RSVP confirmed · Viewing access pending' : 'RSVP required for complimentary viewing'}</p>
+                  </>
+                ) : (
+                  <>
+                    <p>Free members can purchase a {film.price} screening ticket through the external provider.</p>
+                    <button className={styles.primary} onClick={() => setNotice('Demo checkout. This button would open the screening provider’s ticket page.')}>Purchase ticket · External provider</button>
+                  </>
+                )}
+              </section>
+            </div>
           </div>
           <section className={styles.card}>
             <h2>Continue the conversation</h2>

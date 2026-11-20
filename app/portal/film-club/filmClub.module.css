@@ -188,3 +188,5 @@
 @media (max-width: 1050px) {
   .columns { grid-template-columns: minmax(0, 1fr); }
 }
+
+.trailerPlayer { margin-top: 10px; }
