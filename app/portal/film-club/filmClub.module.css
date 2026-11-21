@@ -103,7 +103,12 @@
 .card,
 .cardBody,
 .notice { padding: 16px 18px; }
-.feature { overflow: hidden; }
+.feature {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
 .banner {
   display: grid;
@@ -115,7 +120,10 @@
   color: white;
 }
 
-.feature .banner { border-radius: 0; }
+.feature .banner {
+  flex: 1 0 auto;
+  border-radius: 0;
+}
 .banner h2 { margin-top: 8px; font-size: clamp(1.65rem, 4vw, 2.25rem); }
 
 .eyebrow {
