@@ -54,7 +54,7 @@ export async function POST(request, { params }) {
   if (body.length > 3000) return Response.json({ error: 'Too long' }, { status: 400 })
 
   const { data, error } = await db.from('member_post_comments').insert({ post_id: id, member_id: user.id, body }).select(CSEL).single()
-  if (error) return Response.json({ error: error.message }, { status: 500 })
+  if (error) return Response.json({ error: error.message }, { status: error.code === '42501' ? 403 : 500 })
 
   // Notify the post author (best effort).
   const post = gate.post

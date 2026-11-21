@@ -6,6 +6,7 @@ import { createClient } from '../../../../lib/supabase'
 import { prepareImageUpload, isDuplicateUpload } from '../../../../lib/uploadImage'
 import PortalShell from '../../_components/PortalShell'
 import { THREAD_GUIDELINES } from '../../_components/PostGuidelines'
+import CommentingControls from '../../_components/CommentingControls'
 import PostsWall from '../../_components/PostsWall'
 import { forumCss } from '../forumCss'
 import { confirmDialog, alertDialog } from '../../../../lib/confirmDialog'
@@ -405,16 +406,16 @@ function Detail() {
 
       {/* Rich post feed — profile-style composer, media cards, and comments,
           scoped to this forum. */}
-      {f.film_club ? (
+      <CommentingControls key={f.id} kind="forum" id={f.id}>{closed => f.film_club ? (
         <>
-          {f.commenting_open ? (
+          {!closed && (
             <form className="fr-composer" onSubmit={startDiscussion}>
               <h2>Start a thread</h2>
               <label>Title<textarea name="title" rows={1} maxLength={160} required /></label>
               <label>Message<textarea name="body" rows={3} maxLength={4000} required /></label>
               <button className="fr-postbtn" disabled={posting}>Post thread</button>
             </form>
-          ) : <p role="status">Commenting is closed. You can still read the discussion.</p>}
+           )}
           {postError && <p role="alert">{postError}</p>}
           <div className="fr-list">
             {data.threads.map(thread => (
@@ -426,7 +427,7 @@ function Detail() {
             {!data.threads.length && <p>No threads yet.</p>}
           </div>
         </>
-      ) : <PostsWall forumId={id} currentUserId={uid} />}
+      ) : <PostsWall forumId={f.id} currentUserId={uid} postingClosed={closed} />} </CommentingControls>
         </div>
 
         {/* Right sidebar — moderators + members */}

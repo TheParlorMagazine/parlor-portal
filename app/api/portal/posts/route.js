@@ -99,7 +99,7 @@ export async function POST(request) {
   if (error && forumId && (String(error.message).includes('forum_id') || error.code === '42703')) {
     return Response.json({ error: 'Run the forum-posts migration first.' }, { status: 500 })
   }
-  if (error) return Response.json({ error: error.message }, { status: 500 })
+  if (error) return Response.json({ error: error.message }, { status: error.code === '42501' ? 403 : 500 })
   return Response.json({ post: shape(data, {}) })
 }
 

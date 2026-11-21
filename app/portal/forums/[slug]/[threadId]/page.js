@@ -1,5 +1,6 @@
 'use client'
 
+import CommentingControls from '../../../_components/CommentingControls'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '../../../../../lib/supabase'
@@ -130,12 +131,12 @@ function Thread() {
       )}
 
       {replyError && <p role="alert">{replyError}</p>}
-      {d.commentingOpen === false ? <p role="status">Commenting is closed.</p> : <div className="fr-composer">
+      <CommentingControls key={threadId} kind="thread" id={threadId}>{closed => !closed && d.commentingOpen !== false && <div className="fr-composer">
         <textarea value={reply} onChange={e => setReply(e.target.value)} rows={3} placeholder="Write a reply…" />
         <div className="fr-composer-row">
           <button className="fr-postbtn" onClick={postReply} disabled={!reply.trim() || busy}>{busy ? 'Posting…' : 'Post reply'}</button>
         </div>
-      </div>}
+      </div>}</CommentingControls>
     </div>
   )
 }

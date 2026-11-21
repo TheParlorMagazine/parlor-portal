@@ -1,5 +1,6 @@
 'use client'
 
+import CommentingControls from './CommentingControls'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { prepareImageUpload, isDuplicateUpload } from '../../../lib/uploadImage'
@@ -57,6 +58,7 @@ function CommentComposer({ me, onSubmit, busy }) {
 // The comment thread under a post; loads lazily when first opened.
 function PostComments({ postId, currentUserId, me, auth, onCountChange }) {
   const [comments, setComments] = useState([])
+  const [commentError, setCommentError] = useState('')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   useEffect(() => {
@@ -69,10 +71,16 @@ function PostComments({ postId, currentUserId, me, auth, onCountChange }) {
   }, [postId, auth])
 
   async function add(body) {
+    setCommentError('')
     setBusy(true)
     try {
       const res = await fetch(`/api/portal/posts/${postId}/comments`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(await auth()) }, body: JSON.stringify({ body }) })
-      if (res.ok) { const d = await res.json(); setComments(c => [...c, d.comment]); onCountChange?.(1) }
+      const d = await res.json()
+      if (!res.ok) { setCommentError(d.error || 'Could not post the comment.'); return }
+      setComments(c => [...c, d.comment])
+      onCountChange?.(1)
+    } catch {
+      setCommentError('Could not post the comment.')
     } finally { setBusy(false) }
   }
   async function del(cid) {
@@ -98,7 +106,10 @@ function PostComments({ postId, currentUserId, me, auth, onCountChange }) {
           </div>
         </div>
       ))}
-      <CommentComposer me={me} onSubmit={add} busy={busy} />
+      {commentError && <p role="alert">{commentError}</p>}
+      <CommentingControls kind="post" id={postId}>{closed => !closed && (
+        <CommentComposer me={me} onSubmit={add} busy={busy} />
+      )}</CommentingControls>
     </div>
   )
 }
@@ -153,13 +164,13 @@ function LinkCard({ link }) {
   )
 }
 
-export default function PostsWall({ memberId, currentUserId, forumId }) {
+export default function PostsWall({ memberId, currentUserId, forumId, postingClosed = false }) {
   const supabase = useMemo(() => createClient(), [])
   const ctx = usePortal()
   const me = ctx?.member || {}
   // In a forum, anyone viewing (a member) can post. On a profile wall, only the
   // owner can.
-  const canPost = forumId ? true : memberId === currentUserId
+  const canPost = forumId ? !postingClosed : memberId === currentUserId
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [composing, setComposing] = useState(false)
