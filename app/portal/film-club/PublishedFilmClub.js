@@ -54,7 +54,7 @@ export default function PublishedFilmClub() {
                 {event.description && <p>{event.description}</p>}
                 <div className={styles.actions}>
                   <Link href={`/portal/events/${id}`}>{paid ? 'Screening details and RSVP' : 'Screening details'}</Link>
-                  {tickets && <a href={tickets} target="_blank" rel="noreferrer">Get a Kinema ticket</a>}
+                  {!paid && tickets && <a href={tickets} target="_blank" rel="noreferrer">Get a Kinema ticket</a>}
                 </div>
               </div>
             </section>

@@ -20,7 +20,18 @@ export async function GET(request, { params }) {
   const { data: members, error: memberError } = ids.length ? await g.db.from('members').select('id,full_name').in('id', ids) : { data: [] }
   if (memberError) return eventError(memberError)
   const names = Object.fromEntries((members || []).map(m => [m.id, m.full_name]))
-  return Response.json({ attendees: (data || []).map(r => ({ ...r, full_name: names[r.member_id] || 'Member', queue_position: r.status === 'waitlist' ? r.queue_position : null })) })
+  const { data: contacts, error: contactError } = ids.length
+    ? await g.db.from('event_rsvps').select('member_id,film_club_rsvp_name,film_club_rsvp_email')
+      .eq('event_id', g.id).in('member_id', ids).not('film_club_rsvp_email', 'is', null)
+    : { data: [] }
+  if (contactError && !['42703', 'PGRST204'].includes(contactError.code)) return eventError(contactError)
+  const byMember = new Map((contacts || []).map(contact => [contact.member_id, contact]))
+  return Response.json({ attendees: (data || []).map(r => ({
+    ...r,
+    full_name: byMember.get(r.member_id)?.film_club_rsvp_name || names[r.member_id] || 'Member',
+    film_club_rsvp_email: byMember.get(r.member_id)?.film_club_rsvp_email,
+    queue_position: r.status === 'waitlist' ? r.queue_position : null,
+  })) })
 }
 export async function PATCH(request, { params }) {
   const g = await gate(request, params)

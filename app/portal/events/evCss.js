@@ -40,4 +40,11 @@ export const evCss = `
   .ev-join { background:var(--cream); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:20px; font-size:14px; }
   .ev-join a { color:var(--pink); font-weight:600; }
   .ev-count { font-size:12.5px; color:var(--muted); }
+
+.ev-rsvp-dialog{width:min(440px,calc(100% - 32px));box-sizing:border-box;border:1px solid var(--line,#ddd);border-radius:12px;padding:24px;color:inherit;background:var(--surface,#fff)}
+.ev-rsvp-dialog::backdrop{background:rgba(0,0,0,.48)}
+.ev-rsvp-dialog h2{margin-top:0}
+.ev-rsvp-dialog label{display:grid;gap:6px;margin-top:14px}
+.ev-rsvp-dialog input{box-sizing:border-box;width:100%;font:inherit;padding:10px;border:1px solid var(--line,#ccc);border-radius:6px}
+.ev-rsvp-dialog [role="alert"]{color:#a02030}
 `

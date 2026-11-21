@@ -126,3 +126,40 @@ test('superseded waitlist notices are not sent after promotion',async()=>{
   assert.equal(calls[0][1].last_error,'superseded')
   assert.equal(calls.some(call=>call[0]==='notification'),false)
 })
+
+test('Film Club registration validates and saves contact through its RSVP RPC', async () => {
+  const calls = []
+  const db = {
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { event_id: 'screening' } }) }) }) }),
+    rpc: async (name, args) => { calls.push([name, args]); return { data: { status: 'going' } } },
+  }
+  const module = await route('app/api/portal/events/[id]/rsvp/route.js', {
+    '../../../../../../lib/apiAuth': { requireUser: async () => ({ id: 'member' }), serviceClient: () => db },
+    '../../../../../../lib/eventAccess': { eventError() { throw Error('unexpected error') } },
+    '../../../../../../lib/eventMessages': { deliverEventMessages: async () => {} },
+  })
+  const context = { params: Promise.resolve({ id: 'screening' }) }
+  assert.equal((await module.POST({ json: async () => ({ name: 'Reader', email: 'invalid' }) }, context)).status, 400)
+  assert.equal(calls.length, 0)
+  assert.equal((await module.POST({ json: async () => ({ name: ' Reader ', email: 'Reader@example.test' }) }, context)).status, 200)
+  assert.equal(calls[0][0], 'register_film_club_rsvp')
+  assert.equal(calls[0][1].p_name, 'Reader')
+  assert.equal(calls[0][1].p_email, 'reader@example.test')
+})
+
+test('the screenings endpoint only returns Kinema URLs for free members', async () => {
+  let paid = true
+  const db = {
+    from: () => ({ select: () => ({ eq: () => ({ eq: async () => ({ data: [{ ticket_url: 'https://kinema.com/example' }] }) }) }) }),
+    rpc: async name => {
+      assert.equal(name, 'film_club_paid_member')
+      return { data: paid }
+    },
+  }
+  const module = await route('app/api/portal/film-club/screenings/route.js', {
+    '../../../../../lib/apiAuth': { requireUser: async () => ({ id: 'member' }), serviceClient: () => db },
+  })
+  assert.equal((await (await module.GET({})).json()).screenings[0].ticket_url, null)
+  paid = false
+  assert.equal((await (await module.GET({})).json()).screenings[0].ticket_url, 'https://kinema.com/example')
+})

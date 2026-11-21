@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
 import { hasEndedPaidMembership, isPaidPlan } from '../../../../lib/plans'
@@ -25,6 +25,8 @@ function Detail() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [attendees, setAttendees] = useState([])
+  const rsvpDialog = useRef(null)
+  const [rsvpOpen, setRsvpOpen] = useState(false)
 
   const auth = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -46,22 +48,37 @@ function Detail() {
   }, [id, auth])
   useEffect(() => { load() }, [load])
 
-  async function action(method, body) {
+  async function action(method, body, endpoint = 'rsvp') {
     setBusy(true); setError('')
     try {
-      const url = `/api/portal/events/${id}/${body ? 'attendees' : 'rsvp'}`
+      const url = `/api/portal/events/${id}/${endpoint}`
       const res = await fetch(url, { method, headers: { ...(await auth()), 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) })
       if (!res.ok) throw new Error((await res.json()).error || 'Could not update RSVP')
       await load()
-    } catch (error) { setError(error.message) } finally { setBusy(false) }
+      return true
+    } catch (error) { setError(error.message); return false } finally { setBusy(false) }
   }
-  const rsvp = () => action('POST')
+  function rsvp() {
+    if (d.film_club_discussion === undefined) return action('POST')
+    setError('')
+    rsvpDialog.current.showModal()
+    setRsvpOpen(true)
+  }
+
+  async function submitFilmRsvp(event) {
+    event.preventDefault()
+    const form = event.currentTarget
+    if (await action('POST', Object.fromEntries(new FormData(form)))) {
+      rsvpDialog.current?.close()
+      form.reset()
+    }
+  }
   async function cancel() {
     if (await confirmDialog('Cancel your RSVP? Your forum membership will stay unchanged.')) await action('DELETE')
   }
   async function manage(member_id, actionName) {
     if (await confirmDialog(actionName === 'promote' ? 'Confirm this attendee? This can override queue order, but not capacity.' : 'Cancel this member’s RSVP?')) {
-      await action('PATCH', { member_id, action: actionName })
+      await action('PATCH', { member_id, action: actionName }, 'attendees')
     }
   }
 
@@ -112,7 +129,24 @@ function Detail() {
         )}
       </div>
 
-      {error && <p role="alert" style={{ color: '#a02030' }}>{error}</p>}
+      {d.film_club_discussion !== undefined && (
+        <dialog ref={rsvpDialog} className="ev-rsvp-dialog" aria-labelledby="film-rsvp-title"
+          onCancel={event => { if (busy) event.preventDefault() }}
+          onClose={() => { setRsvpOpen(false); setError('') }}>
+          <form onSubmit={submitFilmRsvp}>
+            <h2 id="film-rsvp-title">RSVP for complimentary viewing</h2>
+            <p>Use the email address where you’d like to receive your viewing link.</p>
+            <label>Full name<input name="name" autoComplete="name" maxLength={160} required /></label>
+            <label>Email address<input name="email" type="email" autoComplete="email" maxLength={254} required /></label>
+            <p role="alert">{error}</p>
+            <div className="ev-cta">
+              <button type="submit" className="ev-btn primary" disabled={busy}>{busy ? 'Submitting…' : 'Confirm RSVP'}</button>
+              <button type="button" className="ev-btn ghost" disabled={busy} onClick={() => rsvpDialog.current.close()}>Cancel</button>
+            </div>
+          </form>
+        </dialog>
+      )}
+      {error && !rsvpOpen && <p role="alert" style={{ color: '#a02030' }}>{error}</p>}
       {waitlisted && <p>Your attendance is not confirmed. We’ll notify you if a place opens.</p>}
       {e.is_public && e.forum_id && !d.can_access_forum && d.film_club_discussion === undefined && <p>Event registration does not join the host’s forum. You can request membership separately from Forums.</p>}
       {d.can_manage && <section style={{ marginTop: 28 }}>
@@ -120,7 +154,7 @@ function Detail() {
         <p>Hosts and admins are excluded from this list and do not use capacity.</p>
         {!attendees.length && <p>No registrations yet.</p>}
         {attendees.map(person => <div key={person.member_id} style={{ borderTop: '1px solid #ddd', padding: '12px 0', display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
-          <span>{person.full_name} · {person.status === 'waitlist' ? `Waitlist #${person.queue_position}` : 'Going'}</span>
+          <span>{person.full_name}{person.film_club_rsvp_email && <> · {person.film_club_rsvp_email}</>} · {person.status === 'waitlist' ? `Waitlist #${person.queue_position}` : 'Going'}</span>
           {person.status === 'waitlist' && <button className="ev-btn ghost" disabled={busy || (e.capacity != null && e.going_count >= e.capacity)} onClick={() => manage(person.member_id, 'promote')}>Confirm place</button>}
           <button className="ev-btn ghost" disabled={busy} onClick={() => manage(person.member_id, 'remove')}>Cancel RSVP</button>
         </div>)}
