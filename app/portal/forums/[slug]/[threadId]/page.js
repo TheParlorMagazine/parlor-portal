@@ -1,5 +1,6 @@
 'use client'
 
+import CommentingControls from '../../../_components/CommentingControls'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '../../../../../lib/supabase'
@@ -25,6 +26,7 @@ function Thread() {
   const supabase = useMemo(() => createClient(), [])
   const [d, setD] = useState({ loading: true, forum: null, thread: null, replies: [] })
   const [reply, setReply] = useState('')
+  const [replyError, setReplyError] = useState('')
   const [busy, setBusy] = useState(false)
 
   const auth = useCallback(async () => {
@@ -37,7 +39,7 @@ function Thread() {
       const res = await fetch(`/api/portal/threads/${threadId}`, { headers: await auth() })
       if (!res.ok) { setD({ loading: false, forum: null, thread: null, replies: [] }); return }
       const j = await res.json()
-      setD({ loading: false, forum: j.forum, thread: j.thread, replies: j.replies || [] })
+      setD({ loading: false, forum: j.forum, commentingOpen: j.commenting_open, thread: j.thread, replies: j.replies || [] })
     } catch { setD({ loading: false, forum: null, thread: null, replies: [] }) }
   }, [threadId, auth])
 
@@ -52,12 +54,21 @@ function Thread() {
   async function postReply() {
     if (!reply.trim() || busy) return
     setBusy(true)
-    const res = await fetch(`/api/portal/threads/${threadId}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', ...(await auth()) },
-      body: JSON.stringify({ body: reply.trim() }),
-    })
-    setBusy(false)
-    if (res.ok) { const j = await res.json(); setD(s => ({ ...s, replies: [...s.replies, j.reply] })); setReply('') }
+    setReplyError('')
+    try {
+      const res = await fetch(`/api/portal/threads/${threadId}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...(await auth()) },
+        body: JSON.stringify({ body: reply.trim() }),
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || 'Could not post the reply.')
+      setD(state => ({ ...state, replies: [...state.replies, result.reply] }))
+      setReply('')
+    } catch (error) {
+      setReplyError(error.message)
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function report(kind, rid) {
@@ -119,12 +130,13 @@ function Thread() {
         </div>
       )}
 
-      <div className="fr-composer">
+      {replyError && <p role="alert">{replyError}</p>}
+      <CommentingControls key={threadId} kind="thread" id={threadId}>{closed => !closed && d.commentingOpen !== false && <div className="fr-composer">
         <textarea value={reply} onChange={e => setReply(e.target.value)} rows={3} placeholder="Write a reply…" />
         <div className="fr-composer-row">
           <button className="fr-postbtn" onClick={postReply} disabled={!reply.trim() || busy}>{busy ? 'Posting…' : 'Post reply'}</button>
         </div>
-      </div>
+      </div>}</CommentingControls>
     </div>
   )
 }

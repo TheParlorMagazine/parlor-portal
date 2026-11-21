@@ -1,3 +1,4 @@
+import { deliverFilmClubDiscussionEmails } from '../../../../lib/filmClubEmails'
 import { deliverEventMessages } from '../../../../lib/eventMessages'
 import { createClient } from '@supabase/supabase-js'
 import { sendEventReminderEmail } from '../../../../lib/emails'
@@ -21,13 +22,17 @@ async function run(request) {
   const { error: queueError } = await db.rpc('queue_event_audience_reminders')
   if (queueError) return Response.json({ error: 'Event reminder setup unavailable' }, { status: 500 })
   await deliverEventMessages(db)
+  const filmClub = await deliverFilmClubDiscussionEmails(db).catch(error => {
+    console.error('Film Club email queue failed', error.code)
+    return { error: 'Film Club email queue failed' }
+  })
   const now = new Date()
   const soon = new Date(now.getTime() + 24 * 3600 * 1000).toISOString()
 
   const { data: events } = await db.from('events')
     .select('id, title, starts_at, forum_id, blurb, location_type, location')
     .eq('status', 'published').gte('starts_at', now.toISOString()).lte('starts_at', soon)
-  if (!events || events.length === 0) return Response.json({ ok: true, sent: 0 })
+  if (!events || events.length === 0) return Response.json({ ok: true, sent: 0, filmClub })
 
   let sent = 0
   let failed = 0
@@ -153,7 +158,7 @@ async function run(request) {
     }
   }
 
-  return Response.json({ ok: true, sent, failed, uncertain })
+  return Response.json({ ok: true, sent, failed, uncertain, filmClub })
 }
 
 export async function GET(request) { return run(request) }

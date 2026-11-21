@@ -1,0 +1,99 @@
+.section {
+  display: grid;
+  gap: 18px;
+  max-width: 1100px;
+  color: #0a0a0a;
+  --film-card-border: #e8e8e8;
+  --film-muted: #666;
+  --film-accent: #813d52;
+  --film-tint: #fcf5f7;
+}
+
+.section h1,
+.section h2,
+.section h3 {
+  font-family: 'Playfair Display', Georgia, serif;
+  margin: 0;
+}
+
+.section h1 { font-size: 30px; }
+.section h2 { font-size: 21px; }
+.section h3 { font-size: 18px; }
+.section p { margin: 5px 0 0; color: var(--film-muted); line-height: 1.5; }
+
+.heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.badge {
+  background: var(--film-tint);
+  border-radius: 20px;
+  color: var(--film-accent);
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.metric,
+.card {
+  border: 1px solid var(--film-card-border);
+  border-radius: 12px;
+  background: white;
+  padding: 18px;
+}
+
+.metric { display: flex; flex-direction: column-reverse; gap: 5px; }
+.metric dt, .costs dt { color: var(--film-muted); }
+.metric dd, .costs dd { margin: 0; font-weight: 700; }
+.metric dd { font-family: 'Playfair Display', Georgia, serif; font-size: 28px; }
+
+.screening { margin-top: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--film-card-border); }
+
+.costs { display: grid; gap: 12px; margin: 16px 0; }
+.costs > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; }
+
+.section .error { color: #9b2940; }
+.trailer { width: min(100%, 640px); }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--film-card-border); }
+.tabs button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 8px 4px;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.tabs button[aria-pressed='true'] { border-color: #0a0a0a; font-weight: 700; }
+.selector, .form label { display: grid; gap: 5px; }
+.form { display: grid; gap: 12px; justify-items: start; }
+.form label { width: min(100%, 600px); }
+.form input, .form textarea, .selector select {
+  border: 1px solid #d5d5d5;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font: inherit;
+  background: #fff;
+}
+.selector select { width: min(100%, 600px); }
+.form button, .primary, .moderation button {
+  border: 1px solid #0a0a0a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #0a0a0a;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.form button:disabled, .moderation button:disabled { opacity: .6; cursor: wait; }
+.moderation h2 { margin-top: 14px; }

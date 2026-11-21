@@ -65,7 +65,9 @@ function Notifications() {
         body: JSON.stringify({ id: n.id }),
       }).catch(() => {})
     }
-    const dest = DEST[n.link_to] || '/portal'
+    const dest = n.link_to === 'film-club-moderation' && n.link_ref
+      ? `/portal/film-club/moderate/${n.link_ref}`
+      : DEST[n.link_to] || '/portal'
     window.location.href = dest
   }
 

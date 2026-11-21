@@ -1,3 +1,4 @@
+import { filmClubDiscussion, filmClubDiscussionVisible } from '../../../../lib/filmClubDiscussions'
 import { requireUser, serviceClient } from '../../../../lib/apiAuth'
 import { fetchLinkPreview } from '../../../../lib/linkPreview'
 import { toEmbedUrl } from '../../../../lib/videoEmbed'
@@ -38,6 +39,8 @@ export async function GET(request) {
 
   let q = db.from('member_posts').select(SEL).eq('status', 'live').order('created_at', { ascending: false }).limit(50)
   if (forumId) {
+    const discussion = await filmClubDiscussion(db, forumId)
+    if (discussion && !filmClubDiscussionVisible(discussion)) return Response.json({ error: 'Forum not found' }, { status: 404 })
     if (!(await forumRole(db, forumId, user.id))) {
       // Admins/super-mods can still oversee; others get nothing.
       const { data: m } = await db.from('members').select('role').eq('id', user.id).maybeSingle()
@@ -96,7 +99,7 @@ export async function POST(request) {
   if (error && forumId && (String(error.message).includes('forum_id') || error.code === '42703')) {
     return Response.json({ error: 'Run the forum-posts migration first.' }, { status: 500 })
   }
-  if (error) return Response.json({ error: error.message }, { status: 500 })
+  if (error) return Response.json({ error: error.message }, { status: error.code === '42501' ? 403 : 500 })
   return Response.json({ post: shape(data, {}) })
 }
 

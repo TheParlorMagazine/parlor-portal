@@ -14,6 +14,8 @@ const SAMPLE = {
   payment_failed: { name: 'Maya', planName: "Reader's Circle" },
   plan_upgraded: { name: 'Maya', oldPlan: "Reader's Circle", newPlan: 'Printing Press' },
   cancellation: { name: 'Maya', planName: 'Printing Press' },
+  film_club_rsvp: { eventTitle: 'The Land We Keep', eventUrl: `${SITE}/portal/events/sample` },
+  film_club_discussion: { eventTitle: 'The Land We Keep', forumUrl: `${SITE}/portal/forums/sample` },
   event_rsvp: { name: 'Maya', title: 'Democracy Salon with DemCon', when: 'Friday, October 10, 2026 · 6:00 PM', where: 'Online', eventUrl: `${SITE}/portal/events/sample` },
   event_reminder: { name: 'Maya', title: 'Democracy Salon with DemCon', when: 'Friday, October 10, 2026 · 6:00 PM', eventUrl: `${SITE}/portal/events/sample` },
   forum_invite: { forumName: 'The Reading Room', inviterName: 'Lindsey', joinUrl: `${SITE}/portal/join/sample` },

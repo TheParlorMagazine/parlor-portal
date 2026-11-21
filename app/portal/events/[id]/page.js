@@ -3,7 +3,8 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
-import PortalShell from '../../_components/PortalShell'
+import { hasEndedPaidMembership, isPaidPlan } from '../../../../lib/plans'
+import PortalShell, { usePortal } from '../../_components/PortalShell'
 import { evCss } from '../evCss'
 import { confirmDialog } from '../../../../lib/confirmDialog'
 
@@ -18,6 +19,7 @@ function fmtWhen(iso) {
 
 function Detail() {
   const { id } = useParams()
+  const member = usePortal()?.member
   const supabase = useMemo(() => createClient(), [])
   const [d, setD] = useState({ loading: true, event: null, my_status: null })
   const [busy, setBusy] = useState(false)
@@ -67,6 +69,7 @@ function Detail() {
   if (!d.event) return <div className="ev-wrap"><style>{evCss}</style><a className="ev-back" href="/portal/events">← Events</a><div className="ev-empty">This event isn’t available.</div></div>
 
   const e = d.event
+  const canRsvp = d.film_club_discussion === undefined || (isPaidPlan(member?.plan) && !hasEndedPaidMembership(member))
   const host = d.my_status === 'host'
   const going = d.my_status === 'going' || host
   const waitlisted = d.my_status === 'waitlist'
@@ -89,11 +92,12 @@ function Detail() {
       {e.description && <div className="ev-desc">{e.description}</div>}
 
       <div className="ev-cta">
+        {d.film_club_discussion && <a className="ev-btn ghost" href={`/portal/forums/${e.forum_id}`}>Film Club discussion →</a>}
         {going ? (
           <>
             <span className="ev-btn going">{host ? 'Host/admin access · no RSVP needed' : '✓ You’re going'}</span>
             <a className="ev-btn ghost" href={`/api/portal/events/${id}/ics`}>Add to calendar</a>
-            {e.forum_id && d.can_access_forum && <a className="ev-btn ghost" href={`/portal/forums/${e.forum_id}`}>Event discussion →</a>}
+            {e.forum_id && d.can_access_forum && d.film_club_discussion === undefined && <a className="ev-btn ghost" href={`/portal/forums/${e.forum_id}`}>Event discussion →</a>}
             {!host && <button className="ev-btn ghost" onClick={cancel} disabled={busy} style={{ color: '#c04040' }}>Cancel RSVP</button>}
           </>
         ) : waitlisted ? (
@@ -101,6 +105,8 @@ function Detail() {
             <span className="ev-btn going" style={{ background: '#fff5e6', color: '#b26a00', borderColor: '#f0d9a8' }}>On the waitlist · position {d.queue_position}</span>
             <button className="ev-btn ghost" onClick={cancel} disabled={busy}>Leave waitlist</button>
           </>
+        ) : !canRsvp ? (
+          <p>Complimentary RSVPs are available to paid members. For tickets, visit Film Club.</p>
         ) : (
           <button className="ev-btn primary" onClick={rsvp} disabled={busy || ended}>{ended ? 'Event ended' : busy ? 'RSVPing…' : 'RSVP'}</button>
         )}
@@ -108,7 +114,7 @@ function Detail() {
 
       {error && <p role="alert" style={{ color: '#a02030' }}>{error}</p>}
       {waitlisted && <p>Your attendance is not confirmed. We’ll notify you if a place opens.</p>}
-      {e.is_public && e.forum_id && !d.can_access_forum && <p>Event registration does not join the host’s forum. You can request membership separately from Forums.</p>}
+      {e.is_public && e.forum_id && !d.can_access_forum && d.film_club_discussion === undefined && <p>Event registration does not join the host’s forum. You can request membership separately from Forums.</p>}
       {d.can_manage && <section style={{ marginTop: 28 }}>
         <h2>Attendees and waitlist</h2>
         <p>Hosts and admins are excluded from this list and do not use capacity.</p>

@@ -1,3 +1,4 @@
+import { filmClubDiscussion, filmClubDiscussionVisible } from '../../../../../../lib/filmClubDiscussions'
 import { requireUser, serviceClient } from '../../../../../../lib/apiAuth'
 import { forumRole } from '../../../../../../lib/forums'
 import { notifyMember } from '../../../../../../lib/notify'
@@ -17,6 +18,8 @@ async function access(db, postId, userId) {
   const { data: post } = await db.from('member_posts').select('id, member_id, forum_id, status').eq('id', postId).maybeSingle()
   if (!post || post.status !== 'live') return { error: Response.json({ error: 'Not found' }, { status: 404 }) }
   if (post.forum_id) {
+    const discussion = await filmClubDiscussion(db, post.forum_id)
+    if (discussion && !filmClubDiscussionVisible(discussion)) return { error: Response.json({ error: 'Not found' }, { status: 404 }) }
     if (!(await forumRole(db, post.forum_id, userId))) {
       const { data: m } = await db.from('members').select('role').eq('id', userId).maybeSingle()
       if (!m || !['admin', 'social_admin'].includes(m.role)) return { error: Response.json({ error: 'Not a member of this forum' }, { status: 403 }) }
@@ -51,7 +54,7 @@ export async function POST(request, { params }) {
   if (body.length > 3000) return Response.json({ error: 'Too long' }, { status: 400 })
 
   const { data, error } = await db.from('member_post_comments').insert({ post_id: id, member_id: user.id, body }).select(CSEL).single()
-  if (error) return Response.json({ error: error.message }, { status: 500 })
+  if (error) return Response.json({ error: error.message }, { status: error.code === '42501' ? 403 : 500 })
 
   // Notify the post author (best effort).
   const post = gate.post

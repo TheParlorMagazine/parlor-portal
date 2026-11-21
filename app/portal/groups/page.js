@@ -1,5 +1,6 @@
 'use client'
 
+import FilmClubDiscussions from '../_components/FilmClubDiscussions'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '../../../lib/supabase'
 import PortalShell, { usePortal } from '../_components/PortalShell'
@@ -169,8 +170,17 @@ function Groups() {
         <span style={{ fontSize: 11.5, color: '#c4364a', background: '#fbeaee', borderRadius: 20, padding: '4px 12px', fontWeight: 600, whiteSpace: 'nowrap' }}>Upgrade to join</span>
       </a>
 
+      <a href="/portal/film-club" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, border: '1px solid var(--border)', borderRadius: 12, background: '#fff', padding: '16px 18px', marginBottom: 12 }}>
+        <div>
+          <div style={{ fontFamily: SERIF, fontSize: 16.5, fontWeight: 500 }}>The Film Club</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>Documentary screenings, filmmaker Q&amp;As, and discussions.</div>
+        </div>
+        <span style={{ fontSize: 11.5, color: '#7a2531', background: '#fbeaee', borderRadius: 20, padding: '4px 12px', fontWeight: 600 }}>Preview</span>
+      </a>
+
+      <FilmClubDiscussions />
       {loading ? <p style={{ color: 'var(--muted)' }}>Loading…</p>
-        : groups.length === 0 ? <div style={{ border: '1px solid var(--border)', borderRadius: 12, background: 'var(--cream)', padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 14 }}>No forums yet — propose the first one.</div>
+        : groups.length === 0 ? <div style={{ border: '1px solid var(--border)', borderRadius: 12, background: 'var(--cream)', padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 14 }}>You can propose a community forum.</div>
         : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {groups.map(g => <GroupCard key={g.id} g={g} onJoin={join} busy={busyId === g.id} />)}
