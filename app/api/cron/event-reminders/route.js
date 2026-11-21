@@ -1,4 +1,4 @@
-import { deliverFilmClubDiscussionEmails } from '../../../../lib/filmClubEmails'
+import { deliverFilmClubDiscussionEmails, deliverFilmClubReminderEmails } from '../../../../lib/filmClubEmails'
 import { deliverEventMessages } from '../../../../lib/eventMessages'
 import { createClient } from '@supabase/supabase-js'
 import { sendEventReminderEmail } from '../../../../lib/emails'
@@ -26,19 +26,31 @@ async function run(request) {
     console.error('Film Club email queue failed', error.code)
     return { error: 'Film Club email queue failed' }
   })
+  const filmClubReminders = await deliverFilmClubReminderEmails(db).catch(error => {
+    console.error('Film Club reminder queue failed', error.code)
+    return { error: 'Film Club reminder queue failed' }
+  })
   const now = new Date()
   const soon = new Date(now.getTime() + 24 * 3600 * 1000).toISOString()
 
   const { data: events } = await db.from('events')
     .select('id, title, starts_at, forum_id, blurb, location_type, location')
     .eq('status', 'published').gte('starts_at', now.toISOString()).lte('starts_at', soon)
-  if (!events || events.length === 0) return Response.json({ ok: true, sent: 0, filmClub })
+  if (!events || events.length === 0) return Response.json({ ok: !filmClubReminders.error, sent: 0, filmClub, filmClubReminders })
+
+  const { data: screenings, error: screeningError } = await db.from('film_club_screenings')
+    .select('event_id').in('event_id', events.map(event => event.id))
+  if (screeningError && !['42P01', 'PGRST205'].includes(screeningError.code)) {
+    return Response.json({ error: 'Could not distinguish Film Club screenings from other events' }, { status: 500 })
+  }
+  const screeningIds = new Set((screenings || []).map(screening => screening.event_id))
 
   let sent = 0
   let failed = 0
   let uncertain = 0
 
   for (const e of events) {
+    if (filmClubReminders.configured !== false && screeningIds.has(e.id)) continue
     const { data: rsvps, error: rsvpError } = await db.from('event_attendance')
       .select('member_id')
       .eq('event_id', e.id)
@@ -158,7 +170,7 @@ async function run(request) {
     }
   }
 
-  return Response.json({ ok: true, sent, failed, uncertain, filmClub })
+  return Response.json({ ok: !filmClubReminders.error, sent, failed, uncertain, filmClub, filmClubReminders })
 }
 
 export async function GET(request) { return run(request) }

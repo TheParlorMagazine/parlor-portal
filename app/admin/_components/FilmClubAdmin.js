@@ -87,7 +87,7 @@ function ScreeningEmails({ screening, busy, onSave }) {
       </section>
       <form className={`${styles.card} ${styles.form}`} onSubmit={saveBuyers}>
         <h2>Confirmed Kinema ticket buyers</h2>
-        <p>Paste the emails from confirmed purchases only. Saving replaces this screening’s list. This form does not purchase tickets.</p>
+        <p>Paste confirmed Kinema buyer emails here, including buyers without Parlor accounts. Saving replaces this screening’s list. The pre-screening reminder uses this list and confirmed RSVPs.</p>
         <label>Ticket buyer emails
           <textarea name="buyers" rows={8} defaultValue={(screening.buyers || []).map(buyer => buyer.email).sort().join('\n')} />
         </label>
