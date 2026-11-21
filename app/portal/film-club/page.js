@@ -1,5 +1,6 @@
 'use client'
 
+import PublishedFilmClub from './PublishedFilmClub'
 import FilmClubDiscussions from '../_components/FilmClubDiscussions'
 import { useState } from 'react'
 import Link from 'next/link'
@@ -256,5 +257,5 @@ function FilmClub() {
 }
 
 export default function FilmClubPage() {
-  return <PortalShell active="filmclub" returnTo="/portal/film-club"><FilmClub /></PortalShell>
+  return <PortalShell active="filmclub" returnTo="/portal/film-club">{process.env.NODE_ENV === 'development' ? <FilmClub /> : <PublishedFilmClub />}</PortalShell>
 }

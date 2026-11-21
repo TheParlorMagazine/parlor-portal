@@ -14,7 +14,7 @@ async function gate(request, params) {
   const grant = internal ? null : await db.from('film_club_forum_moderators').select('member_id')
     .eq('forum_id', id).eq('member_id', user.id).gt('expires_at', new Date().toISOString()).maybeSingle()
   if (!internal && !grant?.data) return { error: json('Discussion moderation access is required.', 403) }
-  const { data, error } = await db.from('film_club_screenings').select('event:events!inner(title)').eq('forum_id', id).maybeSingle()
+  const { data, error } = await db.from('film_club_screenings').select('discussion_archived,event:events!inner(title)').eq('forum_id', id).maybeSingle()
   if (error) return { error: json('Could not load discussion.', 500) }
   if (!data) return { error: json('Discussion not found.', 404) }
   return { db, user, id, internal, title: data.event.title }

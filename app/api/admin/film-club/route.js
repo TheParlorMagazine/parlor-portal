@@ -21,7 +21,7 @@ export async function GET(request) {
   const { db, error } = await gate(request)
   if (error) return error
   const { data, error: loadError } = await db.from('film_club_screenings')
-    .select('*, event:events!inner(id,title,description,starts_at,status,forum_id)')
+    .select('*, event:events!inner(id,title,description,starts_at,ends_at,status,forum_id), buyers:film_club_ticket_buyers(email)')
   if (loadError) return json('Could not load screenings. Check that the Film Club migrations are applied.', 503)
   return Response.json({ screenings: data.sort((a, b) => (b.event.starts_at || '').localeCompare(a.event.starts_at || '')) })
 }
@@ -57,6 +57,29 @@ export async function PATCH(request) {
       .eq('event_id', body.eventId).not('forum_id', 'is', null).select('event_id').maybeSingle()
     if (error) return json('Could not save the discussion setting.', 500)
     return data ? Response.json({ ok: true }) : json('Discussion not found.', 404)
+  }
+  if (body.action === 'discussion_email') {
+    if (typeof body.enabled !== 'boolean') return json('Select whether to send the discussion email.', 400)
+    if (body.enabled) {
+      const { data, error } = await db.from('events').select('ends_at,starts_at').eq('id', body.eventId).maybeSingle()
+      if (error) return json('Could not check the screening end time.', 500)
+      if (!data?.ends_at || (data.starts_at && Date.parse(data.ends_at) <= Date.parse(data.starts_at))) {
+        return json('Set a screening end time after the start time in Community → Events first.', 400)
+      }
+    }
+    const { data, error } = await db.from('film_club_screenings').update({ discussion_email_enabled: body.enabled })
+      .eq('event_id', body.eventId).select('event_id').maybeSingle()
+    if (error) return json('Could not save the email setting.', 500)
+    return data ? Response.json({ ok: true }) : json('Screening not found.', 404)
+  }
+  if (body.action === 'ticket_buyers') {
+    if (!Array.isArray(body.emails) || body.emails.length > 2000 ||
+      !body.emails.every(email => typeof email === 'string' && email.length <= 254 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))) {
+      return json('Enter up to 2,000 valid email addresses.', 400)
+    }
+    const { data, error } = await db.rpc('replace_film_club_ticket_buyers', { p_event: body.eventId, p_emails: body.emails })
+    if (error) return json('Could not save the confirmed ticket buyers.', 500)
+    return Response.json({ count: data })
   }
   if (body.action === 'tickets') {
     const amounts = [body.publicTickets, body.publicGrossCents]

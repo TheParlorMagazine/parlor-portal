@@ -7,7 +7,7 @@ import { filmClubRequest } from '../../../lib/filmClubRequest'
 import styles from './FilmClubAdmin.module.css'
 
 const api = '/api/admin/film-club'
-const tabs = ['Overview', 'Screenings', 'Forums']
+const tabs = ['Overview', 'Screenings', 'Forums', 'Emails']
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const formatDate = value => value ? new Date(value).toLocaleString() : 'Date TBA'
 
@@ -58,6 +58,41 @@ function Overview({ screening, onSave, busy }) {
         </form>
         {screening.ticket_reported_at && <p>Last updated {formatDate(screening.ticket_reported_at)}</p>}
       </section>
+    </>
+  )
+}
+
+function ScreeningEmails({ screening, busy, onSave }) {
+  if (!screening) return <section className={styles.card}><p>Add a screening first.</p></section>
+
+  function saveBuyers(event) {
+    event.preventDefault()
+    const fields = new FormData(event.currentTarget)
+    const emails = fields.get('buyers').split(/[\s,;]+/).filter(Boolean)
+    onSave({ action: 'ticket_buyers', emails }, result => `Saved ${result.count} confirmed ticket buyer emails.`)
+  }
+
+  return (
+    <>
+      <section className={`${styles.card} ${styles.form}`}>
+        <h2>After-screening discussion email</h2>
+        <p>Invites confirmed paid RSVPs and ticket buyers with matching Parlor accounts to the screening forum. Anyone in both groups gets one invitation.</p>
+        <p>{screening.event.ends_at ? `Screening ends ${formatDate(screening.event.ends_at)}.` : 'Set the viewing window end time in Community → Events.'}</p>
+        <button type="button" disabled={busy} onClick={() => onSave({
+          action: 'discussion_email', enabled: !screening.discussion_email_enabled,
+        }, () => screening.discussion_email_enabled ? 'Discussion email paused.' : 'Discussion email enabled.')}>
+          {screening.discussion_email_enabled ? 'Pause discussion email' : 'Enable discussion email'}
+        </button>
+        <p>Invitations are sent after the end time while the discussion is open. Enabling for a past screening makes it eligible on the next run.</p>
+      </section>
+      <form className={`${styles.card} ${styles.form}`} onSubmit={saveBuyers}>
+        <h2>Confirmed Kinema ticket buyers</h2>
+        <p>Paste the emails from confirmed purchases only. Saving replaces this screening’s list. This form does not purchase tickets.</p>
+        <label>Ticket buyer emails
+          <textarea name="buyers" rows={8} defaultValue={(screening.buyers || []).map(buyer => buyer.email).sort().join('\n')} />
+        </label>
+        <button disabled={busy}>Save ticket buyers</button>
+      </form>
     </>
   )
 }
@@ -194,6 +229,10 @@ export default function FilmClubAdmin() {
           ))}
           {!screenings.length && !loading && !adding && <p>No screenings yet.</p>}
         </>
+      )}
+      {!loading && tab === 'Emails' && (
+        <ScreeningEmails key={screening?.event_id} screening={screening} busy={busy}
+          onSave={(body, success) => save('PATCH', { ...body, eventId: screening.event_id }, success)} />
       )}
       {!loading && tab === 'Forums' && (
         screening?.forum_id ? (
