@@ -1,3 +1,4 @@
+import { filmClubDiscussion, filmClubDiscussionVisible } from '../../../../../lib/filmClubDiscussions'
 import { requireUser, serviceClient } from '../../../../../lib/apiAuth'
 import { effectiveForumRole, threadForumId } from '../../../../../lib/forums'
 import { notifyMember } from '../../../../../lib/notify'
@@ -14,7 +15,9 @@ export async function GET(request, { params }) {
 
   const { data: thread } = await db.from('forum_threads').select(THREAD_SEL).eq('id', id).eq('status', 'live').single()
   if (!thread) return Response.json({ error: 'Thread not found' }, { status: 404 })
-  const role = await effectiveForumRole(db, thread.forum_id, user.id)
+  const discussion = await filmClubDiscussion(db, thread.forum_id)
+  if (discussion && !filmClubDiscussionVisible(discussion)) return Response.json({ error: 'Thread not found' }, { status: 404 })
+  const role = await effectiveForumRole(db, thread.forum_id, user.id) || (discussion?.forum.join_policy === 'open' ? 'member' : null)
   if (!role) return Response.json({ error: 'Not a member of this forum' }, { status: 403 })
 
   const { data: replies } = await db.from('forum_replies')
@@ -24,6 +27,7 @@ export async function GET(request, { params }) {
 
   return Response.json({
     forum,
+    commenting_open: discussion?.commenting_open ?? true,
     thread: {
       id: thread.id, forum_id: thread.forum_id, title: thread.title, body: thread.body,
       upvote_count: thread.upvote_count, reply_count: thread.reply_count, created_at: thread.created_at,
@@ -46,8 +50,12 @@ export async function POST(request, { params }) {
 
   const t = await threadForumId(db, id)
   if (!t || t.status !== 'live') return Response.json({ error: 'Thread not found' }, { status: 404 })
-  const role = await effectiveForumRole(db, t.forum_id, user.id)
+  const discussion = await filmClubDiscussion(db, t.forum_id)
+  if (discussion && !filmClubDiscussionVisible(discussion)) return Response.json({ error: 'Thread not found' }, { status: 404 })
+  const role = await effectiveForumRole(db, t.forum_id, user.id) || (discussion?.forum.join_policy === 'open' ? 'member' : null)
   if (!role) return Response.json({ error: 'Not a member of this forum' }, { status: 403 })
+
+  if (discussion && !discussion.commenting_open) return Response.json({ error: 'Commenting is closed.' }, { status: 403 })
 
   let b = {}
   try { b = await request.json() } catch {}
@@ -56,7 +64,7 @@ export async function POST(request, { params }) {
 
   const { data: reply, error } = await db.from('forum_replies')
     .insert({ thread_id: id, member_id: user.id, body }).select(REPLY_SEL).single()
-  if (error) return Response.json({ error: error.message }, { status: 500 })
+  if (error) return Response.json({ error: error.message }, { status: error.code === '42501' ? 403 : 500 })
 
   const now = new Date().toISOString()
   const { count } = await db.from('forum_replies').select('id', { count: 'exact', head: true }).eq('thread_id', id).eq('status', 'live')

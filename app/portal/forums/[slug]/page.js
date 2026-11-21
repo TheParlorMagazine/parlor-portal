@@ -219,6 +219,8 @@ function Detail() {
   const supabase = useMemo(() => createClient(), [])
   const [data, setData] = useState({ loading: true, forum: null, members: [], events: { upcoming: [], past: [] } })
   const [uid, setUid] = useState(null)
+  const [posting, setPosting] = useState(false)
+  const [postError, setPostError] = useState('')
   const [showRules, setShowRules] = useState(false)
   const [uploadingBanner, setUploadingBanner] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -243,7 +245,7 @@ function Detail() {
       const res = await fetch(`/api/portal/forums/${id}`, { headers: await auth() })
       if (!res.ok) { setData({ loading: false, forum: null, members: [], events: { upcoming: [], past: [] } }); return }
       const d = await res.json()
-      setData({ loading: false, forum: d.forum, members: d.members || [], events: d.events || { upcoming: [], past: [] } })
+      setData({ loading: false, forum: d.forum, threads: d.threads || [], members: d.members || [], events: d.events || { upcoming: [], past: [] } })
     } catch { setData({ loading: false, forum: null, members: [], events: { upcoming: [], past: [] } }) }
   }, [id, auth])
 
@@ -311,6 +313,29 @@ function Detail() {
     </div>
   )
 
+  async function startDiscussion(event) {
+    event.preventDefault()
+    const form = event.currentTarget
+    const body = Object.fromEntries(new FormData(form))
+    setPosting(true)
+    setPostError('')
+    try {
+      const response = await fetch(`/api/portal/forums/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await auth()) },
+        body: JSON.stringify(body),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not post the thread.')
+      form.reset()
+      await load()
+    } catch (error) {
+      setPostError(error.message)
+    } finally {
+      setPosting(false)
+    }
+  }
+
   const f = data.forum
   return (
     <div className="fr-wrap" style={{ maxWidth: 'none' }}>
@@ -357,7 +382,7 @@ function Detail() {
         </div>
       </div>
 
-      {f.my_role === 'host' && <ModPanel id={id} auth={auth} supabase={supabase} onChanged={load} forumName={f.name} />}
+      {!f.film_club && f.my_role === 'host' && <ModPanel id={id} auth={auth} supabase={supabase} onChanged={load} forumName={f.name} />}
 
       {f.guidelines && (
         <div className="fr-guide">
@@ -380,7 +405,28 @@ function Detail() {
 
       {/* Rich post feed — profile-style composer, media cards, and comments,
           scoped to this forum. */}
-      <PostsWall forumId={id} currentUserId={uid} />
+      {f.film_club ? (
+        <>
+          {f.commenting_open ? (
+            <form className="fr-composer" onSubmit={startDiscussion}>
+              <h2>Start a thread</h2>
+              <label>Title<textarea name="title" rows={1} maxLength={160} required /></label>
+              <label>Message<textarea name="body" rows={3} maxLength={4000} required /></label>
+              <button className="fr-postbtn" disabled={posting}>Post thread</button>
+            </form>
+          ) : <p role="status">Commenting is closed. You can still read the discussion.</p>}
+          {postError && <p role="alert">{postError}</p>}
+          <div className="fr-list">
+            {data.threads.map(thread => (
+              <a key={thread.id} className="fr-card" href={`/portal/forums/${id}/${thread.id}`}>
+                <div className="fr-card-name">{thread.pinned && 'Pinned · '}{thread.title}</div>
+                <div className="fr-card-meta">{thread.reply_count} replies</div>
+              </a>
+            ))}
+            {!data.threads.length && <p>No threads yet.</p>}
+          </div>
+        </>
+      ) : <PostsWall forumId={id} currentUserId={uid} />}
         </div>
 
         {/* Right sidebar — moderators + members */}

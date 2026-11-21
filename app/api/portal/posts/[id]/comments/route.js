@@ -1,3 +1,4 @@
+import { filmClubDiscussion, filmClubDiscussionVisible } from '../../../../../../lib/filmClubDiscussions'
 import { requireUser, serviceClient } from '../../../../../../lib/apiAuth'
 import { forumRole } from '../../../../../../lib/forums'
 import { notifyMember } from '../../../../../../lib/notify'
@@ -17,6 +18,8 @@ async function access(db, postId, userId) {
   const { data: post } = await db.from('member_posts').select('id, member_id, forum_id, status').eq('id', postId).maybeSingle()
   if (!post || post.status !== 'live') return { error: Response.json({ error: 'Not found' }, { status: 404 }) }
   if (post.forum_id) {
+    const discussion = await filmClubDiscussion(db, post.forum_id)
+    if (discussion && !filmClubDiscussionVisible(discussion)) return { error: Response.json({ error: 'Not found' }, { status: 404 }) }
     if (!(await forumRole(db, post.forum_id, userId))) {
       const { data: m } = await db.from('members').select('role').eq('id', userId).maybeSingle()
       if (!m || !['admin', 'social_admin'].includes(m.role)) return { error: Response.json({ error: 'Not a member of this forum' }, { status: 403 }) }

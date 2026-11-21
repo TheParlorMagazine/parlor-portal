@@ -89,11 +89,12 @@ function Detail() {
       {e.description && <div className="ev-desc">{e.description}</div>}
 
       <div className="ev-cta">
+        {d.film_club_discussion && <a className="ev-btn ghost" href={`/portal/forums/${e.forum_id}`}>Film Club discussion →</a>}
         {going ? (
           <>
             <span className="ev-btn going">{host ? 'Host/admin access · no RSVP needed' : '✓ You’re going'}</span>
             <a className="ev-btn ghost" href={`/api/portal/events/${id}/ics`}>Add to calendar</a>
-            {e.forum_id && d.can_access_forum && <a className="ev-btn ghost" href={`/portal/forums/${e.forum_id}`}>Event discussion →</a>}
+            {e.forum_id && d.can_access_forum && d.film_club_discussion === undefined && <a className="ev-btn ghost" href={`/portal/forums/${e.forum_id}`}>Event discussion →</a>}
             {!host && <button className="ev-btn ghost" onClick={cancel} disabled={busy} style={{ color: '#c04040' }}>Cancel RSVP</button>}
           </>
         ) : waitlisted ? (
@@ -108,7 +109,7 @@ function Detail() {
 
       {error && <p role="alert" style={{ color: '#a02030' }}>{error}</p>}
       {waitlisted && <p>Your attendance is not confirmed. We’ll notify you if a place opens.</p>}
-      {e.is_public && e.forum_id && !d.can_access_forum && <p>Event registration does not join the host’s forum. You can request membership separately from Forums.</p>}
+      {e.is_public && e.forum_id && !d.can_access_forum && d.film_club_discussion === undefined && <p>Event registration does not join the host’s forum. You can request membership separately from Forums.</p>}
       {d.can_manage && <section style={{ marginTop: 28 }}>
         <h2>Attendees and waitlist</h2>
         <p>Hosts and admins are excluded from this list and do not use capacity.</p>

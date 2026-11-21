@@ -23,7 +23,13 @@ export async function GET(request) {
   const me = await memberOf(db, user.id)
   const paid = hasPaidAccess(me)
   const { data: memberships } = await db.from('forum_members').select('forum_id').eq('member_id', user.id)
-  const forumIds = (memberships || []).map(m => m.forum_id)
+  let forumIds = (memberships || []).map(m => m.forum_id)
+  if (forumIds.length) {
+    const { data: hidden } = await db.from('film_club_screenings').select('forum_id')
+      .in('forum_id', forumIds).or('discussion_archived.eq.true,discussion_active.eq.false')
+    const hiddenIds = new Set((hidden || []).map(item => item.forum_id))
+    forumIds = forumIds.filter(id => !hiddenIds.has(id))
+  }
 
   const [postRes, blogRes, comRes, thrRes, promptRes] = await Promise.all([
     db.from('member_posts')
@@ -43,8 +49,9 @@ export async function GET(request) {
       .limit(60),
     forumIds.length
       ? db.from('forum_threads')
-          .select('id, title, body, forum_id, last_activity_at, created_at, member_id, members!forum_threads_member_id_fkey(full_name, avatar_url), forums(name)')
+          .select('id, title, body, forum_id, last_activity_at, created_at, member_id, members!forum_threads_member_id_fkey(full_name, avatar_url), forums!inner(name)')
           .in('forum_id', forumIds)
+          .eq('forums.status', 'active')
           .eq('status', 'live')
           .order('last_activity_at', { ascending: false })
           .limit(15)

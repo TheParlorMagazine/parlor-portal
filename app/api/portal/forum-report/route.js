@@ -1,3 +1,4 @@
+import { filmClubDiscussion, filmClubDiscussionVisible } from '../../../../lib/filmClubDiscussions'
 import { requireUser, serviceClient, memberOf } from '../../../../lib/apiAuth'
 import { effectiveForumRole, threadForumId } from '../../../../lib/forums'
 import { hasPaidAccess } from '../../../../lib/plans'
@@ -23,7 +24,9 @@ export async function POST(request) {
     let forumId
     if (b.kind === 'forum_thread') { const t = await threadForumId(db, b.id); if (!t) return Response.json({ error: 'Not found' }, { status: 404 }); forumId = t.forum_id }
     else { const { data: r } = await db.from('forum_replies').select('thread_id').eq('id', b.id).single(); if (!r) return Response.json({ error: 'Not found' }, { status: 404 }); const t = await threadForumId(db, r.thread_id); forumId = t?.forum_id }
-    const role = await effectiveForumRole(db, forumId, user.id)
+    const discussion = forumId ? await filmClubDiscussion(db, forumId) : null
+    if (discussion && !filmClubDiscussionVisible(discussion)) return Response.json({ error: 'Not found' }, { status: 404 })
+    const role = await effectiveForumRole(db, forumId, user.id) || (discussion?.forum.join_policy === 'open' ? 'member' : null)
     if (!role) return Response.json({ error: 'Not a member of this forum' }, { status: 403 })
   } else {
     const me = await memberOf(db, user.id)

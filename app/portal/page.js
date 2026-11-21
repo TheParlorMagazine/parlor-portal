@@ -1,5 +1,6 @@
 'use client'
 
+import FilmClubDiscussions from './_components/FilmClubDiscussions'
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '../../lib/supabase'
 import PortalShell, { usePortal, ROLE_LABELS } from './_components/PortalShell'
@@ -304,6 +305,7 @@ function Hub() {
       `}</style>
 
       <h1 data-tour="dashboard-ready" className="hub-greeting">Hello, <em>{first}.</em></h1>
+      <FilmClubDiscussions dashboard />
       <p className="hub-sub">{subline}</p>
 
       {/* Top: New in the Library (left) + this month's book club pick (right) */}

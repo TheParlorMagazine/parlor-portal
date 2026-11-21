@@ -1,127 +1,244 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import FilmTrailer, { getTrailerEmbed } from '../../_components/FilmTrailer'
+import FilmClubModeration from '../../_components/FilmClubModeration'
+import { filmClubRequest } from '../../../lib/filmClubRequest'
 import styles from './FilmClubAdmin.module.css'
 
-const screening = {
-  title: 'Documentary Screening',
-  date: 'December · Date TBA',
-  status: 'Draft',
-  paidRsvps: 12,
-  publicTickets: 8,
-  ticketPrice: 9.99,
-  hostShare: 0.45,
-  licensePrice: 100,
-  licenseThreshold: 23,
+const api = '/api/admin/film-club'
+const tabs = ['Overview', 'Screenings', 'Forums']
+const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+const formatDate = value => value ? new Date(value).toLocaleString() : 'Date TBA'
+
+function Overview({ screening, onSave, busy }) {
+  if (!screening) return <section className={styles.card}><p>Add a screening to see its ticket totals and licensing estimates.</p></section>
+  const netPerTicket = screening.ticket_price_cents * (1 - screening.host_share_percent / 100)
+  const breakEven = netPerTicket > 0 ? Math.ceil(screening.license_price_cents / netPerTicket) : null
+
+  function save(event) {
+    event.preventDefault()
+    const fields = new FormData(event.currentTarget)
+    const tickets = fields.get('tickets')
+    const gross = fields.get('gross')
+    onSave({
+      action: 'tickets', eventId: screening.event_id,
+      publicTickets: tickets === '' ? null : Number(tickets),
+      publicGrossCents: gross === '' ? null : Math.round(Number(gross) * 100),
+    })
+  }
+
+  return (
+    <>
+      <dl className={styles.metrics}>
+        {[
+          ['Member RSVPs', '—'],
+          ['License threshold', screening.license_threshold],
+          ['Public tickets', screening.public_tickets ?? '—'],
+          ['Public gross sales', screening.public_gross_cents === null ? '—' : money.format(screening.public_gross_cents / 100)],
+        ].map(([label, value]) => <div key={label} className={styles.metric}><dt>{label}</dt><dd>{value}</dd></div>)}
+      </dl>
+      <section className={styles.card}>
+        <h2>Licensing estimate</h2>
+        <dl className={styles.costs}>
+          <div><dt>Estimated net cost per sponsored ticket</dt><dd>{money.format(netPerTicket / 100)}</dd></div>
+          <div><dt>Private screening license</dt><dd>{money.format(screening.license_price_cents / 100)}</dd></div>
+          <div><dt>Calculated break-even</dt><dd>{breakEven === null ? 'Unavailable' : `${breakEven} sponsored tickets`}</dd></div>
+        </dl>
+        <p>Estimates use a {money.format(screening.ticket_price_cents / 100)} ticket price and a {screening.host_share_percent}% host share. Member RSVP tracking is pending.</p>
+      </section>
+      <section className={styles.card}>
+        <h2>External ticket sales</h2>
+        <p>Enter cumulative totals from your screening provider. Each update replaces the previous totals.</p>
+        {screening.ticket_url && <p><a href={screening.ticket_url} target="_blank" rel="noreferrer">Open ticket provider</a></p>}
+        <form className={styles.form} onSubmit={save}>
+          <label>Tickets sold<input name="tickets" type="number" min="0" max="2147483647" step="1" defaultValue={screening.public_tickets ?? ''} /></label>
+          <label>Gross sales (USD)<input name="gross" type="number" min="0" max="21474836.47" step="0.01" defaultValue={screening.public_gross_cents === null ? '' : screening.public_gross_cents / 100} /></label>
+          <button disabled={busy}>Save totals</button>
+        </form>
+        {screening.ticket_reported_at && <p>Last updated {formatDate(screening.ticket_reported_at)}</p>}
+      </section>
+    </>
+  )
 }
 
-const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
-const netPerTicket = screening.ticketPrice * (1 - screening.hostShare)
-const sponsoredTicketCost = screening.paidRsvps * netPerTicket
-const remaining = Math.max(0, screening.licenseThreshold - screening.paidRsvps)
-const breakEven = netPerTicket > 0 ? Math.floor(screening.licensePrice / netPerTicket) + 1 : null
-
-const metrics = [
-  ['Paid RSVPs', screening.paidRsvps],
-  ['License threshold', screening.licenseThreshold],
-  ['Public tickets', screening.publicTickets],
-  ['Spots to threshold', remaining],
-]
-
-export default function FilmClubAdmin() {
+function ScreeningForm({ onAdd, busy }) {
+  const submissionId = useRef(null)
   const [trailerUrl, setTrailerUrl] = useState('')
   const [trailerEmbed, setTrailerEmbed] = useState(null)
-  const [trailerError, setTrailerError] = useState('')
 
-  function previewTrailer(event) {
+  async function submit(event) {
     event.preventDefault()
-    const embed = getTrailerEmbed(trailerUrl.trim())
-    setTrailerEmbed(embed)
-    setTrailerError(embed ? '' : 'Enter an HTTPS YouTube or Vimeo video link.')
+    const form = event.currentTarget
+    const fields = Object.fromEntries(new FormData(form))
+    submissionId.current ||= crypto.randomUUID()
+    await onAdd({ ...fields, id: submissionId.current, starts_at: new Date(fields.starts_at).toISOString() })
+  }
+
+  return (
+    <form className={`${styles.card} ${styles.form}`} onSubmit={submit}>
+      <h2>Add screening event</h2>
+      <label>Title<input name="title" required maxLength={200} /></label>
+      <label>Screening date and time (your local time)<input name="starts_at" type="datetime-local" required /></label>
+      <label>Description<textarea name="description" rows={3} maxLength={5000} /></label>
+      <label>External tickets URL<input name="ticket_url" type="url" placeholder="https://" /></label>
+      <label>YouTube or Vimeo trailer URL<input name="trailer_url" type="url" value={trailerUrl} onChange={event => setTrailerUrl(event.target.value)} /></label>
+      <button type="button" onClick={() => setTrailerEmbed(getTrailerEmbed(trailerUrl.trim()) || false)}>Preview trailer</button>
+      {trailerEmbed === false && <p role="alert">Enter an HTTPS YouTube or Vimeo video link.</p>}
+      {trailerEmbed && <div className={styles.trailer}><FilmTrailer src={trailerEmbed} title="Screening" /></div>}
+      <p>The screening appears as a draft in Community → Events.</p>
+      <button disabled={busy}>Add screening event</button>
+    </form>
+  )
+}
+
+export default function FilmClubAdmin() {
+  const [tab, setTab] = useState('Overview')
+  const [screenings, setScreenings] = useState([])
+  const [selectedId, setSelectedId] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [revision, setRevision] = useState(0)
+  const screening = screenings.find(item => item.event_id === selectedId) || screenings[0]
+
+  useEffect(() => {
+    let current = true
+    filmClubRequest(api).then(result => {
+      if (current) setScreenings(result.screenings)
+    }).catch(err => {
+      if (current) setError(err.message)
+    }).finally(() => {
+      if (current) setLoading(false)
+    })
+    return () => { current = false }
+  }, [])
+
+  async function save(method, body, success) {
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const result = await filmClubRequest(api, method, body)
+      setNotice(success(result))
+      if (body.action === 'invite' || body.action === 'revoke') {
+        setRevision(value => value + 1)
+      } else {
+        setScreenings((await filmClubRequest(api)).screenings)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function invite(event) {
+    event.preventDefault()
+    const { email, expiry } = Object.fromEntries(new FormData(event.currentTarget))
+    save('PATCH', {
+      action: 'invite', eventId: screening.event_id, email, expiresAt: new Date(expiry).toISOString(),
+    }, result => result.notified ? 'Filmmaker access granted and in-app invitation sent.' : `Access granted. Share this moderation link: ${result.path}`)
   }
 
   return (
     <div className={styles.section}>
       <header className={styles.heading}>
-        <div>
-          <h1>Film Club</h1>
-          <p>Screenings, member RSVPs &amp; licensing</p>
-        </div>
-        <span className={styles.badge}>Demo data</span>
+        <div><h1>Film Club</h1><p>Screenings, ticket reports &amp; discussion moderation</p></div>
+        {tab === 'Screenings' && <button className={styles.primary} onClick={() => setAdding(value => !value)}>{adding ? 'Cancel' : '+ Add screening event'}</button>}
       </header>
 
-      <dl className={styles.metrics}>
-        {metrics.map(([label, value]) => (
-          <div key={label} className={styles.metric}>
-            <dt>{label}</dt>
-            <dd>{value}</dd>
-          </div>
+      <nav className={styles.tabs} aria-label="Film Club sections">
+        {tabs.map(label => (
+          <button key={label} type="button" aria-pressed={tab === label} onClick={() => {
+            setTab(label)
+            setNotice('')
+          }}>{label}</button>
         ))}
-      </dl>
+      </nav>
 
-      <section className={styles.card}>
-        <div className={styles.heading}>
-          <h2>Upcoming screening</h2>
-          <span className={styles.badge}>{screening.status}</span>
-        </div>
-        <div className={styles.screening}>
-          <h3>{screening.title}</h3>
-          <p>{screening.date}</p>
-          <p>Member RSVP registration and public ticket sales</p>
-        </div>
-        <dl className={styles.costs}>
-          <div><dt>Estimated net member ticket cost</dt><dd>{money.format(sponsoredTicketCost)}</dd></div>
-          <div><dt>Private screening license</dt><dd>{money.format(screening.licensePrice)}</dd></div>
-          <div><dt>Calculated break-even</dt><dd>{breakEven === null ? 'Unavailable' : `${breakEven} RSVPs`}</dd></div>
-        </dl>
-        <div className={styles.callout}>
-          <strong>{remaining === 0 ? 'Review private screening license option' : 'Individual sponsored tickets may be more economical'}</strong>
-          <p>{screening.paidRsvps} paid members have RSVP’d. The operational review threshold is {screening.licenseThreshold} RSVPs.</p>
-        </div>
-        <p className={styles.note}>
-          Illustrative estimates use a {money.format(screening.ticketPrice)} ticket price and a {Math.round(screening.hostShare * 100)}% host share.
-          Confirm actual costs, licensing permissions, and revenue-share eligibility with the screening provider.
-        </p>
-      </section>
-
-      <section className={styles.card}>
-        <h2>Screening trailer</h2>
-        <form className={styles.trailerForm} onSubmit={previewTrailer}>
-          <label htmlFor="film-trailer-url">YouTube or Vimeo URL</label>
-          <div className={styles.trailerControls}>
-            <input id="film-trailer-url" type="url" required value={trailerUrl}
-              onChange={event => {
-                setTrailerUrl(event.target.value)
-                setTrailerError('')
-              }} aria-invalid={Boolean(trailerError)} aria-describedby="film-trailer-hint" />
-            <button type="submit">Preview trailer</button>
-            {trailerEmbed && (
-              <button type="button" onClick={() => {
-                setTrailerUrl('')
-                setTrailerEmbed(null)
-                setTrailerError('')
-              }}>Clear preview</button>
-            )}
-          </div>
-          <p id="film-trailer-hint">This preview is temporary and resets when you leave the section.</p>
-          {trailerError && <p role="alert" className={styles.error}>{trailerError}</p>}
-        </form>
-        <div className={styles.trailer}>
-          <FilmTrailer src={trailerEmbed} title={screening.title} placeholder="Add a trailer URL to preview it here." />
-        </div>
-      </section>
-
-      <section className={styles.card}>
-        <div className={styles.heading}>
-          <div>
-            <h2>Member RSVPs</h2>
-            <p>Paid subscribers registered for this screening</p>
-          </div>
-          <span className={styles.badge}>{screening.paidRsvps} registered (demo)</span>
-        </div>
-        <div className={styles.empty}>RSVP records will appear here once registration is connected.</div>
-      </section>
+      {loading && <p role="status">Loading screenings…</p>}
+      {error && <p role="alert" className={styles.error}>{error}</p>}
+      {notice && <p role="status">{notice}</p>}
+      {!loading && tab !== 'Screenings' && screening && (
+        <label className={styles.selector}>Screening
+          <select value={screening.event_id} onChange={event => {
+            setSelectedId(event.target.value)
+            setNotice('')
+          }}>
+            {screenings.map(item => <option key={item.event_id} value={item.event_id}>{item.event.title} · {formatDate(item.event.starts_at)}</option>)}
+          </select>
+        </label>
+      )}
+      {!loading && tab === 'Overview' && (
+        <Overview key={`${screening?.event_id}:${screening?.ticket_reported_at}`} screening={screening} busy={busy} onSave={body => save('PATCH', body, () => 'Ticket totals saved.')} />
+      )}
+      {tab === 'Screenings' && (
+        <>
+          {adding && <ScreeningForm busy={busy} onAdd={body => save('POST', body, result => {
+            setAdding(false)
+            setSelectedId(result.eventId)
+            return 'Screening saved as a draft in Events.'
+          })} />}
+          {screenings.map(item => (
+            <section className={styles.card} key={item.event_id}>
+              <div className={styles.heading}>
+                <div><h2>{item.event.title}</h2><p>{formatDate(item.event.starts_at)}</p></div>
+                <span className={styles.badge}>{item.event.status}</span>
+              </div>
+              {item.event.description && <p>{item.event.description}</p>}
+              {item.trailer_url && <div className={styles.trailer}><FilmTrailer src={getTrailerEmbed(item.trailer_url)} title={item.event.title} /></div>}
+            </section>
+          ))}
+          {!screenings.length && !loading && !adding && <p>No screenings yet.</p>}
+        </>
+      )}
+      {!loading && tab === 'Forums' && (
+        screening?.forum_id ? (
+          <>
+            <section className={`${styles.card} ${styles.form}`}>
+              <h2>Discussion settings</h2>
+              {[
+                ['discussion_active', 'Visibility in active lists', 'Active', 'Inactive', 'Mark inactive', 'Mark active'],
+                ['commenting_open', 'Commenting', 'Open', 'Closed', 'Close commenting', 'Open commenting'],
+                ['discussion_archived', 'Archive', 'Archived', 'Available to members after publication', 'Unarchive discussion', 'Archive discussion'],
+              ].map(([field, label, on, off, turnOff, turnOn]) => (
+                <div key={field} className={styles.heading}>
+                  <p><strong>{label}</strong> · {screening[field] ? on : off}</p>
+                  <button disabled={busy} onClick={() => save('PATCH', {
+                    action: 'discussion', eventId: screening.event_id, field, value: !screening[field],
+                  }, () => 'Discussion setting saved.')}>{screening[field] ? turnOff : turnOn}</button>
+                </div>
+              ))}
+            </section>
+            <form className={`${styles.card} ${styles.form}`} onSubmit={invite}>
+              <h2>Invite a filmmaker</h2>
+              <p>Invite an existing Parlor member to co-moderate this discussion until the date you choose.</p>
+              <label>Parlor account email<input name="email" type="email" required /></label>
+              <label>Access expires (your local time)<input name="expiry" type="datetime-local" required /></label>
+              <button disabled={busy}>Invite co-moderator</button>
+            </form>
+            <div className={`${styles.card} ${styles.moderation}`}>
+              {screening.event.status === 'published' && !screening.discussion_archived && <a href={`/portal/forums/${screening.forum_id}`}>Open member discussion</a>}
+              <FilmClubModeration key={screening.forum_id} forumId={screening.forum_id} revision={revision} renderGrants={grants => grants.length > 0 && (
+                <section className={styles.screening}>
+                  <h2>Filmmaker access</h2>
+                  {grants.map(grant => (
+                    <p key={grant.member_id}>
+                      {grant.member?.email || grant.member?.full_name || 'Member'} · Expires {formatDate(grant.expires_at)}{' '}
+                      <button disabled={busy} onClick={() => save('PATCH', {
+                        action: 'revoke', eventId: screening.event_id, memberId: grant.member_id,
+                      }, () => 'Filmmaker access revoked.')}>Revoke access</button>
+                    </p>
+                  ))}
+                </section>
+              )} />
+            </div>
+          </>
+        ) : <p>Add a screening with a discussion to start moderating.</p>
+      )}
     </div>
   )
 }

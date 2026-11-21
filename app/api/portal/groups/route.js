@@ -24,6 +24,10 @@ export async function GET(request) {
   }
   if (error) return Response.json({ error: error.message }, { status: 500 })
 
+  const { data: filmRooms } = await db.from('film_club_screenings').select('forum_id')
+  const filmIds = new Set((filmRooms || []).map(room => room.forum_id))
+  forums = (forums || []).filter(forum => !filmIds.has(forum.id))
+
   const [{ data: mine }, { data: reqs }] = await Promise.all([
     db.from('forum_members').select('forum_id, role').eq('member_id', user.id),
     db.from('forum_join_requests').select('forum_id, status').eq('member_id', user.id).eq('status', 'pending'),

@@ -52,6 +52,8 @@ export default function NotifPanel({ open, onClose, onChange }) {
     // Comment replies link straight to the public article (where the thread lives).
     if (n.link_to === 'article' && n.link_ref) { window.location.href = `/post/${n.link_ref}`; return }
     // Forum notifications carry `${forumId}/${threadId}` (or just a forum id).
+    if (n.link_to === 'film-club-moderation' && n.link_ref) { window.location.href = `/portal/film-club/moderate/${n.link_ref}`; return }
+
     if (n.link_to === 'forum' && n.link_ref) { window.location.href = `/portal/forums/${n.link_ref}`; return }
     // Book club notifications carry `${bookId}/${promptId}`.
     if (n.link_to === 'bookclub' && n.link_ref) { window.location.href = `/portal/reading-room/${n.link_ref}`; return }

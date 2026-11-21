@@ -1,5 +1,6 @@
 'use client'
 
+import FilmClubDiscussions from '../_components/FilmClubDiscussions'
 import { useState } from 'react'
 import Link from 'next/link'
 import FilmTrailer, { getTrailerEmbed } from '../../_components/FilmTrailer'
@@ -206,11 +207,12 @@ function FilmClub() {
         </div>
       )}
 
+      {view === 'discussions' && <FilmClubDiscussions showEmpty />}
       {view === 'discussions' && (
         <section className={styles.stack}>
           <div className={styles.header}>
             <div>
-              <h2>{film.title} · Discussion</h2>
+              <h2>Demo discussion · {film.title}</h2>
               <p>Open to registered members. Filmmaker participation welcome.</p>
             </div>
             <button className={styles.primary} aria-expanded={composing} onClick={() => setComposing(!composing)}>

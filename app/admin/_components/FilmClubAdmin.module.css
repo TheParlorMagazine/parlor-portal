@@ -21,8 +21,7 @@
 .section h3 { font-size: 18px; }
 .section p { margin: 5px 0 0; color: var(--film-muted); line-height: 1.5; }
 
-.heading,
-.trailerControls {
+.heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -63,29 +62,38 @@
 .costs { display: grid; gap: 12px; margin: 16px 0; }
 .costs > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; }
 
-.callout { padding: 14px; border: 1px solid #eed9df; border-radius: 8px; background: var(--film-tint); }
-.callout strong { color: var(--film-accent); }
-.section .note { margin-top: 12px; font-size: 13px; }
+.section .error { color: #9b2940; }
+.trailer { width: min(100%, 640px); }
 
-.trailerForm { margin: 12px 0; }
-.trailerControls { justify-content: flex-start; align-items: stretch; margin-top: 5px; }
-.trailerControls input,
-.trailerControls button {
-  border: 1px solid var(--film-card-border);
+.tabs { display: flex; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--film-card-border); }
+.tabs button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 8px 4px;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.tabs button[aria-pressed='true'] { border-color: #0a0a0a; font-weight: 700; }
+.selector, .form label { display: grid; gap: 5px; }
+.form { display: grid; gap: 12px; justify-items: start; }
+.form label { width: min(100%, 600px); }
+.form input, .form textarea, .selector select {
+  border: 1px solid #d5d5d5;
   border-radius: 8px;
   padding: 8px 12px;
   font: inherit;
+  background: #fff;
 }
-.trailerControls input { flex: 1 1 260px; min-width: 0; }
-.trailerControls button { background: #0a0a0a; color: white; cursor: pointer; }
-.trailerControls button[type='button'] { background: white; color: #0a0a0a; }
-.section .error { color: #9b2940; }
-.trailer { max-width: 640px; }
-
-.empty {
-  margin-top: 14px;
-  padding: 24px 8px 10px;
-  border-top: 1px solid var(--film-card-border);
-  text-align: center;
-  color: var(--film-muted);
+.selector select { width: min(100%, 600px); }
+.form button, .primary, .moderation button {
+  border: 1px solid #0a0a0a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #0a0a0a;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
 }
+.form button:disabled, .moderation button:disabled { opacity: .6; cursor: wait; }
+.moderation h2 { margin-top: 14px; }
