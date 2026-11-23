@@ -169,6 +169,7 @@ function TemplateEditorModal({ template, footer, onSave, onClose, supabase }) {
   const [overriding, setOverriding] = useState(hasOverride)
   const [defaultHtml, setDefaultHtml] = useState('')
   const [loadingDefault, setLoadingDefault] = useState(!hasOverride)
+  const [previewError, setPreviewError] = useState('')
   const [previewMode, setPreview] = useState('desktop')
   const [saving, setSaving]       = useState(false)
 
@@ -182,8 +183,11 @@ function TemplateEditorModal({ template, footer, onSave, onClose, supabase }) {
         const { data: { session } } = await supabase.auth.getSession()
         const res = await fetch(`/api/admin/email-default?type=${template.template_type}`, { headers: { Authorization: `Bearer ${session?.access_token}` } })
         const d = await res.json()
-        if (!cancelled) setDefaultHtml(d.html || '')
-      } catch {} finally { if (!cancelled) setLoadingDefault(false) }
+        if (!res.ok || !d.html) throw new Error(d.error || 'No built-in preview is available for this template.')
+        if (!cancelled) setDefaultHtml(d.html)
+      } catch {
+        if (!cancelled) setPreviewError('Could not load the built-in email preview.')
+      } finally { if (!cancelled) setLoadingDefault(false) }
     })()
     return () => { cancelled = true }
   }, [])
@@ -276,7 +280,9 @@ function TemplateEditorModal({ template, footer, onSave, onClose, supabase }) {
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px', background: '#e8e8e8', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#aaa', fontFamily: ff, marginBottom: '14px', alignSelf: 'flex-start' }}>Preview — {previewMode}</div>
           <div style={{ width: previewMode === 'mobile' ? '375px' : '100%', maxWidth: '680px', height: '600px', background: '#fff', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}>
-            <EmailPreview html={previewHtml} mode={previewMode} />
+            {!overriding && previewError
+              ? <p role="alert" style={{ padding: 24, color: '#a03045', fontFamily: ff }}>{previewError}</p>
+              : <EmailPreview html={previewHtml} mode={previewMode} />}
           </div>
         </div>
       </div>

@@ -6,11 +6,15 @@ export async function GET(request, { params }) {
   if (!user) return Response.json({ error: 'Not signed in' }, { status: 401 })
   try {
     const db = serviceClient()
-    const result = await eventSummary(db, (await params).id, user.id)
+    const { id } = await params
+    const result = await eventSummary(db, id, user.id)
     const forumId = result.event?.forum_id
-    if (!forumId) return Response.json(result)
-    const discussion = await filmClubDiscussion(db, forumId)
-    if (!discussion) return Response.json(result)
+    const discussion = forumId ? await filmClubDiscussion(db, forumId) : null
+    if (!discussion) {
+      const { data: screening, error } = await db.from('film_club_screenings').select('event_id').eq('event_id', id).maybeSingle()
+      if (error && !['42P01', 'PGRST205'].includes(error.code)) throw error
+      return Response.json(screening ? { ...result, film_club_discussion: false } : result)
+    }
     return Response.json({
       ...result,
       film_club_discussion: filmClubDiscussionVisible(discussion) &&
