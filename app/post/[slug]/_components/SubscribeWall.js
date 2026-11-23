@@ -7,6 +7,7 @@ export default function SubscribeWall() {
   const [email, setEmail]     = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent]       = useState(false)
+  const [error, setError] = useState('')
   const scrollCount = useRef(0)
   const lastY       = useRef(0)
 
@@ -40,6 +41,8 @@ export default function SubscribeWall() {
     e.preventDefault()
     if (!email.trim() || loading) return
     setLoading(true)
+    setError('')
+    try {
     const returnTo = window.location.pathname
     const res = await fetch('/api/auth/check-email', {
       method: 'POST',
@@ -47,15 +50,19 @@ export default function SubscribeWall() {
       body: JSON.stringify({ email: email.trim(), returnTo }),
     })
     const data = await res.json()
-    if (data.exists) {
+    if (!res.ok) throw new Error(data.error || 'We could not send your email. Please try again.')
+    if (data.exists === true) {
       // Already a member — magic link was sent
       setSent(true)
       setLoading(false)
-    } else {
+    } else if (data.exists === false) {
       // New reader — go to signup
       const params = new URLSearchParams({ email: email.trim(), source: 'article-wall', returnTo })
       window.location.href = `/signup?${params}`
-    }
+    } else { throw new Error('We could not check your account. Please try again.') }
+    } catch (error) {
+      setError(error.message || 'Please check your connection and try again.')
+    } finally { setLoading(false) }
   }
 
   if (!visible) return null
@@ -104,6 +111,7 @@ export default function SubscribeWall() {
             </div>
           ) : (
             <>
+              {error && <p role="alert">{error}</p>}
               <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 0, maxWidth: 480, margin: '0 auto 16px' }}>
                 <input
                   type="email"

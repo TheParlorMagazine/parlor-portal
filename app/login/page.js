@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
+import ResendConfirmation from '../_components/ResendConfirmation'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
@@ -271,6 +272,7 @@ function LoginForm() {
           )}
         </form>
 
+        <ResendConfirmation email={email} returnTo={returnTo} />
         <div style={{ marginTop: '22px', textAlign: 'center', fontSize: '13px', color: '#888', fontFamily: "'Source Serif 4', Georgia, serif" }}>
           New to The Parlor?{' '}
           <a href={`/signup?returnTo=${encodeURIComponent(returnTo)}`} style={{ color: '#7a2531', fontWeight: 600, textDecoration: 'none' }}>Create an account</a>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
+import ResendConfirmation from '../_components/ResendConfirmation'
 import { createClient } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
@@ -81,6 +82,7 @@ function SignupForm() {
         <p style={styles.sub}>
           {passwordSetup ? <>An account is already associated with <strong>{email}</strong>. We sent a link to set or reset your password. Use that email link to access your existing subscription.</> : <>We requested a confirmation email for <strong>{email}</strong>. Check your inbox and spam folder, then follow the link to activate your account.</>}
         </p>
+        {!passwordSetup && <ResendConfirmation email={email} returnTo={returnTo} />}
         <a href="/login" style={styles.btn}>Back to login</a>
       </div>
     </div>
@@ -189,6 +191,7 @@ function SignupForm() {
           </button>
         </form>
 
+        <ResendConfirmation email={email} returnTo={returnTo} />
         <div style={styles.footer}>
           Already have an account?{' '}
           <a href={`/login?returnTo=${encodeURIComponent(returnTo)}`} style={styles.link}>Sign in</a>
