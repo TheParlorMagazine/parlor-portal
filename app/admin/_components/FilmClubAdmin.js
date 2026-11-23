@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import FilmTrailer, { getTrailerEmbed } from '../../_components/FilmTrailer'
+import FilmClubMediaFields from './FilmClubMediaFields'
 import FilmClubModeration from '../../_components/FilmClubModeration'
 import { filmClubRequest } from '../../../lib/filmClubRequest'
 import styles from './FilmClubAdmin.module.css'
@@ -100,10 +100,12 @@ function ScreeningEmails({ screening, busy, onSave }) {
 function ScreeningForm({ onAdd, busy }) {
   const submissionId = useRef(null)
   const [trailerUrl, setTrailerUrl] = useState('')
-  const [trailerEmbed, setTrailerEmbed] = useState(null)
+  const [cover, setCover] = useState('')
+  const [uploading, setUploading] = useState(false)
 
   async function submit(event) {
     event.preventDefault()
+    if (busy || uploading) return
     const form = event.currentTarget
     const fields = Object.fromEntries(new FormData(form))
     submissionId.current ||= crypto.randomUUID()
@@ -117,14 +119,25 @@ function ScreeningForm({ onAdd, busy }) {
       <label>Screening date and time (your local time)<input name="starts_at" type="datetime-local" required /></label>
       <label>Description<textarea name="description" rows={3} maxLength={5000} /></label>
       <label>External tickets URL<input name="ticket_url" type="url" placeholder="https://" /></label>
-      <label>YouTube or Vimeo trailer URL<input name="trailer_url" type="url" value={trailerUrl} onChange={event => setTrailerUrl(event.target.value)} /></label>
-      <button type="button" onClick={() => setTrailerEmbed(getTrailerEmbed(trailerUrl.trim()) || false)}>Preview trailer</button>
-      {trailerEmbed === false && <p role="alert">Enter an HTTPS YouTube or Vimeo video link.</p>}
-      {trailerEmbed && <div className={styles.trailer}><FilmTrailer src={trailerEmbed} title="Screening" /></div>}
+      <FilmClubMediaFields cover={cover} trailer={trailerUrl} onCover={setCover} onTrailer={setTrailerUrl} disabled={busy} onUploading={setUploading} />
       <p>The screening appears as a draft in Community → Events.</p>
-      <button disabled={busy}>Add screening event</button>
+      <button disabled={busy || uploading}>Add screening event</button>
     </form>
   )
+}
+
+function ScreeningMediaEditor({ screening, busy, onSave }) {
+  const [cover, setCover] = useState(screening.event.cover_image_url || '')
+  const [trailer, setTrailer] = useState(screening.trailer_url || '')
+  const [uploading, setUploading] = useState(false)
+  return <div className={styles.form}>
+    <FilmClubMediaFields cover={cover} trailer={trailer} onCover={setCover} onTrailer={setTrailer} disabled={busy} onUploading={setUploading} />
+    <div className={styles.mediaActions}>
+      <button disabled={busy || uploading} onClick={() => onSave({ action: 'cover', cover_image_url: cover.trim() })}>Save cover image</button>
+      <button disabled={busy || uploading} onClick={() => onSave({ action: 'trailer', trailer_url: trailer.trim() })}>Save trailer</button>
+    </div>
+    <p>Save each change after uploading. Clear its URL and save to remove it.</p>
+  </div>
 }
 
 export default function FilmClubAdmin() {
@@ -224,7 +237,8 @@ export default function FilmClubAdmin() {
                 <span className={styles.badge}>{item.event.status}</span>
               </div>
               {item.event.description && <p>{item.event.description}</p>}
-              {item.trailer_url && <div className={styles.trailer}><FilmTrailer src={getTrailerEmbed(item.trailer_url)} title={item.event.title} /></div>}
+              <ScreeningMediaEditor key={item.event_id} screening={item} busy={busy}
+                onSave={body => save('PATCH', { ...body, eventId: item.event_id }, () => 'Screening media saved.')} />
             </section>
           ))}
           {!screenings.length && !loading && !adding && <p>No screenings yet.</p>}

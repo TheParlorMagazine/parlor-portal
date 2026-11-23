@@ -198,3 +198,5 @@
 }
 
 .trailerPlayer { margin-top: 10px; }
+
+.screeningCover{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}

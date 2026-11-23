@@ -44,6 +44,7 @@ export default function PublishedFilmClub() {
         {active.map(({ event_id: id, event, trailer_url: trailer, ticket_url: tickets }) => (
           <div className={styles.columns} key={id}>
             <section className={styles.feature}>
+              {event.cover_image_url && <img className={styles.screeningCover} src={event.cover_image_url} alt="" loading="lazy" decoding="async" />}
               <div className={styles.banner}>
                 <div className={styles.eyebrow}>Film Club screening</div>
                 <h2>{event.title}</h2>
@@ -61,7 +62,7 @@ export default function PublishedFilmClub() {
             <section className={styles.card}>
               <h2>Trailer</h2>
               <div className={styles.trailerPlayer}>
-                <FilmTrailer src={getTrailerEmbed(trailer)} title={event.title} />
+                <FilmTrailer src={getTrailerEmbed(trailer)} title={event.title} poster={event.cover_image_url} />
               </div>
             </section>
           </div>

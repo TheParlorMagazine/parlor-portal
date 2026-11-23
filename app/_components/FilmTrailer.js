@@ -1,17 +1,11 @@
-import { toEmbedUrl } from '../../lib/videoEmbed'
+import { filmTrailerSource, isFilmVideoFile } from '../../lib/filmClubMedia'
 import styles from './FilmTrailer.module.css'
 
-export function getTrailerEmbed(url) {
-  if (!url) return null
-  try {
-    if (new URL(url).protocol !== 'https:') return null
-    return toEmbedUrl(url)
-  } catch {
-    return null
-  }
-}
+export const getTrailerEmbed = filmTrailerSource
 
-export default function FilmTrailer({ src, title, placeholder = 'Trailer coming soon.' }) {
+export default function FilmTrailer({ src, title, poster, placeholder = 'Trailer coming soon.' }) {
+  if (isFilmVideoFile(src)) return <video className={styles.frame} src={src} poster={poster || undefined}
+    controls playsInline preload="metadata" aria-label={`${title} trailer`} />
   return src ? (
     <iframe
       className={styles.frame}

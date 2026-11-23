@@ -1,5 +1,5 @@
 import { memberOf, requireUser, serviceClient } from '../../../../lib/apiAuth'
-import { toEmbedUrl } from '../../../../lib/videoEmbed'
+import { filmImageUrl, filmTrailerSource } from '../../../../lib/filmClubMedia'
 
 const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i
 const json = (error, status) => Response.json({ error }, { status })
@@ -21,7 +21,7 @@ export async function GET(request) {
   const { db, error } = await gate(request)
   if (error) return error
   const { data, error: loadError } = await db.from('film_club_screenings')
-    .select('*, event:events!inner(id,title,description,starts_at,ends_at,status,forum_id), buyers:film_club_ticket_buyers(email)')
+    .select('*, event:events!inner(id,title,description,starts_at,ends_at,status,forum_id,cover_image_url), buyers:film_club_ticket_buyers(email)')
   if (loadError) return json('Could not load screenings. Check that the Film Club migrations are applied.', 503)
   return Response.json({ screenings: data.sort((a, b) => (b.event.starts_at || '').localeCompare(a.event.starts_at || '')) })
 }
@@ -34,7 +34,8 @@ export async function POST(request) {
   if (!title || title.length > 200 || !uuid.test(body.id) || typeof body.starts_at !== 'string' || !Number.isFinite(Date.parse(body.starts_at))) {
     return json('Enter a title and valid screening date.', 400)
   }
-  if (body.trailer_url && (!httpsUrl(body.trailer_url) || !toEmbedUrl(body.trailer_url))) return json('Enter a YouTube or Vimeo trailer URL.', 400)
+  if (body.trailer_url && !filmTrailerSource(body.trailer_url)) return json('Enter an HTTPS YouTube, Vimeo, MP4 or WebM trailer URL.', 400)
+  if (body.cover_image_url && !filmImageUrl(body.cover_image_url)) return json('Enter an HTTPS cover image URL.', 400)
   if (body.ticket_url && !httpsUrl(body.ticket_url)) return json('Enter an HTTPS ticket URL.', 400)
   const { data, error: createError } = await db.rpc('create_film_club_screening', {
     p_id: body.id, p_creator: user.id, p_title: title, p_starts_at: body.starts_at,
@@ -42,6 +43,12 @@ export async function POST(request) {
     p_trailer_url: body.trailer_url || null, p_ticket_url: body.ticket_url || null,
   })
   if (createError) return json('Could not create the screening. Check that the Film Club migrations are applied.', 500)
+  if (body.cover_image_url) {
+    // The creation RPC is idempotent for this creator/ID; retries keep the same draft.
+    const { data: saved, error: coverError } = await db.from('events').update({ cover_image_url: filmImageUrl(body.cover_image_url) })
+      .eq('id', data).eq('created_by', user.id).select('id').maybeSingle()
+    if (coverError || !saved) return json('The screening draft was created, but its cover could not be saved. Retry this form to save the cover.', 500)
+  }
   return Response.json({ eventId: data }, { status: 201 })
 }
 
@@ -50,6 +57,21 @@ export async function PATCH(request) {
   if (error) return error
   const body = await request.json().catch(() => null)
   if (!uuid.test(body?.eventId)) return json('Select a screening.', 400)
+  if (body.action === 'cover' || body.action === 'trailer') {
+    const cover = body.action === 'cover'
+    const value = cover ? body.cover_image_url : body.trailer_url
+    if (typeof value !== 'string' || (value && !(cover ? filmImageUrl(value) : filmTrailerSource(value)))) {
+      return json(cover ? 'Enter an HTTPS cover image URL.' : 'Enter an HTTPS YouTube, Vimeo, MP4 or WebM trailer URL.', 400)
+    }
+    const { data: screening, error: lookupError } = await db.from('film_club_screenings').select('event_id').eq('event_id', body.eventId).maybeSingle()
+    if (lookupError) return json('Could not load the screening.', 500)
+    if (!screening) return json('Screening not found.', 404)
+    const { data: saved, error: saveError } = await db.from(cover ? 'events' : 'film_club_screenings')
+      .update(cover ? { cover_image_url: value ? filmImageUrl(value) : null } : { trailer_url: value || null })
+      .eq(cover ? 'id' : 'event_id', body.eventId).select(cover ? 'id' : 'event_id').maybeSingle()
+    if (saveError) return json('Could not save screening media.', 500)
+    return saved ? Response.json({ ok: true }) : json('Screening not found.', 404)
+  }
   if (body.action === 'discussion') {
     const fields = ['discussion_active', 'commenting_open', 'discussion_archived']
     if (!fields.includes(body.field) || typeof body.value !== 'boolean') return json('Invalid discussion setting.', 400)
