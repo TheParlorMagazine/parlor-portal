@@ -230,7 +230,7 @@ function Hub() {
           .hub-forums-sidebar{ position:static; width:100%; order:-1; }
           .hub-fsb-card{ display:flex; flex-direction:column; gap:8px; }
           .hub-fsb-forum{ display:grid !important; grid-template-columns:72px 1fr; grid-template-rows:1fr; align-items:stretch; gap:0; border-radius:10px; overflow:hidden; }
-          .hub-fsb-thumb{ width:72px !important; height:72px !important; border-radius:0 !important; flex-shrink:0; object-fit:cover; grid-row:1; grid-column:1; object-position:center center !important; transform:none !important; }
+          .hub-fsb-thumb{ width:72px !important; height:72px !important; border-radius:0 !important; flex-shrink:0; object-fit:contain; grid-row:1; grid-column:1; object-position:center center !important; transform:none !important; }
           .hub-fsb-thumb-ph{ width:72px !important; height:72px !important; border-radius:0 !important; flex-shrink:0; grid-row:1; grid-column:1; }
           .hub-fsb-body{ grid-row:1; grid-column:2; padding:10px 14px !important; display:flex; flex-direction:column; justify-content:center; min-width:0; }
           .hub-fsb-name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -240,7 +240,7 @@ function Hub() {
         .hub-fsb-card { display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
         .hub-fsb-forum { border:1px solid var(--border); border-radius:10px; background:#fff; overflow:hidden; text-decoration:none; display:block; transition:border-color 0.15s; }
         .hub-fsb-forum:hover { border-color:var(--pinkborder); }
-        .hub-fsb-thumb { width:100%; height:80px; object-fit:cover; display:block; background:var(--cream); object-position:right 70%; transform:scale(1.45); transform-origin:right 70%; }
+        .hub-fsb-thumb { width:100%; height:80px; object-fit:contain; display:block; background:var(--cream); object-position:center; transform:none; }
         .hub-fsb-thumb-ph { width:100%; height:80px; background:linear-gradient(135deg,var(--cream),var(--pink)); }
         .hub-fsb-body { padding:13px 11px 10px; }
         .hub-fsb-name { font-size:13px; font-weight:600; color:var(--ink); line-height:1.25; margin-bottom:4px; }
