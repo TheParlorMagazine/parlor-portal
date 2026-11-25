@@ -6,6 +6,7 @@ const SITE = 'https://theparlormagazine.com'
 
 // Sample data so the built-in design renders realistically in the editor preview.
 const SAMPLE = {
+  ...Object.fromEntries(['purchase','access','reminder','refund'].map(purpose=>[`film_ticket_${purpose}`,{filmTitle:'The Land We Keep',amount:'$7.99',when:'January 20, 2027',viewingUrl:'https://example.com/viewing',instructions:'Use the access link during the viewing window.',expires:'January 22, 2027',qa:'Filmmaker Q&A after the screening',forumUrl:`${SITE}/portal/film-club`}])) ,
   welcome: { name: 'Maya' },
   weekly_digest: { name: 'Maya', notifications: [{ type: 'reply', message: 'Someone replied to your thread in The Reading Room.' }, { type: 'event', message: 'New event: Democracy Salon with DemCon.' }], unread: { count: 2, threads: [{ subject: 'Editorial feedback' }] } },
   password_reset: { name: 'Maya', resetUrl: `${SITE}/auth/reset-password?token=sample` },

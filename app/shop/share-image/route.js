@@ -13,7 +13,7 @@ export async function GET() {
   try {
     const { data, error } = await serviceClient().from('shop_products')
       .select('id, name, variant, description, images, featured, external_url')
-      .eq('active', true).order('sort', { ascending: true }).order('created_at', { ascending: false })
+      .eq('active', true).eq('public_listing', true).order('sort', { ascending: true }).order('created_at', { ascending: false })
     if (error) throw error
     const catalogue = data || []
     const candidates = [...catalogue.filter(p => p.featured), ...selectBonesProducts(catalogue), ...catalogue]

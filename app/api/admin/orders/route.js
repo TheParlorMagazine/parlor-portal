@@ -96,6 +96,7 @@ export async function PATCH(request) {
     .select('*, members!orders_member_id_fkey(full_name, email)').eq('id', b.id).single()
   if (!existing) return Response.json({ error: 'Not found' }, { status: 404 })
 
+  if (existing?.metadata?.kind === 'film_screening_ticket') return Response.json({ error: 'Manage screening tickets through Film Club ticket fulfillment.' }, { status: 409 })
   const patch = {}
   if (b.status && STATUSES.includes(b.status)) patch.status = b.status
   if ('carrier' in b) patch.carrier = b.carrier || null

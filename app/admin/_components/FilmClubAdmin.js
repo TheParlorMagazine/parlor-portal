@@ -1,20 +1,19 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { currencyExponent } from '../../../lib/filmTicketPricing'
+import { FilmTicketSettings, FilmTicketManagement } from './FilmTicketAdmin'
 import FilmClubMediaFields from './FilmClubMediaFields'
 import FilmClubModeration from '../../_components/FilmClubModeration'
 import { filmClubRequest } from '../../../lib/filmClubRequest'
 import styles from './FilmClubAdmin.module.css'
 
 const api = '/api/admin/film-club'
-const tabs = ['Overview', 'Screenings', 'Forums', 'Emails']
-const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+const tabs = ['Overview', 'Screenings', 'Tickets', 'Forums', 'Emails']
 const formatDate = value => value ? new Date(value).toLocaleString() : 'Date TBA'
 
 function Overview({ screening, onSave, busy }) {
   if (!screening) return <section className={styles.card}><p>Add a screening to see its ticket totals and licensing estimates.</p></section>
-  const netPerTicket = screening.ticket_price_cents * (1 - screening.host_share_percent / 100)
-  const breakEven = netPerTicket > 0 ? Math.ceil(screening.license_price_cents / netPerTicket) : null
 
   function save(event) {
     event.preventDefault()
@@ -24,36 +23,19 @@ function Overview({ screening, onSave, busy }) {
     onSave({
       action: 'tickets', eventId: screening.event_id,
       publicTickets: tickets === '' ? null : Number(tickets),
-      publicGrossCents: gross === '' ? null : Math.round(Number(gross) * 100),
+      publicGrossCents: gross === '' ? null : Math.round(Number(gross) * 10 ** currencyExponent(screening.currency || 'usd')),
     })
   }
 
   return (
     <>
-      <dl className={styles.metrics}>
-        {[
-          ['Member RSVPs', '—'],
-          ['License threshold', screening.license_threshold],
-          ['Public tickets', screening.public_tickets ?? '—'],
-          ['Public gross sales', screening.public_gross_cents === null ? '—' : money.format(screening.public_gross_cents / 100)],
-        ].map(([label, value]) => <div key={label} className={styles.metric}><dt>{label}</dt><dd>{value}</dd></div>)}
-      </dl>
-      <section className={styles.card}>
-        <h2>Licensing estimate</h2>
-        <dl className={styles.costs}>
-          <div><dt>Estimated net cost per sponsored ticket</dt><dd>{money.format(netPerTicket / 100)}</dd></div>
-          <div><dt>Private screening license</dt><dd>{money.format(screening.license_price_cents / 100)}</dd></div>
-          <div><dt>Calculated break-even</dt><dd>{breakEven === null ? 'Unavailable' : `${breakEven} sponsored tickets`}</dd></div>
-        </dl>
-        <p>Estimates use a {money.format(screening.ticket_price_cents / 100)} ticket price and a {screening.host_share_percent}% host share. Member RSVP tracking is pending.</p>
-      </section>
       <section className={styles.card}>
         <h2>External ticket sales</h2>
         <p>Enter cumulative totals from your screening provider. Each update replaces the previous totals.</p>
         {screening.ticket_url && <p><a href={screening.ticket_url} target="_blank" rel="noreferrer">Open ticket provider</a></p>}
         <form className={styles.form} onSubmit={save}>
           <label>Tickets sold<input name="tickets" type="number" min="0" max="2147483647" step="1" defaultValue={screening.public_tickets ?? ''} /></label>
-          <label>Gross sales (USD)<input name="gross" type="number" min="0" max="21474836.47" step="0.01" defaultValue={screening.public_gross_cents === null ? '' : screening.public_gross_cents / 100} /></label>
+          <label>Gross sales ({(screening.currency || 'usd').toUpperCase()})<input name="gross" type="number" min="0" max="21474836.47" step={currencyExponent(screening.currency || 'usd')>0?'0.01':'1'} defaultValue={screening.public_gross_cents==null?'':screening.public_gross_cents/10**currencyExponent(screening.currency || 'usd')} /></label>
           <button disabled={busy}>Save totals</button>
         </form>
         {screening.ticket_reported_at && <p>Last updated {formatDate(screening.ticket_reported_at)}</p>}
@@ -223,6 +205,8 @@ export default function FilmClubAdmin() {
       {!loading && tab === 'Overview' && (
         <Overview key={`${screening?.event_id}:${screening?.ticket_reported_at}`} screening={screening} busy={busy} onSave={body => save('PATCH', body, () => 'Ticket totals saved.')} />
       )}
+      {!loading && tab === 'Overview' && screening && <FilmTicketManagement key={screening.event_id} screening={screening} overview />}
+      {!loading && tab === 'Tickets' && screening && <FilmTicketManagement key={screening.event_id} screening={screening} />}
       {tab === 'Screenings' && (
         <>
           {adding && <ScreeningForm busy={busy} onAdd={body => save('POST', body, result => {
@@ -237,6 +221,7 @@ export default function FilmClubAdmin() {
                 <span className={styles.badge}>{item.event.status}</span>
               </div>
               {item.event.description && <p>{item.event.description}</p>}
+              <FilmTicketSettings screening={item} onChanged={async () => setScreenings((await filmClubRequest(api)).screenings)} />
               <ScreeningMediaEditor key={item.event_id} screening={item} busy={busy}
                 onSave={body => save('PATCH', { ...body, eventId: item.event_id }, () => 'Screening media saved.')} />
             </section>

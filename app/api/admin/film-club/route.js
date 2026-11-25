@@ -21,7 +21,7 @@ export async function GET(request) {
   const { db, error } = await gate(request)
   if (error) return error
   const { data, error: loadError } = await db.from('film_club_screenings')
-    .select('*, event:events!inner(id,title,description,starts_at,ends_at,status,forum_id,cover_image_url), buyers:film_club_ticket_buyers(email)')
+    .select('*, event:events!inner(id,title,description,starts_at,ends_at,status,is_public,capacity,forum_id,cover_image_url), buyers:film_club_ticket_buyers(email)')
   if (loadError) return json('Could not load screenings. Check that the Film Club migrations are applied.', 503)
   return Response.json({ screenings: data.sort((a, b) => (b.event.starts_at || '').localeCompare(a.event.starts_at || '')) })
 }
@@ -106,12 +106,9 @@ export async function PATCH(request) {
   if (body.action === 'tickets') {
     const amounts = [body.publicTickets, body.publicGrossCents]
     if (!amounts.every(n => n === null || Number.isInteger(n) && n >= 0 && n <= 2147483647)) return json('Enter valid ticket totals.', 400)
-    const { data, error } = await db.from('film_club_screenings').update({
-      public_tickets: body.publicTickets, public_gross_cents: body.publicGrossCents,
-      ticket_reported_at: new Date().toISOString(),
-    }).eq('event_id', body.eventId).select('event_id').maybeSingle()
-    if (error) return json('Could not save ticket totals.', 500)
-    return data ? Response.json({ ok: true }) : json('Screening not found.', 404)
+    const { error } = await db.rpc('save_film_public_sales', { p_event: body.eventId, p_actor: user.id, p_tickets: body.publicTickets, p_gross: body.publicGrossCents })
+    if (error) return json('Could not save audited ticket totals.', 500)
+    return Response.json({ ok: true })
   }
   const { data, error: queryError } = await db.from('film_club_screenings')
     .select('forum_id').eq('event_id', body.eventId).maybeSingle()

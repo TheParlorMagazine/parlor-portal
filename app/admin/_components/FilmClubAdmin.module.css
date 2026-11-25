@@ -99,3 +99,12 @@
 .moderation h2 { margin-top: 14px; }
 
 .mediaFields{display:grid;gap:12px;min-width:0;margin:12px 0;padding:16px;border:1px solid var(--film-card-border);border-radius:8px}.mediaFields legend{padding:0 6px;font-weight:600}.coverPreview{display:block;width:min(100%,520px);max-height:300px;object-fit:contain}.mediaActions{display:flex;flex-wrap:wrap;gap:10px}
+
+.form select {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--film-card-border);
+  border-radius: 8px; background: #fff; color: inherit; font: inherit;
+}
+.form input[type='checkbox'] { width: auto; min-height: auto; margin-right: 8px; }
+.ticketTable { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; text-align: left; }
+.ticketTable th, .ticketTable td { padding: 10px; border-bottom: 1px solid var(--film-card-border); vertical-align: top; }
+.ticketTable th { background: var(--film-tint); }

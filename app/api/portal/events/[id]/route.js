@@ -13,8 +13,10 @@ export async function GET(request, { params }) {
     if (!discussion) {
       const { data: screening, error } = await db.from('film_club_screenings').select('event_id').eq('event_id', id).maybeSingle()
       if (error && !['42P01', 'PGRST205'].includes(error.code)) throw error
+      if (screening && result.event) result.event.join_url = null
       return Response.json(screening ? { ...result, film_club_discussion: false } : result)
     }
+    if (result.event) result.event.join_url = null
     return Response.json({
       ...result,
       film_club_discussion: filmClubDiscussionVisible(discussion) &&

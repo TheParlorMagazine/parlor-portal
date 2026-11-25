@@ -1,3 +1,4 @@
+import { fulfillFilmTicket, handleFilmPaymentEvent } from '../../../../lib/filmTicketCommerce'
 import { notifyAdminPaidSubscription } from '../../../../lib/adminNotifications'
 import { observeStripeCheckout } from '../../../../lib/checkoutReservations'
 import { fulfillShopPurchase } from '../../../../lib/fulfillShopPurchase'
@@ -260,7 +261,8 @@ export async function POST(request) {
       if(error || !row)throw new Error('Checkout allocation could not be loaded')
       const current=await observeStripeCheckout(db,stripe,row,{id:object.id})
       if(current.payment_status==='paid' && current.status==='complete') {
-        if(current.metadata?.articleId)await fulfillItemPurchase(current,{retryReceipt:true})
+        if(current.metadata?.kind==='film_screening_ticket')await fulfillFilmTicket(stripe,current)
+        else if(current.metadata?.articleId)await fulfillItemPurchase(current,{retryReceipt:true})
         else await fulfillShopPurchase(stripe,current,{retryReceipt:true})
       }
     }
@@ -278,7 +280,9 @@ export async function POST(request) {
     } else if (session.mode === 'payment') {
       // Digital item unlocks carry articleId; everything else that's a physical
       // shop checkout (has shipping, or is tagged shop_order) becomes an order.
-      if (session.metadata?.articleId) {
+      if (session.metadata?.kind === 'film_screening_ticket') {
+        await fulfillFilmTicket(stripe, session)
+      } else if (session.metadata?.articleId) {
         await fulfillItemPurchase(session, { retryReceipt: true })
       } else if (session.metadata?.kind === 'tot_bundle') {
         await fulfillShopPurchase(stripe, session, { retryReceipt: true })
@@ -299,7 +303,8 @@ export async function POST(request) {
   }
 
   if (event.type === 'checkout.session.async_payment_succeeded') {
-    if (event.data.object.metadata?.articleId) await fulfillItemPurchase(event.data.object, { retryReceipt: true })
+    if (event.data.object.metadata?.kind === 'film_screening_ticket') await fulfillFilmTicket(stripe,event.data.object)
+    else if (event.data.object.metadata?.articleId) await fulfillItemPurchase(event.data.object, { retryReceipt: true })
     else if (['shop_order','tot_bundle'].includes(event.data.object.metadata?.kind)) await fulfillShopPurchase(stripe,event.data.object,{ retryReceipt: true })
     else if (event.data.object.mode === 'subscription') await handleSubscriptionCheckout(event.data.object, event.id)
   }
@@ -315,6 +320,8 @@ export async function POST(request) {
   if (event.type === 'customer.subscription.deleted') {
     await handleSubscriptionCanceled(event.data.object, event.id)
   }
+
+  if (['charge.refunded','charge.dispute.created','charge.dispute.updated','charge.dispute.closed','refund.updated','refund.failed'].includes(event.type)) await handleFilmPaymentEvent(getSupabase(),stripe,event.data.object)
 
   return Response.json({ received: true })
 }

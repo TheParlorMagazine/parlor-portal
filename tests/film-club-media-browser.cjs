@@ -4,8 +4,8 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
 ;(async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'film-media-ui-')),out=path.join(dir,'ui.js')
  await build({stdin:{resolveDir:process.cwd(),loader:'jsx',contents:`import React from 'react';import{createRoot}from'react-dom/client';import Admin from './app/admin/_components/FilmClubAdmin';import Published from './app/portal/film-club/PublishedFilmClub';createRoot(document.getElementById('root')).render(window.view==='admin'?<Admin/>:<Published/>);`},outfile:out,bundle:true,jsx:'automatic',loader:{'.js':'jsx'},plugins:[{name:'fixtures',setup(b){
-  b.onResolve({filter:/lib\/filmClubRequest$|lib\/uploadImage$|FilmClubModeration$|FilmClubDiscussions$|PortalShell$|^next\/link$/},a=>({path:a.path,namespace:'fixture'}))
-  b.onLoad({filter:/.*/,namespace:'fixture'},a=>({contents:a.path.endsWith('filmClubRequest')?`export const filmClubRequest=(...args)=>window.filmRequest(...args);`:a.path.endsWith('uploadImage')?`export const uploadToCloudinary=async(file,folder)=>{window.uploads.push({name:file.name,type:file.type,folder});return file.type.startsWith('image/')?'https://media.fixture/cover.webp':'https://media.fixture/clip.mp4'};`:a.path.endsWith('PortalShell')?`export const usePortal=()=>({member:{plan:"Reader's Circle",subscription_status:'active'}});`:a.path==='next/link'?`import React from 'react';export default function Link({children,...props}){return <a {...props}>{children}</a>}`:`export default function Empty(){return null}`,loader:'jsx',resolveDir:process.cwd()}))
+  b.onResolve({filter:/lib\/filmClubRequest$|lib\/uploadImage$|FilmTicketPurchase$|FilmClubModeration$|FilmClubDiscussions$|PortalShell$|^next\/link$/},a=>({path:a.path,namespace:'fixture'}))
+  b.onLoad({filter:/.*/,namespace:'fixture'},a=>({contents:a.path.endsWith('FilmTicketPurchase')?`export default function Purchase(){return null};export const FilmTicketOrders=()=>null;export const filmTicketRequest=(...args)=>window.filmRequest(...args);`:a.path.endsWith('filmClubRequest')?`export const filmClubRequest=(...args)=>window.filmRequest(...args);`:a.path.endsWith('uploadImage')?`export const uploadToCloudinary=async(file,folder)=>{window.uploads.push({name:file.name,type:file.type,folder});return file.type.startsWith('image/')?'https://media.fixture/cover.webp':'https://media.fixture/clip.mp4'};`:a.path.endsWith('PortalShell')?`export const usePortal=()=>({member:{plan:"Reader's Circle",subscription_status:'active'}});`:a.path==='next/link'?`import React from 'react';export default function Link({children,...props}){return <a {...props}>{children}</a>}`:`export default function Empty(){return null}`,loader:'jsx',resolveDir:process.cwd()}))
  }}]})
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']})
  try{for(const width of [390,1440]){
@@ -16,6 +16,7 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
     window.view=view;window.uploads=[];window.calls=[]
     window.records=[{event_id:'11111111-1111-4111-8111-111111111111',trailer_url:null,event:{id:'11111111-1111-4111-8111-111111111111',title:'Existing screening',status:'published',starts_at:'2099-12-12T19:00:00Z',cover_image_url:null}}]
     window.filmRequest=async(url,method='GET',body)=>{
+     if(method==='GET'&&url.includes('/tickets'))return {tickets:[],audit:[]}
      if(method==='GET')return {screenings:structuredClone(window.records)}
      window.calls.push({method,body})
      if(method==='PATCH'){

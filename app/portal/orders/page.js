@@ -1,4 +1,5 @@
 'use client'
+import { FilmTicketOrders } from '../../_components/FilmTicketPurchase'
 
 import { useState, useEffect, Fragment } from 'react'
 import { createClient } from '../../../lib/supabase'
@@ -126,6 +127,7 @@ function Orders() {
     <>
       <style>{fieldCss + ordersCss}</style>
       <h1 className="pg-title">Orders</h1>
+      <FilmTicketOrders />
       <p className="pg-sub">Track your shop purchases from order to fulfillment.</p>
 
       {state === 'loading' && <div className="pg-card">Loading your orders…</div>}

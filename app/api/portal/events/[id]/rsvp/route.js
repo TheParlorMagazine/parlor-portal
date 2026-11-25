@@ -12,13 +12,7 @@ async function change(request, params, action) {
     const { data: screening, error } = await db.from('film_club_screenings').select('event_id').eq('event_id', id).maybeSingle()
     if (error && !['42P01', 'PGRST205'].includes(error.code)) return eventError(error)
     if (screening) {
-      const body = await request.json().catch(() => null)
-      const name = typeof body?.name === 'string' ? body.name.trim() : ''
-      const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
-      if (!name || name.length > 160 || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        return Response.json({ error: 'Enter your name and a valid email address.' }, { status: 400 })
-      }
-      registration = await db.rpc('register_film_club_rsvp', { ...args, p_name: name, p_email: email })
+      return Response.json({ error: 'Purchase screening tickets through Film Club.', path: '/portal/film-club' }, { status: 409 })
     }
   }
   const { data, error } = registration || await db.rpc('event_registration', { ...args, p_action: action })
