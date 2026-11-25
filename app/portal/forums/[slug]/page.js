@@ -427,7 +427,7 @@ function Detail() {
             {!data.threads.length && <p>No threads yet.</p>}
           </div>
         </>
-      ) : <PostsWall forumId={f.id} currentUserId={uid} postingClosed={closed} />} </CommentingControls>
+      ) : <PostsWall forumId={f.id} currentUserId={uid} postingClosed={closed} />}</CommentingControls>
         </div>
 
         {/* Right sidebar — moderators + members */}
