@@ -237,7 +237,8 @@ function Hub() {
         .hub-fsb-thumb { width:72px; height:72px; object-fit:contain; display:block; background:var(--cream); object-position:center; transform:none; }
         .hub-fsb-thumb-ph { width:72px; height:72px; background:linear-gradient(135deg,var(--cream),var(--pink)); }
         .hub-fsb-body { min-width:0; padding:12px 11px; overflow-wrap:anywhere; }
-        .hub-fsb-description { font-size:12px; color:var(--muted); line-height:1.4; margin:0 0 6px; }
+        .hub-fsb-description { display:none; font-size:12px; color:var(--muted); line-height:1.4; margin:0 0 6px; }
+        .hub-fsb-forum:hover .hub-fsb-description, .hub-fsb-forum:focus-visible .hub-fsb-description { display:block; }
         .hub-fsb-name { font-size:13px; font-weight:600; color:var(--ink); line-height:1.25; margin-bottom:4px; }
         .hub-fsb-row { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
         .hub-fsb-meta { font-size:11px; color:var(--muted); }
