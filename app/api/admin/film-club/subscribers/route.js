@@ -36,5 +36,5 @@ export async function GET(request){
 }
 export async function POST(request){
  const body=await request.json().catch(()=>null),{db,error}=await gate(request,body?.eventId);if(error)return error
- try{const member=await addScreeningSubscriber(db,body.eventId,{email:body.email,full_name:body.full_name});return Response.json({ok:true,member},{headers:{'Cache-Control':'private, no-store'}})}catch(e){return Response.json({error:e.message},{status:409})}
+ try{const member=await addScreeningSubscriber(db,body.eventId,{email:body.email,full_name:body.full_name,createNew:body.createNew===true});return Response.json({ok:true,member},{headers:{'Cache-Control':'private, no-store'}})}catch(e){return Response.json({error:e.message},{status:409})}
 }

@@ -107,3 +107,11 @@ test('screening subscriber list combines paid purchasers and external contacts o
  const response=await subscribers.GET({url:'https://fixture.test/?eventId='+id});assert.equal(response.status,200);const body=await response.json();assert.equal(body.subscribers.length,1);assert.equal(body.subscribers[0].source,'Parlor ticket');assert.equal(body.subscribers[0].newsletter_subscribed,false);assert.deepEqual(queries.find(q=>q.table==='film_club_tickets').payment_status,['paid','partially_refunded'])
  const result=await subscribers.GET({url:'https://fixture.test/?eventId='+id+'&q=Reader'});assert.equal((await result.json()).members.length,1)
 })
+
+test('new-contact submissions reject existing subscribers and auth accounts without changing or adding them',async()=>{
+ const {contacts}=await modules(),old={id:'paid',email:'paid@example.com',plan:'Printing Press',newsletter_subscribed:false},f=contactDB([old])
+ await assert.rejects(()=>contacts.addScreeningSubscriber(f.db,id,{email:' PAID@example.com ',full_name:'Replacement',createNew:true}),/Subscriber already exists/)
+ assert.deepEqual(f.members,[old]);assert.deepEqual(f.buyers,[]);assert.deepEqual(f.calls,[])
+ const orphan=contactDB([],[{id:'known',email:'known@example.com'}]);await assert.rejects(()=>contacts.addScreeningSubscriber(orphan.db,id,{email:'known@example.com',createNew:true}),/Subscriber already exists/);assert.equal(orphan.calls.includes('createUser'),false);assert.equal(orphan.members.length,0)
+ const fresh=contactDB();await contacts.addScreeningSubscriber(fresh.db,id,{email:'new@example.com',createNew:true});assert.equal(fresh.members.length,1);assert.equal(fresh.buyers.length,1)
+})

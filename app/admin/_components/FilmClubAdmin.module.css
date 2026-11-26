@@ -363,3 +363,13 @@
 .subscriberMatch > div { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
 .subscriberMatch span { font-size: 13px; color: #888; }
 @media(max-width:650px) { .subscriberColumns { grid-template-columns: minmax(0,2fr) 1fr; gap: 9px; } .subscriberColumns:first-child { display: none; } .subscriberHeading { align-items: start; flex-wrap: wrap; } .subscriberMatch { flex-wrap: wrap; } }
+
+.subscriberAutocomplete { position: relative; width: 100%; }
+.subscriberSuggestions { margin-top: 6px; border: 1px solid #ead4dc; border-radius: 8px; box-shadow: 0 5px 18px #813d5212; overflow: hidden; max-height: 260px; overflow-y: auto; background: white; }
+.subscriberSuggestions [role='option'] { display: grid; text-align: left; width: 100%; gap: 4px; border: 0; border-bottom: 1px solid #f0e8eb; border-radius: 0; background: white; color: #222; padding: 12px; font: inherit; font-size: 14px; cursor: pointer; }
+.subscriberSuggestions [role='option'] span { font-size: 13px; color: #888; overflow-wrap: anywhere; }
+.subscriberSuggestions [role='option']:hover, .subscriberSuggestions [aria-selected='true'] { background: #fcf2f5; }
+.subscriberSuggestions [aria-disabled='true'] { opacity: .55; cursor: default; }
+.subscriberSuggestions p { padding: 10px 12px; font-size: 13px; color: #888; margin: 0; }
+.newSubscriber input[aria-invalid='true'] { border-color: #bc3552; outline-color: #bc3552; background: #fff8fa; }
+.subscriberAutocomplete input:focus-visible, .newSubscriber input:focus-visible { outline: 2px solid #c55b7b; outline-offset: 2px; }
