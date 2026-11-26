@@ -94,7 +94,7 @@ export async function PATCH(request) {
       const { data, error } = await db.from('events').select('ends_at,starts_at').eq('id', body.eventId).maybeSingle()
       if (error) return json('Could not check the screening end time.', 500)
       if (!data?.ends_at || (data.starts_at && Date.parse(data.ends_at) <= Date.parse(data.starts_at))) {
-        return json('Set a screening end time after the start time in Community → Events first.', 400)
+        return json('Set a screening end time after the start time in Edit screening first.', 400)
       }
     }
     const { data, error } = await db.from('film_club_screenings').update({ discussion_email_enabled: body.enabled })

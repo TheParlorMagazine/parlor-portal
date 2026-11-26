@@ -16,6 +16,7 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
     window.view=view;window.uploads=[];window.calls=[];window.rejectCreateOnce=true
     window.records=[{event_id:'11111111-1111-4111-8111-111111111111',forum_id:'forum-existing',discussion_active:true,commenting_open:true,trailer_url:null,event:{id:'11111111-1111-4111-8111-111111111111',title:'Existing screening',status:'published',starts_at:'2099-12-12T19:00:00Z',cover_image_url:null}}]
     window.filmRequest=async(url,method='GET',body)=>{
+     if(url.includes('/subscribers')){window.contacts ||= [{id:'paid-contact',full_name:'Existing Buyer',email:'buyer@example.invalid',plan:'Reader Circle',source:'Parlor ticket',newsletter_subscribed:true}];if(method==='POST'){window.calls.push({method,body});if(!window.contacts.some(c=>c.email===body.email))window.contacts.push({id:'new-contact',email:body.email,full_name:body.full_name||'Existing Subscriber',plan:'free',newsletter_subscribed:true,source:'External ticket'});return{ok:true}}if(url.includes('&q='))return{members:[{id:'existing-contact',full_name:'Existing Subscriber',email:'existing@example.invalid',plan:'free'}]};return{subscribers:structuredClone(window.contacts)}}
      if(method==='GET'&&url.includes('overview=true'))return {dashboard:{byCurrency:[],rates:[],rows:[],tickets:0,screenings:0,pendingScreenings:0,unreportedTicketCounts:0}}
      if(method==='GET'&&url.includes('/tickets'))return {tickets:[],audit:[]}
      if(method==='GET')return {screenings:structuredClone(window.records)}
@@ -24,6 +25,7 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
      if(method==='PATCH'){
       const record=window.records.find(r=>r.event_id===body.eventId)
       if(body.action==='discussion')record[body.field]=body.value
+      if(body.action==='discussion_email')record.discussion_email_enabled=body.enabled
       if(body.action==='forum_visibility'){record.discussion_active=body.visible;record.discussion_archived=!body.visible}
       if(body.action==='cover')record.event.cover_image_url=body.cover_image_url
       if(body.action==='trailer')record.trailer_url=body.trailer_url
@@ -37,7 +39,10 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
    await p.setContent(`<style>${fs.readFileSync(path.join(dir,'ui.css'),'utf8')}</style><div id="root"></div>`)
    await p.addScriptTag({path:out})
   }
-  await mount('admin');await p.getByRole('button',{name:'Forums',exact:true}).click()
+  await mount('admin');await p.getByRole('button',{name:'Emails',exact:true}).click();await p.getByText('Existing Buyer',{exact:true}).waitFor();assert.equal(await p.getByRole('button',{name:'Enable discussion email'}).count(),0);await p.getByRole('button',{name:'+ Add subscriber',exact:true}).click();await p.getByLabel('Find an existing subscriber',{exact:true}).fill('Existing');await p.getByRole('button',{name:'Add to screening',exact:true}).click();await p.getByRole('dialog').waitFor({state:'detached'});await p.getByText('existing@example.invalid',{exact:true}).waitFor()
+  await p.getByRole('button',{name:'+ Add subscriber',exact:true}).click();await p.getByLabel('Full name',{exact:true}).fill('New Contact');await p.getByLabel('Email address',{exact:true}).fill('new@example.invalid');await p.getByRole('button',{name:'Add subscriber to screening',exact:true}).click();await p.getByRole('dialog').waitFor({state:'detached'});await p.getByText('New Contact',{exact:true}).waitFor();await p.getByRole('searchbox',{name:'Search screening subscribers',exact:true}).fill('no-match');await p.getByText('No subscribers match your search.',{exact:true}).waitFor();await p.getByRole('searchbox',{name:'Search screening subscribers',exact:true}).fill('')
+  await p.getByRole('switch',{name:'Automated discussion email',exact:true}).check();assert.equal((await p.evaluate(()=>window.calls.at(-1))).body.action,'discussion_email')
+  await p.getByRole('button',{name:'Forums',exact:true}).click()
   const forumStrip=p.locator('summary').filter({hasText:'Existing screening — Discussion'});await forumStrip.waitFor();assert.equal(await forumStrip.evaluate(e=>e.parentElement.open),false);assert.equal(await p.getByRole('heading',{name:'Discussion settings'}).count(),0)
   await p.getByRole('searchbox',{name:'Search screening forums'}).fill('missing');await p.getByText('No forums match your search.',{exact:true}).waitFor();await p.getByRole('searchbox',{name:'Search screening forums'}).fill('Existing')
   await forumStrip.click();await p.getByRole('heading',{name:'Discussion settings'}).waitFor();assert.equal(await p.getByRole('switch',{name:'Commenting',exact:true}).isChecked(),true);await p.getByRole('switch',{name:'Commenting',exact:true}).uncheck();await p.waitForFunction(()=>window.records[0].commenting_open===false);assert.equal(await p.getByRole('switch',{name:'Commenting',exact:true}).isChecked(),false);assert.equal((await p.evaluate(()=>window.calls.at(-1))).body.eventId,'11111111-1111-4111-8111-111111111111')
@@ -101,9 +106,9 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
   await form.getByRole('button',{name:'Add screening event',exact:true}).click()
   await p.getByText('Screening saved as a draft in Events.',{exact:true}).waitFor()
   const calls=await p.evaluate(()=>window.calls)
-  const submissions=calls.filter(c=>c.method==='POST');assert.equal(submissions.length,2);assert.equal(submissions[0].body.id,submissions[1].body.id)
-  assert.equal(calls.find(c=>c.method==='POST').body.cover_image_url,'https://media.fixture/new-cover.webp')
-  assert.equal(calls.find(c=>c.method==='POST').body.trailer_url,'https://youtu.be/fixture123')
+  const submissions=calls.filter(c=>c.method==='POST'&&c.body.title);assert.equal(submissions.length,2);assert.equal(submissions[0].body.id,submissions[1].body.id)
+  assert.equal(calls.find(c=>c.method==='POST'&&c.body.title).body.cover_image_url,'https://media.fixture/new-cover.webp')
+  assert.equal(calls.find(c=>c.method==='POST'&&c.body.title).body.trailer_url,'https://youtu.be/fixture123')
   // Portal receives the saved cover and uploaded trailer in the published screening response.
   await mount('published')
   await p.evaluate(()=>{window.records[0].event.cover_image_url='https://media.fixture/cover.webp';window.records[0].trailer_url='https://media.fixture/clip.mp4'})

@@ -343,3 +343,23 @@
 .forumDelete { border-top: 1px solid #ead4dc; padding-top: 18px; }
 .forumDelete button { font: inherit; font-size: 13px; padding: 8px 12px; border: 1px solid #e8bac4; border-radius: 8px; background: white; color: #a3324a; cursor: pointer; }
 .forumDelete button:disabled { opacity: .5; cursor: wait; }
+
+.subscriberPanel { font-family: 'Source Serif 4', Georgia, serif; }
+.subscriberHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.subscriberHeading h2 { font-size: 21px; margin: 0; }
+.subscriberHeading p { font-size: 13px; margin: 5px 0 0; color: #888; }
+.subscriberSearch { font: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid #e3dce0; border-radius: 8px; width: 300px; max-width: 100%; box-sizing: border-box; margin: 22px 0 16px; }
+.subscriberList { border: 1px solid #ece7e9; border-radius: 10px; overflow: hidden; }
+.subscriberColumns { display: grid; grid-template-columns: minmax(180px,2fr) 1fr 1fr 1fr; gap: 16px; padding: 16px; align-items: center; font-size: 13px; border-bottom: 1px solid #f0edef; }
+.subscriberColumns:first-child { background: #faf9fa; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #999; }
+.subscriberColumns:last-child { border-bottom: 0; }
+.subscriberColumns > div { display: grid; gap: 4px; min-width: 0; }
+.subscriberColumns strong { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.subscriberColumns > span, .subscriberColumns > div > span { color: #888; overflow-wrap: anywhere; }
+.subscriberAutomation { border-top: 1px solid #ead4dc; margin-top: 24px; padding-top: 16px; }
+.subscriberAutomation p { font-size: 13px; color: #888; margin: 0; }
+.newSubscriber { border-top: 1px solid #ead4dc; margin-top: 24px; padding-top: 20px; }
+.subscriberMatch { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; width: 100%; }
+.subscriberMatch > div { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.subscriberMatch span { font-size: 13px; color: #888; }
+@media(max-width:650px) { .subscriberColumns { grid-template-columns: minmax(0,2fr) 1fr; gap: 9px; } .subscriberColumns:first-child { display: none; } .subscriberHeading { align-items: start; flex-wrap: wrap; } .subscriberMatch { flex-wrap: wrap; } }
