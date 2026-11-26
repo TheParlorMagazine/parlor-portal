@@ -30,14 +30,14 @@ function Overview({ screening, onSave, busy }) {
   return (
     <>
       <section className={styles.card}>
-        <h2>External ticket sales</h2>
+        <details><summary>External ticket sales</summary>
         <p>Enter cumulative totals from your screening provider. Each update replaces the previous totals.</p>
         {screening.ticket_url && <p><a href={screening.ticket_url} target="_blank" rel="noreferrer">Open ticket provider</a></p>}
         <form className={styles.form} onSubmit={save}>
           <label>Tickets sold<input name="tickets" type="number" min="0" max="2147483647" step="1" defaultValue={screening.public_tickets ?? ''} /></label>
           <label>Gross sales ({(screening.currency || 'usd').toUpperCase()})<input name="gross" type="number" min="0" max="21474836.47" step={currencyExponent(screening.currency || 'usd')>0?'0.01':'1'} defaultValue={screening.public_gross_cents==null?'':screening.public_gross_cents/10**currencyExponent(screening.currency || 'usd')} /></label>
           <button disabled={busy}>Save totals</button>
-        </form>
+        </form></details>
         {screening.ticket_reported_at && <p>Last updated {formatDate(screening.ticket_reported_at)}</p>}
       </section>
     </>

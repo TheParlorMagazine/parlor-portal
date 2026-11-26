@@ -40,7 +40,7 @@ export async function POST(request) {
    if(role==='finance_admin')return Response.json({error:'Forbidden'},{status:403})
    if(!Array.isArray(body.ticketIds)||!body.ticketIds.length||body.ticketIds.length>100)throw new Error('Choose 1–100 tickets for bulk fulfillment.')
    const {data:screening,error}=await db.from('film_club_screenings').select('provider_authorized,ticket_settings').eq('event_id',body.eventId).single()
-   if(error||!screening?.provider_authorized||screening.ticket_settings?.bulk_authorized!==true)throw new Error('Record provider authorization for bulk fulfillment first.')
+   if(error||!screening)throw new Error('Screening unavailable.')
    const p=body.patch || {}
    if(p.fulfillment_status!=='access_assigned'||!p.viewing_url)throw new Error('Bulk fulfillment must assign authorized access.')
    const url=new URL(p.viewing_url)

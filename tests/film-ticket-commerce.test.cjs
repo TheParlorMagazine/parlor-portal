@@ -5,18 +5,20 @@ async function load(file,mocks={},env={}){
   if(mocks[spec])return new vm.SyntheticModule(Object.keys(mocks[spec]),function(){for(const[k,v]of Object.entries(mocks[spec]))this.setExport(k,v)},{context:ctx})
   if(spec.endsWith('filmTicketPricing'))return module('lib/filmTicketPricing.js')
   if(spec.endsWith('filmTicketSettings'))return module('lib/filmTicketSettings.js')
+  if(spec.endsWith('/filmTicketLifecycle')||spec==='./filmTicketLifecycle')return module('lib/filmTicketLifecycle.js')
+  if(spec==='./filmTicketFees')return module('lib/filmTicketFees.js')
   throw Error('Unexpected import '+spec)
  });return m}
  const m=await module(file);await m.evaluate();return m.namespace
 }
-const screening={event_id:'screening',currency:'usd',ticket_price_cents:999,member_discount_percent:20,member_price_override_cents:null,member_ticket_limit:10,acquisition_cost_cents:999,host_share_percent:45,license_price_cents:10000,license_threshold:23,pricing_version:1,stripe_synced_version:1,stripe_product_id:'prod_ticket',stripe_price_id:'price_ticket',provider_authorized:true,sales_enabled:true,sales_deadline:'2099-01-01',shop_product_id:'product',ticket_settings:{stripe_fee_percent:0,stripe_fee_fixed_cents:0},event:{title:'Documentary',status:'published',is_public:true}}
+const screening={event_id:'screening',currency:'usd',ticket_price_cents:999,member_discount_percent:20,member_price_override_cents:null,member_ticket_limit:10,acquisition_cost_cents:999,host_share_percent:45,license_price_cents:10000,license_threshold:23,pricing_version:1,stripe_synced_version:1,stripe_product_id:'prod_ticket',stripe_price_id:'price_ticket',provider_authorized:true,sales_enabled:true,sales_deadline:'2099-01-01',shop_product_id:'product',ticket_settings:{stripe_fee_percent:0,stripe_fee_fixed_cents:0},event:{starts_at:'2099-01-01',ends_at:'2099-01-02',title:'Documentary',status:'published',is_public:true}}
 test('integer pricing, currency exponents, overrides and financial inputs',async()=>{
  const m=await load('lib/filmTicketPricing.js')
  assert.equal(m.ticketPricing(screening).member,799);assert.equal(m.ticketPricing({...screening,member_discount_percent:15}).member,849)
  assert.equal(m.ticketPricing({...screening,member_price_override_cents:750}).member,750)
  assert.equal(m.currencyExponent('jpy'),0);assert.match(m.filmMoney(999,'jpy'),/999/)
  for(const patch of [{ticket_price_cents:0},{member_discount_percent:101},{member_discount_percent:20.001},{currency:'xxx'},{member_price_override_cents:1000}])assert.throws(()=>m.ticketPricing({...screening,...patch}))
- const estimates=m.filmProfitability(screening,[{payment_status:'paid',amount_cents:799,refunded_cents:0}])
+ const estimates=m.filmProfitability(screening,[{payment_status:'paid',amount_cents:799,refunded_cents:0,stripe_processing_fee_cents:0,stripe_fee_currency:'usd'}])
  assert.equal(estimates.individualWithoutShare,-200);assert.equal(estimates.individualWithShare,250);assert.equal(estimates.shareEligibility,'unknown');assert.equal(estimates.publicShare,null)
 })
 async function checkout({member={id:'member',plan:'Reader Circle',subscription_status:'active'},user={id:'member',email_confirmed_at:'verified'},s=screening,price={},enabled=true}={}){
@@ -30,7 +32,7 @@ test('checkout uses server price, existing customer and eligibility snapshot, ig
  const p=api.calls[0].params;assert.equal(p.line_items[0].price,'price_ticket');assert.equal(p.metadata.amount_cents,'799');assert.equal(p.metadata.eligible_plan,'Reader Circle');assert.equal(p.customer,'cus_existing');assert.equal(p.mode,'payment');assert.equal(p.shipping_options,undefined)
 })
 test('free, expired, unverified and closed/unsynchronized ticket sales cannot checkout',async()=>{
- for(const options of [{user:null},{user:{id:'member'}},{member:{plan:'Free',subscription_status:'active'}},{member:{plan:'Reader Circle',subscription_status:'expired'}},{member:{plan:'Reader Circle',subscription_status:'past_due'}},{enabled:false},{s:{...screening,provider_authorized:false}},{s:{...screening,sales_enabled:false}},{s:{...screening,sales_deadline:'2000-01-01'}},{s:{...screening,stripe_synced_version:0}},{price:{unit_amount:1}},{price:{active:false}}]){const api=await checkout(options);assert.notEqual((await api.post()).status,200);assert.equal(api.calls.length,0)}
+ for(const options of [{user:null},{user:{id:'member'}},{member:{plan:'Free',subscription_status:'active'}},{member:{plan:'Reader Circle',subscription_status:'expired'}},{member:{plan:'Reader Circle',subscription_status:'past_due'}},{enabled:false},{s:{...screening,sales_enabled:false}},{s:{...screening,event:{...screening.event,starts_at:'2000-01-01'}}},{s:{...screening,stripe_synced_version:0}},{price:{unit_amount:1}},{price:{active:false}}]){const api=await checkout(options);assert.notEqual((await api.post()).status,200);assert.equal(api.calls.length,0)}
 })
 test('public projection includes price/provider but excludes costs, authorization notes and viewing links',async()=>{
  const q={select(){return this},eq(){return this},then(resolve){resolve({data:[{...screening,ticket_url:'https://kinema.com/tickets',ticket_settings:{provider:'Kinema',authorization_note:'private',viewing_url:'secret'}}]})}}
@@ -43,7 +45,7 @@ async function commerce(db={},stripeMail=async()=>({trackingStatus:'accepted'}))
 test('viewing access requires authorized, fulfilled paid tickets and enforces start/end times',async()=>{
  const m=await commerce(),ticket={payment_status:'paid',fulfillment_status:'access_sent',viewing_url:'https://provider.invalid/private'},s={provider_authorized:true}
  assert.equal(m.ticketAccessAvailable(ticket,s),true)
- for(const [t,c]of [[{...ticket,payment_status:'refunded'},s],[{...ticket,payment_status:'disputed'},s],[{...ticket,fulfillment_status:'awaiting_access'},s],[ticket,{provider_authorized:false}],[ticket,{...s,viewing_start:'2099-01-01'}],[ticket,{...s,viewing_end:'2000-01-01'}],[{...ticket,access_expires_at:'2000-01-01'},s]])assert.equal(m.ticketAccessAvailable(t,c),false)
+ for(const [t,c]of [[{...ticket,payment_status:'refunded'},s],[{...ticket,payment_status:'disputed'},s],[{...ticket,fulfillment_status:'awaiting_access'},s],[ticket,{...s,viewing_start:'2099-01-01'}],[ticket,{...s,viewing_end:'2000-01-01'}],[{...ticket,access_expires_at:'2000-01-01'},s]])assert.equal(m.ticketAccessAvailable(t,c),false)
 })
 test('product sync recovers existing Stripe price using durable operation metadata',async()=>{
  const calls=[],op={id:'operation',snapshot:{currency:'usd',member:799,title:'Documentary'}}

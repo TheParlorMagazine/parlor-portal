@@ -15,3 +15,6 @@
 
 [functions."subscriber-activity-retention"]
   schedule = "0 3 * * *"
+
+[functions."film-ticket-maintenance"]
+  schedule = "* * * * *"

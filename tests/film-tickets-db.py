@@ -19,10 +19,15 @@ try:
   except RuntimeError:time.sleep(.1)
  sql((root/'tests/event-access-schema.sql').read_text())
  sql("alter table members add column plan text,add column subscription_status text;alter table events add column is_public boolean default true,add column description text,add column cover_image_url text;alter table forums add column name text,add column description text,add column tied_to_type text,add column tied_to_ref text,add column created_by uuid,add column member_count integer,add column join_policy text;create table articles(id uuid primary key);create table item_purchases(member_id uuid,article_id uuid,item_type text);create table tot_treats(id uuid primary key,stock integer);create table email_automations(id text primary key,enabled boolean,sent_count integer);")
- for file in ['20260927_orders.sql','20260930_shop_products.sql','20260930_shop_printify.sql','20261021_stripe_email_tracking.sql','20261025_shop_payment_fulfillment.sql','20261026090000_inventory_reservations.sql','20261121110000_film_club_screenings.sql','20261125180000_film_club_member_tickets.sql']:
+ for file in ['20260927_orders.sql','20260930_shop_products.sql','20260930_shop_printify.sql','20261021_stripe_email_tracking.sql','20261025_shop_payment_fulfillment.sql','20261026090000_inventory_reservations.sql','20261121110000_film_club_screenings.sql','20261125180000_film_club_member_tickets.sql','20261126110000_film_club_simplify_admin.sql']:
   sql((root/'supabase/migrations'/file).read_text())
  for n in range(1,12):sql(f"insert into members(id,plan,subscription_status) values('{uid(n)}','Reader Circle','active');")
- sql(f"insert into events(id,title,status,starts_at,is_public) values('{uid(100)}','Documentary','published',now()+interval '1 day',true);insert into film_club_screenings(event_id,sales_deadline,viewing_start,viewing_end,member_ticket_limit,provider_authorized,stripe_price_id,stripe_product_id,stripe_synced_version,sales_enabled) values('{uid(100)}',now()+interval '12 hours',now()+interval '1 day',now()+interval '2 days',2,true,'price_member','prod_member',1,true);")
+ sql(f"insert into events(id,title,status,starts_at,ends_at,is_public) values('{uid(100)}','Documentary','published',now()+interval '1 day',now()+interval '2 days',true);insert into film_club_screenings(event_id,sales_deadline,viewing_start,viewing_end,member_ticket_limit,provider_authorized,stripe_price_id,stripe_product_id,stripe_synced_version,sales_enabled) values('{uid(100)}',now()+interval '12 hours',now()+interval '1 day',now()+interval '2 days',2,true,'price_member','prod_member',1,true);")
+ assert sql(f"select s.sales_deadline=e.starts_at and s.viewing_end=e.ends_at from film_club_screenings s join events e on e.id=s.event_id where e.id='{uid(100)}'")=='t'
+ sql(f"update film_club_screenings set provider_authorized=false where event_id='{uid(100)}'")
+ # Saving non-price details preserves the synced version and open sales.
+ sql(f"select save_film_ticket_settings('{uid(100)}',null,(select to_jsonb(s)||jsonb_build_object('event',to_jsonb(e),'ticket_settings',jsonb_build_object('format','live','fulfillment_method','individual','synopsis','Updated')) from film_club_screenings s join events e on e.id=s.event_id where e.id='{uid(100)}'))")
+ assert sql(f"select pricing_version=1 and sales_enabled from film_club_screenings where event_id='{uid(100)}'")=='t'
  def reserve(n):
   params={'mode':'payment','currency':'usd','line_items':[{'price':'price_member','quantity':1}],'client_reference_id':uid(n),'metadata':{'userId':uid(n),'screening_id':uid(100),'amount_cents':'799','product_name':'Member ticket','price_id':'price_member','eligible_plan':'Reader Circle','eligible_status':'active'}}
   return json.loads(sql(f"select reserve_checkout('{uid(n)}','{uid(200+n)}','film_screening_ticket','finger-{n}','film:{uid(100)}','[]','{{}}',{j(params)},now()+interval '31 minutes')"))
@@ -56,6 +61,15 @@ try:
  assert attempt(10) is None
  sql(f"select observe_checkout('{held['id']}','cs_expired','released')")
  assert attempt(10) is not None
+ # Event edits drive the deadline/window and close sales even if a stale flag was set.
+ sql(f"update events set starts_at=now()-interval '1 minute',ends_at=now()+interval '1 hour' where id='{uid(100)}'")
+ assert sql(f"select sales_enabled from film_club_screenings where event_id='{uid(100)}'")=='f'
+ reject(f"select set_film_ticket_sales('{uid(100)}',null,true)")
+ reject(f"select mark_finished_film_archived('{uid(100)}','prod_member')")
+ sql(f"update events set ends_at=now()-interval '1 second' where id='{uid(100)}'")
+ reject(f"set role authenticated;select mark_finished_film_archived('{uid(100)}','prod_member')")
+ sql(f"select mark_finished_film_archived('{uid(100)}','prod_member')")
+ assert sql(f"select stripe_archived from film_club_screenings where event_id='{uid(100)}'")=='t'
  print('PASS migration + concurrent capacity + idempotent paid orders + retained tickets + RLS + refund cancellation + ordinary RSVP preservation')
 finally:
  subprocess.run(['docker','rm','-f',name],capture_output=True)

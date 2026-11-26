@@ -1,3 +1,4 @@
+import { filmSalesOpen } from '../../../../../lib/filmTicketLifecycle'
 import Stripe from 'stripe'
 import { requireUser, serviceClient } from '../../../../../lib/apiAuth'
 import { ensureStripeCustomer } from '../../../../../lib/stripeCustomer'
@@ -13,10 +14,10 @@ export async function POST(request) {
  if(process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') && process.env.FILM_CLUB_LIVE_STRIPE_APPROVED!=='true')return Response.json({error:'Live screening ticket checkout is not activated.'},{status:503})
  const body=await request.json().catch(()=>({})),db=serviceClient()
  try{
-  const [{data:member,error:memberError},{data:s,error:screeningError}]=await Promise.all([db.from('members').select('id,plan,subscription_status').eq('id',user.id).single(),db.from('film_club_screenings').select('*,event:events(title,status,is_public)').eq('event_id',body?.eventId).single()])
+  const [{data:member,error:memberError},{data:s,error:screeningError}]=await Promise.all([db.from('members').select('id,plan,subscription_status').eq('id',user.id).single(),db.from('film_club_screenings').select('*,event:events(title,status,is_public,starts_at,ends_at)').eq('event_id',body?.eventId).single()])
   if(memberError||screeningError)throw new Error('Could not load membership or screening.')
   if(!filmEligible(member))return Response.json({error:'An active Reader’s Circle or Printing Press membership is required.'},{status:403})
-  if(!s.sales_enabled||!s.provider_authorized||s.stripe_archived||s.event.status!=='published'||!s.event.is_public||!s.sales_deadline||Date.parse(s.sales_deadline)<=Date.now()||s.stripe_synced_version!==s.pricing_version)throw new Error('Ticket sales are closed or pricing needs synchronization.')
+  if(!filmSalesOpen(s)||s.stripe_synced_version!==s.pricing_version)throw new Error('Ticket sales are closed or pricing needs synchronization.')
   const quote=ticketPricing(s),stripe=new Stripe(process.env.STRIPE_SECRET_KEY)
   const price=await stripe.prices.retrieve(s.stripe_price_id)
   if(!price.active||price.recurring||price.currency!==quote.currency||price.unit_amount!==quote.member||price.product!==s.stripe_product_id)throw new Error('Ticket pricing is unavailable.')

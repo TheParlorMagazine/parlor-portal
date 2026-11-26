@@ -9,18 +9,18 @@ export async function POST(request) {
  if(!['admin','editor'].includes(member.role))return Response.json({error:'Forbidden'},{status:403})
  const body=await request.json().catch(()=>({}))
  try{
-  const {data:s,error}=await db.from('film_club_screenings').select('*,event:events(title,status,is_public)').eq('event_id',body.eventId).single()
+  const {data:s,error}=await db.from('film_club_screenings').select('*,event:events(title,status,is_public,starts_at,ends_at)').eq('event_id',body.eventId).single()
   if(error||!s)throw new Error('Screening unavailable.')
   if(body.action==='settings'){
    const patch=validateFilmSettings(body.settings)
    const {error}=await db.rpc('save_film_ticket_settings',{p_event:s.event_id,p_actor:user.id,p_patch:patch})
    if(error)throw new Error('Settings could not be saved.')
-   return Response.json({ok:true,message:'Saved. Synchronize pricing before enabling sales.'})
+   return Response.json({ok:true,message:'Changes saved.'})
   }
   if(body.action==='sales'){
    if(typeof body.enabled!=='boolean')throw new Error('Choose whether sales are enabled.')
    const {error}=await db.rpc('set_film_ticket_sales',{p_event:s.event_id,p_actor:user.id,p_enabled:body.enabled})
-   if(error)throw new Error('Sales need published screening, authorized provider, future deadline and synchronized pricing.')
+   if(error)throw new Error('Sales need a published upcoming screening and synchronized pricing.')
    return Response.json({ok:true})
   }
   if(!['sync','archive'].includes(body.action))throw new Error('Choose a supported action.')
