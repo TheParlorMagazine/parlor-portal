@@ -286,7 +286,7 @@ export default function FilmClubAdmin() {
               {[
                 ['discussion_active', 'Visibility in active lists', 'Active', 'Inactive'],
                 ['commenting_open', 'Commenting', 'Open', 'Closed'],
-                ['discussion_archived', 'Archive discussion', 'Archived', 'Not archived'],
+                ['discussion_archived', 'Archive discussion', 'Archived', 'Visible'],
               ].map(([field, label, on, off]) => (
                 <label key={field} className={`${styles.toggle} ${styles.discussionToggle}`}>
                   <span className={styles.discussionLabel}>{label}</span>
