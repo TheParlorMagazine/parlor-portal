@@ -134,8 +134,10 @@
 .form .toggle input:focus-visible { outline: 2px solid #813d52; outline-offset: 3px; }
 
 .section summary, .form summary {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  display: flex; align-items: center; justify-content: flex-start; gap: 10px;
   list-style: none; cursor: pointer;
+  font-family: 'Playfair Display', Georgia, serif; font-size: 18px; font-weight: 700;
+  color: var(--film-accent, #813d52); padding: 8px 0; border-radius: 4px;
 }
 .section summary::-webkit-details-marker, .form summary::-webkit-details-marker { display: none; }
 .section summary::after, .form summary::after {
@@ -174,3 +176,11 @@
 .calendarActions button:last-child { margin-left: auto; background: #813d52; color: white; }
 .dateInput button:focus-visible { outline: 2px solid #b65b79; outline-offset: 1px; }
 .dateField input::selection { background: #f2b7c8; color: #401c29; }
+
+.section summary:hover, .form summary:hover { color: #64263b; }
+.section summary:focus-visible, .form summary:focus-visible { outline: 2px solid #b65b79; outline-offset: 4px; }
+.form > details { margin: 8px 0; padding-top: 14px; border-top: 1px solid #ead4dc; }
+.form > details[open] > summary { margin-bottom: 8px; }
+.form > details > label { margin-top: 16px; }
+.ticketSection { margin-top: 8px; padding-top: 22px; border-top: 1px solid #ead4dc; }
+.ticketSection > h3 { font-size: 20px; margin-bottom: 4px; }
