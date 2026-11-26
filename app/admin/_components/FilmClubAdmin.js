@@ -232,11 +232,11 @@ export default function FilmClubAdmin() {
         </label>
       )}
       {!loading && tab === 'Overview' && (
-        <Overview key={`${screening?.event_id}:${screening?.ticket_reported_at}`} screening={screening} busy={busy} onSave={body => save('PATCH', body, () => 'Ticket totals saved.')} />
+        <Overview key={`external-sales:${screening?.event_id}:${screening?.ticket_reported_at}`} screening={screening} busy={busy} onSave={body => save('PATCH', body, () => 'Ticket totals saved.')} />
       )}
-      {!loading && tab === 'Overview' && screening && <FilmTicketManagement key={screening.event_id} screening={screening} overview />}
-      {!loading && tab === 'Overview' && screening && <FilmTicketArchive key={screening.event_id} screening={screening} onChanged={async () => setScreenings((await filmClubRequest(api)).screenings)} />}
-      {!loading && tab === 'Tickets' && screening && <FilmTicketManagement key={screening.event_id} screening={screening} />}
+      {!loading && tab === 'Overview' && screening && <FilmTicketManagement key={`revenue:${screening.event_id}`} screening={screening} overview />}
+      {!loading && tab === 'Overview' && screening && <FilmTicketArchive key={`archive:${screening.event_id}`} screening={screening} onChanged={async () => setScreenings((await filmClubRequest(api)).screenings)} />}
+      {!loading && tab === 'Tickets' && screening && <FilmTicketManagement key={`tickets:${screening.event_id}`} screening={screening} />}
       {tab === 'Screenings' && (
         <>
           {adding && <ScreeningModal title="Add screening event" busy={modalBusy} onClose={() => setAdding(false)}>

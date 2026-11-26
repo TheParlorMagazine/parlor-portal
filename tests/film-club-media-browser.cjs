@@ -9,7 +9,7 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
  }}]})
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']})
  try{for(const width of [390,1440]){
-  const p=await browser.newPage({viewport:{width,height:1000}}),errors=[];p.on('pageerror',e=>errors.push(e.message))
+  const p=await browser.newPage({viewport:{width,height:1000}}),errors=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',message=>{if(['error','warning'].includes(message.type())&&/same key|unique.*key|Warning:|Encountered two children/.test(message.text()))errors.push(message.text())})
   await p.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<div id="root"></div>'}));await p.goto('https://fixture.test/')
   async function mount(view){
    await p.evaluate(view=>{
@@ -35,6 +35,8 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
   }
   await mount('admin');await p.getByRole('button',{name:'Screenings',exact:true}).click()
   await p.getByRole('heading',{name:'Existing screening'}).waitFor()
+  assert.equal(await p.getByText('Could not load ticket revenue.',{exact:true}).count(),0)
+  assert.deepEqual(errors,[])
   assert.equal(await p.getByLabel('Upload cover image',{exact:true}).count(),0)
   await p.getByRole('button',{name:'Edit',exact:true}).click()
   await p.getByRole('dialog',{name:'Edit screening',exact:true}).waitFor()
