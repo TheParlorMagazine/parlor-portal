@@ -44,7 +44,7 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
    {['subtitles','qa'].map(key=><label key={key}>{{subtitles:'Subtitles',qa:'Q&A details',refund_policy:'Refund policy'}[key]}<textarea rows={2} maxLength={5000} value={config[key] || ''} onChange={e=>detail(key,e.target.value)}/></label>)}
    <label>Runtime (minutes)<input type="number" inputMode="numeric" min="1" step="1" value={config.runtime_minutes ?? ''} onChange={e=>detail('runtime_minutes',e.target.value===''?null:Number(e.target.value))}/></label>
   </details>
-  <details><summary>Tickets</summary>
+  <details className={styles.ticketDisclosure}><summary>Tickets</summary>
   <section className={styles.ticketSection} aria-label="Ticket settings">
    <label>Currency<select value={s.currency || 'usd'} onChange={e=>set('currency',e.target.value)}>{FILM_CURRENCIES.map(c=><option key={c} value={c}>{c.toUpperCase()}</option>)}</select></label>
    {moneyField('ticket_price_cents','Ticket price')}{moneyField('member_discount_percent','Member discount (%)')}

@@ -267,3 +267,5 @@
 .form .uploadChoose { margin-left: auto; }
 .modalFields:disabled .uploadDrop { opacity: .65; }
 @media(max-width:500px) { .uploadDrop { padding: 14px; } .form .uploadChoose { min-height: 40px; } }
+
+.form > .ticketDisclosure { border-bottom: 1px solid #ead4dc; padding-bottom: 14px; }
