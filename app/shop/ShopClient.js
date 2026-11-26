@@ -245,7 +245,7 @@ export default function ShopPage() {
         .shop-browse { color:#fff; font-family:${BODY}; font-size:14px; letter-spacing:0.1em; text-transform:uppercase; background:none; border:none; cursor:pointer; padding:0; transition:color 0.15s; }
         .shop-browse:hover { color:${PINK}; }
         .shop-card { background:#fff; text-align:left; }
-        .shop-card-sale .shop-card-img { box-shadow:0 0 18px 4px rgba(217,136,164,.38),0 5px 14px rgba(217,136,164,.22); }
+        .shop-card-sale .shop-card-img { box-shadow:0 0 5px 2px rgba(217,136,164,.42),0 3px 6px rgba(217,136,164,.2); }
         .shop-sale-ribbon { position:absolute; bottom:0; right:0; width:130px; height:130px; overflow:hidden; pointer-events:none; }
         .shop-sale-ribbon > span { position:absolute; width:190px; right:-49px; bottom:27px; transform:rotate(-45deg); background:#f2b8c6; color:#7a2531; border-block:2px solid #d988a4; text-align:center; padding:8px 0; font-family:"Source Serif 4",Georgia,serif; font-size:20px; font-weight:700; line-height:1.2; box-shadow:0 2px 6px #0002; }
         .shop-card-img { position:relative; border-radius:4px; aspect-ratio:4/5; display:flex; align-items:flex-end; justify-content:flex-start; padding:12px; overflow:hidden; }
