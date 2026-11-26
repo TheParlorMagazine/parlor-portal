@@ -34,10 +34,12 @@ function Overview({ screening, onSave, busy }) {
       <section className={styles.card}>
         <details><summary>External ticket sales</summary>
         <p>Enter cumulative sales made outside The Parlor’s Stripe checkout. Exclude provider tickets bought to fulfill Stripe orders. Your revenue-share percentage is applied automatically. Each update replaces the previous totals.</p>
-        {screening.ticket_url && <p><a href={screening.ticket_url} target="_blank" rel="noreferrer">Open ticket provider</a></p>}
-        <form className={styles.form} onSubmit={save}>
+        {screening.ticket_url && <p><a className={styles.providerLink} href={screening.ticket_url} target="_blank" rel="noreferrer">Open ticket provider<svg aria-hidden="true" viewBox="0 0 16 16"><path d="M9 2h5v5M14 2 7 9M6 3H2v11h11V9"/></svg></a></p>}
+        <form className={`${styles.form} ${styles.externalSalesForm}`} onSubmit={save}>
+          <div className={styles.externalSalesNumbers}>
           <label>Tickets sold<input name="tickets" type="number" min="0" max="2147483647" step="1" defaultValue={screening.public_tickets ?? ''} /></label>
           <label>Provider sales total ({(screening.currency || 'usd').toUpperCase()})<input name="gross" type="number" min="0" max="21474836.47" step={currencyExponent(screening.currency || 'usd')>0?'0.01':'1'} defaultValue={screening.public_gross_cents==null?'':screening.public_gross_cents/10**currencyExponent(screening.currency || 'usd')} /></label>
+          </div>
           <button disabled={busy}>Save totals</button>
         </form></details>
         {screening.ticket_reported_at && <p>Last updated {formatDate(screening.ticket_reported_at)}</p>}

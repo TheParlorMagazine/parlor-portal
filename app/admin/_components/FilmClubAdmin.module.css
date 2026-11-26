@@ -182,7 +182,7 @@
 .form > details { margin: 8px 0; padding-top: 14px; border-top: 1px solid #ead4dc; }
 .form > details[open] > summary { margin-bottom: 8px; }
 .form > details > label { margin-top: 16px; }
-.ticketSection { margin-top: 8px; padding-top: 22px; border-top: 1px solid #ead4dc; }
+.ticketSection { margin-top: 0; padding-top: 12px; border: 0; }
 .ticketSection > h3 { font-size: 20px; margin-bottom: 4px; }
 
 .screeningRow { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; max-width: 860px; box-sizing: border-box; padding: 12px 14px; }
@@ -240,3 +240,14 @@
 .section .revenueEmpty { padding: 18px; font-size: 13px; color: #aaa; }
 @media(max-width:900px) { .revenueCards { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(max-width:500px) { .revenueMetric { padding: 14px; } .revenueValue { font-size: 23px; } .revenuePanelHeader { padding: 12px 14px; } .reportFilters { width: 100%; justify-content: space-between; } .reportFilters input { width: 100%; } .reportSearch { flex: 1 1 100%; } .section .revenueItem > summary { flex-wrap: wrap; gap: 9px; padding: 13px 14px; } .revenueTitle { flex-basis: calc(100% - 28px); } .revenueRowNumbers { flex: 1; text-align: left; padding-left: 22px; } .revenueDetail { padding: 0 14px 14px; } }
+
+.providerLink, .providerLink:visited { display: inline-flex; align-items: center; gap: 6px; color: #813d52; font: 500 13px/1.4 'Source Serif 4',Georgia,serif; text-decoration: none; border-bottom: 1px solid #e8c5d0; padding: 2px 0; }
+.providerLink:hover { color: #64263b; border-color: currentColor; }
+.providerLink:focus-visible { outline: 2px solid #b65b79; outline-offset: 4px; border-radius: 2px; }
+.providerLink svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.form.externalSalesForm { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-top: 12px; }
+.externalSalesNumbers { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.55fr); align-items: end; gap: 12px; width: min(100%, 360px); }
+.externalSalesNumbers label { font-size: 13px; line-height: 1.4; }
+.externalSalesNumbers input { height: 36px; padding: 7px 10px; font-size: 14px; }
+.externalSalesForm button { min-height: 36px; padding: 7px 14px; font-size: 13px; }
+@media(max-width: 360px) { .externalSalesNumbers { grid-template-columns: minmax(0, 1fr); max-width: 240px; } }

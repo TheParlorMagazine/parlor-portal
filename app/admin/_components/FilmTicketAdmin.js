@@ -20,7 +20,7 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
  let quote;try{quote=ticketPricing(s)}catch{}
  const settings=()=>({...s,member_price_override_cents:null,host_share_eligibility:s.host_share_eligibility==='yes'?'yes':'no',host_share_percent:s.host_share_eligibility==='yes'?s.host_share_percent:0,currency:s.currency || 'usd',ticket_settings:{...config,language:config.language || 'English',format:config.format || 'live',fulfillment_method:config.fulfillment_method || 'individual'}})
  async function action(action){
-  if(['settings','publish'].includes(action)){const invalid=editor.current?.querySelector(':invalid');if(invalid){invalid.reportValidity();invalid.focus();return}}
+  if(['settings','publish'].includes(action)){const invalid=editor.current?.querySelector(':invalid');if(invalid){const disclosure=invalid.closest('details');if(disclosure)disclosure.open=true;invalid.reportValidity();invalid.focus();return}}
   setBusy(true);setPending(action);setMessage('');setFailed(false)
   try{
    const result=await filmClubRequest(`${api}/commerce`,'POST',{eventId:s.event_id,action,...(['settings','publish'].includes(action)?{settings:settings()}:{})})
@@ -44,8 +44,8 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
    {['subtitles','qa'].map(key=><label key={key}>{{subtitles:'Subtitles',qa:'Q&A details',refund_policy:'Refund policy'}[key]}<textarea rows={2} maxLength={5000} value={config[key] || ''} onChange={e=>detail(key,e.target.value)}/></label>)}
    <label>Runtime (minutes)<input type="number" inputMode="numeric" min="1" step="1" value={config.runtime_minutes ?? ''} onChange={e=>detail('runtime_minutes',e.target.value===''?null:Number(e.target.value))}/></label>
   </details>
+  <details><summary>Tickets</summary>
   <section className={styles.ticketSection} aria-label="Ticket settings">
-   <h3>Tickets</h3>
    <label>Currency<select value={s.currency || 'usd'} onChange={e=>set('currency',e.target.value)}>{FILM_CURRENCIES.map(c=><option key={c} value={c}>{c.toUpperCase()}</option>)}</select></label>
    {moneyField('ticket_price_cents','Ticket price')}{moneyField('member_discount_percent','Member discount (%)')}
    {quote&&<p>Member price: {filmMoney(quote.member,quote.currency)} · Save {filmMoney(quote.savings,quote.currency)}</p>}
@@ -59,7 +59,7 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
    {s.host_share_eligibility==='yes'&&<label>Host revenue share (%)<input type="number" min="0" max="100" step="0.01" value={s.host_share_percent ?? 0} onChange={e=>set('host_share_percent',e.target.value===''?null:Number(e.target.value))}/></label>}
    <label>Other expenses<input type="number" min="0" step={currencyExponent(s.currency || 'usd')>0?'0.01':'1'} value={config.other_cost_cents==null?'':config.other_cost_cents/10**currencyExponent(s.currency || 'usd')} onChange={e=>detail('other_cost_cents',e.target.value?Math.round(Number(e.target.value)*10**currencyExponent(s.currency || 'usd')):null)}/></label>
    <p>Processing fees are pulled from Stripe after payment.</p>
-  </section>
+  </section></details>
   <div className={styles.mediaActions}>
    <button disabled={busy||!quote} onClick={()=>action('settings')}>{pending==='settings'?'Saving…':'Save changes'}</button>
    {(!screening.sales_enabled||dirty)&&<button disabled={busy||!quote} onClick={()=>action('publish')}>{pending==='publish'?'Publishing…':'Publish and open ticket sales'}</button>}
