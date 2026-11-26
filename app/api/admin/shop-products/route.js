@@ -1,3 +1,4 @@
+import {shopSaleAmount} from '../../../../lib/shopSale'
 import { packageSize } from '../../../../lib/shopPackaging'
 import { requireUser, serviceClient, memberOf } from '../../../../lib/apiAuth'
 
@@ -13,7 +14,7 @@ async function gate(request) {
 }
 
 const STRINGS = ['name', 'variant', 'description', 'category', 'tint', 'sku', 'fulfillment', 'external_url', 'stripe_price_id', 'printify_shop_id', 'printify_product_id', 'featured_blurb', 'ships_to', 'packaging_size']
-const NUMBERS = ['price', 'price_eur', 'price_gbp', 'sort', 'inventory', 'printify_variant_id', 'weight_oz']
+const NUMBERS = ['price', 'price_eur', 'price_gbp', 'sort', 'inventory', 'printify_variant_id', 'weight_oz', 'sale_discount_percent']
 const BOOLS = ['active', 'featured']
 
 function pick(b) {
@@ -31,6 +32,26 @@ function pick(b) {
   return out
 }
 
+
+function saleError(body){
+ if(!('sale_discount_percent' in body))return null
+ const n=Number(body.sale_discount_percent || 0)
+ if(!Number.isInteger(n)||n<0||n>99)return 'Choose a whole sale percentage from 0 to 99.'
+ const amounts=[body.price,body.price_eur,body.price_gbp,...(Array.isArray(body.variants)?body.variants.map(v=>v.price):[])].filter(value=>value!=null&&value!=='')
+ if(n&&amounts.some(value=>!Number.isFinite(Number(value))||shopSaleAmount(value,n)<.01))return 'Sale prices must be at least 0.01. Reduce the discount or increase the regular price.'
+ if(n&&body.fulfillment==='external')return 'Sales are managed by the external shop for this product.'
+ return null
+}
+async function writeProduct(db,patch,id){
+ const write=value=>id?db.from('shop_products').update(value).eq('id',id).select().single():db.from('shop_products').insert(value).select().single()
+ let result=await write(patch)
+ if(result.error&&['42703','PGRST204'].includes(result.error.code)&&/sale_discount_percent/.test(result.error.message || '')){
+  if(patch.sale_discount_percent>0)return {error:{message:'Apply the shop product sales migration before saving a sale.'}}
+  const {sale_discount_percent,...legacy}=patch;result=await write(legacy)
+ }
+ return result
+}
+
 // GET → all products (admin view, includes inactive), newest sort first
 export async function GET(request) {
   const g = await gate(request); if (g.error) return g.error
@@ -45,9 +66,10 @@ export async function POST(request) {
   const g = await gate(request); if (g.error) return g.error
   let b = {}; try { b = await request.json() } catch {}
   if (b.packaging_size != null && b.packaging_size !== '' && !packageSize(b.packaging_size)) return Response.json({ error: 'Invalid packaging size' }, { status: 400 })
+  const invalidSale=saleError(b);if(invalidSale)return Response.json({error:invalidSale},{status:400})
   const patch = pick(b)
   if (!patch.name) return Response.json({ error: 'name required' }, { status: 400 })
-  const { data, error } = await g.db.from('shop_products').insert(patch).select().single()
+  const { data, error } = await writeProduct(g.db,patch)
   if (error) return Response.json({ error: error.message }, { status: 500 })
   if (patch.featured === true) await clearOtherFeatured(g.db, data.id)
   return Response.json({ product: data })
@@ -65,8 +87,9 @@ export async function PATCH(request) {
   let b = {}; try { b = await request.json() } catch {}
   if (!b.id) return Response.json({ error: 'id required' }, { status: 400 })
   if (b.packaging_size != null && b.packaging_size !== '' && !packageSize(b.packaging_size)) return Response.json({ error: 'Invalid packaging size' }, { status: 400 })
+  const invalidSale=saleError(b);if(invalidSale)return Response.json({error:invalidSale},{status:400})
   const patch = pick(b)
-  const { data, error } = await g.db.from('shop_products').update(patch).eq('id', b.id).select().single()
+  const { data, error } = await writeProduct(g.db,patch,b.id)
   if (error) return Response.json({ error: error.message }, { status: 500 })
   if (patch.featured === true) await clearOtherFeatured(g.db, b.id)
   return Response.json({ product: data })

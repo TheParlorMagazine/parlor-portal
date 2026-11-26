@@ -1,3 +1,4 @@
+import {queryShopSale} from '../../../lib/shopSale'
 import { headers } from 'next/headers'
 import { serviceClient } from '../../../lib/apiAuth'
 import { countryFromRequest, currencyForRequest } from '../../../lib/geo'
@@ -18,8 +19,8 @@ export default async function ProductLayout({ children, params }) {
   if (SHOP_PRODUCT_ID.test(id)) {
     try {
       const request = { headers: await headers() }
-      const { data, error } = await serviceClient().from('shop_products').select(SHOPPING_PRODUCT_FIELDS)
-        .eq('id', id).eq('active', true).eq('public_listing', true).maybeSingle()
+      const { data, error } = await queryShopSale(SHOPPING_PRODUCT_FIELDS, fields=>serviceClient().from('shop_products').select(fields)
+        .eq('id', id).eq('active', true).eq('public_listing', true).maybeSingle())
       if (!error) schema = productStructuredData(data, {
         currency: currencyForRequest(request).toUpperCase(), country: countryFromRequest(request) || 'US',
       })

@@ -1,0 +1,9 @@
+'use client'
+import {fmtPrice} from '../../lib/useCurrency'
+export function ShopSaleBadge({percent,style}){
+ return percent>0?<span style={{display:'inline-block',border:'1px solid #d988a4',borderRadius:5,padding:'4px 9px',background:'#fff7fa',color:'#923c5a',fontFamily:"'Source Serif 4', Georgia, serif",fontSize:12,fontWeight:600,lineHeight:1.3,...style}}>Sale!</span>:null
+}
+export default function ShopSalePrice({amount,regular,percent=0,symbol='$'}){
+ const sale=percent>0&&regular!=null&&Number(regular)>Number(amount)
+ return <span style={{display:'inline-flex',alignItems:'baseline',gap:8,flexWrap:'wrap'}}>{sale&&<s style={{opacity:.65,fontSize:'.85em',textDecorationThickness:'1px'}}>{fmtPrice(regular,symbol)}</s>}<span style={{fontWeight:sale?600:undefined}}>{fmtPrice(amount,symbol)}</span>{sale&&<span style={{fontSize:'.75em',fontWeight:600,whiteSpace:'nowrap'}}>{percent}% off</span>}</span>
+}

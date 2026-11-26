@@ -17,6 +17,14 @@ try:
   try:sql('select 1;');break
   except RuntimeError:time.sleep(.1)
  sql('create role anon;create role authenticated;create role service_role;create table members(id uuid primary key);create table shop_products(id uuid primary key, inventory integer,variants jsonb);create table tot_treats(id uuid primary key,stock integer);create table email_automations(id text primary key,enabled boolean,sent_count integer);')
+ sql((root/'supabase/migrations/20261126200000_shop_product_sales.sql').read_text())
+ sql(f"insert into shop_products(id,inventory) values('{uid(999)}',1);")
+ assert sql(f"select sale_discount_percent from shop_products where id='{uid(999)}'")=='0'
+ denied=False
+ try:sql(f"update shop_products set sale_discount_percent=100 where id='{uid(999)}'")
+ except RuntimeError:denied=True
+ assert denied
+ sql(f"update shop_products set sale_discount_percent=20 where id='{uid(999)}';delete from shop_products where id='{uid(999)}'")
  for f in ['20260927_orders.sql','20260930_shop_printify.sql','20261021_stripe_email_tracking.sql']:sql((root/'supabase/migrations'/f).read_text())
  # Match the reported production digital-access schema, including its existing
  # UUID default, purchased_at timestamp and locally-added unique index.

@@ -1,4 +1,6 @@
 'use client'
+import {displayShopPrice} from '../../../lib/shopSale'
+import ShopSalePrice, {ShopSaleBadge} from '../../_components/ShopSalePrice'
 
 import { useState, useEffect, useMemo, use } from 'react'
 import ShopHeader from '../../_components/ShopHeader'
@@ -112,7 +114,7 @@ export default function ProductPage({ params }) {
 
   const variants = variantsOf(product)
   const chosen = variants.length ? (variants.find(v => String(v.printify_variant_id) === String(variantSel)) || variants[0]) : null
-  const unit = chosen?.price != null ? Number(chosen.price) : Number(product?.price || 0)
+  const unit = displayShopPrice(chosen?.price!=null?chosen:product,currency)
   const pickedProduct = singlePick ? bundleProducts.find(p => p.id === singlePick) : null
   const notFound = loaded && !bundle && product === null
 
@@ -130,14 +132,14 @@ export default function ProductPage({ params }) {
 
   const bundleConfig = product?.bundle_config
   const bundleQty = bundleConfig?.qty ?? 3
-  const bundlePrice = bundleConfig?.price ?? 0
+  const bundlePrice = displayShopPrice(bundleConfig,currency)
   const baseImages = bundle?.images ?? product?.images ?? []
   const posterImages = bundleConfig ? bundleProducts.map(p => p.images?.[0]).filter(Boolean) : []
   const allImages = bundleConfig ? [...new Set([...baseImages, ...posterImages])] : baseImages
   const images = (purchaseMode === 'single' && pickedProduct?.images?.length) ? pickedProduct.images : allImages
   // Price display: bundle mode → bundle price; single/buy-one mode → picked item's price (or first item's price)
   const singleUnitPrice = bundleConfig
-    ? (pickedProduct?.price != null ? Number(pickedProduct.price) : (bundleProducts[0]?.price != null ? Number(bundleProducts[0].price) : unit))
+    ? (pickedProduct||bundleProducts[0]?displayShopPrice(pickedProduct || bundleProducts[0],currency):unit)
     : unit
   const displayPrice = bundleConfig
     ? (purchaseMode === 'bundle' ? bundlePrice : singleUnitPrice)
@@ -368,10 +370,11 @@ export default function ProductPage({ params }) {
 
             {/* Right: purchase panel */}
             <div>
+              <ShopSaleBadge percent={bundleConfig&&purchaseMode==='single'?(pickedProduct || bundleProducts[0])?.sale_discount_percent:product.sale_discount_percent} style={{marginBottom:14}}/>
               <h1 style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 600, color: BLACK, margin: '4px 0 22px', lineHeight: 1.1 }}>{product.name}</h1>
               {product.variant && <div style={{ fontFamily: BODY, fontSize: 16, color: '#7a5560', marginTop: -14, marginBottom: 20 }}>{product.variant}</div>}
 
-              <div style={{ fontFamily: BODY, fontSize: 26, color: BLACK, marginBottom: 8 }}>{fmtPrice(displayPrice, symbol)}</div>
+              <div style={{ fontFamily: BODY, fontSize: 26, color: BLACK, marginBottom: 8 }}><ShopSalePrice amount={displayPrice} regular={displayShopPrice(bundleConfig?(purchaseMode==='bundle'?bundleConfig:pickedProduct || bundleProducts[0]):chosen?.price!=null?chosen:product,currency,true)} percent={bundleConfig&&purchaseMode==='single'?(pickedProduct || bundleProducts[0])?.sale_discount_percent:product.sale_discount_percent} symbol={symbol}/></div>
               <div style={{ marginBottom: 28 }}>
                 <BnplMessage amount={displayPrice} currency={currency} country={country || 'US'} fontFamily={BODY} />
               </div>

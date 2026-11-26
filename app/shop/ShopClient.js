@@ -1,4 +1,6 @@
 'use client'
+import {displayShopPrice} from '../../lib/shopSale'
+import ShopSalePrice, {ShopSaleBadge} from '../_components/ShopSalePrice'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
 import ShopTrickOrTreatPopup from '../_components/ShopTrickOrTreatPopup'
@@ -91,7 +93,7 @@ export default function ShopPage() {
   const [bundles, setBundles] = useState([])
   const [catalogueLoaded, setCatalogueLoaded] = useState(false)
   const [categories, setCategories] = useState(FALLBACK_CATEGORIES)
-  const { symbol } = useCurrency() // same-numeral geo pricing: $7 → €7 → £7
+  const { symbol, currency } = useCurrency() // same-numeral geo pricing: $7 → €7 → £7
   const searchWrapRef = useRef(null)
 
   // Load the live catalogue from the admin-managed DB; keep the seed list if empty/offline.
@@ -197,7 +199,8 @@ export default function ShopPage() {
     if (!vs.length) return null
     return vs.find(v => String(v.printify_variant_id) === String(variantSel[p.id])) || vs[0]
   }
-  const priceOf = p => { if (p._isBundle) return Number(p.price || 0); const v = chosenVariant(p); return v?.price != null ? Number(v.price) : Number(p.price || 0) }
+  const priceSource = p => p._isBundle?p:chosenVariant(p)?.price!=null?chosenVariant(p):p
+  const priceOf = p => displayShopPrice(priceSource(p),currency)
 
   const add = p => { if (p._isBundle) { cartAdd(p.id, null); openCart(); return } const v = chosenVariant(p); cartAdd(p.id, v?.printify_variant_id ?? null); openCart() }
 
@@ -379,7 +382,7 @@ export default function ShopPage() {
                           <span className="shop-sr-thumb" style={{ backgroundColor: p.tint || '#eee', backgroundImage: p.images?.[0] ? `url(${p.images[0]})` : undefined }} />
                           <span>
                             <span className="shop-sr-name">{p.name}</span>
-                            <span className="shop-sr-price" style={{ display: 'block', marginTop: 2 }}>{fmtPrice(priceOf(p), symbol)}</span>
+                            <span className="shop-sr-price" style={{ display: 'block', marginTop: 2 }}><ShopSalePrice amount={priceOf(p)} regular={displayShopPrice(priceSource(p),currency,true)} percent={p.sale_discount_percent} symbol={symbol}/></span>
                           </span>
                         </a>
                       ))}
@@ -414,9 +417,10 @@ export default function ShopPage() {
       <section id="shop-featured-product" style={{ background: '#f3c3d1' }}>
         <div className="shop-herogrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', alignItems: 'center' }}>
           <div className="shop-hero-left">
+            <ShopSaleBadge percent={featured.sale_discount_percent} style={{marginBottom:14}}/>
             <h2 className="shop-hero-title" style={{ whiteSpace: 'pre-line' }}>{heroHeadline}</h2>
             <a href={`/shop/${featured.id}`} className="shop-hero-btn">
-              Order now — {fmtPrice(priceOf(featured), symbol)} {featuredShipsFree ? 'with free shipping' : 'plus shipping'}
+              Order now — <ShopSalePrice amount={priceOf(featured)} regular={displayShopPrice(priceSource(featured),currency,true)} percent={featured.sale_discount_percent} symbol={symbol}/> {featuredShipsFree ? 'with free shipping' : 'plus shipping'}
             </a>
           </div>
           <div style={{ position: 'relative', alignSelf: 'stretch', minHeight: 440, overflow: 'hidden', background: '#e9e7e3' }}>
@@ -457,6 +461,7 @@ export default function ShopPage() {
         <div className="shop-grid">
           {shown.map(p => (
             <div key={p.id} className="shop-card" style={{ position: 'relative' }}>
+              <ShopSaleBadge percent={p.sale_discount_percent} style={{position:'absolute',top:48,left:12,zIndex:2}}/>
               <button onClick={() => wish.toggle(p.id)} aria-label="Wishlist" title="Wishlist"
                 style={{ position: 'absolute', top: 10, right: 10, zIndex: 2, width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.9)', cursor: 'pointer', fontSize: 16, lineHeight: 1, color: wish.has(p.id) ? '#c4364a' : '#555', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}>
                 {wish.has(p.id) ? '♥' : '♡'}
@@ -488,7 +493,7 @@ export default function ShopPage() {
                   )}
                 </>
               )}
-              <div style={{ fontFamily: BODY, fontSize: 15, color: '#1a1a1a', marginTop: 6 }}>{fmtPrice(priceOf(p), symbol)}</div>
+              <div style={{ fontFamily: BODY, fontSize: 15, color: '#1a1a1a', marginTop: 6 }}><ShopSalePrice amount={priceOf(p)} regular={displayShopPrice(priceSource(p),currency,true)} percent={p.sale_discount_percent} symbol={symbol}/></div>
               <button className="shop-add" onClick={() => p.bundle_config ? (window.location.href = `/shop/${p.id}`) : add(p)}>
                 {p.bundle_config ? 'Pick your items' : 'Add to cart'}
               </button>

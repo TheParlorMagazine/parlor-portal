@@ -1,4 +1,6 @@
 'use client'
+import {displayShopPrice} from '../../lib/shopSale'
+import ShopSalePrice from './ShopSalePrice'
 import { startShopCheckout } from '../../lib/startShopCheckout'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
@@ -23,7 +25,7 @@ const SHIP_COUNTRIES = [['US', 'United States'], ['CA', 'Canada'], ['GB', 'Unite
 export default function CartDrawer() {
   const { cart, add: cartAdd, dec, removeAll, clear } = useCart()
   const wish = useWishlist()
-  const { symbol, country: geoCountry } = useCurrency()
+  const { symbol, currency, country: geoCountry } = useCurrency()
 
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState('cart')
@@ -103,11 +105,13 @@ export default function CartDrawer() {
       const product = products.find(p => String(p.id) === String(id)) || bundles.find(b => String(b.id) === String(id))
       if (!product) return null
       const variant = (!product._isBundle && vid != null) ? variantsOf(product).find(v => String(v.printify_variant_id) === String(vid)) : null
-      const baseUnit = variant?.price != null ? Number(variant.price) : Number(product.price || 0)
-      const unit = meta?.single_pick_price != null ? Number(meta.single_pick_price) : (meta?.bundle_price != null ? Number(meta.bundle_price) : (meta?.bundle_unit_price != null ? Number(meta.bundle_unit_price) : baseUnit))
-      return { key: lineKey(id, vid, meta), product, variant, meta, qty, unit }
+      const baseUnit = displayShopPrice(variant?.price!=null?variant:product,currency)
+      const picked=meta?.single_pick?products.find(p=>p.id===meta.single_pick):null
+      const unit = meta?.single_pick_price != null ? (picked?displayShopPrice(picked,currency):Number(meta.single_pick_price)) : (meta?.bundle_price != null ? (product.bundle_config?displayShopPrice(product.bundle_config,currency):Number(meta.bundle_price)) : (meta?.bundle_unit_price != null ? Number(meta.bundle_unit_price) : baseUnit))
+      const priceSource=picked || (meta?.bundle_price!=null?product.bundle_config:variant?.price!=null?variant:product)
+      return { key: lineKey(id, vid, meta), product, variant, meta, qty, unit, regular:displayShopPrice(priceSource,currency,true), percent:picked?.sale_discount_percent ?? product.sale_discount_percent }
     }).filter(Boolean)
-  }, [cart, products, bundles])
+  }, [cart, products, bundles, currency])
   const needsSelection = cartGroups.some(g => g.product.bundle_config && !g.meta?.single_pick && !g.meta?.bundle_picks?.length)
   const cartTotal = cartGroups.reduce((s, g) => s + g.unit * g.qty, 0)
 
@@ -226,13 +230,14 @@ export default function CartDrawer() {
             {wishItems.length === 0 ? (
               <div style={{ color: '#999', fontFamily: BODY, textAlign: 'center', marginTop: 40 }}>Your wishlist is empty. Tap the ♡ on any product to save it.</div>
             ) : wishItems.map(p => {
-              const unit = variantsOf(p)[0]?.price != null ? Number(variantsOf(p)[0].price) : Number(p.price || 0)
+              const source=variantsOf(p)[0]?.price!=null?variantsOf(p)[0]:p
+              const unit = displayShopPrice(source,currency)
               return (
                 <div key={p.id} style={{ display: 'flex', gap: 12, padding: '14px 0', borderBottom: '1px solid #f0f0f0' }}>
                   <a href={`/shop/${p.id}`} style={{ width: 56, height: 56, borderRadius: 8, flexShrink: 0, backgroundColor: p.tint || '#eee', backgroundImage: p.images?.[0] ? `url(${p.images[0]})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <a href={`/shop/${p.id}`} style={{ display: 'block', fontFamily: DISPLAY, fontSize: 15, color: '#1a1a1a', textDecoration: 'none' }}>{p.name}</a>
-                    <div style={{ fontFamily: BODY, fontSize: 13, color: '#888' }}>{fmtPrice(unit, symbol)}</div>
+                    <div style={{ fontFamily: BODY, fontSize: 13, color: '#888' }}><ShopSalePrice amount={unit} regular={displayShopPrice(source,currency,true)} percent={p.sale_discount_percent} symbol={symbol}/></div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
                       <button onClick={() => moveToCart(p)} style={{ background: BLACK, color: '#fff', border: 'none', borderRadius: 20, padding: '6px 14px', fontFamily: BODY, fontSize: 12.5, cursor: 'pointer' }}>{p.bundle_config ? 'Choose an item' : 'Move to cart'}</button>
                       <button onClick={() => wish.remove(p.id)} style={{ background: 'none', border: 'none', color: '#b99', fontSize: 12.5, cursor: 'pointer', fontFamily: BODY }}>Remove</button>
@@ -260,7 +265,7 @@ export default function CartDrawer() {
                     {!isManual && <span style={{ fontFamily: BODY, fontSize: 12, color: '#5a9e78' }}>— combined shipping below</span>}
                   </div>
                 )}
-                {items.map(({ key, product: p, variant, meta, qty, unit }) => (
+                {items.map(({ key, product: p, variant, meta, qty, unit, regular, percent }) => (
                   <div key={key} style={{ display: 'flex', gap: 12, padding: '14px 0', borderBottom: '1px solid #f0f0f0' }}>
                     <div style={{ width: 56, height: 56, borderRadius: 8, flexShrink: 0, backgroundColor: p.tint || '#eee', backgroundImage: (meta?.single_pick_image || p.images?.[0]) ? `url(${meta?.single_pick_image || p.images[0]})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -281,7 +286,7 @@ export default function CartDrawer() {
                         <button onClick={() => removeAll(key)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#b99', fontSize: 12.5, cursor: 'pointer', fontFamily: BODY }}>Remove</button>
                       </div>
                     </div>
-                    <div style={{ fontFamily: BODY, fontSize: 14, color: '#1a1a1a', flexShrink: 0 }}>{fmtPrice(unit * qty, symbol)}</div>
+                    <div style={{ fontFamily: BODY, fontSize: 14, color: '#1a1a1a', flexShrink: 0 }}><ShopSalePrice amount={unit * qty} regular={regular!=null?regular*qty:null} percent={percent} symbol={symbol}/></div>
                   </div>
                 ))}
               </div>

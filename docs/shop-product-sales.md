@@ -1,0 +1,13 @@
+# Product sale discounts
+
+Apply `supabase/migrations/20261126200000_shop_product_sales.sql` before saving a sale. It adds one integer column, `sale_discount_percent`, defaulting to zero with a 0–99 constraint. Existing product prices, orders, Stripe records and inventory remain unchanged. Tested with the existing shop/payment migrations in disposable PostgreSQL; not applied to production by this implementation.
+
+New and existing product editors have a Sale discount checkbox and whole-number percentage picker (1–99%). Zero/off restores regular pricing. The storefront and product detail page show a pink outlined Sale! badge, struck-through regular price, discounted price and percentage off. Cart prices use the current public catalogue and show the same sale breakdown. A product-level percentage applies to its variants and each configured currency; prices round once to integer cents. Discounts that round a positive price below one cent are rejected by the editor API.
+
+Stored prices stay at their regular amounts. Public catalogue responses derive discounted prices with separate regular-price values. Server checkout reads stored product settings and calculates the sale independently; client-supplied discounts/prices cannot change the charge. Pick-your-own bundles discount the parent's configured bundle price; individual picks use the selected product's own sale. Fixed curated bundle prices do not stack component discounts. Partner/external checkout products cannot be put on sale here.
+
+New Stripe Checkout sessions use discounted `price_data`; no separate product/price synchronization is needed. Completed orders and already-open Stripe sessions retain their original price/snapshot. Printify fulfillment charges and shipping remain provider charges; a sale does not waive them. The manual free-shipping threshold uses discounted subtotals, so an item reduced below 100 no longer claims free shipping on its own.
+
+Google feed prices include regular `price` and discounted `sale_price`; product structured data uses the price charged. Read queries fall back to the existing schema if only the sale column is missing. Normal no-sale product saves also retain compatibility, while trying to save a sale before migration returns a specific setup error rather than silently ignoring the discount.
+
+Verification: percentage validation, USD/EUR/GBP prices, selected variants, cent rounding, no discount stacking, restoring prices, server-authoritative checkout, migration compatibility, feed data, new/existing editor browser interactions, product/card/cart display, shipping, bundle selections, and production build. No live payments or production database writes were performed.

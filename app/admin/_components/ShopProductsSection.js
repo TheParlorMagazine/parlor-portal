@@ -1,5 +1,7 @@
 'use client'
 
+import ShopSalePrice from '../../_components/ShopSalePrice'
+import { shopSaleAmount } from '../../../lib/shopSale'
 import { useEffect, useState, useRef } from 'react'
 import { uploadToCloudinary, isDuplicateUpload } from '../../../lib/uploadImage'
 import { confirmDialog } from '../../../lib/confirmDialog'
@@ -24,6 +26,7 @@ function money(n) { return n == null || n === '' ? '—' : `$${Number(n).toFixed
 function ProductModal({ token, item, supabase, onClose, onSaved, categories = [], allProducts = [] }) {
   const [f, setF] = useState({
     name: item?.name || '', variant: item?.variant || '', description: item?.description || '',
+    sale_discount_percent:item?.sale_discount_percent || 0,
     category: item?.category || '', price: item?.price ?? '', price_eur: item?.price_eur ?? '', price_gbp: item?.price_gbp ?? '',
     images: Array.isArray(item?.images) ? item.images : [], tint: item?.tint || '#eee',
     sku: item?.sku || '', inventory: item?.inventory ?? '', weight_oz: item?.weight_oz ?? '', sort: item?.sort ?? 0,
@@ -36,6 +39,7 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
     bundle_config: item?.bundle_config ?? null,
     variants: Array.isArray(item?.variants) ? item.variants : [],
   })
+  const [saleEnabled,setSaleEnabled]=useState(Number(item?.sale_discount_percent || 0)>0)
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
@@ -64,6 +68,7 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
   function makePrimary(i) { if (i === 0) return; const a = [...f.images]; const [x] = a.splice(i, 1); a.unshift(x); set('images', a) }
 
   async function save() {
+    if(!Number.isInteger(Number(f.sale_discount_percent))||Number(f.sale_discount_percent)<0||Number(f.sale_discount_percent)>99||(saleEnabled&&Number(f.sale_discount_percent)<1)){setErr('Choose a whole sale percentage from 0 to 99.');return}
     if (!f.name.trim()) { setErr('Name is required'); return }
     if (f.fulfillment === 'manual' && !f.packaging_size) { setErr('Choose a packaging size for this self-fulfilled product.'); return }
     setSaving(true); setErr('')
@@ -117,6 +122,11 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
         </div>
 
         {/* Images */}
+        <div style={{marginTop:18,padding:'14px 16px',border:'1px solid #edbdcc',borderRadius:8,background:'#fffafb'}}>
+          <label style={{display:'flex',alignItems:'center',gap:10,fontFamily:ff,fontSize:14}}><input type="checkbox" checked={saleEnabled} disabled={f.fulfillment==='external'} onChange={e=>{setSaleEnabled(e.target.checked);set('sale_discount_percent',e.target.checked?10:0)}} style={{accentColor:'#b55073'}}/>Sale discount</label>
+          {saleEnabled&&<><label style={{display:'block',fontFamily:ff,fontSize:13,marginTop:12}}>Percentage off<input aria-label="Sale percentage" type="number" min="1" max="99" step="1" value={f.sale_discount_percent} onChange={e=>set('sale_discount_percent',e.target.value)} style={{...input,width:110,display:'block',marginTop:6}}/></label><p style={{fontFamily:ff,fontSize:13,color:'#813d52',margin:'12px 0 0'}}><span style={{border:'1px solid #db93ab',padding:'3px 8px',borderRadius:4,marginRight:8}}>Sale!</span><s>{money(f.price)}</s> <strong>{money(shopSaleAmount(f.price,Number(f.sale_discount_percent)))}</strong> · {f.sale_discount_percent}% off</p><p style={{fontFamily:ff,fontSize:12,color:'#888',marginBottom:0}}>Applies to this product and its variants. Turn off to restore regular prices.</p></>}
+        </div>
+
         <div style={label}>Images <span style={{ textTransform: 'none', letterSpacing: 0, color: '#bbb' }}>(first is the primary)</span></div>
         <div ref={dropRef}
           onDragOver={e => { e.preventDefault() }}
@@ -152,7 +162,7 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
 
         {/* Fulfillment */}
         <div style={label}>Fulfillment</div>
-        <select value={f.fulfillment} onChange={e => set('fulfillment', e.target.value)} style={{ ...input, cursor: 'pointer' }}>
+        <select value={f.fulfillment} onChange={e => {if(e.target.value==='external')setSaleEnabled(false);setF(old=>({...old,fulfillment:e.target.value,sale_discount_percent:e.target.value==='external'?0:old.sale_discount_percent}))}} style={{ ...input, cursor: 'pointer' }}>
           <option value="manual">Self-fulfilled (you ship it)</option>
           <option value="printify">Printify (print-on-demand)</option>
           <option value="external">External link (e.g. Wix)</option>
@@ -600,7 +610,7 @@ export default function ShopProductsSection({ supabase }) {
                 <div style={{ fontSize: 12.5, color: '#999' }}>{[p.variant, p.category || 'Uncategorized'].filter(Boolean).join(' · ')}</div>
               </div>
 
-              <div style={{ fontFamily: ffH, fontSize: 15, color: '#333', width: 70, textAlign: 'right' }}>{money(p.price)}</div>
+              <div style={{ fontFamily: ffH, fontSize: 15, color: '#333', width: 70, textAlign: 'right' }}><ShopSalePrice amount={shopSaleAmount(p.price,Number(p.sale_discount_percent || 0))} regular={p.price} percent={p.sale_discount_percent}/></div>
               <button onClick={() => toggleActive(p)} title={p.active ? 'Active' : 'Hidden'} style={{ width: 46, height: 24, borderRadius: 20, border: 'none', background: p.active ? '#2d8f5a' : '#ccc', position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
                 <span style={{ position: 'absolute', top: 2, left: p.active ? 24 : 2, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
               </button>
