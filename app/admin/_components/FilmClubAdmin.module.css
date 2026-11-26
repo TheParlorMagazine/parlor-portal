@@ -184,3 +184,12 @@
 .form > details > label { margin-top: 16px; }
 .ticketSection { margin-top: 8px; padding-top: 22px; border-top: 1px solid #ead4dc; }
 .ticketSection > h3 { font-size: 20px; margin-bottom: 4px; }
+
+.screeningRow { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; max-width: 860px; box-sizing: border-box; padding: 12px 14px; }
+.screeningCopy { flex: 1 1 auto; min-width: 0; }
+.section .screeningCopy h2 { font-size: 17px; line-height: 1.35; overflow-wrap: anywhere; }
+.section .screeningCopy p { font-size: 13px; line-height: 1.4; margin-top: 3px; }
+.screeningActions { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; }
+.screeningActions .badge { display: inline-flex; align-items: center; justify-content: center; min-width: 76px; min-height: 34px; box-sizing: border-box; padding: 6px 14px; line-height: 1; font-size: 12px; text-transform: capitalize; border-radius: 6px; }
+.screeningActions .primary { min-height: 34px; padding: 6px 14px; font-size: 13px; line-height: 1.2; }
+@media (max-width: 600px) { .screeningRow { flex-wrap: wrap; gap: 10px; } .screeningCopy { flex-basis: 100%; } .screeningActions { margin-left: auto; } .screeningActions .primary, .screeningActions .badge { min-height: 40px; } }

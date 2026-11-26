@@ -248,11 +248,9 @@ export default function FilmClubAdmin() {
             })} />
           </ScreeningModal>}
           {screenings.map(item => (
-            <section className={styles.card} key={item.event_id}>
-              <div className={styles.heading}>
-                <div><h2>{item.event.title}</h2><p>{formatDate(item.event.starts_at)}</p></div>
-                <div className={styles.mediaActions}><span className={styles.badge}>{item.event.status}</span><button type="button" className={styles.primary} onClick={() => { setError(''); setNotice(''); setEditingId(item.event_id) }}>Edit</button></div>
-              </div>
+            <section className={`${styles.card} ${styles.screeningRow}`} key={item.event_id}>
+              <div className={styles.screeningCopy}><h2>{item.event.title}</h2><p>{item.event.starts_at ? new Date(item.event.starts_at).toLocaleString(undefined, {dateStyle:'medium',timeStyle:'short'}) : 'Date TBA'}</p></div>
+              <div className={styles.screeningActions}><span className={styles.badge}>{item.event.status}</span><button type="button" className={styles.primary} onClick={() => { setError(''); setNotice(''); setEditingId(item.event_id) }}>Edit</button></div>
             </section>
           ))}
           {editing && <ScreeningModal title="Edit screening" busy={modalBusy} onClose={() => setEditingId(null)}>
