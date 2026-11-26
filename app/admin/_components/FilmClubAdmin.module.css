@@ -332,3 +332,10 @@
 @media(max-width:600px) { .forumToolbar { align-items: stretch; flex-direction: column; } .forumToolbar input { width: 100%; box-sizing: border-box; } .forumStrip > summary { flex-wrap: wrap; } .forumState { padding-left: 25px; width: 100%; } .forumContents .heading { flex-wrap: wrap; } }
 .section .forumStrip > summary { font-family: 'Source Serif 4', Georgia, serif; font-weight: 400; color: #222; border-radius: 0; }
 .section .forumStrip > summary::after { display: none; }
+
+.form .discussionToggle { max-width: 540px; padding: 8px 0; gap: 12px; }
+.discussionLabel { flex: 1; color: #444; font-size: 14px; }
+.discussionValue { width: 86px; font-size: 13px; color: #813d52; }
+.form .discussionToggle input:disabled { cursor: wait; opacity: .5; }
+.form .discussionToggle input { border: 1px solid transparent; }
+@media(max-width: 420px) { .form .discussionToggle { gap: 9px; } .discussionValue { width: 70px; font-size: 12px; } }

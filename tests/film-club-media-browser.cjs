@@ -22,6 +22,7 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
      window.calls.push({method,body})
      if(method==='PATCH'){
       const record=window.records.find(r=>r.event_id===body.eventId)
+      if(body.action==='discussion')record[body.field]=body.value
       if(body.action==='cover')record.event.cover_image_url=body.cover_image_url
       if(body.action==='trailer')record.trailer_url=body.trailer_url
       return {ok:true}
@@ -37,7 +38,9 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
   await mount('admin');await p.getByRole('button',{name:'Forums',exact:true}).click()
   const forumStrip=p.locator('summary').filter({hasText:'Existing screening — Discussion'});await forumStrip.waitFor();assert.equal(await forumStrip.evaluate(e=>e.parentElement.open),false);assert.equal(await p.getByRole('heading',{name:'Discussion settings'}).count(),0)
   await p.getByRole('searchbox',{name:'Search screening forums'}).fill('missing');await p.getByText('No forums match your search.',{exact:true}).waitFor();await p.getByRole('searchbox',{name:'Search screening forums'}).fill('Existing')
-  await forumStrip.click();await p.getByRole('heading',{name:'Discussion settings'}).waitFor();await p.getByRole('button',{name:'Close commenting',exact:true}).click();assert.equal((await p.evaluate(()=>window.calls.at(-1))).body.eventId,'11111111-1111-4111-8111-111111111111')
+  await forumStrip.click();await p.getByRole('heading',{name:'Discussion settings'}).waitFor();assert.equal(await p.getByRole('switch',{name:'Commenting',exact:true}).isChecked(),true);await p.getByRole('switch',{name:'Commenting',exact:true}).uncheck();await p.waitForFunction(()=>window.records[0].commenting_open===false);assert.equal(await p.getByRole('switch',{name:'Commenting',exact:true}).isChecked(),false);assert.equal((await p.evaluate(()=>window.calls.at(-1))).body.eventId,'11111111-1111-4111-8111-111111111111')
+  await p.getByRole('switch',{name:'Archive discussion',exact:true}).check();assert.equal((await p.evaluate(()=>window.calls.at(-1))).body.field,'discussion_archived');assert.equal((await p.evaluate(()=>window.calls.at(-1))).body.value,true)
+  await p.getByRole('switch',{name:'Visibility in active lists',exact:true}).uncheck();assert.equal((await p.evaluate(()=>window.calls.at(-1))).body.field,'discussion_active');assert.equal((await p.evaluate(()=>window.calls.at(-1))).body.value,false)
   await p.getByLabel('Parlor account email',{exact:true}).fill('filmmaker@example.invalid');await p.getByLabel('Access expires (your local time)',{exact:true}).fill('2099-12-13T19:00');await p.getByRole('button',{name:'Invite co-moderator',exact:true}).click();assert.equal((await p.evaluate(()=>window.calls.at(-1))).body.action,'invite');assert.equal((await p.evaluate(()=>window.calls.at(-1))).body.eventId,'11111111-1111-4111-8111-111111111111')
   await forumStrip.click();assert.equal(await p.getByRole('heading',{name:'Discussion settings'}).count(),0)
   await p.getByRole('button',{name:'Screenings',exact:true}).click()

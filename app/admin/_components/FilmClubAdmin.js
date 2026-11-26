@@ -284,16 +284,17 @@ export default function FilmClubAdmin() {
             <section className={`${styles.card} ${styles.form}`}>
               <h2>Discussion settings</h2>
               {[
-                ['discussion_active', 'Visibility in active lists', 'Active', 'Inactive', 'Mark inactive', 'Mark active'],
-                ['commenting_open', 'Commenting', 'Open', 'Closed', 'Close commenting', 'Open commenting'],
-                ['discussion_archived', 'Archive', 'Archived', 'Available to members after publication', 'Unarchive discussion', 'Archive discussion'],
-              ].map(([field, label, on, off, turnOff, turnOn]) => (
-                <div key={field} className={styles.heading}>
-                  <p><strong>{label}</strong> · {screening[field] ? on : off}</p>
-                  <button disabled={busy} onClick={() => save('PATCH', {
-                    action: 'discussion', eventId: screening.event_id, field, value: !screening[field],
-                  }, () => 'Discussion setting saved.')}>{screening[field] ? turnOff : turnOn}</button>
-                </div>
+                ['discussion_active', 'Visibility in active lists', 'Active', 'Inactive'],
+                ['commenting_open', 'Commenting', 'Open', 'Closed'],
+                ['discussion_archived', 'Archive discussion', 'Archived', 'Not archived'],
+              ].map(([field, label, on, off]) => (
+                <label key={field} className={`${styles.toggle} ${styles.discussionToggle}`}>
+                  <span className={styles.discussionLabel}>{label}</span>
+                  <input type="checkbox" role="switch" aria-label={label} checked={!!screening[field]} disabled={busy} onChange={event => save('PATCH', {
+                    action: 'discussion', eventId: screening.event_id, field, value: event.target.checked,
+                  }, () => 'Discussion setting saved.')} />
+                  <span className={styles.discussionValue}>{screening[field] ? on : off}</span>
+                </label>
               ))}
             </section>
             <form className={`${styles.card} ${styles.form}`} onSubmit={event=>invite(event,screening.event_id)}>
