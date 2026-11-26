@@ -228,23 +228,19 @@ function Hub() {
         @media (max-width:1280px){
           .hub-feed-wrap{ grid-template-columns:1fr; }
           .hub-forums-sidebar{ position:static; width:100%; order:-1; }
-          .hub-fsb-card{ display:flex; flex-direction:column; gap:8px; }
-          .hub-fsb-forum{ display:grid !important; grid-template-columns:72px 1fr; grid-template-rows:1fr; align-items:stretch; gap:0; border-radius:10px; overflow:hidden; }
-          .hub-fsb-thumb{ width:72px !important; height:72px !important; border-radius:0 !important; flex-shrink:0; object-fit:cover; grid-row:1; grid-column:1; object-position:center center !important; transform:none !important; }
-          .hub-fsb-thumb-ph{ width:72px !important; height:72px !important; border-radius:0 !important; flex-shrink:0; grid-row:1; grid-column:1; }
-          .hub-fsb-body{ grid-row:1; grid-column:2; padding:10px 14px !important; display:flex; flex-direction:column; justify-content:center; min-width:0; }
-          .hub-fsb-name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         }
         .hub-forums-sidebar { position:sticky; top:24px; }
         .hub-fsb-title { font-family:'thermal-variable',Georgia,serif; font-size:15px; font-style:italic; color:var(--muted); font-weight:400; margin-bottom:12px; }
         .hub-fsb-card { display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
-        .hub-fsb-forum { border:1px solid var(--border); border-radius:10px; background:#fff; overflow:hidden; text-decoration:none; display:block; transition:border-color 0.15s; }
+        .hub-fsb-forum { display:grid; grid-template-columns:72px minmax(0,1fr); align-items:center; border:1px solid var(--border); border-radius:10px; background:#fff; overflow:hidden; text-decoration:none; transition:border-color 0.15s; }
         .hub-fsb-forum:hover { border-color:var(--pinkborder); }
-        .hub-fsb-thumb { width:100%; height:80px; object-fit:cover; display:block; background:var(--cream); object-position:right 70%; transform:scale(1.45); transform-origin:right 70%; }
-        .hub-fsb-thumb-ph { width:100%; height:80px; background:linear-gradient(135deg,var(--cream),var(--pink)); }
-        .hub-fsb-body { padding:13px 11px 10px; }
+        .hub-fsb-thumb { width:72px; height:72px; object-fit:contain; display:block; background:var(--cream); object-position:center; transform:none; }
+        .hub-fsb-thumb-ph { width:72px; height:72px; background:linear-gradient(135deg,var(--cream),var(--pink)); }
+        .hub-fsb-body { min-width:0; padding:12px 11px; overflow-wrap:anywhere; }
+        .hub-fsb-description { display:none; font-size:12px; color:var(--muted); line-height:1.4; margin:0 0 6px; }
+        .hub-fsb-forum:hover .hub-fsb-description, .hub-fsb-forum:focus-visible .hub-fsb-description { display:block; }
         .hub-fsb-name { font-size:13px; font-weight:600; color:var(--ink); line-height:1.25; margin-bottom:4px; }
-        .hub-fsb-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+        .hub-fsb-row { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
         .hub-fsb-meta { font-size:11px; color:var(--muted); }
         .hub-fsb-new { font-size:10.5px; font-weight:600; color:#fff; background:var(--pink); border-radius:20px; padding:1px 7px; }
         .hub-fsb-join { font-size:11px; font-weight:600; color:#9b3657; border:1px solid #b85a78; background:#fff5f8; border-radius:20px; padding:2px 9px; white-space:nowrap; }
@@ -495,6 +491,7 @@ function Hub() {
                     : <div className="hub-fsb-thumb-ph" />}
                   <div className="hub-fsb-body">
                     <div className="hub-fsb-name">{f.name}</div>
+                    {f.description && <p className="hub-fsb-description">{f.description}</p>}
                     <div className="hub-fsb-row">
                       <span className="hub-fsb-meta">{f.member_count || 0} {(f.member_count || 0) === 1 ? 'member' : 'members'}{f.new_posts > 0 ? '' : f.thread_count ? ` · ${f.thread_count} posts` : ''}</span>
                       <span style={{ display:'flex', alignItems:'center', gap:6 }}>
