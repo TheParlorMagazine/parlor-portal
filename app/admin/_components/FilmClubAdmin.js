@@ -79,11 +79,34 @@ function ScreeningEmails({ screening, busy, onSave }) {
   )
 }
 
-function ScreeningForm({ onAdd, busy }) {
+function ScreeningModal({ title, busy, onClose, children }) {
+  const dialog = useRef(null)
+  useEffect(() => {
+    const previous = document.body.style.overflow
+    const returnFocus = document.activeElement
+    dialog.current.showModal()
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
+      if (returnFocus?.isConnected) returnFocus.focus()
+    }
+  }, [])
+  return <dialog ref={dialog} className={styles.modal} aria-labelledby="screening-modal-title"
+    onCancel={event => { event.preventDefault(); if (!busy) onClose() }}
+    onClick={event => { if (event.target === event.currentTarget && !busy) { const r=event.currentTarget.getBoundingClientRect(); if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)onClose() } }}>
+    <header className={styles.modalHeader}><h2 id="screening-modal-title">{title}</h2><button type="button" aria-label="Close screening editor" disabled={busy} onClick={onClose}>×</button></header>
+    <div className={styles.modalBody}>{children}</div>
+    <footer className={styles.modalFooter}><button className={styles.primary} type="button" disabled={busy} onClick={onClose}>Done</button></footer>
+  </dialog>
+}
+
+function ScreeningForm({ onAdd, busy, onBusyChange }) {
   const submissionId = useRef(null)
   const [trailerUrl, setTrailerUrl] = useState('')
   const [cover, setCover] = useState('')
   const [uploading, setUploading] = useState(false)
+
+  useEffect(() => { onBusyChange?.(uploading) }, [uploading, onBusyChange])
 
   async function submit(event) {
     event.preventDefault()
@@ -96,7 +119,6 @@ function ScreeningForm({ onAdd, busy }) {
 
   return (
     <form className={`${styles.card} ${styles.form}`} onSubmit={submit}>
-      <h2>Add screening event</h2>
       <label>Title<input name="title" required maxLength={200} /></label>
       <label>Screening date and time (your local time)<input name="starts_at" type="datetime-local" required /></label>
       <label>Description<textarea name="description" rows={3} maxLength={5000} /></label>
@@ -108,10 +130,11 @@ function ScreeningForm({ onAdd, busy }) {
   )
 }
 
-function ScreeningMediaEditor({ screening, busy, onSave }) {
+function ScreeningMediaEditor({ screening, busy, onSave, onBusyChange }) {
   const [cover, setCover] = useState(screening.event.cover_image_url || '')
   const [trailer, setTrailer] = useState(screening.trailer_url || '')
   const [uploading, setUploading] = useState(false)
+  useEffect(() => { onBusyChange?.(uploading) }, [uploading, onBusyChange])
   return <div className={styles.form}>
     <FilmClubMediaFields cover={cover} trailer={trailer} onCover={setCover} onTrailer={setTrailer} disabled={busy} onUploading={setUploading} />
     <div className={styles.mediaActions}>
@@ -131,6 +154,11 @@ export default function FilmClubAdmin() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [adding, setAdding] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [editorBusy, setEditorBusy] = useState(false)
+  const [mediaBusy, setMediaBusy] = useState(false)
+  const editing = screenings.find(item => item.event_id === editingId)
+  const modalBusy = busy || editorBusy || mediaBusy
   const [revision, setRevision] = useState(0)
   const screening = screenings.find(item => item.event_id === selectedId) || screenings[0]
 
@@ -177,7 +205,7 @@ export default function FilmClubAdmin() {
     <div className={styles.section}>
       <header className={styles.heading}>
         <div><h1>Film Club</h1><p>Screenings, ticket reports &amp; discussion moderation</p></div>
-        {tab === 'Screenings' && <button className={styles.primary} onClick={() => setAdding(value => !value)}>{adding ? 'Cancel' : '+ Add screening event'}</button>}
+        {tab === 'Screenings' && <button className={styles.primary} onClick={() => { setError(''); setNotice(''); setAdding(true) }}>+ Add screening event</button>}
       </header>
 
       <nav className={styles.tabs} aria-label="Film Club sections">
@@ -190,8 +218,8 @@ export default function FilmClubAdmin() {
       </nav>
 
       {loading && <p role="status">Loading screenings…</p>}
-      {error && <p role="alert" className={styles.error}>{error}</p>}
-      {notice && <p role="status">{notice}</p>}
+      {!adding && !editing && error && <p role="alert" className={styles.error}>{error}</p>}
+      {!adding && !editing && notice && <p role="status">{notice}</p>}
       {!loading && tab !== 'Screenings' && screening && (
         <label className={styles.selector}>Screening
           <select value={screening.event_id} onChange={event => {
@@ -209,23 +237,31 @@ export default function FilmClubAdmin() {
       {!loading && tab === 'Tickets' && screening && <FilmTicketManagement key={screening.event_id} screening={screening} />}
       {tab === 'Screenings' && (
         <>
-          {adding && <ScreeningForm busy={busy} onAdd={body => save('POST', body, result => {
-            setAdding(false)
-            setSelectedId(result.eventId)
-            return 'Screening saved as a draft in Events.'
-          })} />}
+          {adding && <ScreeningModal title="Add screening event" busy={modalBusy} onClose={() => setAdding(false)}>
+            {error && <p role="alert" className={styles.error}>{error}</p>}
+            <ScreeningForm busy={busy} onBusyChange={setEditorBusy} onAdd={body => save('POST', body, result => {
+              setAdding(false)
+              setSelectedId(result.eventId)
+              return 'Screening saved as a draft in Events.'
+            })} />
+          </ScreeningModal>}
           {screenings.map(item => (
             <section className={styles.card} key={item.event_id}>
               <div className={styles.heading}>
                 <div><h2>{item.event.title}</h2><p>{formatDate(item.event.starts_at)}</p></div>
-                <span className={styles.badge}>{item.event.status}</span>
+                <div className={styles.mediaActions}><span className={styles.badge}>{item.event.status}</span><button type="button" className={styles.primary} onClick={() => { setError(''); setNotice(''); setEditingId(item.event_id) }}>Edit</button></div>
               </div>
-              {item.event.description && <p>{item.event.description}</p>}
-              <FilmTicketSettings screening={item} onChanged={async () => setScreenings((await filmClubRequest(api)).screenings)} />
-              <ScreeningMediaEditor key={item.event_id} screening={item} busy={busy}
-                onSave={body => save('PATCH', { ...body, eventId: item.event_id }, () => 'Screening media saved.')} />
             </section>
           ))}
+          {editing && <ScreeningModal title="Edit screening" busy={modalBusy} onClose={() => setEditingId(null)}>
+            {error && <p role="alert" className={styles.error}>{error}</p>}
+            {notice && <p role="status">{notice}</p>}
+            <fieldset className={styles.modalFields} disabled={modalBusy}>
+              <FilmTicketSettings screening={editing} onBusyChange={setEditorBusy} onChanged={async () => setScreenings((await filmClubRequest(api)).screenings)} />
+              <ScreeningMediaEditor key={editing.event_id} screening={editing} busy={busy} onBusyChange={setMediaBusy}
+                onSave={body => save('PATCH', { ...body, eventId: editing.event_id }, () => 'Screening media saved.')} />
+            </fieldset>
+          </ScreeningModal>}
           {!screenings.length && !loading && !adding && <p>No screenings yet.</p>}
         </>
       )}

@@ -108,3 +108,13 @@
 .ticketTable { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; text-align: left; }
 .ticketTable th, .ticketTable td { padding: 10px; border-bottom: 1px solid var(--film-card-border); vertical-align: top; }
 .ticketTable th { background: var(--film-tint); }
+
+.modal { width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 64px); padding: 0; border: 0; border-radius: 14px; background: #fff; color: #0a0a0a; font: inherit; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+.modal::backdrop { background: rgba(0,0,0,.4); }
+.modalHeader { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px; background: #fff; border-bottom: 1px solid var(--film-card-border); padding: 22px 26px; }
+.modalHeader button { border: none; background: none; font: inherit; font-size: 26px; cursor: pointer; }
+.modalBody { padding: 22px 26px; }
+.modalBody > form { border: 0; padding: 0; margin: 0; }
+.modalFooter { display: flex; justify-content: flex-end; border-top: 1px solid var(--film-card-border); padding: 16px 26px; background: #fff; }
+.modalFields { border: 0; padding: 0; margin: 0; min-width: 0; }
+@media (max-width: 600px) { .modal { max-height: calc(100dvh - 24px); } .modalHeader, .modalBody, .modalFooter { padding: 16px; } }

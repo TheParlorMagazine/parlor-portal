@@ -6,9 +6,10 @@ import styles from './FilmClubAdmin.module.css'
 const api='/api/admin/film-club'
 const numberFields=[['ticket_price_cents','Public ticket price'],['member_discount_percent','Member discount (%)'],['member_price_override_cents','Member price override (optional)'],['member_ticket_limit','Maximum member tickets (optional)'],['acquisition_cost_cents','External ticket acquisition cost (optional)'],['host_share_percent','Estimated provider host share (%)'],['license_price_cents','Private license cost'],['license_threshold','Operational review threshold']]
 const details=[['filmmaker','Filmmaker'],['synopsis','Synopsis'],['language','Language'],['subtitles','Subtitles'],['qa','Filmmaker Q&A details'],['authorization_note','Provider authorization evidence / arrangement'],['refund_policy','Cancellation and refund policy']]
-export function FilmTicketSettings({screening,onChanged}) {
+export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
  const [s,setS]=useState(screening),[busy,setBusy]=useState(false),[message,setMessage]=useState('')
  useEffect(()=>setS(screening),[screening])
+ useEffect(()=>{onBusyChange?.(busy)},[busy,onBusyChange])
  const config=s.ticket_settings || {}
  const dirty=JSON.stringify(s)!==JSON.stringify(screening)
  const set=(key,value)=>setS(old=>({...old,[key]:value}))
