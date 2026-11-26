@@ -14,7 +14,7 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
   async function mount(view){
    await p.evaluate(view=>{
     window.view=view;window.uploads=[];window.calls=[];window.rejectCreateOnce=true
-    window.records=[{event_id:'11111111-1111-4111-8111-111111111111',trailer_url:null,event:{id:'11111111-1111-4111-8111-111111111111',title:'Existing screening',status:'published',starts_at:'2099-12-12T19:00:00Z',cover_image_url:null}}]
+    window.records=[{event_id:'11111111-1111-4111-8111-111111111111',forum_id:'forum-existing',discussion_active:true,commenting_open:true,trailer_url:null,event:{id:'11111111-1111-4111-8111-111111111111',title:'Existing screening',status:'published',starts_at:'2099-12-12T19:00:00Z',cover_image_url:null}}]
     window.filmRequest=async(url,method='GET',body)=>{
      if(method==='GET'&&url.includes('overview=true'))return {dashboard:{byCurrency:[],rates:[],rows:[],tickets:0,screenings:0,pendingScreenings:0,unreportedTicketCounts:0}}
      if(method==='GET'&&url.includes('/tickets'))return {tickets:[],audit:[]}
@@ -34,7 +34,13 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
    await p.setContent(`<style>${fs.readFileSync(path.join(dir,'ui.css'),'utf8')}</style><div id="root"></div>`)
    await p.addScriptTag({path:out})
   }
-  await mount('admin');await p.getByRole('button',{name:'Screenings',exact:true}).click()
+  await mount('admin');await p.getByRole('button',{name:'Forums',exact:true}).click()
+  const forumStrip=p.locator('summary').filter({hasText:'Existing screening — Discussion'});await forumStrip.waitFor();assert.equal(await forumStrip.evaluate(e=>e.parentElement.open),false);assert.equal(await p.getByRole('heading',{name:'Discussion settings'}).count(),0)
+  await p.getByRole('searchbox',{name:'Search screening forums'}).fill('missing');await p.getByText('No forums match your search.',{exact:true}).waitFor();await p.getByRole('searchbox',{name:'Search screening forums'}).fill('Existing')
+  await forumStrip.click();await p.getByRole('heading',{name:'Discussion settings'}).waitFor();await p.getByRole('button',{name:'Close commenting',exact:true}).click();assert.equal((await p.evaluate(()=>window.calls.at(-1))).body.eventId,'11111111-1111-4111-8111-111111111111')
+  await p.getByLabel('Parlor account email',{exact:true}).fill('filmmaker@example.invalid');await p.getByLabel('Access expires (your local time)',{exact:true}).fill('2099-12-13T19:00');await p.getByRole('button',{name:'Invite co-moderator',exact:true}).click();assert.equal((await p.evaluate(()=>window.calls.at(-1))).body.action,'invite');assert.equal((await p.evaluate(()=>window.calls.at(-1))).body.eventId,'11111111-1111-4111-8111-111111111111')
+  await forumStrip.click();assert.equal(await p.getByRole('heading',{name:'Discussion settings'}).count(),0)
+  await p.getByRole('button',{name:'Screenings',exact:true}).click()
   await p.getByRole('heading',{name:'Existing screening'}).waitFor()
   assert.equal(await p.getByText('Could not load ticket revenue.',{exact:true}).count(),0)
   assert.deepEqual(errors,[])

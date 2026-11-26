@@ -151,6 +151,8 @@ function ScreeningMediaEditor({ screening, busy, onSave, onBusyChange }) {
 
 export default function FilmClubAdmin() {
   const [tab, setTab] = useState('Overview')
+  const [forumSearch, setForumSearch] = useState('')
+  const [openForum, setOpenForum] = useState(null)
   const [screenings, setScreenings] = useState([])
   const [selectedId, setSelectedId] = useState('')
   const [loading, setLoading] = useState(true)
@@ -198,11 +200,11 @@ export default function FilmClubAdmin() {
     }
   }
 
-  function invite(event) {
+  function invite(event, eventId) {
     event.preventDefault()
     const { email, expiry } = Object.fromEntries(new FormData(event.currentTarget))
     save('PATCH', {
-      action: 'invite', eventId: screening.event_id, email, expiresAt: new Date(expiry).toISOString(),
+      action: 'invite', eventId, email, expiresAt: new Date(expiry).toISOString(),
     }, result => result.notified ? 'Filmmaker access granted and in-app invitation sent.' : `Access granted. Share this moderation link: ${result.path}`)
   }
 
@@ -225,7 +227,7 @@ export default function FilmClubAdmin() {
       {loading && <p role="status">Loading screenings…</p>}
       {!adding && !editing && error && <p role="alert" className={styles.error}>{error}</p>}
       {!adding && !editing && notice && <p role="status">{notice}</p>}
-      {!loading && tab !== 'Screenings' && tab !== 'Overview' && screening && (
+      {!loading && tab !== 'Screenings' && tab !== 'Overview' && tab !== 'Forums' && screening && (
         <label className={styles.selector}>Screening
           <select value={screening.event_id} onChange={event => {
             setSelectedId(event.target.value)
@@ -273,8 +275,12 @@ export default function FilmClubAdmin() {
           onSave={(body, success) => save('PATCH', { ...body, eventId: screening.event_id }, success)} />
       )}
       {!loading && tab === 'Forums' && (
-        screening?.forum_id ? (
-          <>
+        <section className={styles.forumList}>
+          <div className={styles.forumToolbar}><h2>Screening forums</h2><input type="search" aria-label="Search screening forums" placeholder="Search forums…" value={forumSearch} onChange={event=>setForumSearch(event.target.value)}/></div>
+          {screenings.filter(item=>item.forum_id && `${item.event.title} Discussion`.toLowerCase().includes(forumSearch.trim().toLowerCase())).map(screening=>(
+          <details key={screening.forum_id} className={styles.forumStrip} open={openForum===screening.forum_id} onToggle={event=>{const expanded=event.currentTarget.open;setOpenForum(current=>expanded?screening.forum_id:current===screening.forum_id?null:current)}}>
+            <summary><span className={styles.forumTitle}><strong>{screening.event.title} — Discussion</strong><span>{screening.event.starts_at?new Date(screening.event.starts_at).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'Date TBA'}</span></span><span className={styles.forumState}>{screening.discussion_archived?'Archived':screening.discussion_active?'Active':'Inactive'} · {screening.commenting_open?'Comments open':'Comments closed'}</span></summary>
+            {openForum===screening.forum_id&&<div className={styles.forumContents}>
             <section className={`${styles.card} ${styles.form}`}>
               <h2>Discussion settings</h2>
               {[
@@ -290,7 +296,7 @@ export default function FilmClubAdmin() {
                 </div>
               ))}
             </section>
-            <form className={`${styles.card} ${styles.form}`} onSubmit={invite}>
+            <form className={`${styles.card} ${styles.form}`} onSubmit={event=>invite(event,screening.event_id)}>
               <h2>Invite a filmmaker</h2>
               <p>Invite an existing Parlor member to co-moderate this discussion until the date you choose.</p>
               <label>Parlor account email<input name="email" type="email" required /></label>
@@ -313,8 +319,10 @@ export default function FilmClubAdmin() {
                 </section>
               )} />
             </div>
-          </>
-        ) : <p>Add a screening with a discussion to start moderating.</p>
+            </div>}
+          </details>))}
+          {!screenings.some(item=>item.forum_id && `${item.event.title} Discussion`.toLowerCase().includes(forumSearch.trim().toLowerCase()))&&<p className={styles.forumEmpty}>{forumSearch?'No forums match your search.':'No screening forums yet.'}</p>}
+        </section>
       )}
     </div>
   )
