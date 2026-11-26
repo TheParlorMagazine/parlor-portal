@@ -47,7 +47,7 @@ async function commerce(db={},stripeMail=async()=>({trackingStatus:'accepted'}))
 test('viewing access requires authorized, fulfilled paid tickets and enforces start/end times',async()=>{
  const m=await commerce(),ticket={payment_status:'paid',fulfillment_status:'access_sent',viewing_url:'https://provider.invalid/private'},s={provider_authorized:true}
  assert.equal(m.ticketAccessAvailable(ticket,s),true)
- for(const [t,c]of [[{...ticket,payment_status:'refunded'},s],[{...ticket,payment_status:'disputed'},s],[{...ticket,fulfillment_status:'awaiting_access'},s],[ticket,{...s,viewing_start:'2099-01-01'}],[ticket,{...s,viewing_end:'2000-01-01'}],[{...ticket,access_expires_at:'2000-01-01'},s]])assert.equal(m.ticketAccessAvailable(t,c),false)
+ for(const [t,c]of [[{...ticket,payment_status:'refunded'},s],[{...ticket,payment_status:'disputed'},s],[{...ticket,fulfillment_status:'awaiting_access'},s],[ticket,{...s,event:{status:'cancelled'}}],[ticket,{...s,viewing_start:'2099-01-01'}],[ticket,{...s,viewing_end:'2000-01-01'}],[{...ticket,access_expires_at:'2000-01-01'},s]])assert.equal(m.ticketAccessAvailable(t,c),false)
 })
 test('product sync recovers existing Stripe price using durable operation metadata',async()=>{
  const calls=[],op={id:'operation',snapshot:{currency:'usd',member:799,title:'Documentary'}}
@@ -103,4 +103,29 @@ test('members cannot request screening refunds through member or admin ticket AP
  assert.equal((await member.POST({json:async()=>({action:'refund',ticketId:'someone-elses-ticket'})})).status,403)
  const admin=await load('app/api/admin/film-club/tickets/route.js',{'stripe':{default:class{}},'../../../../../lib/apiAuth':auth,'../../../../../lib/filmTicketCommerce':{refreshFilmPayment(){},sendFilmEmail(){}},'../../../../../lib/subscriberActions':{refundScreeningOrder(){throw Error('Member must not refund')}}})
  assert.equal((await admin.POST({json:async()=>({action:'refund'})})).status,403)
+})
+
+test('live reminders target the start and flex reminders target viewing expiration; cancelled access cannot be emailed',async()=>{
+ const now=Date.now(),future=hours=>new Date(now+hours*3600000).toISOString(),sent=[]
+ const ticket=(id,format,start,end,status='published')=>({id,event_id:id,member_id:'reader',payment_status:'paid',fulfillment_status:'access_sent',viewing_url:'https://provider.invalid/access',access_version:1,screening:{ticket_settings:{format},viewing_end:end,event:{starts_at:start,status}}})
+ const rows=[ticket('live-soon','live',future(1),future(30)),ticket('live-started','live',future(-1),future(1)),ticket('flex-ending','flex',future(-40),future(1)),ticket('cancelled','live',future(1),future(2),'cancelled')]
+ const db={from(table){let selected;const q={select(){return q},in(){return q},eq(key,value){if(key==='event_id')selected=value;return q},lte(){return q},order(){return q},range:async(start,end)=>({data:rows.slice(start,end+1)}),single:async()=>({data:table==='members'?{email:'reader@example.invalid'}:{...rows.find(t=>t.id===selected)?.screening,event:{title:'Film',status:selected==='cancelled'?'cancelled':'published'}}}),update(){return q},then(resolve){return Promise.resolve({}).then(resolve)}};return q}}
+ const m=await commerce(db,async args=>{sent.push(args.eventId);return{trackingStatus:'accepted'}})
+ const result=await m.deliverFilmTicketReminders(db);assert.equal(result.sent,2);assert.equal(result.failed,0);assert.deepEqual(sent.sort(),['scheduled-reminder-flex-ending-1','scheduled-reminder-live-soon-1'])
+ await assert.rejects(()=>m.sendFilmEmail(db,rows[3],'access','cancelled-access'),/cancelled screening/);assert.equal(sent.length,2)
+})
+
+test('scheduled reminders do not lose new purchasers after the first 1,000 historical tickets',async()=>{
+ const ranges=[],rows=Array.from({length:1001},(_,i)=>({id:'ticket-'+i,member_id:'reader',event_id:'screening',access_version:1,payment_status:'paid',fulfillment_status:'access_sent',viewing_url:'https://provider.invalid/view',screening:{event:{status:'published',starts_at:i===1000?new Date(Date.now()+3600000).toISOString():'2000-01-01'}}}))
+ const db={from(table){const q={select(){return q},eq(){return q},in(){return q},lte(){return q},order(){return q},range:async(start,end)=>{ranges.push([start,end]);return{data:rows.slice(start,end+1)}},single:async()=>({data:table==='members'?{email:'reader@example.invalid'}:{event:{title:'Film',status:'published'}}}),update(){return q},then(resolve){return Promise.resolve({}).then(resolve)}};return q}}
+ const sent=[],m=await commerce(db,async args=>{sent.push(args.eventId);return{trackingStatus:'accepted'}})
+ assert.equal((await m.deliverFilmTicketReminders(db)).sent,1);assert.deepEqual(sent,['scheduled-reminder-ticket-1000-1']);assert.equal(ranges.length,3)
+})
+
+test('member ticket API withholds cancelled screening credentials while retaining the paid receipt',async()=>{
+ const shared=await commerce(),ticket={id:'ticket',member_id:'member',event_id:'screening',payment_status:'paid',fulfillment_status:'access_sent',amount_cents:799,currency:'usd',viewing_url:'https://provider.invalid/private',instructions:'private instructions',order:{order_number:'PARLOR-1'},screening:{event:{title:'Cancelled screening',status:'cancelled'}}}
+ let fields=''
+ const db={from:()=>({select(value){fields=value;return this},eq(){return this},order:async()=>({data:[ticket]})})}
+ const m=await load('app/api/portal/film-club/tickets/route.js',{'../../../../../lib/apiAuth':{requireUser:async()=>({id:'member'}),serviceClient:()=>db},'../../../../../lib/filmTicketCommerce':{ticketAccessAvailable:shared.ticketAccessAvailable}})
+ const response=await m.GET({}),body=await response.json();assert.equal(response.status,200);assert.match(fields,/event:events\(title,status\)/);assert.equal(body.tickets[0].payment_status,'paid');assert.equal(body.tickets[0].fulfillment_status,'cancelled');assert.equal(body.tickets[0].viewing_url,undefined);assert.equal(body.tickets[0].instructions,undefined)
 })
