@@ -410,7 +410,7 @@ export default function SubscribersSection({ supabase }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => { setAddForm({ name: '', email: '', plan: 'free' }); setAddError(''); setAddOpen(true) }} style={{ padding: '9px 18px', background: darkPink, border: 'none', borderRadius: '7px', color: '#fff', fontSize: '13px', cursor: 'pointer', fontFamily: ff, fontWeight: '500' }}>
+          <button onClick={() => { setAddForm({ name: '', email: '', plan: 'free' }); setAddError(''); setAddOpen(true) }} style={{ padding: '9px 18px', background: '#0a0a0a', border: 'none', borderRadius: '7px', color: '#fff', fontSize: '13px', cursor: 'pointer', fontFamily: ff, fontWeight: '500' }}>
             + Add subscriber
           </button>
           <button onClick={exportCSV} style={{ padding: '9px 18px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '7px', color: '#444', fontSize: '13px', cursor: 'pointer', fontFamily: ff }}>
@@ -444,7 +444,7 @@ export default function SubscribersSection({ supabase }) {
               {addError && <div style={{ color: '#c04040', fontSize: '13px', marginBottom: '14px' }}>{addError}</div>}
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                 <button type="button" onClick={() => setAddOpen(false)} style={{ padding: '9px 20px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '7px', color: '#444', fontSize: '13px', cursor: 'pointer', fontFamily: ff }}>Cancel</button>
-                <button type="submit" disabled={addSaving} style={{ padding: '9px 20px', background: darkPink, border: 'none', borderRadius: '7px', color: '#fff', fontSize: '13px', cursor: addSaving ? 'default' : 'pointer', fontFamily: ff, fontWeight: '500', opacity: addSaving ? 0.7 : 1 }}>
+                <button type="submit" disabled={addSaving} style={{ padding: '9px 20px', background: '#0a0a0a', border: 'none', borderRadius: '7px', color: '#fff', fontSize: '13px', cursor: addSaving ? 'default' : 'pointer', fontFamily: ff, fontWeight: '500', opacity: addSaving ? 0.7 : 1 }}>
                   {addSaving ? 'Adding…' : 'Add subscriber'}
                 </button>
               </div>
