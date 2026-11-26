@@ -1,20 +1,22 @@
 'use client'
+import FilmDateTimeField from './FilmDateTimeField'
+import FilmRevenueDashboard from './FilmRevenueDashboard'
+import FilmScreeningSubscribers from './FilmScreeningSubscribers'
 
 import { useEffect, useRef, useState } from 'react'
+import { currencyExponent } from '../../../lib/filmTicketPricing'
+import { FilmTicketSettings, FilmTicketManagement, FilmTicketArchive } from './FilmTicketAdmin'
 import FilmClubMediaFields from './FilmClubMediaFields'
 import FilmClubModeration from '../../_components/FilmClubModeration'
 import { filmClubRequest } from '../../../lib/filmClubRequest'
 import styles from './FilmClubAdmin.module.css'
 
 const api = '/api/admin/film-club'
-const tabs = ['Overview', 'Screenings', 'Forums', 'Emails']
-const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+const tabs = ['Overview', 'Screenings', 'Tickets', 'Forums', 'Emails']
 const formatDate = value => value ? new Date(value).toLocaleString() : 'Date TBA'
 
 function Overview({ screening, onSave, busy }) {
   if (!screening) return <section className={styles.card}><p>Add a screening to see its ticket totals and licensing estimates.</p></section>
-  const netPerTicket = screening.ticket_price_cents * (1 - screening.host_share_percent / 100)
-  const breakEven = netPerTicket > 0 ? Math.ceil(screening.license_price_cents / netPerTicket) : null
 
   function save(event) {
     event.preventDefault()
@@ -24,84 +26,57 @@ function Overview({ screening, onSave, busy }) {
     onSave({
       action: 'tickets', eventId: screening.event_id,
       publicTickets: tickets === '' ? null : Number(tickets),
-      publicGrossCents: gross === '' ? null : Math.round(Number(gross) * 100),
+      publicGrossCents: gross === '' ? null : Math.round(Number(gross) * 10 ** currencyExponent(screening.currency || 'usd')),
     })
   }
 
   return (
     <>
-      <dl className={styles.metrics}>
-        {[
-          ['Member RSVPs', '—'],
-          ['License threshold', screening.license_threshold],
-          ['Public tickets', screening.public_tickets ?? '—'],
-          ['Public gross sales', screening.public_gross_cents === null ? '—' : money.format(screening.public_gross_cents / 100)],
-        ].map(([label, value]) => <div key={label} className={styles.metric}><dt>{label}</dt><dd>{value}</dd></div>)}
-      </dl>
       <section className={styles.card}>
-        <h2>Licensing estimate</h2>
-        <dl className={styles.costs}>
-          <div><dt>Estimated net cost per sponsored ticket</dt><dd>{money.format(netPerTicket / 100)}</dd></div>
-          <div><dt>Private screening license</dt><dd>{money.format(screening.license_price_cents / 100)}</dd></div>
-          <div><dt>Calculated break-even</dt><dd>{breakEven === null ? 'Unavailable' : `${breakEven} sponsored tickets`}</dd></div>
-        </dl>
-        <p>Estimates use a {money.format(screening.ticket_price_cents / 100)} ticket price and a {screening.host_share_percent}% host share. Member RSVP tracking is pending.</p>
-      </section>
-      <section className={styles.card}>
-        <h2>External ticket sales</h2>
-        <p>Enter cumulative totals from your screening provider. Each update replaces the previous totals.</p>
-        {screening.ticket_url && <p><a href={screening.ticket_url} target="_blank" rel="noreferrer">Open ticket provider</a></p>}
-        <form className={styles.form} onSubmit={save}>
+        <details><summary>External ticket sales</summary>
+        <p>Enter cumulative sales made outside The Parlor’s Stripe checkout. Exclude provider tickets bought to fulfill Stripe orders. Your revenue-share percentage is applied automatically. Each update replaces the previous totals.</p>
+        {screening.ticket_url && <p><a className={styles.providerLink} href={screening.ticket_url} target="_blank" rel="noreferrer">Open ticket provider<svg aria-hidden="true" viewBox="0 0 16 16"><path d="M9 2h5v5M14 2 7 9M6 3H2v11h11V9"/></svg></a></p>}
+        <form className={`${styles.form} ${styles.externalSalesForm}`} onSubmit={save}>
+          <div className={styles.externalSalesNumbers}>
           <label>Tickets sold<input name="tickets" type="number" min="0" max="2147483647" step="1" defaultValue={screening.public_tickets ?? ''} /></label>
-          <label>Gross sales (USD)<input name="gross" type="number" min="0" max="21474836.47" step="0.01" defaultValue={screening.public_gross_cents === null ? '' : screening.public_gross_cents / 100} /></label>
+          <label>Provider sales total ({(screening.currency || 'usd').toUpperCase()})<input name="gross" type="number" min="0" max="21474836.47" step={currencyExponent(screening.currency || 'usd')>0?'0.01':'1'} defaultValue={screening.public_gross_cents==null?'':screening.public_gross_cents/10**currencyExponent(screening.currency || 'usd')} /></label>
+          </div>
           <button disabled={busy}>Save totals</button>
-        </form>
+        </form></details>
         {screening.ticket_reported_at && <p>Last updated {formatDate(screening.ticket_reported_at)}</p>}
       </section>
     </>
   )
 }
 
-function ScreeningEmails({ screening, busy, onSave }) {
-  if (!screening) return <section className={styles.card}><p>Add a screening first.</p></section>
-
-  function saveBuyers(event) {
-    event.preventDefault()
-    const fields = new FormData(event.currentTarget)
-    const emails = fields.get('buyers').split(/[\s,;]+/).filter(Boolean)
-    onSave({ action: 'ticket_buyers', emails }, result => `Saved ${result.count} confirmed ticket buyer emails.`)
-  }
-
-  return (
-    <>
-      <section className={`${styles.card} ${styles.form}`}>
-        <h2>After-screening discussion email</h2>
-        <p>Invites confirmed paid RSVPs and ticket buyers with matching Parlor accounts to the screening forum. Anyone in both groups gets one invitation.</p>
-        <p>{screening.event.ends_at ? `Screening ends ${formatDate(screening.event.ends_at)}.` : 'Set the viewing window end time in Community → Events.'}</p>
-        <button type="button" disabled={busy} onClick={() => onSave({
-          action: 'discussion_email', enabled: !screening.discussion_email_enabled,
-        }, () => screening.discussion_email_enabled ? 'Discussion email paused.' : 'Discussion email enabled.')}>
-          {screening.discussion_email_enabled ? 'Pause discussion email' : 'Enable discussion email'}
-        </button>
-        <p>Invitations are sent after the end time while the discussion is open. Enabling for a past screening makes it eligible on the next run.</p>
-      </section>
-      <form className={`${styles.card} ${styles.form}`} onSubmit={saveBuyers}>
-        <h2>Confirmed Kinema ticket buyers</h2>
-        <p>Paste confirmed Kinema buyer emails here, including buyers without Parlor accounts. Saving replaces this screening’s list. The pre-screening reminder uses this list and confirmed RSVPs.</p>
-        <label>Ticket buyer emails
-          <textarea name="buyers" rows={8} defaultValue={(screening.buyers || []).map(buyer => buyer.email).sort().join('\n')} />
-        </label>
-        <button disabled={busy}>Save ticket buyers</button>
-      </form>
-    </>
-  )
+function ScreeningModal({ title, busy, onClose, children }) {
+  const dialog = useRef(null)
+  useEffect(() => {
+    const previous = document.body.style.overflow
+    const returnFocus = document.activeElement
+    dialog.current.showModal()
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
+      if (returnFocus?.isConnected) returnFocus.focus()
+    }
+  }, [])
+  return <dialog ref={dialog} className={styles.modal} aria-labelledby="screening-modal-title"
+    onCancel={event => { event.preventDefault(); if (!busy) onClose() }}
+    onClick={event => { if (event.target === event.currentTarget && !busy) { const r=event.currentTarget.getBoundingClientRect(); if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)onClose() } }}>
+    <header className={styles.modalHeader}><h2 id="screening-modal-title">{title}</h2><button type="button" aria-label="Close screening editor" disabled={busy} onClick={onClose}>×</button></header>
+    <div className={styles.modalBody}>{children}</div>
+    <footer className={styles.modalFooter}><button className={styles.primary} type="button" disabled={busy} onClick={onClose}>Done</button></footer>
+  </dialog>
 }
 
-function ScreeningForm({ onAdd, busy }) {
+function ScreeningForm({ onAdd, busy, onBusyChange }) {
   const submissionId = useRef(null)
   const [trailerUrl, setTrailerUrl] = useState('')
   const [cover, setCover] = useState('')
   const [uploading, setUploading] = useState(false)
+
+  useEffect(() => { onBusyChange?.(uploading) }, [uploading, onBusyChange])
 
   async function submit(event) {
     event.preventDefault()
@@ -114,9 +89,8 @@ function ScreeningForm({ onAdd, busy }) {
 
   return (
     <form className={`${styles.card} ${styles.form}`} onSubmit={submit}>
-      <h2>Add screening event</h2>
       <label>Title<input name="title" required maxLength={200} /></label>
-      <label>Screening date and time (your local time)<input name="starts_at" type="datetime-local" required /></label>
+      <FilmDateTimeField label="Screening date and time (your local time)" name="starts_at" required />
       <label>Description<textarea name="description" rows={3} maxLength={5000} /></label>
       <label>External tickets URL<input name="ticket_url" type="url" placeholder="https://" /></label>
       <FilmClubMediaFields cover={cover} trailer={trailerUrl} onCover={setCover} onTrailer={setTrailerUrl} disabled={busy} onUploading={setUploading} />
@@ -126,10 +100,11 @@ function ScreeningForm({ onAdd, busy }) {
   )
 }
 
-function ScreeningMediaEditor({ screening, busy, onSave }) {
+function ScreeningMediaEditor({ screening, busy, onSave, onBusyChange }) {
   const [cover, setCover] = useState(screening.event.cover_image_url || '')
   const [trailer, setTrailer] = useState(screening.trailer_url || '')
   const [uploading, setUploading] = useState(false)
+  useEffect(() => { onBusyChange?.(uploading) }, [uploading, onBusyChange])
   return <div className={styles.form}>
     <FilmClubMediaFields cover={cover} trailer={trailer} onCover={setCover} onTrailer={setTrailer} disabled={busy} onUploading={setUploading} />
     <div className={styles.mediaActions}>
@@ -142,6 +117,8 @@ function ScreeningMediaEditor({ screening, busy, onSave }) {
 
 export default function FilmClubAdmin() {
   const [tab, setTab] = useState('Overview')
+  const [forumSearch, setForumSearch] = useState('')
+  const [openForum, setOpenForum] = useState(null)
   const [screenings, setScreenings] = useState([])
   const [selectedId, setSelectedId] = useState('')
   const [loading, setLoading] = useState(true)
@@ -149,6 +126,11 @@ export default function FilmClubAdmin() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [adding, setAdding] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [editorBusy, setEditorBusy] = useState(false)
+  const [mediaBusy, setMediaBusy] = useState(false)
+  const editing = screenings.find(item => item.event_id === editingId)
+  const modalBusy = busy || editorBusy || mediaBusy
   const [revision, setRevision] = useState(0)
   const screening = screenings.find(item => item.event_id === selectedId) || screenings[0]
 
@@ -175,6 +157,7 @@ export default function FilmClubAdmin() {
         setRevision(value => value + 1)
       } else {
         setScreenings((await filmClubRequest(api)).screenings)
+        setRevision(value=>value+1)
       }
     } catch (err) {
       setError(err.message)
@@ -183,11 +166,11 @@ export default function FilmClubAdmin() {
     }
   }
 
-  function invite(event) {
+  function invite(event, eventId) {
     event.preventDefault()
     const { email, expiry } = Object.fromEntries(new FormData(event.currentTarget))
     save('PATCH', {
-      action: 'invite', eventId: screening.event_id, email, expiresAt: new Date(expiry).toISOString(),
+      action: 'invite', eventId, email, expiresAt: new Date(expiry).toISOString(),
     }, result => result.notified ? 'Filmmaker access granted and in-app invitation sent.' : `Access granted. Share this moderation link: ${result.path}`)
   }
 
@@ -195,7 +178,7 @@ export default function FilmClubAdmin() {
     <div className={styles.section}>
       <header className={styles.heading}>
         <div><h1>Film Club</h1><p>Screenings, ticket reports &amp; discussion moderation</p></div>
-        {tab === 'Screenings' && <button className={styles.primary} onClick={() => setAdding(value => !value)}>{adding ? 'Cancel' : '+ Add screening event'}</button>}
+        {tab === 'Screenings' && <button className={styles.primary} onClick={() => { setError(''); setNotice(''); setAdding(true) }}>+ Add screening event</button>}
       </header>
 
       <nav className={styles.tabs} aria-label="Film Club sections">
@@ -208,9 +191,9 @@ export default function FilmClubAdmin() {
       </nav>
 
       {loading && <p role="status">Loading screenings…</p>}
-      {error && <p role="alert" className={styles.error}>{error}</p>}
-      {notice && <p role="status">{notice}</p>}
-      {!loading && tab !== 'Screenings' && screening && (
+      {!adding && !editing && error && <p role="alert" className={styles.error}>{error}</p>}
+      {!adding && !editing && notice && <p role="status">{notice}</p>}
+      {!loading && tab !== 'Screenings' && tab !== 'Overview' && tab !== 'Forums' && screening && (
         <label className={styles.selector}>Screening
           <select value={screening.event_id} onChange={event => {
             setSelectedId(event.target.value)
@@ -220,57 +203,68 @@ export default function FilmClubAdmin() {
           </select>
         </label>
       )}
-      {!loading && tab === 'Overview' && (
-        <Overview key={`${screening?.event_id}:${screening?.ticket_reported_at}`} screening={screening} busy={busy} onSave={body => save('PATCH', body, () => 'Ticket totals saved.')} />
-      )}
+      {!loading && tab === 'Overview' && <FilmRevenueDashboard revision={revision} renderScreening={item=><>
+        <Overview key={`external-sales:${item.event_id}:${item.ticket_reported_at}`} screening={item} busy={busy} onSave={body=>save('PATCH',body,()=> 'Ticket totals saved.')} />
+        <FilmTicketArchive key={`archive:${item.event_id}`} screening={item} onChanged={async()=>{setScreenings((await filmClubRequest(api)).screenings);setRevision(value=>value+1)}}/>
+      </>} />}
+      {!loading && tab === 'Tickets' && screening && <FilmTicketManagement key={`tickets:${screening.event_id}`} screening={screening} />}
       {tab === 'Screenings' && (
         <>
-          {adding && <ScreeningForm busy={busy} onAdd={body => save('POST', body, result => {
-            setAdding(false)
-            setSelectedId(result.eventId)
-            return 'Screening saved as a draft in Events.'
-          })} />}
+          {adding && <ScreeningModal title="Add screening event" busy={modalBusy} onClose={() => setAdding(false)}>
+            {error && <p role="alert" className={styles.error}>{error}</p>}
+            <ScreeningForm busy={busy} onBusyChange={setEditorBusy} onAdd={body => save('POST', body, result => {
+              setAdding(false)
+              setSelectedId(result.eventId)
+              return 'Screening saved as a draft in Events.'
+            })} />
+          </ScreeningModal>}
           {screenings.map(item => (
-            <section className={styles.card} key={item.event_id}>
-              <div className={styles.heading}>
-                <div><h2>{item.event.title}</h2><p>{formatDate(item.event.starts_at)}</p></div>
-                <span className={styles.badge}>{item.event.status}</span>
-              </div>
-              {item.event.description && <p>{item.event.description}</p>}
-              <ScreeningMediaEditor key={item.event_id} screening={item} busy={busy}
-                onSave={body => save('PATCH', { ...body, eventId: item.event_id }, () => 'Screening media saved.')} />
+            <section className={`${styles.card} ${styles.screeningRow}`} key={item.event_id}>
+              <div className={styles.screeningCopy}><h2>{item.event.title}</h2><p>{item.event.starts_at ? new Date(item.event.starts_at).toLocaleString(undefined, {dateStyle:'medium',timeStyle:'short'}) : 'Date TBA'}</p></div>
+              <div className={styles.screeningActions}><span className={styles.badge}>{item.event.status}</span><button type="button" className={styles.primary} onClick={() => { setError(''); setNotice(''); setEditingId(item.event_id) }}>Edit</button></div>
             </section>
           ))}
+          {editing && <ScreeningModal title="Edit screening" busy={modalBusy} onClose={() => setEditingId(null)}>
+            {error && <p role="alert" className={styles.error}>{error}</p>}
+            {notice && <p role="status">{notice}</p>}
+            <fieldset className={styles.modalFields} disabled={modalBusy}>
+              <FilmTicketSettings screening={editing} onBusyChange={setEditorBusy} onChanged={async () => setScreenings((await filmClubRequest(api)).screenings)} />
+              <ScreeningMediaEditor key={editing.event_id} screening={editing} busy={busy} onBusyChange={setMediaBusy}
+                onSave={body => save('PATCH', { ...body, eventId: editing.event_id }, () => 'Screening media saved.')} />
+            </fieldset>
+          </ScreeningModal>}
           {!screenings.length && !loading && !adding && <p>No screenings yet.</p>}
         </>
       )}
       {!loading && tab === 'Emails' && (
-        <ScreeningEmails key={screening?.event_id} screening={screening} busy={busy}
-          onSave={(body, success) => save('PATCH', { ...body, eventId: screening.event_id }, success)} />
+        screening ? <FilmScreeningSubscribers Dialog={ScreeningModal} key={screening.event_id} screening={screening} busy={busy}
+          onSave={(body, success) => save('PATCH', { ...body, eventId: screening.event_id }, success)} /> : <p>Add a screening first.</p>
       )}
       {!loading && tab === 'Forums' && (
-        screening?.forum_id ? (
-          <>
+        <section className={styles.forumList}>
+          <div className={styles.forumToolbar}><h2>Screening forums</h2><input type="search" aria-label="Search screening forums" placeholder="Search forums…" value={forumSearch} onChange={event=>setForumSearch(event.target.value)}/></div>
+          {screenings.filter(item=>item.forum_id && `${item.event.title} Discussion`.toLowerCase().includes(forumSearch.trim().toLowerCase())).map(screening=>(
+          <details key={screening.forum_id} className={styles.forumStrip} open={openForum===screening.forum_id} onToggle={event=>{const expanded=event.currentTarget.open;setOpenForum(current=>expanded?screening.forum_id:current===screening.forum_id?null:current)}}>
+            <summary><span className={styles.forumTitle}><strong>{screening.event.title} — Discussion</strong><span>{screening.event.starts_at?new Date(screening.event.starts_at).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'Date TBA'}</span></span><span className={styles.forumState}>{screening.discussion_archived||!screening.discussion_active?'Archived':'Visible'} · {screening.commenting_open?'Comments open':'Comments closed'}</span></summary>
+            {openForum===screening.forum_id&&<div className={styles.forumContents}>
             <section className={`${styles.card} ${styles.form}`}>
               <h2>Discussion settings</h2>
-              {[
-                ['discussion_active', 'Visibility in active lists', 'Active', 'Inactive', 'Mark inactive', 'Mark active'],
-                ['commenting_open', 'Commenting', 'Open', 'Closed', 'Close commenting', 'Open commenting'],
-                ['discussion_archived', 'Archive', 'Archived', 'Available to members after publication', 'Unarchive discussion', 'Archive discussion'],
-              ].map(([field, label, on, off, turnOff, turnOn]) => (
-                <div key={field} className={styles.heading}>
-                  <p><strong>{label}</strong> · {screening[field] ? on : off}</p>
-                  <button disabled={busy} onClick={() => save('PATCH', {
-                    action: 'discussion', eventId: screening.event_id, field, value: !screening[field],
-                  }, () => 'Discussion setting saved.')}>{screening[field] ? turnOff : turnOn}</button>
-                </div>
-              ))}
+              <label className={`${styles.toggle} ${styles.discussionToggle}`}>
+                <span className={styles.discussionLabel}>Forum visibility</span>
+                <input type="checkbox" role="switch" aria-label="Forum visibility" checked={!!screening.discussion_active && !screening.discussion_archived} disabled={busy} onChange={event=>save('PATCH', {action:'forum_visibility',eventId:screening.event_id,visible:event.target.checked},()=> 'Forum visibility saved.')} />
+                <span className={styles.discussionValue}>{screening.discussion_active && !screening.discussion_archived?'Visible':'Archived'}</span>
+              </label>
+              <label className={`${styles.toggle} ${styles.discussionToggle}`}>
+                <span className={styles.discussionLabel}>Commenting</span>
+                <input type="checkbox" role="switch" aria-label="Commenting" checked={!!screening.commenting_open} disabled={busy} onChange={event=>save('PATCH', {action:'discussion',eventId:screening.event_id,field:'commenting_open',value:event.target.checked},()=> 'Discussion setting saved.')} />
+                <span className={styles.discussionValue}>{screening.commenting_open?'Open':'Closed'}</span>
+              </label>
             </section>
-            <form className={`${styles.card} ${styles.form}`} onSubmit={invite}>
+            <form className={`${styles.card} ${styles.form}`} onSubmit={event=>invite(event,screening.event_id)}>
               <h2>Invite a filmmaker</h2>
               <p>Invite an existing Parlor member to co-moderate this discussion until the date you choose.</p>
               <label>Parlor account email<input name="email" type="email" required /></label>
-              <label>Access expires (your local time)<input name="expiry" type="datetime-local" required /></label>
+              <FilmDateTimeField label="Access expires (your local time)" name="expiry" required />
               <button disabled={busy}>Invite co-moderator</button>
             </form>
             <div className={`${styles.card} ${styles.moderation}`}>
@@ -289,8 +283,11 @@ export default function FilmClubAdmin() {
                 </section>
               )} />
             </div>
-          </>
-        ) : <p>Add a screening with a discussion to start moderating.</p>
+              <div className={styles.forumDelete}><button type="button" disabled={busy} onClick={()=>{if(window.confirm(`Permanently delete “${screening.event.title} — Discussion”? This removes its threads, replies, forum memberships and moderator access. The screening, ticket purchases and revenue records are kept. This cannot be undone.`))save('DELETE',{eventId:screening.event_id,forumId:screening.forum_id,confirm:true},()=> 'Forum deleted.')}}>Delete forum</button></div>
+            </div>}
+          </details>))}
+          {!screenings.some(item=>item.forum_id && `${item.event.title} Discussion`.toLowerCase().includes(forumSearch.trim().toLowerCase()))&&<p className={styles.forumEmpty}>{forumSearch?'No forums match your search.':'No screening forums yet.'}</p>}
+        </section>
       )}
     </div>
   )

@@ -2,30 +2,31 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { hasEndedPaidMembership, isPaidPlan } from '../../../lib/plans'
-import { filmClubRequest } from '../../../lib/filmClubRequest'
+import FilmTicketPurchase, { FilmTicketOrders, filmTicketRequest } from '../../_components/FilmTicketPurchase'
 import FilmTrailer, { getTrailerEmbed } from '../../_components/FilmTrailer'
 import FilmClubDiscussions from '../_components/FilmClubDiscussions'
 import { usePortal } from '../_components/PortalShell'
 import styles from './filmClub.module.css'
 
-export default function PublishedFilmClub() {
+export default function PublishedFilmClub({ publicView = false }) {
   const [screenings, setScreenings] = useState(null)
+  const [returned, setReturned] = useState(false)
   const [error, setError] = useState('')
   const member = usePortal()?.member
-  const paid = isPaidPlan(member?.plan) && !hasEndedPaidMembership(member)
+  const [eligible, setEligible] = useState(false)
 
   useEffect(() => {
+    setReturned(new URLSearchParams(window.location.search).get('checkout') === 'returned')
     let current = true
-    filmClubRequest('/api/portal/film-club/screenings').then(result => {
-      if (current) setScreenings(result.screenings)
+    filmTicketRequest('/api/portal/film-club/screenings').then(result => {
+      if (current) { setScreenings(result.screenings); setEligible(result.eligible) }
     }).catch(error => {
       if (current) setError(error.message)
     })
     return () => { current = false }
   }, [])
 
-  const active = (screenings || []).filter(item => Date.parse(item.event.ends_at || item.event.starts_at) > Date.now())
+  const active = (screenings || []).filter(item => Date.parse(item.viewing_end || item.event.ends_at || item.event.starts_at) > Date.now())
     .sort((a, b) => Date.parse(a.event.starts_at) - Date.parse(b.event.starts_at))
 
   return (
@@ -37,11 +38,12 @@ export default function PublishedFilmClub() {
           <p>Documentaries, conversations, and perspectives beyond the credits.</p>
         </div>
       </header>
+      {returned && <p role="status">Your payment is being checked. Your ticket will appear below after payment verification; returning from checkout alone does not confirm payment.</p>}
       {error && <p role="alert">{error}</p>}
       {!screenings && !error && <p role="status">Loading screenings…</p>}
       {screenings && !active.length && <p>No upcoming screenings yet.</p>}
       <div className={styles.recent}>
-        {active.map(({ event_id: id, event, trailer_url: trailer, ticket_url: tickets }) => (
+        {active.map(screening => { const { event_id: id, event, trailer_url: trailer } = screening; return (
           <div className={styles.columns} key={id}>
             <section className={styles.feature}>
               {event.cover_image_url && <img className={styles.screeningCover} src={event.cover_image_url} alt="" loading="lazy" decoding="async" />}
@@ -52,10 +54,15 @@ export default function PublishedFilmClub() {
               </div>
               <div className={styles.cardBody}>
                 {event.starts_at && <p>{new Date(event.starts_at).toLocaleString()}</p>}
-                {event.description && <p>{event.description}</p>}
+                {(screening.synopsis || event.description) && <p>{screening.synopsis || event.description}</p>}
+                {screening.filmmaker && <p>Filmmaker: {screening.filmmaker}</p>}
+                {(screening.runtime || screening.language) && <p>{screening.runtime ? `${screening.runtime} minutes · ` : ''}{screening.language}{screening.subtitles ? ` · Subtitles: ${screening.subtitles}` : ''}</p>}
+                {screening.format && <p>Format: {screening.format === 'flex' ? 'Flex viewing' : 'Live screening'}</p>}
+                {screening.viewing_start && <p>Viewing window: {new Date(screening.viewing_start).toLocaleString()}{screening.viewing_end ? ` – ${new Date(screening.viewing_end).toLocaleString()}` : ''}</p>}
+                {screening.qa && <p>Q&amp;A: {screening.qa}</p>}
                 <div className={styles.actions}>
-                  <Link href={`/portal/events/${id}`}>{paid ? 'Screening details and RSVP' : 'Screening details'}</Link>
-                  {!paid && tickets && <a href={tickets} target="_blank" rel="noreferrer">Get a Kinema ticket</a>}
+                  <Link href={`/portal/events/${id}`}>Screening details</Link>
+                  <FilmTicketPurchase screening={screening} eligible={eligible} />
                 </div>
               </div>
             </section>
@@ -66,11 +73,12 @@ export default function PublishedFilmClub() {
               </div>
             </section>
           </div>
-        ))}
+        )})}
       </div>
+      {member && <FilmTicketOrders />}
       <section className={styles.recent}>
         <h2>Film discussions</h2>
-        <FilmClubDiscussions showEmpty />
+        {publicView ? <p><Link href="/portal/film-club">Sign in to join the discussion</Link>. Discussions are open to free and paid registered members; a ticket is not required.</p> : <FilmClubDiscussions showEmpty />}
       </section>
     </div>
   )

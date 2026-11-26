@@ -3,7 +3,7 @@ async function load(path, mocks) {
   const context = vm.createContext({ console, Date, Intl, process: { env: {} } })
   const module = new vm.SourceTextModule(fs.readFileSync(path, 'utf8'), { context })
   await module.link(name => {
-    const values = mocks[name]; assert.ok(values, `Unexpected dependency ${name}`)
+    const values = name === './filmTicketCommerce' ? { deliverFilmTicketReminders: async () => ({ sent: 0, failed: 0 }) } : mocks[name]; assert.ok(values, `Unexpected dependency ${name}`)
     return new vm.SyntheticModule(Object.keys(values), function () { for (const [key,value] of Object.entries(values)) this.setExport(key,value) }, { context })
   })
   await module.evaluate(); return module.namespace

@@ -1,7 +1,7 @@
 const{test}=require('node:test'),assert=require('node:assert/strict'),fs=require('fs'),path=require('path'),os=require('os')
 const{build}=require('/tmp/parlor-tour-validation/node_modules/esbuild')
 async function endpoint(){const out=path.join(fs.mkdtempSync(path.join(os.tmpdir(),'shop-share-')),'route.cjs');await build({entryPoints:['app/shop/share-image/route.js'],bundle:true,outfile:out,platform:'node',format:'cjs',packages:'external',jsx:'automatic',loader:{'.js':'jsx'},plugins:[{name:'db',setup(b){b.onResolve({filter:/lib\/apiAuth$/},()=>({path:'db',namespace:'mock'}));b.onLoad({filter:/.*/,namespace:'mock'},()=>({contents:'export const serviceClient=()=>global.shopShareDB;'}))}}]});return require(out)}
-function db(data,error){return{from(table){assert.equal(table,'shop_products');return{select(){return this},eq(k,v){assert.equal(k,'active');assert.equal(v,true);return this},order(){return this},then(resolve){resolve({data,error})}}}}}
+function db(data,error){return{from(table){assert.equal(table,'shop_products');return{select(){return this},eq(k,v){assert.ok(['active','public_listing'].includes(k));assert.equal(v,true);return this},order(){return this},then(resolve){resolve({data,error})}}}}}
 test('shop PNG selects six unique active products and prioritizes featured/Bones picks',async()=>{
  const api=await endpoint(),names=['Other item','Marshmallow Hot Chocolate','Jacked O Lantern Coffee','Bones Colombian Coffee','Magazine','Tote','Extra'],images=[]
  global.shopShareDB=db(names.map((name,id)=>({id,name,images:[`https://res.cloudinary.com/test/${id}.png`],featured:id===4})))

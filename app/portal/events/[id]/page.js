@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
+import FilmTicketPurchase from '../../../_components/FilmTicketPurchase'
+
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '../../../../lib/supabase'
-import { hasEndedPaidMembership, isPaidPlan } from '../../../../lib/plans'
-import PortalShell, { usePortal } from '../../_components/PortalShell'
+import PortalShell from '../../_components/PortalShell'
 import { evCss } from '../evCss'
 import { confirmDialog } from '../../../../lib/confirmDialog'
 
@@ -19,14 +20,11 @@ function fmtWhen(iso) {
 
 function Detail() {
   const { id } = useParams()
-  const member = usePortal()?.member
   const supabase = useMemo(() => createClient(), [])
   const [d, setD] = useState({ loading: true, event: null, my_status: null })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [attendees, setAttendees] = useState([])
-  const rsvpDialog = useRef(null)
-  const [rsvpOpen, setRsvpOpen] = useState(false)
 
   const auth = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -39,7 +37,7 @@ function Detail() {
       if (!res.ok) { setD({ loading: false, event: null, my_status: null }); return }
       const j = await res.json()
       setD({ loading: false, ...j })
-      if (j.can_manage) {
+      if (j.can_manage && j.film_club_discussion === undefined) {
         const response = await fetch(`/api/portal/events/${id}/attendees`, { headers: await auth() })
         if (response.ok) setAttendees((await response.json()).attendees || [])
         else setError('Could not load attendees.')
@@ -58,21 +56,7 @@ function Detail() {
       return true
     } catch (error) { setError(error.message); return false } finally { setBusy(false) }
   }
-  function rsvp() {
-    if (d.film_club_discussion === undefined) return action('POST')
-    setError('')
-    rsvpDialog.current.showModal()
-    setRsvpOpen(true)
-  }
-
-  async function submitFilmRsvp(event) {
-    event.preventDefault()
-    const form = event.currentTarget
-    if (await action('POST', Object.fromEntries(new FormData(form)))) {
-      rsvpDialog.current?.close()
-      form.reset()
-    }
-  }
+  function rsvp() { return action('POST') }
   async function cancel() {
     if (await confirmDialog('Cancel your RSVP? Your forum membership will stay unchanged.')) await action('DELETE')
   }
@@ -86,7 +70,7 @@ function Detail() {
   if (!d.event) return <div className="ev-wrap"><style>{evCss}</style><a className="ev-back" href="/portal/events">← Events</a><div className="ev-empty">This event isn’t available.</div></div>
 
   const e = d.event
-  const canRsvp = d.film_club_discussion === undefined || (isPaidPlan(member?.plan) && !hasEndedPaidMembership(member))
+  const canRsvp = d.film_club_discussion === undefined
   const host = d.my_status === 'host'
   const going = d.my_status === 'going' || host
   const waitlisted = d.my_status === 'waitlist'
@@ -103,14 +87,14 @@ function Detail() {
         {e.starts_at && <div className="ev-meta"><div className="k">When</div><div className="v">{fmtWhen(e.starts_at)}</div></div>}
         <div className="ev-meta"><div className="k">Where</div><div className="v">{e.location_type === 'in_person' ? (e.location || 'In person') : (e.location || 'Online')}</div></div>
         {e.host_name && <div className="ev-meta"><div className="k">Host</div><div className="v">{e.host_name}</div></div>}
-        <div className="ev-meta"><div className="k">Going</div><div className="v">{e.going_count}{e.capacity ? ` / ${e.capacity}` : ''}</div></div>
+        {d.film_club_discussion === undefined && <div className="ev-meta"><div className="k">Going</div><div className="v">{e.going_count}{e.capacity ? ` / ${e.capacity}` : ''}</div></div>}
       </div>
 
       {e.description && <div className="ev-desc">{e.description}</div>}
 
       <div className="ev-cta">
         {d.film_club_discussion && <a className="ev-btn ghost" href={`/portal/forums/${e.forum_id}`}>Film Club discussion →</a>}
-        {going ? (
+        {d.film_club_discussion !== undefined ? <FilmTicketPurchase eventId={id} /> : going ? (
           <>
             <span className="ev-btn going">{host ? 'Host/admin access · no RSVP needed' : '✓ You’re going'}</span>
             <a className="ev-btn ghost" href={`/api/portal/events/${id}/ics`}>Add to calendar</a>
@@ -123,30 +107,14 @@ function Detail() {
             <button className="ev-btn ghost" onClick={cancel} disabled={busy}>Leave waitlist</button>
           </>
         ) : !canRsvp ? (
-          <p>Complimentary RSVPs are available to paid members. For tickets, visit Film Club.</p>
+          <p>Purchase screening tickets through Film Club.</p>
         ) : (
           <button className="ev-btn primary" onClick={rsvp} disabled={busy || ended}>{ended ? 'Event ended' : busy ? 'RSVPing…' : 'RSVP'}</button>
         )}
       </div>
 
-      {d.film_club_discussion !== undefined && (
-        <dialog ref={rsvpDialog} className="ev-rsvp-dialog" aria-labelledby="film-rsvp-title"
-          onCancel={event => { if (busy) event.preventDefault() }}
-          onClose={() => { setRsvpOpen(false); setError('') }}>
-          <form onSubmit={submitFilmRsvp}>
-            <h2 id="film-rsvp-title">RSVP for complimentary viewing</h2>
-            <p>Use the email address where you’d like to receive your viewing link.</p>
-            <label>Full name<input name="name" autoComplete="name" maxLength={160} required /></label>
-            <label>Email address<input name="email" type="email" autoComplete="email" maxLength={254} required /></label>
-            <p role="alert">{error}</p>
-            <div className="ev-cta">
-              <button type="submit" className="ev-btn primary" disabled={busy}>{busy ? 'Submitting…' : 'Confirm RSVP'}</button>
-              <button type="button" className="ev-btn ghost" disabled={busy} onClick={() => rsvpDialog.current.close()}>Cancel</button>
-            </div>
-          </form>
-        </dialog>
-      )}
-      {error && !rsvpOpen && <p role="alert" style={{ color: '#a02030' }}>{error}</p>}
+
+      {error && <p role="alert" style={{ color: '#a02030' }}>{error}</p>}
       {waitlisted && <p>Your attendance is not confirmed. We’ll notify you if a place opens.</p>}
       {e.is_public && e.forum_id && !d.can_access_forum && d.film_club_discussion === undefined && <p>Event registration does not join the host’s forum. You can request membership separately from Forums.</p>}
       {d.can_manage && <section style={{ marginTop: 28 }}>

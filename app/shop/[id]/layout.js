@@ -19,7 +19,7 @@ export default async function ProductLayout({ children, params }) {
     try {
       const request = { headers: await headers() }
       const { data, error } = await serviceClient().from('shop_products').select(SHOPPING_PRODUCT_FIELDS)
-        .eq('id', id).eq('active', true).maybeSingle()
+        .eq('id', id).eq('active', true).eq('public_listing', true).maybeSingle()
       if (!error) schema = productStructuredData(data, {
         currency: currencyForRequest(request).toUpperCase(), country: countryFromRequest(request) || 'US',
       })

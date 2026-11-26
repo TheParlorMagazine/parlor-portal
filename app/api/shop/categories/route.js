@@ -4,7 +4,7 @@ import { serviceClient } from '../../../../lib/apiAuth'
 // appears once it has at least one active product.
 export async function GET() {
   const db = serviceClient()
-  const { data: active } = await db.from('shop_products').select('category').eq('active', true)
+  const { data: active } = await db.from('shop_products').select('category').eq('active', true).eq('public_listing', true)
   const used = new Set((active || []).map(r => r.category).filter(Boolean))
 
   // Order by the managed category list when available; otherwise alphabetical.

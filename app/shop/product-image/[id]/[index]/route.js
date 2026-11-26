@@ -14,7 +14,7 @@ export async function GET(_request, { params }) {
   if (!SHOP_PRODUCT_ID.test(id) || !/^\d{1,3}$/.test(index)) return fail()
   try {
     const { data, error } = await serviceClient().from('shop_products').select('id, images')
-      .eq('id', id).eq('active', true).maybeSingle()
+      .eq('id', id).eq('active', true).eq('public_listing', true).maybeSingle()
     if (error) return fail(503)
     if (!data || !Array.isArray(data.images)) return fail()
     const source = printifyImageSource(data.images[Number(index)])

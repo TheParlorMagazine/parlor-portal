@@ -46,6 +46,17 @@ try:
  sql(f"update events set starts_at=now()-interval '4 hours',ends_at=now()-interval '2 hours' where id='{uid(101)}';")
  assert sql('select email from claim_film_club_discussion_emails();')=='alternate@example.invalid'
  assert sql('select count(*) from claim_film_club_discussion_emails();')=='0'
+ # New claim audience includes Parlor purchases and newly registered free contacts.
+ sql("create table film_club_tickets(event_id uuid,member_id uuid,payment_status text);")
+ sql((ROOT/'supabase/migrations/20261126190000_film_club_screening_subscribers.sql').read_text())
+ sql(f"insert into film_club_tickets values('{uid(101)}','{uid(3)}','paid'),('{uid(101)}','{uid(4)}','refunded'),('{uid(101)}','{uid(5)}','partially_refunded');insert into film_club_ticket_buyers values('{uid(101)}','member3@example.invalid');")
+ # A purchaser in the imported contacts and paid-ticket audiences receives one invite.
+ with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+  results=list(pool.map(lambda _:sql('select email from claim_film_club_discussion_emails();'),range(2)))
+ assert sorted(email for result in results for email in result.splitlines() if email)==['member3@example.invalid','member5@example.invalid'],results
+ sql('update film_club_discussion_deliveries set sent_at=now();')
+ assert sql('select count(*) from claim_film_club_discussion_emails();')=='0'
+ denied('set role authenticated; select * from claim_film_club_discussion_emails();')
  # Contact details and service-only RPCs are unavailable to browser database roles.
  for role in ['anon','authenticated']:
   denied(f"set role {role}; select register_film_club_rsvp('{uid(101)}','{uid(2)}','Reader','x@example.invalid');")

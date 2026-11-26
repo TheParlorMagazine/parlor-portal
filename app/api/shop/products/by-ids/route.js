@@ -7,8 +7,8 @@ export async function POST(req) {
   if (!Array.isArray(ids) || !ids.length) return Response.json({ products: [] })
   const db = serviceClient()
   const { data, error } = await db.from('shop_products')
-    .select('id, name, variant, description, images, price, price_eur, price_gbp, fulfillment, variants, printify_variant_id')
-    .in('id', ids)
+    .select('product_type, public_listing, id, name, variant, description, images, price, price_eur, price_gbp, fulfillment, variants, printify_variant_id')
+    .eq('public_listing', true).in('id', ids)
   if (error) return Response.json({ products: [] })
-  return Response.json({ products: data || [] })
+  return Response.json({ products: (data || []).filter(p => p.product_type !== 'film_screening_ticket' || p.public_listing) })
 }

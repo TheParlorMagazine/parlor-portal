@@ -9,7 +9,7 @@ export async function GET(request) {
   const db = serviceClient()
   const { data: orders, error } = await db
     .from('orders')
-    .select('id, order_number, status, carrier, tracking_number, tracking_url, shipping_name, shipping_address, subtotal_cents, shipping_cents, total_cents, currency, placed_at, shipped_at, fulfilled_at')
+    .select('id, order_number, status, carrier, tracking_number, tracking_url, shipping_name, shipping_address, subtotal_cents, shipping_cents, total_cents, currency, metadata, placed_at, shipped_at, fulfilled_at')
     .eq('member_id', user.id)
     .order('placed_at', { ascending: false })
 
@@ -26,6 +26,6 @@ export async function GET(request) {
     for (const it of items || []) (itemsByOrder[it.order_id] ||= []).push(it)
   }
 
-  const out = (orders || []).map(o => ({ ...o, items: itemsByOrder[o.id] || [] }))
+  const out = (orders || []).filter(o => o.metadata?.kind !== 'film_screening_ticket').map(({ metadata, ...o }) => ({ ...o, items: itemsByOrder[o.id] || [] }))
   return Response.json({ orders: out }, { headers: { 'Cache-Control': 'private, no-store' } })
 }

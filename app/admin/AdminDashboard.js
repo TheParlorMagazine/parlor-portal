@@ -938,6 +938,7 @@ function MainContent({ section, supabase, setActiveSection, role }) {
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [selectedSection, setSelectedSection] = useState('dashboard')
+  useEffect(() => { if (new URLSearchParams(window.location.search).get('section') === 'orders') setSelectedSection('orders') }, [])
   const pathname = usePathname()
   const activeSection = pathname === '/admin/film-club' ? 'film-club' : selectedSection
   const [role, setRole] = useState(null)
