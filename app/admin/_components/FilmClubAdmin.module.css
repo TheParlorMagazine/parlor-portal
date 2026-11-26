@@ -269,3 +269,7 @@
 @media(max-width:500px) { .uploadDrop { padding: 14px; } .form .uploadChoose { min-height: 40px; } }
 
 .form > .ticketDisclosure { border-bottom: 1px solid #ead4dc; padding-bottom: 14px; }
+
+.form .publishOption { display: flex; align-items: center; gap: 10px; color: #813d52; font-size: 15px; line-height: 1.5; cursor: pointer; }
+.form .publishOption input[type='checkbox'] { flex: 0 0 auto; width: 17px; height: 17px; min-height: 0; padding: 0; margin: 0; accent-color: #813d52; }
+.form .publishOption input:focus-visible { outline: 2px solid #c55b7b; outline-offset: 3px; }

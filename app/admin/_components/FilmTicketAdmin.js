@@ -9,7 +9,8 @@ const api='/api/admin/film-club'
 const filmLanguages=['English','Arabic','Bengali','Chinese','Dutch','French','German','Greek','Hebrew','Hindi','Indonesian','Italian','Japanese','Korean','Persian','Polish','Portuguese','Russian','Spanish','Swahili','Swedish','Tamil','Turkish','Ukrainian','Urdu','Vietnamese','Multiple languages','No dialogue']
 const editorScreening=screening=>({...screening,member_price_override_cents:null,ticket_settings:{...screening.ticket_settings}})
 export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
- const [s,setS]=useState(()=>editorScreening(screening)),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[failed,setFailed]=useState(false),[pending,setPending]=useState('')
+ const [s,setS]=useState(()=>editorScreening(screening)),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[failed,setFailed]=useState(false),[pending,setPending]=useState(''),[publishOnSave,setPublishOnSave]=useState(false)
+ useEffect(()=>{setPublishOnSave(false)},[screening.event_id])
  const editor=useRef(null)
  const pausedEdits=useRef(null)
  useEffect(()=>{setS(pausedEdits.current?{...pausedEdits.current,sales_enabled:screening.sales_enabled}:editorScreening(screening));pausedEdits.current=null},[screening])
@@ -25,7 +26,7 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
   try{
    const result=await filmClubRequest(`${api}/commerce`,'POST',{eventId:s.event_id,action,...(['settings','publish'].includes(action)?{settings:settings()}:{})})
    if(action==='pause'&&dirty)pausedEdits.current={...s,sales_enabled:false}
-   await onChanged();setMessage(result.message || 'Saved.')
+   await onChanged();setPublishOnSave(false);setMessage(result.message || 'Saved.')
   }catch(e){if(e.saved){try{await onChanged()}catch{}}setFailed(true);setMessage(e.message)}finally{setBusy(false);setPending('')}
  }
  const moneyField=(key,label)=>{const scale=key.endsWith('_cents')?10**currencyExponent(s.currency || 'usd'):1;return <label key={key}>{label}<input type="number" min={key==='member_ticket_limit'?1:key==='ticket_price_cents'?1/scale:0} max={key.includes('percent')?100:undefined} step={scale>1||key.includes('percent')?'0.01':'1'} value={s[key]==null?'':s[key]/scale} onChange={e=>set(key,e.target.value===''?null:key.endsWith('_cents')?Math.round(Number(e.target.value)*scale):Number(e.target.value))}/></label>}
@@ -34,7 +35,6 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
   <label>Title<input value={s.event?.title || ''} onChange={e=>set('event',{...s.event,title:e.target.value})}/></label>
   {dateField('starts_at','Starts')}{dateField('ends_at','Ends')}
   <p>Sales close when the event starts. The Stripe ticket product is archived automatically after it ends.</p>
-  <label>Publication<select value={s.event?.status || 'draft'} onChange={e=>set('event',{...s.event,status:e.target.value})}>{['draft','published','cancelled'].map(status=><option key={status}>{status}</option>)}</select></label>
   <label>Public screening / ticket URL<input type="url" value={s.ticket_url || ''} onChange={e=>set('ticket_url',e.target.value)}/></label>
   <label>Filmmaker<input value={config.filmmaker || ''} onChange={e=>detail('filmmaker',e.target.value)}/></label>
   <label>Synopsis<textarea rows={3} value={config.synopsis || ''} onChange={e=>detail('synopsis',e.target.value)}/></label>
@@ -60,9 +60,9 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
    <label>Other expenses<input type="number" min="0" step={currencyExponent(s.currency || 'usd')>0?'0.01':'1'} value={config.other_cost_cents==null?'':config.other_cost_cents/10**currencyExponent(s.currency || 'usd')} onChange={e=>detail('other_cost_cents',e.target.value?Math.round(Number(e.target.value)*10**currencyExponent(s.currency || 'usd')):null)}/></label>
    <p>Processing fees are pulled from Stripe after payment.</p>
   </section></details>
+  {(!screening.sales_enabled||dirty)&&<label className={styles.publishOption}><input type="checkbox" checked={publishOnSave} disabled={busy} onChange={e=>setPublishOnSave(e.target.checked)}/><span>Publish and open ticket sales when saving</span></label>}
   <div className={styles.mediaActions}>
-   <button disabled={busy||!quote} onClick={()=>action('settings')}>{pending==='settings'?'Saving…':'Save changes'}</button>
-   {(!screening.sales_enabled||dirty)&&<button disabled={busy||!quote} onClick={()=>action('publish')}>{pending==='publish'?'Publishing…':'Publish and open ticket sales'}</button>}
+   <button disabled={busy||!quote} onClick={()=>action(publishOnSave&&(!screening.sales_enabled||dirty)?'publish':'settings')}>{pending==='publish'?'Publishing…':pending==='settings'?'Saving…':'Save changes'}</button>
    {screening.sales_enabled&&<button disabled={busy} onClick={()=>action('pause')}>{pending==='pause'?'Pausing…':'Pause sales'}</button>}
   </div>
   <p>Ticket sales: {screening.sales_enabled?'Open':screening.stripe_archived?'Archived':screening.event?.status==='draft'?'Draft — not open':'Paused'}.</p>
