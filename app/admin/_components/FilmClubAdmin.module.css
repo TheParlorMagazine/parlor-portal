@@ -339,3 +339,7 @@
 .form .discussionToggle input:disabled { cursor: wait; opacity: .5; }
 .form .discussionToggle input { border: 1px solid transparent; }
 @media(max-width: 420px) { .form .discussionToggle { gap: 9px; } .discussionValue { width: 70px; font-size: 12px; } }
+
+.forumDelete { border-top: 1px solid #ead4dc; padding-top: 18px; }
+.forumDelete button { font: inherit; font-size: 13px; padding: 8px 12px; border: 1px solid #e8bac4; border-radius: 8px; background: white; color: #a3324a; cursor: pointer; }
+.forumDelete button:disabled { opacity: .5; cursor: wait; }

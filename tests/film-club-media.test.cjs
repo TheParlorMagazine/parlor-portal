@@ -54,3 +54,22 @@ test('existing screening cover and trailer save/clear independently and reject n
  assert.equal((await route.PATCH(request({eventId:id,action:'cover',cover_image_url:'https://media.invalid/a.png'}))).status,404)
  assert.equal(f.writes.length,0)
 })
+
+test('forum visibility changes listing and archive flags together without changing commenting',async()=>{
+ const {route}=await modules();global.filmUser={id:'creator'};global.filmRole='editor'
+ const writes=[];global.filmDB={from(table){const q={update(value){writes.push({table,value});return q},eq(){return q},not(){return q},select(){return q},maybeSingle:async()=>({data:{event_id:id}})};return q}}
+ for(const visible of [false,true]){assert.equal((await route.PATCH(request({eventId:id,action:'forum_visibility',visible}))).status,200);assert.deepEqual(writes.at(-1).value,{discussion_active:visible,discussion_archived:!visible})}
+ assert.equal((await route.PATCH(request({eventId:id,action:'forum_visibility',visible:'yes'}))).status,400)
+})
+test('forum deletion requires an admin, confirmation and matching screening link; deletes only the forum',async()=>{
+ const {route}=await modules(),forum='22222222-2222-4222-8222-222222222222',deleted=[]
+ global.filmUser={id:'creator'};const body={eventId:id,forumId:forum,confirm:true}
+ global.filmRole='editor';assert.equal((await route.DELETE(request(body))).status,403)
+ global.filmUser=null;assert.equal((await route.DELETE(request(body))).status,401);global.filmUser={id:'creator'};global.filmRole='admin'
+ let failure=false
+ global.filmDB={from(table){const filters=[];let removing=false;const q={select(){return q},eq(key,value){filters.push([key,value]);return q},delete(){removing=true;return q},async maybeSingle(){if(removing){deleted.push({table,filters});return failure?{error:{message:'blocked'}}:{data:{id:forum}}}return{data:{forum_id:forum}}}};return q}}
+ assert.equal((await route.DELETE(request({...body,confirm:false}))).status,400)
+ assert.equal((await route.DELETE(request({...body,forumId:id}))).status,404);assert.equal(deleted.length,0)
+ assert.equal((await route.DELETE(request(body))).status,200);assert.deepEqual(deleted,[{table:'forums',filters:[['id',forum]]}])
+ failure=true;assert.equal((await route.DELETE(request(body))).status,500)
+})

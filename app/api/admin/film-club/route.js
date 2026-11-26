@@ -10,7 +10,7 @@ async function gate(request) {
   const db = serviceClient()
   const { role } = await memberOf(db, user.id)
   if (!['admin', 'editor'].includes(role)) return { error: json('Forbidden', 403) }
-  return { db, user }
+  return { db, user, role }
 }
 
 function httpsUrl(value) {
@@ -71,6 +71,14 @@ export async function PATCH(request) {
       .eq(cover ? 'id' : 'event_id', body.eventId).select(cover ? 'id' : 'event_id').maybeSingle()
     if (saveError) return json('Could not save screening media.', 500)
     return saved ? Response.json({ ok: true }) : json('Screening not found.', 404)
+  }
+  if (body.action === 'forum_visibility') {
+    if (typeof body.visible !== 'boolean') return json('Choose forum visibility.', 400)
+    const { data, error } = await db.from('film_club_screenings')
+      .update({ discussion_active: body.visible, discussion_archived: !body.visible })
+      .eq('event_id', body.eventId).not('forum_id', 'is', null).select('event_id').maybeSingle()
+    if (error) return json('Could not save forum visibility.', 500)
+    return data ? Response.json({ ok: true }) : json('Discussion not found.', 404)
   }
   if (body.action === 'discussion') {
     const fields = ['discussion_active', 'commenting_open', 'discussion_archived']
@@ -141,4 +149,20 @@ export async function PATCH(request) {
     read: false,
   })
   return Response.json({ ok: true, notified: !notificationError, path: `/portal/film-club/moderate/${forumId}` })
+}
+
+export async function DELETE(request) {
+  const { db, role, error } = await gate(request)
+  if (error) return error
+  if (role !== 'admin') return json('Only administrators can delete screening forums.', 403)
+  const body = await request.json().catch(() => null)
+  if (!uuid.test(body?.eventId) || !uuid.test(body?.forumId) || body.confirm !== true) return json('Confirm the screening forum to delete.', 400)
+  const { data: screening, error: lookupError } = await db.from('film_club_screenings').select('forum_id').eq('event_id', body.eventId).maybeSingle()
+  if (lookupError) return json('Could not load the screening forum.', 500)
+  if (!screening?.forum_id || screening.forum_id !== body.forumId) return json('Screening forum not found.', 404)
+  // Existing foreign keys cascade discussion content and clear screening/event links.
+  // The screening, purchases and financial records are retained.
+  const { data, error: deleteError } = await db.from('forums').delete().eq('id', screening.forum_id).select('id').maybeSingle()
+  if (deleteError) return json('Could not delete the forum. No changes were saved.', 500)
+  return data ? Response.json({ ok: true }) : json('Screening forum not found.', 404)
 }

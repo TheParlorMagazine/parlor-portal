@@ -279,23 +279,20 @@ export default function FilmClubAdmin() {
           <div className={styles.forumToolbar}><h2>Screening forums</h2><input type="search" aria-label="Search screening forums" placeholder="Search forums…" value={forumSearch} onChange={event=>setForumSearch(event.target.value)}/></div>
           {screenings.filter(item=>item.forum_id && `${item.event.title} Discussion`.toLowerCase().includes(forumSearch.trim().toLowerCase())).map(screening=>(
           <details key={screening.forum_id} className={styles.forumStrip} open={openForum===screening.forum_id} onToggle={event=>{const expanded=event.currentTarget.open;setOpenForum(current=>expanded?screening.forum_id:current===screening.forum_id?null:current)}}>
-            <summary><span className={styles.forumTitle}><strong>{screening.event.title} — Discussion</strong><span>{screening.event.starts_at?new Date(screening.event.starts_at).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'Date TBA'}</span></span><span className={styles.forumState}>{screening.discussion_archived?'Archived':screening.discussion_active?'Active':'Inactive'} · {screening.commenting_open?'Comments open':'Comments closed'}</span></summary>
+            <summary><span className={styles.forumTitle}><strong>{screening.event.title} — Discussion</strong><span>{screening.event.starts_at?new Date(screening.event.starts_at).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'Date TBA'}</span></span><span className={styles.forumState}>{screening.discussion_archived||!screening.discussion_active?'Archived':'Visible'} · {screening.commenting_open?'Comments open':'Comments closed'}</span></summary>
             {openForum===screening.forum_id&&<div className={styles.forumContents}>
             <section className={`${styles.card} ${styles.form}`}>
               <h2>Discussion settings</h2>
-              {[
-                ['discussion_active', 'Visibility in active lists', 'Active', 'Inactive'],
-                ['commenting_open', 'Commenting', 'Open', 'Closed'],
-                ['discussion_archived', 'Archive discussion', 'Archived', 'Visible'],
-              ].map(([field, label, on, off]) => (
-                <label key={field} className={`${styles.toggle} ${styles.discussionToggle}`}>
-                  <span className={styles.discussionLabel}>{label}</span>
-                  <input type="checkbox" role="switch" aria-label={label} checked={!!screening[field]} disabled={busy} onChange={event => save('PATCH', {
-                    action: 'discussion', eventId: screening.event_id, field, value: event.target.checked,
-                  }, () => 'Discussion setting saved.')} />
-                  <span className={styles.discussionValue}>{screening[field] ? on : off}</span>
-                </label>
-              ))}
+              <label className={`${styles.toggle} ${styles.discussionToggle}`}>
+                <span className={styles.discussionLabel}>Forum visibility</span>
+                <input type="checkbox" role="switch" aria-label="Forum visibility" checked={!!screening.discussion_active && !screening.discussion_archived} disabled={busy} onChange={event=>save('PATCH', {action:'forum_visibility',eventId:screening.event_id,visible:event.target.checked},()=> 'Forum visibility saved.')} />
+                <span className={styles.discussionValue}>{screening.discussion_active && !screening.discussion_archived?'Visible':'Archived'}</span>
+              </label>
+              <label className={`${styles.toggle} ${styles.discussionToggle}`}>
+                <span className={styles.discussionLabel}>Commenting</span>
+                <input type="checkbox" role="switch" aria-label="Commenting" checked={!!screening.commenting_open} disabled={busy} onChange={event=>save('PATCH', {action:'discussion',eventId:screening.event_id,field:'commenting_open',value:event.target.checked},()=> 'Discussion setting saved.')} />
+                <span className={styles.discussionValue}>{screening.commenting_open?'Open':'Closed'}</span>
+              </label>
             </section>
             <form className={`${styles.card} ${styles.form}`} onSubmit={event=>invite(event,screening.event_id)}>
               <h2>Invite a filmmaker</h2>
@@ -320,6 +317,7 @@ export default function FilmClubAdmin() {
                 </section>
               )} />
             </div>
+              <div className={styles.forumDelete}><button type="button" disabled={busy} onClick={()=>{if(window.confirm(`Permanently delete “${screening.event.title} — Discussion”? This removes its threads, replies, forum memberships and moderator access. The screening, ticket purchases and revenue records are kept. This cannot be undone.`))save('DELETE',{eventId:screening.event_id,forumId:screening.forum_id,confirm:true},()=> 'Forum deleted.')}}>Delete forum</button></div>
             </div>}
           </details>))}
           {!screenings.some(item=>item.forum_id && `${item.event.title} Discussion`.toLowerCase().includes(forumSearch.trim().toLowerCase()))&&<p className={styles.forumEmpty}>{forumSearch?'No forums match your search.':'No screening forums yet.'}</p>}
