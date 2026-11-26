@@ -210,6 +210,12 @@ export default function ShopPage() {
 
   // The single featured product drives the storefront hero promo.
   const featured = useMemo(() => allItems.find(p => p.featured) || null, [allItems])
+  // Match the checkout's same-numeral 100 threshold for Parlor-fulfilled items.
+  // Printify items (including mixed bundles) retain their provider shipping charge.
+  const manualShipping = product => !!product && !product.external_url && !['printify', 'external'].includes(product.fulfillment)
+  const featuredShipsFree = featured && priceOf(featured) >= 100 && (featured._isBundle
+    ? featured.shop_bundle_items?.length > 0 && featured.shop_bundle_items.every(item => manualShipping(item.shop_products))
+    : manualShipping(featured))
   const heroImgs = (featured?.images?.length ? featured.images : ['https://static.wixstatic.com/media/d449e2_fd8c48fe8b274b67be10d4773240837b~mv2.png'])
   const heroHeadline = (featured?.featured_blurb || featured?.name || '').trim()
 
@@ -410,7 +416,7 @@ export default function ShopPage() {
           <div className="shop-hero-left">
             <h2 className="shop-hero-title" style={{ whiteSpace: 'pre-line' }}>{heroHeadline}</h2>
             <a href={`/shop/${featured.id}`} className="shop-hero-btn">
-              Order now — {fmtPrice(priceOf(featured), symbol)} plus shipping
+              Order now — {fmtPrice(priceOf(featured), symbol)} {featuredShipsFree ? 'with free shipping' : 'plus shipping'}
             </a>
           </div>
           <div style={{ position: 'relative', alignSelf: 'stretch', minHeight: 440, overflow: 'hidden', background: '#e9e7e3' }}>
