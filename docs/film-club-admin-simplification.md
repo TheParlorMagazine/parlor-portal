@@ -36,3 +36,8 @@ Apply `20261126160000_film_club_publish_sales.sql` after the existing simplifica
 - If settings save but Stripe or publishing fails, the editor reloads the saved settings and shows an error with the retry action. Drafts are not published by a failed Stripe call. Durable product/price operation IDs make retries reuse the same ticket setup.
 
 No live Stripe calls were made during implementation. The additional migration has been tested locally, not applied to production.
+
+
+## Pink calendar controls
+
+Film Club screening, viewing-window and access-expiry fields now use a shared calendar styled to match The Parlor. Selected dates, focus and text highlights use pink. The calendar opens above the modal in the browser's popover layer; Escape closes the calendar without closing the editor. Arrow keys, Home/End and Page Up/Down navigate dates. Dates remain local to the user's browser and are sent to the server as ISO timestamps, at minute precision. Manual entry supports `dd/mm/yyyy, hh:mm` and local ISO input; invalid dates and daylight-saving gaps are rejected before saving. No database migration is required for this visual update.

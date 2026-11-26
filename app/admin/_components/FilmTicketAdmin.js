@@ -3,12 +3,13 @@ import { useEffect, useRef, useState } from 'react'
 import { filmClubRequest } from '../../../lib/filmClubRequest'
 import { ticketPricing, filmMoney, FILM_CURRENCIES, currencyExponent } from '../../../lib/filmTicketPricing'
 import styles from './FilmClubAdmin.module.css'
+import FilmDateTimeField from './FilmDateTimeField'
 const api='/api/admin/film-club'
 const filmLanguages=['English','Arabic','Bengali','Chinese','Dutch','French','German','Greek','Hebrew','Hindi','Indonesian','Italian','Japanese','Korean','Persian','Polish','Portuguese','Russian','Spanish','Swahili','Swedish','Tamil','Turkish','Ukrainian','Urdu','Vietnamese','Multiple languages','No dialogue']
 const editorScreening=screening=>({...screening,member_price_override_cents:null,ticket_settings:{...screening.ticket_settings}})
-const localDate=value=>value?new Date(new Date(value).getTime()-new Date(value).getTimezoneOffset()*60000).toISOString().slice(0,16):''
 export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
  const [s,setS]=useState(()=>editorScreening(screening)),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[failed,setFailed]=useState(false),[pending,setPending]=useState('')
+ const editor=useRef(null)
  const pausedEdits=useRef(null)
  useEffect(()=>{setS(pausedEdits.current?{...pausedEdits.current,sales_enabled:screening.sales_enabled}:editorScreening(screening));pausedEdits.current=null},[screening])
  useEffect(()=>{onBusyChange?.(busy)},[busy,onBusyChange])
@@ -18,6 +19,7 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
  let quote;try{quote=ticketPricing(s)}catch{}
  const settings=()=>({...s,member_price_override_cents:null,host_share_eligibility:s.host_share_eligibility==='yes'?'yes':'no',host_share_percent:s.host_share_eligibility==='yes'?s.host_share_percent:0,currency:s.currency || 'usd',ticket_settings:{...config,language:config.language || 'English',format:config.format || 'live',fulfillment_method:config.fulfillment_method || 'individual'}})
  async function action(action){
+  if(['settings','publish'].includes(action)){const invalid=editor.current?.querySelector(':invalid');if(invalid){invalid.reportValidity();invalid.focus();return}}
   setBusy(true);setPending(action);setMessage('');setFailed(false)
   try{
    const result=await filmClubRequest(`${api}/commerce`,'POST',{eventId:s.event_id,action,...(['settings','publish'].includes(action)?{settings:settings()}:{})})
@@ -26,8 +28,8 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
   }catch(e){if(e.saved){try{await onChanged()}catch{}}setFailed(true);setMessage(e.message)}finally{setBusy(false);setPending('')}
  }
  const moneyField=(key,label)=>{const scale=key.endsWith('_cents')?10**currencyExponent(s.currency || 'usd'):1;return <label key={key}>{label}<input type="number" min={key==='member_ticket_limit'?1:key==='ticket_price_cents'?1/scale:0} max={key.includes('percent')?100:undefined} step={scale>1||key.includes('percent')?'0.01':'1'} value={s[key]==null?'':s[key]/scale} onChange={e=>set(key,e.target.value===''?null:key.endsWith('_cents')?Math.round(Number(e.target.value)*scale):Number(e.target.value))}/></label>}
- const dateField=(key,label)=><label key={key}>{label}<input type="datetime-local" value={localDate(s.event?.[key])} onChange={e=>set('event',{...s.event,[key]:e.target.value?new Date(e.target.value).toISOString():null})}/></label>
- return <section className={styles.form}>
+ const dateField=(key,label)=><FilmDateTimeField key={key} label={label} value={s.event?.[key] || ''} required={key==='starts_at'} onChange={value=>set('event',{...s.event,[key]:value})}/>
+ return <section ref={editor} className={styles.form}>
   <label>Title<input value={s.event?.title || ''} onChange={e=>set('event',{...s.event,title:e.target.value})}/></label>
   {dateField('starts_at','Starts')}{dateField('ends_at','Ends')}
   <p>Sales close when the event starts. The Stripe ticket product is archived automatically after it ends.</p>
@@ -49,7 +51,7 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
    {moneyField('member_ticket_limit','Maximum member tickets')}
    <label>Maximum audience<input type="number" min="1" step="1" value={s.event?.capacity ?? ''} onChange={e=>set('event',{...s.event,capacity:e.target.value?Number(e.target.value):null})}/></label>
    <label>Format<select value={config.format || 'live'} onChange={e=>detail('format',e.target.value)}><option value="live">Live event</option><option value="flex">Flexible viewing window</option></select></label>
-   {config.format==='flex'&&['viewing_start','viewing_end'].map(key=><label key={key}>{key==='viewing_start'?'Viewing starts':'Viewing ends'}<input type="datetime-local" value={localDate(s[key])} onChange={e=>set(key,e.target.value?new Date(e.target.value).toISOString():null)}/></label>)}
+   {config.format==='flex'&&['viewing_start','viewing_end'].map(key=><FilmDateTimeField key={key} label={key==='viewing_start'?'Viewing starts':'Viewing ends'} value={s[key] || ''} onChange={value=>set(key,value)}/>)}
    <label>Access delivery<select value={config.fulfillment_method || 'individual'} onChange={e=>detail('fulfillment_method',e.target.value)}>{[...new Set(['individual','provider_link','other',...(config.fulfillment_method?[config.fulfillment_method]:[])])].map(v=><option key={v} value={v}>{({individual:'Individual viewing links',provider_link:'Shared viewing link',other:'Other'})[v] || v.replaceAll('_',' ')}</option>)}</select></label>
    {moneyField('acquisition_cost_cents','Cost per provider ticket')}
    <label className={styles.toggle}>Host revenue share<input type="checkbox" role="switch" checked={s.host_share_eligibility==='yes'} onChange={e=>set('host_share_eligibility',e.target.checked?'yes':'no')}/><span>{s.host_share_eligibility==='yes'?'Yes':'No'}</span></label>

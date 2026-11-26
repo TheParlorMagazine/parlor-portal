@@ -1,4 +1,5 @@
 'use client'
+import FilmDateTimeField from './FilmDateTimeField'
 
 import { useEffect, useRef, useState } from 'react'
 import { currencyExponent } from '../../../lib/filmTicketPricing'
@@ -120,7 +121,7 @@ function ScreeningForm({ onAdd, busy, onBusyChange }) {
   return (
     <form className={`${styles.card} ${styles.form}`} onSubmit={submit}>
       <label>Title<input name="title" required maxLength={200} /></label>
-      <label>Screening date and time (your local time)<input name="starts_at" type="datetime-local" required /></label>
+      <FilmDateTimeField label="Screening date and time (your local time)" name="starts_at" required />
       <label>Description<textarea name="description" rows={3} maxLength={5000} /></label>
       <label>External tickets URL<input name="ticket_url" type="url" placeholder="https://" /></label>
       <FilmClubMediaFields cover={cover} trailer={trailerUrl} onCover={setCover} onTrailer={setTrailerUrl} disabled={busy} onUploading={setUploading} />
@@ -291,7 +292,7 @@ export default function FilmClubAdmin() {
               <h2>Invite a filmmaker</h2>
               <p>Invite an existing Parlor member to co-moderate this discussion until the date you choose.</p>
               <label>Parlor account email<input name="email" type="email" required /></label>
-              <label>Access expires (your local time)<input name="expiry" type="datetime-local" required /></label>
+              <FilmDateTimeField label="Access expires (your local time)" name="expiry" required />
               <button disabled={busy}>Invite co-moderator</button>
             </form>
             <div className={`${styles.card} ${styles.moderation}`}>
