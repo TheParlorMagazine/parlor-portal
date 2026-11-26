@@ -132,3 +132,17 @@
 .form .toggle input:checked { background: var(--film-accent, #813d52); }
 .form .toggle input:checked::after { left: 20px; }
 .form .toggle input:focus-visible { outline: 2px solid #813d52; outline-offset: 3px; }
+
+.section summary, .form summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  list-style: none; cursor: pointer;
+}
+.section summary::-webkit-details-marker, .form summary::-webkit-details-marker { display: none; }
+.section summary::after, .form summary::after {
+  content: ''; flex: 0 0 8px; width: 8px; height: 8px; margin: 0 4px 4px;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+.section details[open] > summary::after, .form details[open] > summary::after {
+  transform: rotate(225deg); margin-bottom: 0; margin-top: 4px;
+}

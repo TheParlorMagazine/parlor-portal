@@ -23,13 +23,6 @@ test('actual Stripe fees preserve settlement currency; delayed balance transacti
  const result=await m.syncFilmTicketFee(db,{},{id:'ticket'},{balance_transaction:{fee:42,currency:'eur'}})
  assert.equal(result.fee,42);assert.equal(updates[0].stripe_fee_currency,'eur')
 })
-test('film metadata reads structured Movie fields and rejects private or untrusted URLs',async()=>{
- const {parseDocument}=require('htmlparser2'),m=await load('lib/filmMetadata.js',{'htmlparser2':{parseDocument}})
- const fields=m.parseFilmMetadata('<meta property="og:title" content="Fallback"><script type="application/ld+json">{"@type":"ScreeningEvent","workPresented":{"@type":"Movie","name":"Film","director":{"name":"Director"},"duration":"PT1H32M","inLanguage":"English"}}</script>')
- assert.equal(fields.title,'Film');assert.equal(fields.runtime_minutes,92);assert.equal(fields.filmmaker,'Director');assert.equal(fields.language,'English')
- for(const url of ['http://kinema.com/events/film','https://kinema.com.evil.test/events/film','https://kinema.com/events/film?token=secret','https://127.0.0.1/events/film','https://kinema.com/watch/private'])assert.throws(()=>m.publicFilmUrl(url))
- assert.equal(m.publicFilmUrl('https://kinema.com/events/film').hostname,'kinema.com')
-})
 test('settlement fees in another currency never produce a misleading net profit',async()=>{
  const m=await load('lib/filmTicketPricing.js'),s={currency:'usd',ticket_price_cents:1000,member_discount_percent:20,acquisition_cost_cents:100,host_share_percent:0},tickets=[{payment_status:'paid',amount_cents:800,refunded_cents:0,stripe_processing_fee_cents:42,stripe_fee_currency:'eur'}]
  const totals=m.filmProfitability(s,tickets);assert.equal(totals.stripeFees,null);assert.equal(totals.individualWithoutShare,null);assert.equal(totals.feesByCurrency.eur,42)

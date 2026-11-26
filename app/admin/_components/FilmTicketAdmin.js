@@ -19,10 +19,6 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
   setBusy(true);setMessage('')
   try{const result=await filmClubRequest(`${api}/commerce`,'POST',{eventId:s.event_id,action,...extra});setMessage(result.message || 'Saved.');await onChanged()}catch(e){setMessage(e.message)}finally{setBusy(false)}
  }
- async function importDetails(){
-  setBusy(true);setMessage('')
-  try{const {details}=await filmClubRequest(`${api}/import`,'POST',{url:s.ticket_url});setS(old=>({...old,event:{...old.event,title:old.event?.title || details.title || ''},ticket_settings:{...old.ticket_settings,...Object.fromEntries(Object.entries(details).filter(([key])=>key!=='title'&&!old.ticket_settings?.[key]))}}));setMessage(Object.keys(details).length?'Imported available details into empty fields. Review before saving.':'No film details found on this page. Enter them manually.')}catch(e){setMessage(e.message)}finally{setBusy(false)}
- }
  const moneyField=(key,label)=>{const scale=key.endsWith('_cents')?10**currencyExponent(s.currency || 'usd'):1;return <label key={key}>{label}<input type="number" min={key==='member_ticket_limit'?1:key==='ticket_price_cents'?1/scale:0} max={key.includes('percent')?100:undefined} step={scale>1||key.includes('percent')?'0.01':'1'} value={s[key]==null?'':s[key]/scale} onChange={e=>set(key,e.target.value===''?null:key.endsWith('_cents')?Math.round(Number(e.target.value)*scale):Number(e.target.value))}/></label>}
  const dateField=(key,label)=><label key={key}>{label}<input type="datetime-local" value={localDate(s.event?.[key])} onChange={e=>set('event',{...s.event,[key]:e.target.value?new Date(e.target.value).toISOString():null})}/></label>
  return <section className={styles.form}>
@@ -31,7 +27,6 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
   <p>Sales close when the event starts. The Stripe ticket product is archived automatically after it ends.</p>
   <label>Publication<select value={s.event?.status || 'draft'} onChange={e=>set('event',{...s.event,status:e.target.value})}>{['draft','published','cancelled'].map(status=><option key={status}>{status}</option>)}</select></label>
   <label>Public screening / ticket URL<input type="url" value={s.ticket_url || ''} onChange={e=>set('ticket_url',e.target.value)}/></label>
-  <button disabled={busy||!s.ticket_url} onClick={importDetails}>Import film details</button>
   <label>Filmmaker<input value={config.filmmaker || ''} onChange={e=>detail('filmmaker',e.target.value)}/></label>
   <label>Synopsis<textarea rows={3} value={config.synopsis || ''} onChange={e=>detail('synopsis',e.target.value)}/></label>
   <details><summary>More film details</summary>
