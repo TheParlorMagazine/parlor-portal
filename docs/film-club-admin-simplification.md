@@ -23,4 +23,16 @@ Overview reads every ticket receipt for the selected screening, independently of
 
 This editor/revenue refinement requires no new migration beyond the already applied simplification migration.
 
-Film metadata import has been removed; film details are entered directly. Disclosures use down/up chevrons and retain native keyboard controls. Stripe synchronization and opening sales remain separate explicit actions in this version.
+Film metadata import has been removed; film details are entered directly. Disclosures use down/up chevrons and retain native keyboard controls. Stripe synchronization now happens when saving; publishing and opening sales use one action.
+
+
+## Automatic Stripe setup and publishing
+
+Apply `20261126160000_film_club_publish_sales.sql` after the existing simplification migration before deploying the matching code. It adds one service-only function; it does not replace existing functions or change existing orders. The function uses the existing commerce lock and pricing version to publish the event and enable sales in one transaction. If validation fails, both changes roll back.
+
+- **Save changes** saves the form and creates/updates Stripe pricing when needed. Repeated non-price edits reuse the existing product/price. Saving drafts, paused, cancelled or archived screenings does not open sales or resurrect archived products. An existing open sale remains open for non-price edits. Changing the price pauses sales; successful synchronization leaves it ready for the explicit open-sales action.
+- **Publish and open ticket sales** saves the current form, synchronizes Stripe, then publishes and opens sales atomically. A valid future start, an event end, and `FILM_CLUB_TICKET_SALES_ENABLED=true` are required. Stripe test/live guards still apply. The button does not bypass deployment configuration.
+- **Pause sales** stops new checkouts without requiring a working Stripe connection. Unsaved editor changes are retained when pausing.
+- If settings save but Stripe or publishing fails, the editor reloads the saved settings and shows an error with the retry action. Drafts are not published by a failed Stripe call. Durable product/price operation IDs make retries reuse the same ticket setup.
+
+No live Stripe calls were made during implementation. The additional migration has been tested locally, not applied to production.

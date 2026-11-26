@@ -8,16 +8,22 @@ const filmLanguages=['English','Arabic','Bengali','Chinese','Dutch','French','Ge
 const editorScreening=screening=>({...screening,member_price_override_cents:null,ticket_settings:{...screening.ticket_settings}})
 const localDate=value=>value?new Date(new Date(value).getTime()-new Date(value).getTimezoneOffset()*60000).toISOString().slice(0,16):''
 export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
- const [s,setS]=useState(()=>editorScreening(screening)),[busy,setBusy]=useState(false),[message,setMessage]=useState('')
- useEffect(()=>setS(editorScreening(screening)),[screening])
+ const [s,setS]=useState(()=>editorScreening(screening)),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[failed,setFailed]=useState(false),[pending,setPending]=useState('')
+ const pausedEdits=useRef(null)
+ useEffect(()=>{setS(pausedEdits.current?{...pausedEdits.current,sales_enabled:screening.sales_enabled}:editorScreening(screening));pausedEdits.current=null},[screening])
  useEffect(()=>{onBusyChange?.(busy)},[busy,onBusyChange])
  const config=s.ticket_settings || {},dirty=JSON.stringify(s)!==JSON.stringify(screening)
  const set=(key,value)=>setS(old=>({...old,[key]:value}))
  const detail=(key,value)=>set('ticket_settings',{...config,[key]:value})
  let quote;try{quote=ticketPricing(s)}catch{}
- async function action(action,extra={}){
-  setBusy(true);setMessage('')
-  try{const result=await filmClubRequest(`${api}/commerce`,'POST',{eventId:s.event_id,action,...extra});setMessage(result.message || 'Saved.');await onChanged()}catch(e){setMessage(e.message)}finally{setBusy(false)}
+ const settings=()=>({...s,member_price_override_cents:null,host_share_eligibility:s.host_share_eligibility==='yes'?'yes':'no',host_share_percent:s.host_share_eligibility==='yes'?s.host_share_percent:0,currency:s.currency || 'usd',ticket_settings:{...config,language:config.language || 'English',format:config.format || 'live',fulfillment_method:config.fulfillment_method || 'individual'}})
+ async function action(action){
+  setBusy(true);setPending(action);setMessage('');setFailed(false)
+  try{
+   const result=await filmClubRequest(`${api}/commerce`,'POST',{eventId:s.event_id,action,...(['settings','publish'].includes(action)?{settings:settings()}:{})})
+   if(action==='pause'&&dirty)pausedEdits.current={...s,sales_enabled:false}
+   await onChanged();setMessage(result.message || 'Saved.')
+  }catch(e){if(e.saved){try{await onChanged()}catch{}}setFailed(true);setMessage(e.message)}finally{setBusy(false);setPending('')}
  }
  const moneyField=(key,label)=>{const scale=key.endsWith('_cents')?10**currencyExponent(s.currency || 'usd'):1;return <label key={key}>{label}<input type="number" min={key==='member_ticket_limit'?1:key==='ticket_price_cents'?1/scale:0} max={key.includes('percent')?100:undefined} step={scale>1||key.includes('percent')?'0.01':'1'} value={s[key]==null?'':s[key]/scale} onChange={e=>set(key,e.target.value===''?null:key.endsWith('_cents')?Math.round(Number(e.target.value)*scale):Number(e.target.value))}/></label>}
  const dateField=(key,label)=><label key={key}>{label}<input type="datetime-local" value={localDate(s.event?.[key])} onChange={e=>set('event',{...s.event,[key]:e.target.value?new Date(e.target.value).toISOString():null})}/></label>
@@ -51,15 +57,16 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
    <label>Other expenses<input type="number" min="0" step={currencyExponent(s.currency || 'usd')>0?'0.01':'1'} value={config.other_cost_cents==null?'':config.other_cost_cents/10**currencyExponent(s.currency || 'usd')} onChange={e=>detail('other_cost_cents',e.target.value?Math.round(Number(e.target.value)*10**currencyExponent(s.currency || 'usd')):null)}/></label>
    <p>Processing fees are pulled from Stripe after payment.</p>
   </section>
-  <button disabled={busy||!quote} onClick={()=>action('settings',{settings:{...s,member_price_override_cents:null,host_share_eligibility:s.host_share_eligibility==='yes'?'yes':'no',host_share_percent:s.host_share_eligibility==='yes'?s.host_share_percent:0,currency:s.currency || 'usd',ticket_settings:{...config,language:config.language || 'English',format:config.format || 'live',fulfillment_method:config.fulfillment_method || 'individual'}}})}>Save changes</button>
-  <details><summary>Stripe ticket sales</summary>
-   <p>{screening.stripe_archived?'Archived':screening.stripe_synced_version===screening.pricing_version?'Pricing connected':'Pricing needs synchronization'}</p>
-   {dirty&&<p>Save changes before updating Stripe.</p>}
-   <button disabled={busy||dirty} onClick={()=>action('sync')}>{screening.stripe_product_id?'Update Stripe pricing':'Connect ticket to Stripe'}</button>
-   <button disabled={busy||(dirty&&!screening.sales_enabled)} onClick={()=>action('sales',{enabled:!screening.sales_enabled})}>{screening.sales_enabled?'Stop ticket sales':'Enable ticket sales'}</button>
+  <div className={styles.mediaActions}>
+   <button disabled={busy||!quote} onClick={()=>action('settings')}>{pending==='settings'?'Saving…':'Save changes'}</button>
+   {(!screening.sales_enabled||dirty)&&<button disabled={busy||!quote} onClick={()=>action('publish')}>{pending==='publish'?'Publishing…':'Publish and open ticket sales'}</button>}
+   {screening.sales_enabled&&<button disabled={busy} onClick={()=>action('pause')}>{pending==='pause'?'Pausing…':'Pause sales'}</button>}
+  </div>
+  <p>Ticket sales: {screening.sales_enabled?'Open':screening.stripe_archived?'Archived':screening.event?.status==='draft'?'Draft — not open':'Paused'}.</p>
+  <details><summary>Advanced ticket controls</summary>
    <button disabled={busy} onClick={()=>action('archive')}>Archive ticket product</button>
   </details>
-  {message&&<p role="status">{message}</p>}
+  {message&&<p role={failed?'alert':'status'}>{message}</p>}
  </section>
 }
 export function FilmTicketManagement({screening,overview=false}) {
