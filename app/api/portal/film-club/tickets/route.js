@@ -8,3 +8,10 @@ export async function GET(request) {
  if(error)return Response.json({error:'Could not load your screening tickets.'},{status:503})
  return Response.json({tickets:(data||[]).map(t=>({id:t.id,event_id:t.event_id,order_id:t.order_id,order_number:t.order?.order_number,title:t.screening.event.title,payment_status:t.payment_status,fulfillment_status:['access_assigned','access_sent'].includes(t.fulfillment_status)&&((t.access_expires_at&&Date.parse(t.access_expires_at)<=Date.now())||(t.screening.viewing_end&&Date.parse(t.screening.viewing_end)<=Date.now()))?'expired':t.fulfillment_status,amount_cents:t.amount_cents,currency:t.currency,refunded_cents:t.refunded_cents,purchased_at:t.purchased_at,viewing_start:t.screening.viewing_start,access_expires_at:t.access_expires_at || t.screening.viewing_end,...(ticketAccessAvailable(t,t.screening)?{viewing_url:t.viewing_url,instructions:t.instructions}:{}),forum_id:t.screening.forum_id}))},{headers:{'Cache-Control':'private, no-store'}})
 }
+
+// Members can view their tickets but cannot submit screening refund requests.
+export async function POST(request){
+ const user=await requireUser(request)
+ if(!user)return Response.json({error:'Sign in'},{status:401})
+ return Response.json({error:'Refund requests are not available for screening tickets.'},{status:403})
+}

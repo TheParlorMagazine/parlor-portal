@@ -41,7 +41,7 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
   <details><summary>More film details</summary>
    <label>Provider<input value={config.provider || ''} onChange={e=>detail('provider',e.target.value)}/></label>
    <label>Language<select aria-label="Language" value={config.language || 'English'} onChange={e=>detail('language',e.target.value)}>{[...new Set([...filmLanguages,...(config.language?[config.language]:[])])].map(language=><option key={language}>{language}</option>)}</select></label>
-   {['subtitles','qa','refund_policy'].map(key=><label key={key}>{{subtitles:'Subtitles',qa:'Q&A details',refund_policy:'Refund policy'}[key]}<textarea rows={2} maxLength={5000} value={config[key] || ''} onChange={e=>detail(key,e.target.value)}/></label>)}
+   {['subtitles','qa'].map(key=><label key={key}>{{subtitles:'Subtitles',qa:'Q&A details',refund_policy:'Refund policy'}[key]}<textarea rows={2} maxLength={5000} value={config[key] || ''} onChange={e=>detail(key,e.target.value)}/></label>)}
    <label>Runtime (minutes)<input type="number" inputMode="numeric" min="1" step="1" value={config.runtime_minutes ?? ''} onChange={e=>detail('runtime_minutes',e.target.value===''?null:Number(e.target.value))}/></label>
   </details>
   <section className={styles.ticketSection} aria-label="Ticket settings">

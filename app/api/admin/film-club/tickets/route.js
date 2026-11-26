@@ -1,4 +1,4 @@
-import { filmRevenueReport } from '../../../../../lib/filmRevenueReport'
+import { filmRevenueReport, filmRevenueDashboard } from '../../../../../lib/filmRevenueReport'
 import Stripe from 'stripe'
 import { requireUser, serviceClient, memberOf } from '../../../../../lib/apiAuth'
 import { refreshFilmPayment, sendFilmEmail } from '../../../../../lib/filmTicketCommerce'
@@ -15,7 +15,7 @@ export async function GET(request) {
  const {db,error}=await gate(request);if(error)return error
  const url=new URL(request.url),eventId=url.searchParams.get('eventId')
  if(url.searchParams.get('overview')==='true'){
-  try{return Response.json({totals:await filmRevenueReport(db,eventId)},{headers:{'Cache-Control':'private, no-store'}})}
+  try{return Response.json(eventId?{totals:await filmRevenueReport(db,eventId)}:{dashboard:await filmRevenueDashboard(db)},{headers:{'Cache-Control':'private, no-store'}})}
   catch(error){return Response.json({error:error.message},{status:503})}
  }
  const data=[]

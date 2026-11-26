@@ -7,6 +7,7 @@ async function load(file,mocks={},env={}){
   if(spec.endsWith('filmTicketSettings'))return module('lib/filmTicketSettings.js')
   if(spec.endsWith('/filmTicketLifecycle')||spec==='./filmTicketLifecycle')return module('lib/filmTicketLifecycle.js')
   if(spec==='./filmTicketFees')return module('lib/filmTicketFees.js')
+  if(spec.endsWith('/filmExchangeRates')||spec==='./filmExchangeRates')return module('lib/filmExchangeRates.js')
   if(spec.endsWith('/filmRevenueReport'))return module('lib/filmRevenueReport.js')
   throw Error('Unexpected import '+spec)
  });return m}
@@ -85,6 +86,7 @@ test('ticket admin rejects anonymous and ordinary members before reading ticket 
  for(const [user,role,status]of [[null,null,401],[{id:'member'},'member',403]]){
   const m=await load('app/api/admin/film-club/tickets/route.js',{'stripe':{default:class{}},'../../../../../lib/apiAuth':{requireUser:async()=>user,memberOf:async()=>({role}),serviceClient:()=>({from(){throw Error('Ticket read without permission')}})},'../../../../../lib/filmTicketCommerce':{refreshFilmPayment(){},sendFilmEmail(){}},'../../../../../lib/subscriberActions':{refundScreeningOrder(){}}})
   assert.equal((await m.GET(new Request('https://local.test'))).status,status)
+  assert.equal((await m.GET(new Request('https://local.test?overview=true'))).status,status)
  }
 })
 test('Stripe product/price creation is recoverable after local synchronization failure',async()=>{
@@ -94,4 +96,11 @@ test('Stripe product/price creation is recoverable after local synchronization f
  const m=await commerce(db)
  await assert.rejects(()=>m.synchronizeFilmProduct(db,stripe,screening),/could not be linked/);fail=false
  assert.equal((await m.synchronizeFilmProduct(db,stripe,screening)).priceId,'price_new');assert.equal(products.length,1);assert.equal(prices.length,1)
+})
+test('members cannot request screening refunds through member or admin ticket APIs',async()=>{
+ const auth={requireUser:async()=>({id:'member'}),memberOf:async()=>({role:'member'}),serviceClient:()=>({from(){throw Error('Refund request must not touch records')}})}
+ const member=await load('app/api/portal/film-club/tickets/route.js',{'../../../../../lib/apiAuth':auth,'../../../../../lib/filmTicketCommerce':{ticketAccessAvailable:()=>false}})
+ assert.equal((await member.POST({json:async()=>({action:'refund',ticketId:'someone-elses-ticket'})})).status,403)
+ const admin=await load('app/api/admin/film-club/tickets/route.js',{'stripe':{default:class{}},'../../../../../lib/apiAuth':auth,'../../../../../lib/filmTicketCommerce':{refreshFilmPayment(){},sendFilmEmail(){}},'../../../../../lib/subscriberActions':{refundScreeningOrder(){throw Error('Member must not refund')}}})
+ assert.equal((await admin.POST({json:async()=>({action:'refund'})})).status,403)
 })

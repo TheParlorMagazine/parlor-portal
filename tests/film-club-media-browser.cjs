@@ -16,6 +16,7 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
     window.view=view;window.uploads=[];window.calls=[];window.rejectCreateOnce=true
     window.records=[{event_id:'11111111-1111-4111-8111-111111111111',trailer_url:null,event:{id:'11111111-1111-4111-8111-111111111111',title:'Existing screening',status:'published',starts_at:'2099-12-12T19:00:00Z',cover_image_url:null}}]
     window.filmRequest=async(url,method='GET',body)=>{
+     if(method==='GET'&&url.includes('overview=true'))return {dashboard:{byCurrency:[],rates:[],rows:[],tickets:0,screenings:0,pendingScreenings:0,unreportedTicketCounts:0}}
      if(method==='GET'&&url.includes('/tickets'))return {tickets:[],audit:[]}
      if(method==='GET')return {screenings:structuredClone(window.records)}
      window.calls.push({method,body})

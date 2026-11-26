@@ -6,7 +6,7 @@ Apply `supabase/migrations/20261126110000_film_club_simplify_admin.sql` after th
 
 - Sales stop at the event start, checked on the server and in the reservation RPC. Changing the event time updates the stored deadline. The existing checkout reconciliation also expires still-open Film Club checkout sessions after the start; a payment already in progress is reconciled rather than discarded. Live viewing follows event start/end; flexible viewing can keep its own window.
 - Set an event end time. A new independent Netlify scheduled function (`film-ticket-maintenance`) archives the Film Club Stripe product and its active prices after that time. It retries uncertain failures, disables local sales before Stripe mutations, checks product identity and retains purchase records. It processes one product per pass, so archival occurs on a subsequent scheduled pass rather than at an exact second. Ordinary inventory reconciliation is unchanged.
-- Actual Stripe charge processing fees and their settlement currency populate automatically after payment. Delayed balance transactions retry in maintenance, two tickets per pass. Unknown fees stay pending; mixed currencies are displayed separately and never subtracted as if equal. Hypothetical profitability scenarios have no invented fee estimate.
+- Actual Stripe charge processing fees and their settlement currency populate automatically after payment. Delayed balance transactions retry in maintenance, two tickets per pass. Unknown fees stay pending; the Overview converts amounts to USD using dated ECB reference rates before combining them. Hypothetical profitability scenarios have no invented fee estimate.
 
 ## Netlify
 
@@ -19,7 +19,7 @@ Local validation covers both ticket migrations with the existing commerce migrat
 
 Ticket settings, capacity, viewing options, provider costs and the host-share toggle now live together in Tickets. The ticket price is the public price; member pricing is derived from the discount. Saving clears a legacy override and the existing pricing-version logic requires Stripe resynchronization when that changes the price. Historical purchases keep their paid amount. Private-license cost and scenario controls are removed from this editor; historical database fields are retained. Language defaults to English, with a dropdown that preserves existing language values. Runtime uses an integer number selector.
 
-Overview reads every ticket receipt for the selected screening, independently of the ticket-management/export row cap. It shows Stripe gross receipts plus manually reported external gross sales as total gross ticket sales. Retained revenue is Stripe receipts after refunds/dispute holds plus the configured host share of external sales. Net subtracts the configured per-Stripe-ticket provider cost, other expenses and actual Stripe fees. Missing external totals, costs or fees remain unavailable instead of being fabricated; settlement currencies are never mixed. Enter external sales only, excluding provider tickets acquired to fulfill Stripe purchases, to avoid double counting.
+Overview reads every ticket receipt for the selected screening, independently of the ticket-management/export row cap. It shows Stripe gross receipts plus manually reported external gross sales as total gross ticket sales. Retained revenue is Stripe receipts after refunds/dispute holds plus the configured host share of external sales. Net subtracts the configured per-Stripe-ticket provider cost, other expenses and actual Stripe fees. Missing external totals, costs or fees remain pending; amounts in different currencies are converted using the published reference rate before combining them. Enter external sales only, excluding provider tickets acquired to fulfill Stripe purchases, to avoid double counting.
 
 This editor/revenue refinement requires no new migration beyond the already applied simplification migration.
 
@@ -44,3 +44,22 @@ Film Club screening, viewing-window and access-expiry fields now use a shared ca
 
 
 Manual archival appears only in the main Overview after the event end time, for screenings with a Stripe ticket product. Already archived products show their status instead of an action. The editor has no Advanced ticket controls section. Manual and scheduled archival share the same product identity checks, deactivate all active prices, retain order history, and record completion through the existing ended-screening RPC. Early requests are rejected before Stripe mutations. This change requires no additional migration.
+
+## All-screening net dashboard
+
+The main Film Club Overview now shows four analytics-style cards: recorded net revenue, revenue share earned (already included in net), recorded ticket purchases, and configured sharing rates with screening counts. It includes all screenings, past and present, including archived screenings. Sharing rates are listed individually rather than summed or averaged. The summary shows one combined USD amount, with foreign amounts automatically converted using dated ECB reference rates. Incomplete screenings are clearly marked and excluded from confirmed net totals.
+
+Each screening has an expandable row with net revenue, included host share and its percentage, fees, provider costs, other expenses, the external-sales report and post-event archival controls. Search and past/current filters narrow the list without changing the all-screening totals. Saving an external report recalculates totals and keeps the expanded row open. A refresh action loads newly recorded Stripe transactions. Both screenings and receipts are paginated independently of the ticket-management/export cap. Aggregate results contain no member identities or viewing credentials. Provider reports remain entered in the screening’s original currency.
+
+Net continues to include Stripe receipts after refunds/dispute holds plus the configured share of reported external sales, minus recorded Stripe fees, configured provider ticket costs and other expenses. No gross-sales figure is shown as the dashboard headline.
+
+Member screening refund requests are explicitly rejected by the member ticket POST API, and ordinary members cannot use admin refund endpoints. The member purchase and ticket views state that refund requests are unavailable. Authorized admin/finance refunds and Stripe refund/dispute reconciliation remain intact. No migration is required for this update.
+
+
+## USD reporting and The Parlor styling
+
+Overview uses the existing Analytics styling: Source Serif 4 body text, Playfair Display values, white bordered cards, restrained pink/burgundy accents and a single expandable screening ledger with matching filter pills. Each money card contains one combined USD figure, not stacked currencies. Sharing percentages remain the configured contractual rates, not converted or added together.
+
+The server retrieves ECB reference quotes through Frankfurter v1, caches them for one hour, and returns the rate date and dollar-per-currency quote with the report. This is a current reference-rate reporting conversion, not a change to historical purchase currencies, Stripe charges or payouts. Net converts receipts/sharing/costs into USD and subtracts fees in their actual recorded settlement currency. If a quote is unavailable, unconverted values remain pending and excluded from confirmed totals. No API key or migration is needed. The development workspace blocks direct outbound requests to the provider; rate parsing, conversion and outage behavior were tested with fixtures. Deployed provider connectivity still requires verification.
+
+Local UI previews use sample data clearly labeled as such; those figures are never seeded into production.

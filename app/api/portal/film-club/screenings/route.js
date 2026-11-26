@@ -11,6 +11,6 @@ export async function GET(request) {
  return Response.json({eligible,screenings:(data||[]).map(s=>{
   let pricing=null;try{pricing=ticketPricing(s)}catch{}
   const c=s.ticket_settings || {}
-  return{event_id:s.event_id,forum_id:s.forum_id,event:s.event,trailer_url:s.trailer_url,ticket_url:s.ticket_url,pricing,provider:c.provider || 'External screening provider',format:c.format,synopsis:c.synopsis,filmmaker:c.filmmaker,runtime:c.runtime_minutes,language:c.language,subtitles:c.subtitles,qa:c.qa,refund_policy:c.refund_policy,viewing_start:s.viewing_start,viewing_end:s.viewing_end,sales_open:!!(filmSalesOpen(s)&&process.env.FILM_CLUB_TICKET_SALES_ENABLED==='true')}
+  return{event_id:s.event_id,forum_id:s.forum_id,event:s.event,trailer_url:s.trailer_url,ticket_url:s.ticket_url,pricing,provider:c.provider || 'External screening provider',format:c.format,synopsis:c.synopsis,filmmaker:c.filmmaker,runtime:c.runtime_minutes,language:c.language,subtitles:c.subtitles,qa:c.qa,refund_policy:'Refund requests are not available for screening tickets purchased through The Parlor.',refund_requests_allowed:false,viewing_start:s.viewing_start,viewing_end:s.viewing_end,sales_open:!!(filmSalesOpen(s)&&process.env.FILM_CLUB_TICKET_SALES_ENABLED==='true')}
  })},{headers:{'Cache-Control':'private, no-store'}})
 }

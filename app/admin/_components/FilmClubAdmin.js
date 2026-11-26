@@ -1,5 +1,6 @@
 'use client'
 import FilmDateTimeField from './FilmDateTimeField'
+import FilmRevenueDashboard from './FilmRevenueDashboard'
 
 import { useEffect, useRef, useState } from 'react'
 import { currencyExponent } from '../../../lib/filmTicketPricing'
@@ -32,11 +33,11 @@ function Overview({ screening, onSave, busy }) {
     <>
       <section className={styles.card}>
         <details><summary>External ticket sales</summary>
-        <p>Enter cumulative sales made outside The Parlor’s Stripe checkout. Exclude provider tickets bought to fulfill Stripe orders. Each update replaces the previous totals.</p>
+        <p>Enter cumulative sales made outside The Parlor’s Stripe checkout. Exclude provider tickets bought to fulfill Stripe orders. Your revenue-share percentage is applied automatically. Each update replaces the previous totals.</p>
         {screening.ticket_url && <p><a href={screening.ticket_url} target="_blank" rel="noreferrer">Open ticket provider</a></p>}
         <form className={styles.form} onSubmit={save}>
           <label>Tickets sold<input name="tickets" type="number" min="0" max="2147483647" step="1" defaultValue={screening.public_tickets ?? ''} /></label>
-          <label>Gross sales ({(screening.currency || 'usd').toUpperCase()})<input name="gross" type="number" min="0" max="21474836.47" step={currencyExponent(screening.currency || 'usd')>0?'0.01':'1'} defaultValue={screening.public_gross_cents==null?'':screening.public_gross_cents/10**currencyExponent(screening.currency || 'usd')} /></label>
+          <label>Provider sales total ({(screening.currency || 'usd').toUpperCase()})<input name="gross" type="number" min="0" max="21474836.47" step={currencyExponent(screening.currency || 'usd')>0?'0.01':'1'} defaultValue={screening.public_gross_cents==null?'':screening.public_gross_cents/10**currencyExponent(screening.currency || 'usd')} /></label>
           <button disabled={busy}>Save totals</button>
         </form></details>
         {screening.ticket_reported_at && <p>Last updated {formatDate(screening.ticket_reported_at)}</p>}
@@ -186,6 +187,7 @@ export default function FilmClubAdmin() {
         setRevision(value => value + 1)
       } else {
         setScreenings((await filmClubRequest(api)).screenings)
+        setRevision(value=>value+1)
       }
     } catch (err) {
       setError(err.message)
@@ -221,7 +223,7 @@ export default function FilmClubAdmin() {
       {loading && <p role="status">Loading screenings…</p>}
       {!adding && !editing && error && <p role="alert" className={styles.error}>{error}</p>}
       {!adding && !editing && notice && <p role="status">{notice}</p>}
-      {!loading && tab !== 'Screenings' && screening && (
+      {!loading && tab !== 'Screenings' && tab !== 'Overview' && screening && (
         <label className={styles.selector}>Screening
           <select value={screening.event_id} onChange={event => {
             setSelectedId(event.target.value)
@@ -231,11 +233,10 @@ export default function FilmClubAdmin() {
           </select>
         </label>
       )}
-      {!loading && tab === 'Overview' && (
-        <Overview key={`external-sales:${screening?.event_id}:${screening?.ticket_reported_at}`} screening={screening} busy={busy} onSave={body => save('PATCH', body, () => 'Ticket totals saved.')} />
-      )}
-      {!loading && tab === 'Overview' && screening && <FilmTicketManagement key={`revenue:${screening.event_id}`} screening={screening} overview />}
-      {!loading && tab === 'Overview' && screening && <FilmTicketArchive key={`archive:${screening.event_id}`} screening={screening} onChanged={async () => setScreenings((await filmClubRequest(api)).screenings)} />}
+      {!loading && tab === 'Overview' && <FilmRevenueDashboard revision={revision} renderScreening={item=><>
+        <Overview key={`external-sales:${item.event_id}:${item.ticket_reported_at}`} screening={item} busy={busy} onSave={body=>save('PATCH',body,()=> 'Ticket totals saved.')} />
+        <FilmTicketArchive key={`archive:${item.event_id}`} screening={item} onChanged={async()=>{setScreenings((await filmClubRequest(api)).screenings);setRevision(value=>value+1)}}/>
+      </>} />}
       {!loading && tab === 'Tickets' && screening && <FilmTicketManagement key={`tickets:${screening.event_id}`} screening={screening} />}
       {tab === 'Screenings' && (
         <>
