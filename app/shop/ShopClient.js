@@ -245,6 +245,9 @@ export default function ShopPage() {
         .shop-browse { color:#fff; font-family:${BODY}; font-size:14px; letter-spacing:0.1em; text-transform:uppercase; background:none; border:none; cursor:pointer; padding:0; transition:color 0.15s; }
         .shop-browse:hover { color:${PINK}; }
         .shop-card { background:#fff; text-align:left; }
+        .shop-card-sale { outline:2px solid #d988a4; outline-offset:9px; border-radius:4px; }
+        .shop-sale-ribbon { position:absolute; bottom:0; right:0; width:130px; height:130px; overflow:hidden; pointer-events:none; }
+        .shop-sale-ribbon > span { position:absolute; width:190px; right:-49px; bottom:27px; transform:rotate(-45deg); background:#f2b8c6; color:#7a2531; border-block:2px solid #d988a4; text-align:center; padding:8px 0; font-family:"Source Serif 4",Georgia,serif; font-size:20px; font-weight:700; line-height:1.2; box-shadow:0 2px 6px #0002; }
         .shop-card-img { position:relative; border-radius:4px; aspect-ratio:4/5; display:flex; align-items:flex-end; justify-content:flex-start; padding:12px; overflow:hidden; }
         .shop-add { margin-top:10px; background:${BLACK}; color:#fff; border:none; border-radius:0; padding:9px 20px; font-family:${BODY}; font-size:13px; letter-spacing:0.04em; cursor:pointer; transition:background 0.15s; }
         .shop-add:hover { background:${PINK}; color:${BLACK}; }
@@ -460,13 +463,13 @@ export default function ShopPage() {
         ) : (
         <div className="shop-grid">
           {shown.map(p => (
-            <div key={p.id} className="shop-card" style={{ position: 'relative' }}>
-              <ShopSaleBadge percent={p.sale_discount_percent} style={{position:'absolute',top:48,left:12,zIndex:2}}/>
+            <div key={p.id} className={`shop-card${p.sale_discount_percent>0?' shop-card-sale':''}`} style={{ position: 'relative' }}>
               <button onClick={() => wish.toggle(p.id)} aria-label="Wishlist" title="Wishlist"
                 style={{ position: 'absolute', top: 10, right: 10, zIndex: 2, width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.9)', cursor: 'pointer', fontSize: 16, lineHeight: 1, color: wish.has(p.id) ? '#c4364a' : '#555', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}>
                 {wish.has(p.id) ? '♥' : '♡'}
               </button>
               <a href={`/shop/${p.id}`} className="shop-card-img" style={{ display: 'flex', backgroundColor: fitOf(p) === 'contain' ? '#fff' : (p.tint || '#eee'), backgroundImage: p.images?.[0] ? `url(${p.images[0]})` : undefined, backgroundSize: fitOf(p) === 'contain' ? '116%' : 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
+                <ShopSaleBadge percent={p.sale_discount_percent} ribbon/>
                 {p._isBundle ? (
                   <span className="shop-cat-chip" style={{ background: '#f2b8c6', color: '#7a2531' }}>Bundle</span>
                 ) : p.category ? (
