@@ -1,5 +1,5 @@
 'use client'
-import {displayShopPrice} from '../../../lib/shopSale'
+import {displayShopPrice,shopBundleSalePercent,shopItemSalePercent,salePickProduct} from '../../../lib/shopSale'
 import ShopSalePrice, {ShopSaleBadge} from '../../_components/ShopSalePrice'
 
 import { useState, useEffect, useMemo, use } from 'react'
@@ -115,7 +115,7 @@ export default function ProductPage({ params }) {
   const variants = variantsOf(product)
   const chosen = variants.length ? (variants.find(v => String(v.printify_variant_id) === String(variantSel)) || variants[0]) : null
   const unit = displayShopPrice(chosen?.price!=null?chosen:product,currency)
-  const pickedProduct = singlePick ? bundleProducts.find(p => p.id === singlePick) : null
+  const pickedProduct = singlePick ? salePickProduct(product,bundleProducts.find(p => p.id === singlePick)) : null
   const notFound = loaded && !bundle && product === null
 
   // Bundle savings: sum individual item prices vs bundle price.
@@ -139,7 +139,7 @@ export default function ProductPage({ params }) {
   const images = (purchaseMode === 'single' && pickedProduct?.images?.length) ? pickedProduct.images : allImages
   // Price display: bundle mode → bundle price; single/buy-one mode → picked item's price (or first item's price)
   const singleUnitPrice = bundleConfig
-    ? (pickedProduct||bundleProducts[0]?displayShopPrice(pickedProduct || bundleProducts[0],currency):unit)
+    ? (pickedProduct||bundleProducts[0]?displayShopPrice(pickedProduct || salePickProduct(product,bundleProducts[0]),currency):unit)
     : unit
   const displayPrice = bundleConfig
     ? (purchaseMode === 'bundle' ? bundlePrice : singleUnitPrice)
@@ -174,7 +174,7 @@ export default function ProductPage({ params }) {
     }
     // "Buy one" from a bundle product — add bundle product with single_pick meta
     if (bundleConfig && singlePick) {
-      const pick = bundleProducts.find(p => p.id === singlePick)
+      const pick = salePickProduct(product,bundleProducts.find(p => p.id === singlePick))
       const pickImg = pick?.images?.[0] || null
       for (let i = 0; i < qty; i++) add(product.id, null, { single_pick: singlePick, single_pick_name: pick?.name || '', single_pick_price: Number(pick?.price || 0), single_pick_image: pickImg })
       setAdded(true); openCart(); return
@@ -370,11 +370,12 @@ export default function ProductPage({ params }) {
 
             {/* Right: purchase panel */}
             <div>
-              <ShopSaleBadge percent={bundleConfig&&purchaseMode==='single'?(pickedProduct || bundleProducts[0])?.sale_discount_percent:product.sale_discount_percent} style={{marginBottom:14}}/>
+              <ShopSaleBadge percent={Math.max(product.sale_discount_percent || 0,(pickedProduct || salePickProduct(product,bundleProducts[0]))?.sale_discount_percent || 0)} style={{marginBottom:14}}/>
               <h1 style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 600, color: BLACK, margin: '4px 0 22px', lineHeight: 1.1 }}>{product.name}</h1>
               {product.variant && <div style={{ fontFamily: BODY, fontSize: 16, color: '#7a5560', marginTop: -14, marginBottom: 20 }}>{product.variant}</div>}
 
-              <div style={{ fontFamily: BODY, fontSize: 26, color: BLACK, marginBottom: 8 }}><ShopSalePrice amount={displayPrice} regular={displayShopPrice(bundleConfig?(purchaseMode==='bundle'?bundleConfig:pickedProduct || bundleProducts[0]):chosen?.price!=null?chosen:product,currency,true)} percent={bundleConfig&&purchaseMode==='single'?(pickedProduct || bundleProducts[0])?.sale_discount_percent:product.sale_discount_percent} symbol={symbol}/></div>
+              <div style={{ fontFamily: BODY, fontSize: 26, color: BLACK, marginBottom: 8 }}><ShopSalePrice amount={displayPrice} regular={displayShopPrice(bundleConfig?(purchaseMode==='bundle'?bundleConfig:pickedProduct || salePickProduct(product,bundleProducts[0])):chosen?.price!=null?chosen:product,currency,true)} percent={bundleConfig?(purchaseMode==='bundle'?shopBundleSalePercent(product):(pickedProduct || salePickProduct(product,bundleProducts[0]))?.sale_discount_percent):shopItemSalePercent(product)} symbol={symbol}/></div>
+              {bundleConfig&&purchaseMode==='single'&&shopBundleSalePercent(product)>0&&<p style={{fontFamily:BODY,fontSize:15,color:'#923c5a',margin:'8px 0 16px'}}>{shopBundleSalePercent(product)}% off the bundle · <ShopSalePrice amount={bundlePrice} regular={displayShopPrice(bundleConfig,currency,true)} percent={shopBundleSalePercent(product)} symbol={symbol}/></p>}
               <div style={{ marginBottom: 28 }}>
                 <BnplMessage amount={displayPrice} currency={currency} country={country || 'US'} fontFamily={BODY} />
               </div>

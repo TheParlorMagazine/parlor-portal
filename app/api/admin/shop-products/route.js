@@ -1,4 +1,4 @@
-import {shopSaleAmount} from '../../../../lib/shopSale'
+import {shopSaleAmount,shopSaleScope} from '../../../../lib/shopSale'
 import { packageSize } from '../../../../lib/shopPackaging'
 import { requireUser, serviceClient, memberOf } from '../../../../lib/apiAuth'
 
@@ -37,7 +37,9 @@ function saleError(body){
  if(!('sale_discount_percent' in body))return null
  const n=Number(body.sale_discount_percent || 0)
  if(!Number.isInteger(n)||n<0||n>99)return 'Choose a whole sale percentage from 0 to 99.'
- const amounts=[body.price,body.price_eur,body.price_gbp,...(Array.isArray(body.variants)?body.variants.map(v=>v.price):[])].filter(value=>value!=null&&value!=='')
+ if(body.bundle_config?.sale_scope&&!['items','bundle'].includes(body.bundle_config.sale_scope))return 'Choose whether the sale applies to individual items or the bundle.'
+ const target=shopSaleScope(body)==='bundle'?body.bundle_config:body
+ const amounts=[target?.price,target?.price_eur,target?.price_gbp,...(target===body&&Array.isArray(body.variants)?body.variants.map(v=>v.price):[])].filter(value=>value!=null&&value!=='')
  if(n&&amounts.some(value=>!Number.isFinite(Number(value))||shopSaleAmount(value,n)<.01))return 'Sale prices must be at least 0.01. Reduce the discount or increase the regular price.'
  if(n&&body.fulfillment==='external')return 'Sales are managed by the external shop for this product.'
  return null

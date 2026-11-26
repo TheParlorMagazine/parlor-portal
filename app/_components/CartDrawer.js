@@ -1,5 +1,5 @@
 'use client'
-import {displayShopPrice} from '../../lib/shopSale'
+import {displayShopPrice,salePickProduct,shopBundleSalePercent} from '../../lib/shopSale'
 import ShopSalePrice from './ShopSalePrice'
 import { startShopCheckout } from '../../lib/startShopCheckout'
 
@@ -31,6 +31,7 @@ export default function CartDrawer() {
   const [tab, setTab] = useState('cart')
   const [products, setProducts] = useState([])
   const [bundles, setBundles] = useState([])
+  const [pickProducts,setPickProducts]=useState([]),[pickPricesError,setPickPricesError]=useState('')
   const [loaded, setLoaded] = useState(false)
   const loadingProducts = useRef(false)
   const checkoutStarted = useRef(false)
@@ -98,6 +99,17 @@ export default function CartDrawer() {
     stale.forEach(({ id, vid, meta }) => removeAll(lineKey(id, vid, meta)))
   }, [loaded, products, bundles]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const missingPickIds=JSON.stringify([...new Set(cart.map(line=>line.meta?.single_pick).filter(id=>id&&!products.some(p=>p.id===id)))].sort())
+  useEffect(()=>{
+    if(!loaded)return
+    const ids=JSON.parse(missingPickIds);let active=true
+    setPickPricesError('')
+    if(!ids.length){setPickProducts([]);return}
+    fetch('/api/shop/products/by-ids',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids})})
+      .then(async response=>{if(!response.ok)throw Error('Could not update selected item prices. Refresh the page and try again.');const result=await response.json();if(!Array.isArray(result.products)||ids.some(id=>!result.products.some(p=>p.id===id)))throw Error('A selected item is unavailable. Review your bundle selections.');if(active)setPickProducts(result.products)})
+      .catch(error=>{if(active)setPickPricesError(error.message)})
+    return()=>{active=false}
+  },[missingPickIds,loaded])
   const cartGroups = useMemo(() => {
     const m = new Map()
     cart.forEach(({ id, vid, meta }) => { const k = lineKey(id, vid, meta); const g = m.get(k) || { id, vid, meta, qty: 0 }; g.qty++; m.set(k, g) })
@@ -106,13 +118,13 @@ export default function CartDrawer() {
       if (!product) return null
       const variant = (!product._isBundle && vid != null) ? variantsOf(product).find(v => String(v.printify_variant_id) === String(vid)) : null
       const baseUnit = displayShopPrice(variant?.price!=null?variant:product,currency)
-      const picked=meta?.single_pick?products.find(p=>p.id===meta.single_pick):null
+      const picked=meta?.single_pick?salePickProduct(product,[...products,...pickProducts].find(p=>p.id===meta.single_pick)):null
       const unit = meta?.single_pick_price != null ? (picked?displayShopPrice(picked,currency):Number(meta.single_pick_price)) : (meta?.bundle_price != null ? (product.bundle_config?displayShopPrice(product.bundle_config,currency):Number(meta.bundle_price)) : (meta?.bundle_unit_price != null ? Number(meta.bundle_unit_price) : baseUnit))
       const priceSource=picked || (meta?.bundle_price!=null?product.bundle_config:variant?.price!=null?variant:product)
-      return { key: lineKey(id, vid, meta), product, variant, meta, qty, unit, regular:displayShopPrice(priceSource,currency,true), percent:picked?.sale_discount_percent ?? product.sale_discount_percent }
+      return { key: lineKey(id, vid, meta), product, variant, meta, qty, unit, regular:displayShopPrice(priceSource,currency,true), percent:picked?.sale_discount_percent ?? (meta?.bundle_price!=null?shopBundleSalePercent(product):product.sale_discount_percent),currentPick:picked }
     }).filter(Boolean)
-  }, [cart, products, bundles, currency])
-  const needsSelection = cartGroups.some(g => g.product.bundle_config && !g.meta?.single_pick && !g.meta?.bundle_picks?.length)
+  }, [cart, products, bundles, currency,pickProducts])
+  const needsSelection = cartGroups.some(g=>g.meta?.single_pick&&!g.currentPick) || cartGroups.some(g => g.product.bundle_config && !g.meta?.single_pick && !g.meta?.bundle_picks?.length)
   const cartTotal = cartGroups.reduce((s, g) => s + g.unit * g.qty, 0)
 
   // Group cart lines by print_provider_id (Printify) or '__manual__' (self-fulfilled).
@@ -354,6 +366,8 @@ export default function CartDrawer() {
             <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: BODY, fontSize: 16, fontWeight: 700, marginBottom: 14, paddingTop: 8, borderTop: '1px solid #f0f0f0' }}>
               <span>{shipping && !shipLoading ? 'Total' : 'Subtotal before shipping'}</span><span>{fmtPrice(cartTotal + (!shipLoading && shipping ? shipping.amount : 0), symbol)}</span>
             </div>
+            {pickPricesError&&<p role="alert" style={{color:'#a3324c'}}>{pickPricesError}</p>}
+            {!pickPricesError&&cartGroups.some(g=>g.meta?.single_pick&&!g.currentPick)&&<p role="status">Updating selected item prices…</p>}
             {shipError && <div role="status" style={{ fontFamily: BODY, fontSize: 13, color: '#c0392b', marginBottom: 12 }}>{shipError}</div>}
             {/* Free shipping progress for self-fulfilled items */}
             {hasManualItems && (

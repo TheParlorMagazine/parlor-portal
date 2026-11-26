@@ -1,7 +1,7 @@
 'use client'
 
-import ShopSalePrice from '../../_components/ShopSalePrice'
-import { shopSaleAmount } from '../../../lib/shopSale'
+import {ShopProductPrice} from '../../_components/ShopSalePrice'
+import { shopSaleAmount, shopSaleScope, shopItemSalePercent } from '../../../lib/shopSale'
 import { useEffect, useState, useRef } from 'react'
 import { uploadToCloudinary, isDuplicateUpload } from '../../../lib/uploadImage'
 import { confirmDialog } from '../../../lib/confirmDialog'
@@ -85,6 +85,7 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
     onSaved()
   }
 
+  const salePreviewPrice=shopSaleScope(f)==='bundle'?f.bundle_config.price:f.price
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '40px 16px' }}>
       <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 560, padding: '26px 28px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
@@ -124,7 +125,7 @@ function ProductModal({ token, item, supabase, onClose, onSaved, categories = []
         {/* Images */}
         <div style={{marginTop:18,padding:'14px 16px',border:'1px solid #edbdcc',borderRadius:8,background:'#fffafb'}}>
           <label style={{display:'flex',alignItems:'center',gap:10,fontFamily:ff,fontSize:14}}><input type="checkbox" checked={saleEnabled} disabled={f.fulfillment==='external'} onChange={e=>{setSaleEnabled(e.target.checked);set('sale_discount_percent',e.target.checked?10:0)}} style={{accentColor:'#b55073'}}/>Sale discount</label>
-          {saleEnabled&&<><label style={{display:'block',fontFamily:ff,fontSize:13,marginTop:12}}>Percentage off<input aria-label="Sale percentage" type="number" min="1" max="99" step="1" value={f.sale_discount_percent} onChange={e=>set('sale_discount_percent',e.target.value)} style={{...input,width:110,display:'block',marginTop:6}}/></label><p style={{fontFamily:ff,fontSize:13,color:'#813d52',margin:'12px 0 0'}}><span style={{border:'1px solid #db93ab',padding:'3px 8px',borderRadius:4,marginRight:8}}>Sale!</span><s>{money(f.price)}</s> <strong>{money(shopSaleAmount(f.price,Number(f.sale_discount_percent)))}</strong> · {f.sale_discount_percent}% off</p><p style={{fontFamily:ff,fontSize:12,color:'#888',marginBottom:0}}>Applies to this product and its variants. Turn off to restore regular prices.</p></>}
+          {saleEnabled&&<>{f.bundle_config&&<label style={{display:'block',fontFamily:ff,fontSize:13,marginTop:12}}>Apply discount to<select aria-label="Apply discount to" value={f.bundle_config.sale_scope || 'bundle'} onChange={e=>set('bundle_config',{...f.bundle_config,sale_scope:e.target.value})} style={{...input,marginTop:6}}><option value="items">Individual items</option><option value="bundle">Bundle</option></select></label>}<label style={{display:'block',fontFamily:ff,fontSize:13,marginTop:12}}>Percentage off<input aria-label="Sale percentage" type="number" min="1" max="99" step="1" value={f.sale_discount_percent} onChange={e=>set('sale_discount_percent',e.target.value)} style={{...input,width:110,display:'block',marginTop:6}}/></label><p style={{fontFamily:ff,fontSize:13,color:'#813d52',margin:'12px 0 0'}}><span style={{border:'1px solid #db93ab',padding:'3px 8px',borderRadius:4,marginRight:8}}>Sale!</span><s>{money(salePreviewPrice)}</s> <strong>{money(shopSaleAmount(salePreviewPrice,Number(f.sale_discount_percent)))}</strong> · {f.sale_discount_percent}% off</p><p style={{fontFamily:ff,fontSize:12,color:'#888',marginBottom:0}}>{f.bundle_config?(shopSaleScope(f)==='bundle'?'Discounts the complete bundle; individual item prices stay unchanged.':'Discounts Buy one selections; the bundle price stays unchanged.'):'Applies to this product and its variants. Turn off to restore regular prices.'}</p></>}
         </div>
 
         <div style={label}>Images <span style={{ textTransform: 'none', letterSpacing: 0, color: '#bbb' }}>(first is the primary)</span></div>
@@ -610,7 +611,7 @@ export default function ShopProductsSection({ supabase }) {
                 <div style={{ fontSize: 12.5, color: '#999' }}>{[p.variant, p.category || 'Uncategorized'].filter(Boolean).join(' · ')}</div>
               </div>
 
-              <div style={{ fontFamily: ffH, fontSize: 15, color: '#333', width: 70, textAlign: 'right' }}><ShopSalePrice amount={shopSaleAmount(p.price,Number(p.sale_discount_percent || 0))} regular={p.price} percent={p.sale_discount_percent}/></div>
+              <div style={{ fontFamily: ffH, fontSize: 15, color: '#333', width: 70, textAlign: 'right' }}><ShopProductPrice product={p} amount={shopSaleAmount(p.price,shopItemSalePercent(p))} regular={p.price}/></div>
               <button onClick={() => toggleActive(p)} title={p.active ? 'Active' : 'Hidden'} style={{ width: 46, height: 24, borderRadius: 20, border: 'none', background: p.active ? '#2d8f5a' : '#ccc', position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
                 <span style={{ position: 'absolute', top: 2, left: p.active ? 24 : 2, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
               </button>

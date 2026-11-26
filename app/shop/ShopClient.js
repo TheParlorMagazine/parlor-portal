@@ -1,6 +1,6 @@
 'use client'
 import {displayShopPrice} from '../../lib/shopSale'
-import ShopSalePrice, {ShopSaleBadge} from '../_components/ShopSalePrice'
+import {ShopSaleBadge,ShopProductPrice} from '../_components/ShopSalePrice'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
 import ShopTrickOrTreatPopup from '../_components/ShopTrickOrTreatPopup'
@@ -382,7 +382,7 @@ export default function ShopPage() {
                           <span className="shop-sr-thumb" style={{ backgroundColor: p.tint || '#eee', backgroundImage: p.images?.[0] ? `url(${p.images[0]})` : undefined }} />
                           <span>
                             <span className="shop-sr-name">{p.name}</span>
-                            <span className="shop-sr-price" style={{ display: 'block', marginTop: 2 }}><ShopSalePrice amount={priceOf(p)} regular={displayShopPrice(priceSource(p),currency,true)} percent={p.sale_discount_percent} symbol={symbol}/></span>
+                            <span className="shop-sr-price" style={{ display: 'block', marginTop: 2 }}><ShopProductPrice product={p} amount={priceOf(p)} regular={displayShopPrice(priceSource(p),currency,true)} symbol={symbol}/></span>
                           </span>
                         </a>
                       ))}
@@ -420,7 +420,7 @@ export default function ShopPage() {
             <ShopSaleBadge percent={featured.sale_discount_percent} style={{marginBottom:14}}/>
             <h2 className="shop-hero-title" style={{ whiteSpace: 'pre-line' }}>{heroHeadline}</h2>
             <a href={`/shop/${featured.id}`} className="shop-hero-btn">
-              Order now — <ShopSalePrice amount={priceOf(featured)} regular={displayShopPrice(priceSource(featured),currency,true)} percent={featured.sale_discount_percent} symbol={symbol}/> {featuredShipsFree ? 'with free shipping' : 'plus shipping'}
+              Order now — <ShopProductPrice product={featured} amount={priceOf(featured)} regular={displayShopPrice(priceSource(featured),currency,true)} messageColor="inherit" symbol={symbol}/> {featuredShipsFree ? 'with free shipping' : 'plus shipping'}
             </a>
           </div>
           <div style={{ position: 'relative', alignSelf: 'stretch', minHeight: 440, overflow: 'hidden', background: '#e9e7e3' }}>
@@ -493,7 +493,7 @@ export default function ShopPage() {
                   )}
                 </>
               )}
-              <div style={{ fontFamily: BODY, fontSize: 15, color: '#1a1a1a', marginTop: 6 }}><ShopSalePrice amount={priceOf(p)} regular={displayShopPrice(priceSource(p),currency,true)} percent={p.sale_discount_percent} symbol={symbol}/></div>
+              <div style={{ fontFamily: BODY, fontSize: 15, color: '#1a1a1a', marginTop: 6 }}><ShopProductPrice product={p} amount={priceOf(p)} regular={displayShopPrice(priceSource(p),currency,true)} symbol={symbol}/></div>
               <button className="shop-add" onClick={() => p.bundle_config ? (window.location.href = `/shop/${p.id}`) : add(p)}>
                 {p.bundle_config ? 'Pick your items' : 'Add to cart'}
               </button>

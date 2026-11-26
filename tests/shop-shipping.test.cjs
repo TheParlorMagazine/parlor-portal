@@ -4,6 +4,7 @@ async function fixture({weight=3,packaging='small', printify=false, configured=t
  const requests=[], printifyRequests=[]
  const context=vm.createContext({AbortSignal,console:{error(){}},process:{env:{SHIPPO_API_KEY:'test',SHIP_FROM_STREET:'Test street',SHIP_FROM_CITY:'Test city',SHIP_FROM_STATE:'VA',SHIP_FROM_ZIP:'22026',SHIP_FROM_COUNTRY:'US',...env}},fetch:async(url,opts)=>{requests.push(JSON.parse(opts.body));return {ok,status:ok?200:status,json:async()=>response}}})
  async function load(file){const m=new vm.SourceTextModule(fs.readFileSync(file,'utf8'),{context});await m.link(async spec=>{
+  if(spec==='./shopSale')return load('lib/shopSale.js')
   if(spec==='./shopSnapshot')return load('lib/shopSnapshot.js')
   if(spec==='./shopPackaging')return load('lib/shopPackaging.js')
   if(spec==='./shippingRegion')return load('lib/shippingRegion.js')
