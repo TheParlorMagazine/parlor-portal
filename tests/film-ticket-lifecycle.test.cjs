@@ -8,7 +8,7 @@ test('sales close at event start, independent of obsolete manually entered deadl
  assert.equal(m.filmHasEnded({event:{ends_at:'2030-01-02'}},Date.parse('2030-01-02')),true)
 })
 test('finished screening archival closes locally first and retries an uncertain Stripe outcome',async()=>{
- const m=await load('lib/filmTicketLifecycle.js'),calls=[],s={event_id:'event',stripe_product_id:'prod'}
+ const m=await load('lib/filmTicketLifecycle.js'),calls=[],s={event_id:'event',stripe_product_id:'prod',event:{ends_at:'2000-01-01'}}
  const q={select(){return this},eq(){return this},not(){return this},lte(){return this},order(){return this},limit:async()=>({data:[s]}),update(){calls.push('stop');return this},then(resolve){resolve({})}}
  const db={from:()=>q,rpc:async()=>{calls.push('record');return{}}},stripe={products:{retrieve:async()=>({metadata:{screening_id:'event'}}),update:async()=>calls.push('product')},prices:{list:()=>({async *[Symbol.asyncIterator](){yield{id:'price'}}}),update:async()=>calls.push('price')}}
  assert.equal((await m.archiveFinishedFilmProducts(db,stripe)).archived,1);assert.deepEqual(calls,['stop','price','product','record'])

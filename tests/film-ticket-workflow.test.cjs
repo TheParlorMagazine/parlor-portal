@@ -2,12 +2,13 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const initial={event_id:'event',currency:'usd',ticket_price_cents:1000,member_discount_percent:20,host_share_percent:0,host_share_eligibility:'no',pricing_version:1,stripe_synced_version:null,sales_enabled:false,ticket_settings:{format:'live',fulfillment_method:'individual'},event:{title:'Film',status:'draft',is_public:true,starts_at:'2099-01-01',ends_at:'2099-01-02'}}
 async function fixture({screening=initial,env={STRIPE_SECRET_KEY:'sk_test_fake',FILM_CLUB_TICKET_SALES_ENABLED:'true'},syncFailure=false,publishFailure=false,role='admin',user={id:'admin'}}={}){
  let state=structuredClone(screening);const calls=[]
- const db={from(){return{select(){return this},eq(){return this},single:async()=>({data:structuredClone(state)})}},rpc:async(name,args)=>{
+ const db={from(){return{select(){return this},eq(){return this},update(patch){state={...state,...patch};return this},then(resolve){resolve({})},single:async()=>({data:structuredClone(state)})}},rpc:async(name,args)=>{
   calls.push(name)
   if(name==='save_film_ticket_settings'){
    const p=args.p_patch,changed=p.ticket_price_cents!==state.ticket_price_cents
    state={...state,...p,event:{...state.event,...p.event},pricing_version:state.pricing_version+(changed?1:0),sales_enabled:changed||p.event.status!=='published'?false:state.sales_enabled}
   }
+  if(name==='mark_finished_film_archived')state.stripe_archived=true
   if(name==='set_film_ticket_sales')state.sales_enabled=args.p_enabled
   if(name==='publish_film_ticket_sales'){
    if(publishFailure)return{error:Error('version changed')}
@@ -15,7 +16,7 @@ async function fixture({screening=initial,env={STRIPE_SECRET_KEY:'sk_test_fake',
   }
   return{}
  }}
- class Stripe{constructor(){calls.push('stripe')}}
+ class Stripe{constructor(){calls.push('stripe');this.products={retrieve:async()=>({metadata:{screening_id:'event'}}),update:async()=>calls.push('archive_product')};this.prices={list:()=>({async *[Symbol.asyncIterator](){yield{id:'price'}}}),update:async()=>calls.push('archive_price')}}}
  const ctx=vm.createContext({Response,console,Date,process:{env}}),cache=new Map()
  const mocks={'stripe':{default:Stripe},'../../../../../lib/apiAuth':{requireUser:async()=>user,memberOf:async()=>({role}),serviceClient:()=>db},'./filmTicketCommerce':{synchronizeFilmProduct:async()=>{calls.push('sync');if(syncFailure)throw Error('provider unavailable');state.stripe_product_id='prod_same';state.stripe_price_id='price_same';state.stripe_synced_version=state.pricing_version}},'../../../../../lib/filmTicketCommerce':{synchronizeFilmProduct(){throw Error('Legacy sync path')}}}
  async function module(file){if(cache.has(file))return cache.get(file);const m=new vm.SourceTextModule(fs.readFileSync(file,'utf8'),{context:ctx});cache.set(file,m);await m.link(async spec=>{
@@ -59,4 +60,11 @@ test('the request helper preserves the saved-settings indicator for recovery aft
  const context=vm.createContext({fetch:async()=>({ok:false,json:async()=>({error:'Changes saved, but Stripe failed.',saved:true})})}),m=new vm.SourceTextModule(fs.readFileSync('lib/filmClubRequest.js','utf8'),{context})
  await m.link(()=>new vm.SyntheticModule(['createClient'],function(){this.setExport('createClient',()=>({auth:{getSession:async()=>({data:{session:{access_token:'test-only'}}})}}))},{context}));await m.evaluate()
  await assert.rejects(()=>m.namespace.filmClubRequest('/api/admin/film-club/commerce','POST',{}),e=>e.saved===true&&/Changes saved/.test(e.message))
+})
+
+test('archive is rejected before the event ends and only finished Stripe products are archived',async()=>{
+ for(const event of [initial.event,{...initial.event,ends_at:null}]){const f=await fixture({screening:{...initial,stripe_product_id:'prod',event}});assert.equal((await f.post('archive')).status,409);assert.deepEqual(f.calls,[])}
+ const ended={...initial,stripe_product_id:'prod',event:{...initial.event,starts_at:'2000-01-01',ends_at:'2000-01-02'}}
+ const f=await fixture({screening:ended});assert.equal((await f.post('archive')).status,200);assert.equal(f.state.stripe_archived,true);assert.ok(f.calls.indexOf('archive_price')<f.calls.indexOf('archive_product'));assert.ok(f.calls.includes('mark_finished_film_archived'))
+ const done=await fixture({screening:{...ended,stripe_archived:true}});assert.equal((await done.post('archive')).status,200);assert.deepEqual(done.calls,[])
 })

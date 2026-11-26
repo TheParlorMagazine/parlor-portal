@@ -4,6 +4,7 @@ import { filmClubRequest } from '../../../lib/filmClubRequest'
 import { ticketPricing, filmMoney, FILM_CURRENCIES, currencyExponent } from '../../../lib/filmTicketPricing'
 import styles from './FilmClubAdmin.module.css'
 import FilmDateTimeField from './FilmDateTimeField'
+import { filmHasEnded } from '../../../lib/filmTicketLifecycle'
 const api='/api/admin/film-club'
 const filmLanguages=['English','Arabic','Bengali','Chinese','Dutch','French','German','Greek','Hebrew','Hindi','Indonesian','Italian','Japanese','Korean','Persian','Polish','Portuguese','Russian','Spanish','Swahili','Swedish','Tamil','Turkish','Ukrainian','Urdu','Vietnamese','Multiple languages','No dialogue']
 const editorScreening=screening=>({...screening,member_price_override_cents:null,ticket_settings:{...screening.ticket_settings}})
@@ -65,9 +66,29 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
    {screening.sales_enabled&&<button disabled={busy} onClick={()=>action('pause')}>{pending==='pause'?'Pausing…':'Pause sales'}</button>}
   </div>
   <p>Ticket sales: {screening.sales_enabled?'Open':screening.stripe_archived?'Archived':screening.event?.status==='draft'?'Draft — not open':'Paused'}.</p>
-  <details><summary>Advanced ticket controls</summary>
-   <button disabled={busy} onClick={()=>action('archive')}>Archive ticket product</button>
-  </details>
+  {message&&<p role={failed?'alert':'status'}>{message}</p>}
+ </section>
+}
+export function FilmTicketArchive({screening,onChanged}) {
+ const [now,setNow]=useState(()=>Date.now()),[busy,setBusy]=useState(false),[archived,setArchived]=useState(!!screening.stripe_archived),[message,setMessage]=useState(''),[failed,setFailed]=useState(false)
+ useEffect(()=>{setArchived(!!screening.stripe_archived)},[screening.stripe_archived])
+ useEffect(()=>{
+  const remaining=Date.parse(screening.event?.ends_at)-Date.now()
+  if(!Number.isFinite(remaining)||remaining<=0)return
+  const timer=setTimeout(()=>setNow(Date.now()),Math.min(remaining+20,2147483647))
+  return()=>clearTimeout(timer)
+ },[screening.event?.ends_at,now])
+ if(!screening.stripe_product_id||!filmHasEnded(screening))return null
+ async function archive(){
+  setBusy(true);setFailed(false);setMessage('')
+  try{
+   const result=await filmClubRequest(`${api}/commerce`,'POST',{eventId:screening.event_id,action:'archive'})
+   setArchived(true);setMessage(result.message || 'Ticket product archived.')
+   try{await onChanged()}catch{setMessage('Ticket product archived. Refresh to update the overview.')}
+  }catch(e){setFailed(true);setMessage(e.message)}finally{setBusy(false)}
+ }
+ return <section className={styles.card}><h2>Ticket product</h2>
+  {archived?<p>Archived in Stripe.</p>:<><p>This event has ended. Its ticket product can now be archived in Stripe.</p><button className={styles.primary} disabled={busy} onClick={archive}>{busy?'Archiving…':'Archive ticket product'}</button></>}
   {message&&<p role={failed?'alert':'status'}>{message}</p>}
  </section>
 }

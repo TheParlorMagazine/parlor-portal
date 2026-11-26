@@ -3,7 +3,7 @@ import FilmDateTimeField from './FilmDateTimeField'
 
 import { useEffect, useRef, useState } from 'react'
 import { currencyExponent } from '../../../lib/filmTicketPricing'
-import { FilmTicketSettings, FilmTicketManagement } from './FilmTicketAdmin'
+import { FilmTicketSettings, FilmTicketManagement, FilmTicketArchive } from './FilmTicketAdmin'
 import FilmClubMediaFields from './FilmClubMediaFields'
 import FilmClubModeration from '../../_components/FilmClubModeration'
 import { filmClubRequest } from '../../../lib/filmClubRequest'
@@ -235,6 +235,7 @@ export default function FilmClubAdmin() {
         <Overview key={`${screening?.event_id}:${screening?.ticket_reported_at}`} screening={screening} busy={busy} onSave={body => save('PATCH', body, () => 'Ticket totals saved.')} />
       )}
       {!loading && tab === 'Overview' && screening && <FilmTicketManagement key={screening.event_id} screening={screening} overview />}
+      {!loading && tab === 'Overview' && screening && <FilmTicketArchive key={screening.event_id} screening={screening} onChanged={async () => setScreenings((await filmClubRequest(api)).screenings)} />}
       {!loading && tab === 'Tickets' && screening && <FilmTicketManagement key={screening.event_id} screening={screening} />}
       {tab === 'Screenings' && (
         <>

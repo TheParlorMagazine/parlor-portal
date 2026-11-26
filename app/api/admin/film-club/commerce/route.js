@@ -1,3 +1,4 @@
+import { archiveFilmProduct, filmHasEnded } from '../../../../../lib/filmTicketLifecycle'
 import Stripe from 'stripe'
 import { requireUser, memberOf, serviceClient } from '../../../../../lib/apiAuth'
 import { saveFilmTicketWorkflow } from '../../../../../lib/filmTicketWorkflow'
@@ -30,17 +31,11 @@ export async function POST(request) {
    return Response.json({ok:true})
   }
   if(!['sync','archive'].includes(body.action))throw new Error('Choose a supported action.')
-  const stripe=stripeFactory()
-  if(body.action==='sync')return Response.json(await synchronizeFilmProduct(db,stripe,s))
-  // Disable locally first so an uncertain provider response never leaves sales open.
-  const {error:disableError}=await db.rpc('set_film_ticket_sales',{p_event:s.event_id,p_actor:user.id,p_enabled:false})
-  if(disableError)throw new Error('Could not disable ticket sales.')
-  if(s.stripe_price_id)await stripe.prices.update(s.stripe_price_id,{active:false})
-  if(s.stripe_product_id)await stripe.products.update(s.stripe_product_id,{active:false})
-  const {error:archiveError}=await db.from('film_club_screenings').update({stripe_archived:true}).eq('event_id',s.event_id)
-  if(archiveError)throw new Error('Stripe product archived; refresh the local status before retrying.')
-  const {error:auditError}=await db.from('film_club_ticket_audit').insert({event_id:s.event_id,actor_id:user.id,action:'stripe_archived'})
-  if(auditError)throw new Error('Archived product; audit needs recovery.')
-  return Response.json({ok:true})
+  if(body.action==='sync')return Response.json(await synchronizeFilmProduct(db,stripeFactory(),s))
+  if(!filmHasEnded(s))throw Error('Ticket products can only be archived after the event ends.')
+  if(!s.stripe_product_id)throw Error('This screening has no Stripe ticket product.')
+  if(s.stripe_archived)return Response.json({ok:true,message:'Ticket product already archived.'})
+  await archiveFilmProduct(db,stripeFactory(),s)
+  return Response.json({ok:true,message:'Ticket product archived.'})
  }catch(error){return Response.json({error:error.message,saved:error.saved===true},{status:409})}
 }

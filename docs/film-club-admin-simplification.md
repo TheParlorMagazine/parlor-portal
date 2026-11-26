@@ -41,3 +41,6 @@ No live Stripe calls were made during implementation. The additional migration h
 ## Pink calendar controls
 
 Film Club screening, viewing-window and access-expiry fields now use a shared calendar styled to match The Parlor. Selected dates, focus and text highlights use pink. The calendar opens above the modal in the browser's popover layer; Escape closes the calendar without closing the editor. Arrow keys, Home/End and Page Up/Down navigate dates. Dates remain local to the user's browser and are sent to the server as ISO timestamps, at minute precision. Manual entry supports `dd/mm/yyyy, hh:mm` and local ISO input; invalid dates and daylight-saving gaps are rejected before saving. No database migration is required for this visual update.
+
+
+Manual archival appears only in the main Overview after the event end time, for screenings with a Stripe ticket product. Already archived products show their status instead of an action. The editor has no Advanced ticket controls section. Manual and scheduled archival share the same product identity checks, deactivate all active prices, retain order history, and record completion through the existing ended-screening RPC. Early requests are rejected before Stripe mutations. This change requires no additional migration.
