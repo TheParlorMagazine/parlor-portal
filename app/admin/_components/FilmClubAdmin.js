@@ -31,7 +31,7 @@ function Overview({ screening, onSave, busy }) {
     <>
       <section className={styles.card}>
         <details><summary>External ticket sales</summary>
-        <p>Enter cumulative totals from your screening provider. Each update replaces the previous totals.</p>
+        <p>Enter cumulative sales made outside The Parlor’s Stripe checkout. Exclude provider tickets bought to fulfill Stripe orders. Each update replaces the previous totals.</p>
         {screening.ticket_url && <p><a href={screening.ticket_url} target="_blank" rel="noreferrer">Open ticket provider</a></p>}
         <form className={styles.form} onSubmit={save}>
           <label>Tickets sold<input name="tickets" type="number" min="0" max="2147483647" step="1" defaultValue={screening.public_tickets ?? ''} /></label>

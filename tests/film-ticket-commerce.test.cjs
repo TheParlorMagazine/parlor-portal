@@ -7,6 +7,7 @@ async function load(file,mocks={},env={}){
   if(spec.endsWith('filmTicketSettings'))return module('lib/filmTicketSettings.js')
   if(spec.endsWith('/filmTicketLifecycle')||spec==='./filmTicketLifecycle')return module('lib/filmTicketLifecycle.js')
   if(spec==='./filmTicketFees')return module('lib/filmTicketFees.js')
+  if(spec.endsWith('/filmRevenueReport'))return module('lib/filmRevenueReport.js')
   throw Error('Unexpected import '+spec)
  });return m}
  const m=await module(file);await m.evaluate();return m.namespace

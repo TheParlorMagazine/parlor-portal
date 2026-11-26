@@ -1,3 +1,4 @@
+import { filmRevenueReport } from '../../../../../lib/filmRevenueReport'
 import Stripe from 'stripe'
 import { requireUser, serviceClient, memberOf } from '../../../../../lib/apiAuth'
 import { refreshFilmPayment, sendFilmEmail } from '../../../../../lib/filmTicketCommerce'
@@ -13,6 +14,10 @@ const csvCell=value=>'"'+String(value??'').replace(/^[=+@\-\t\r]/,"'$&").replace
 export async function GET(request) {
  const {db,error}=await gate(request);if(error)return error
  const url=new URL(request.url),eventId=url.searchParams.get('eventId')
+ if(url.searchParams.get('overview')==='true'){
+  try{return Response.json({totals:await filmRevenueReport(db,eventId)},{headers:{'Cache-Control':'private, no-store'}})}
+  catch(error){return Response.json({error:error.message},{status:503})}
+ }
  const data=[]
  for(let offset=0;offset<5000;offset+=500){
   let q=db.from('film_club_tickets').select('*,member:members(full_name,email),order:orders(order_number,stripe_payment_intent),screening:film_club_screenings(event:events(title))').order('purchased_at',{ascending:false}).order('id')

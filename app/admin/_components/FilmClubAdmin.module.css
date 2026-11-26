@@ -118,3 +118,17 @@
 .modalFooter { display: flex; justify-content: flex-end; border-top: 1px solid var(--film-card-border); padding: 16px 26px; background: #fff; }
 .modalFields { border: 0; padding: 0; margin: 0; min-width: 0; }
 @media (max-width: 600px) { .modal { max-height: calc(100dvh - 24px); } .modalHeader, .modalBody, .modalFooter { padding: 16px; } }
+
+/* Details and ticket fields use the full editor width, including inside disclosures. */
+.form { width: 100%; min-width: 0; }
+.form label, .form details, .ticketSection { width: 100%; min-width: 0; box-sizing: border-box; }
+.form input, .form textarea, .form select { width: 100%; min-width: 0; box-sizing: border-box; }
+.form details > label { margin-top: 12px; }
+.ticketSection { display: grid; gap: 12px; }
+.form input[type='number']::-webkit-inner-spin-button { opacity: 1; }
+.form .toggle { display: flex; align-items: center; gap: 10px; }
+.form .toggle input { appearance: none; position: relative; flex: 0 0 42px; width: 42px; height: 24px; padding: 0; margin: 0; border-radius: 20px; background: #ddd; cursor: pointer; }
+.form .toggle input::after { content: ''; position: absolute; width: 18px; height: 18px; left: 2px; top: 2px; border-radius: 50%; background: white; }
+.form .toggle input:checked { background: var(--film-accent, #813d52); }
+.form .toggle input:checked::after { left: 20px; }
+.form .toggle input:focus-visible { outline: 2px solid #813d52; outline-offset: 3px; }
