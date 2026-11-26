@@ -1,10 +1,11 @@
-// Shared cookie choices; first-party analytics require opt-in. Google may use cookieless measurement in Advanced Consent Mode.
+// Regional cookie choices; European and unknown locations require opt-in. Google may use cookieless measurement in Advanced Consent Mode.
 (()=>{
   if(window.ParlorConsent)return
   const KEY='parlor_cookie_consent',MAX_AGE=180*86400000
   const privacy=()=>navigator.doNotTrack==='1'||window.doNotTrack==='1'||!!navigator.globalPrivacyControl
   function read(){try{const v=JSON.parse(localStorage.getItem(KEY));return v?.version===1&&typeof v.analytics==='boolean'&&Number.isFinite(v.savedAt)&&v.savedAt<=Date.now()&&Date.now()-v.savedAt<MAX_AGE?v:null}catch{return null}}
-  const allowed=()=>!privacy()&&read()?.analytics===true
+  let regionReady=false,consentRequired=true
+  const allowed=()=>!privacy()&&(read()?.analytics ?? (regionReady&&!consentRequired))
   let pagePath=location.pathname
   const adminPage=()=>/^\/(?:admin|dashboard)(?:\/|$)/i.test(pagePath)
   window.ParlorConsent={analytics:allowed,open:()=>show(true),setPage:path=>{pagePath=path;syncPage()}}
@@ -24,7 +25,9 @@
   box.addEventListener('click',event=>{const action=event.target.closest('button')?.dataset.action;if(action==='preferences')show(true);if(action==='reject')save(false);if(action==='accept')save(true);if(action==='save')save(box.querySelector('input').checked)})
   window.addEventListener('storage',e=>{if(e.key===KEY){window.dispatchEvent(new Event('parlor-consent-change'));location.reload()}})
   document.addEventListener('click',e=>{if(e.target.closest('[data-cookie-preferences]'))show(true)})
-  function syncPage(){if(adminPage()){box.hidden=true}else if(!read())show();else{box.hidden=true}}
+  function syncPage(){if(adminPage()){box.hidden=true}else if(regionReady&&consentRequired&&!read())show();else{box.hidden=true}}
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),4000)
+  fetch('/api/geo',{cache:'no-store',signal:controller.signal}).then(response=>{if(!response.ok)throw new Error('Location unavailable');return response.json()}).then(data=>{consentRequired=data.consentRequired!==false}).catch(()=>{consentRequired=true}).finally(()=>{clearTimeout(timeout);regionReady=true;syncPage();window.dispatchEvent(new Event('parlor-consent-change'))})
   syncPage()
   window.dispatchEvent(new Event('parlor-consent-ready'))
 })()
