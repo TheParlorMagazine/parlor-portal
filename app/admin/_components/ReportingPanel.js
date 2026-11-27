@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { TRAFFIC_COLUMNS, trafficSourceLabel } from '../../../lib/trafficSourceLabels'
-const names = { search: 'Search & SEO', ga4: 'Where visitors come from', merchant: 'Product visibility', googleAds: 'Google Ads', instagram: 'Instagram / Meta', reddit: 'Reddit Ads', pinterest: 'Pinterest Ads' }
+const names = { search: 'Search & SEO', ga4: 'Visitor insights', merchant: 'Product visibility', googleAds: 'Google Ads', instagram: 'Instagram / Meta', reddit: 'Reddit Ads', pinterest: 'Pinterest Ads' }
 const font = "'Source Serif 4', Georgia, serif"
 const headingFont = "'Playfair Display', Georgia, serif"
 const providers = { search: 'Google Search Console', ga4: 'Google Analytics 4', merchant: 'Google Merchant Center', googleAds: 'Google Ads', instagram: 'Instagram / Meta', reddit: 'Reddit Ads', pinterest: 'Pinterest Ads' }

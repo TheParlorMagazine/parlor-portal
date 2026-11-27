@@ -495,7 +495,7 @@ export default function AnalyticsSection({ supabase }) {
           <div role="group" aria-label="Reporting controls" style={{ display: 'flex', gap: 8, width: 316, maxWidth: '100%' }}>
             <div style={{ flex: '1 1 190px', minWidth: 0 }}>
               <select aria-label="Analytics report" value={reportType} onChange={e => setReportType(e.target.value)} style={reportControlStyle}>
-                <option value="overview">Website overview</option><option value="page-health">Page health</option><option value="search">Search &amp; SEO</option><option value="ga4">Where visitors come from</option><option value="merchant">Product visibility</option><option value="paid">Paid marketing</option>
+                <option value="overview">Website overview</option><option value="page-health">Page health</option><option value="search">Search &amp; SEO</option><option value="ga4">Visitor insights</option><option value="merchant">Product visibility</option><option value="paid">Paid marketing</option>
               </select>
             </div>
             <div style={{ flex: '0 0 118px' }}>
