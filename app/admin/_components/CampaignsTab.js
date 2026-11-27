@@ -317,6 +317,7 @@ function IntroEditor({ content, onChange, supabase, onUpload, bg, onBgChange }) 
       Underline,
       CampaignLink.configure({ openOnClick: false }),
       AlignableImage,
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
     ],
     content: content || '',
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
@@ -366,7 +367,7 @@ function IntroEditor({ content, onChange, supabase, onUpload, bg, onBgChange }) 
   ]
 
   const btn = (label, active, fn, children) => (
-    <button key={label} type="button" onMouseDown={e => { e.preventDefault(); fn() }}
+    <button key={label} type="button" title={label} aria-label={label} aria-pressed={active} onMouseDown={e => { e.preventDefault(); fn() }}
       style={{ padding: '4px 6px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: active ? 'rgba(196,54,74,0.1)' : 'transparent', color: active ? DP : '#666', display: 'inline-flex', alignItems: 'center' }}>
       {children}
     </button>
@@ -384,6 +385,11 @@ function IntroEditor({ content, onChange, supabase, onUpload, bg, onBgChange }) 
         {sep}
         {btn('Link', editor.isActive('link'), () => editCampaignLink(editor),
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>)}
+        {sep}
+        {btn('Align left',    editor.isActive({ textAlign: 'left' }),    () => editor.chain().focus().setTextAlign('left').run(),    <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="0" y="3" width="9"  height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="0" y="9" width="7"  height="1.5" rx="1"/></svg>)}
+        {btn('Align center',  editor.isActive({ textAlign: 'center' }),  () => editor.chain().focus().setTextAlign('center').run(),  <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="2" y="3" width="9"  height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="3" y="9" width="7"  height="1.5" rx="1"/></svg>)}
+        {btn('Align right',   editor.isActive({ textAlign: 'right' }),   () => editor.chain().focus().setTextAlign('right').run(),   <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="4" y="3" width="9"  height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="6" y="9" width="7"  height="1.5" rx="1"/></svg>)}
+        {btn('Justify',       editor.isActive({ textAlign: 'justify' }), () => editor.chain().focus().setTextAlign('justify').run(), <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="0" y="3" width="13" height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="0" y="9" width="13" height="1.5" rx="1"/></svg>)}
         {sep}
         <CampaignButtonTool editor={editor}/>
         {/* Image insert */}
