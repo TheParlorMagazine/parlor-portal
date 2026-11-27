@@ -38,7 +38,7 @@ export async function POST(request) {
     const { data, error } = await resend.emails.send({
       from: process.env.RESEND_FROM || 'The Parlor <welcome@theparlormagazine.com>',
       to: [to.trim()],
-      subject: `[TEST] ${subject}`,
+      subject: `[TEST ${new Date().toISOString()}] ${subject}`,
       html,
     })
 
