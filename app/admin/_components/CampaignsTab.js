@@ -391,7 +391,6 @@ function IntroEditor({ content, onChange, supabase, onUpload, bg, onBgChange }) 
         {btn('Align right',   editor.isActive({ textAlign: 'right' }),   () => editor.chain().focus().setTextAlign('right').run(),   <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="4" y="3" width="9"  height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="6" y="9" width="7"  height="1.5" rx="1"/></svg>)}
         {btn('Justify',       editor.isActive({ textAlign: 'justify' }), () => editor.chain().focus().setTextAlign('justify').run(), <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="0" y="3" width="13" height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="0" y="9" width="13" height="1.5" rx="1"/></svg>)}
         {sep}
-        <CampaignButtonTool editor={editor}/>
         {/* Image insert */}
         {btn('Insert image', false, insertImage,
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -426,6 +425,7 @@ function IntroEditor({ content, onChange, supabase, onUpload, bg, onBgChange }) 
               style={{ width: '13px', height: '13px', borderRadius: '50%', background: c, border: (bg || '#ffffff') === c ? `2px solid ${DP}` : '1.5px solid #ddd', cursor: 'pointer', padding: 0, flexShrink: 0 }} />
           ))}
         </>}
+        <CampaignButtonTool editor={editor}/>
       </div>
       <div
         style={{ padding: '14px 16px', position: 'relative', transition: 'background .15s', background: dropping ? 'rgba(196,54,74,0.04)' : (bg && bg !== '#ffffff' ? bg : undefined) }}
@@ -525,8 +525,8 @@ function BlockBodyEditor({ content, onChange }) {
         {btn('Align left',    editor.isActive({ textAlign: 'left' }),    () => editor.chain().focus().setTextAlign('left').run(),    <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="0" y="3" width="9"  height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="0" y="9" width="7"  height="1.5" rx="1"/></svg>)}
         {btn('Align center',  editor.isActive({ textAlign: 'center' }),  () => editor.chain().focus().setTextAlign('center').run(),  <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="2" y="3" width="9"  height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="3" y="9" width="7"  height="1.5" rx="1"/></svg>)}
         {btn('Align right',   editor.isActive({ textAlign: 'right' }),   () => editor.chain().focus().setTextAlign('right').run(),   <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="4" y="3" width="9"  height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="6" y="9" width="7"  height="1.5" rx="1"/></svg>)}
-        <CampaignButtonTool editor={editor}/>
         {btn('Justify',       editor.isActive({ textAlign: 'justify' }), () => editor.chain().focus().setTextAlign('justify').run(), <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="0" y="3" width="13" height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="0" y="9" width="13" height="1.5" rx="1"/></svg>)}
+        <CampaignButtonTool editor={editor}/>
       </div>
       <div className="bbe" style={{ padding: '8px 10px', minHeight: '72px', color: '#0a0a0a' }}>
         <EditorContent editor={editor} />
