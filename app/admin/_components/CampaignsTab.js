@@ -58,7 +58,7 @@ function decodeBodyHtml(html) {
   if (s === -1 || e === -1) return { intro: html, blocks: [], introBg: '#ffffff' }
   try {
     const parsed = JSON.parse(html.slice(s + MARKER_START.length, e))
-    return { intro: parsed.intro || '', blocks: (parsed.blocks || []).map(b=>b.type==='shop_grid'?{...b,type:'content',shop_grid:{products:b.products||[],currency:b.currency||'usd',layout:b.layout||'stacked',product_cta_label:b.product_cta_label??'Shop now'}}:b), introBg: parsed.introBg || '#ffffff' }
+    return { intro: parsed.intro || '', blocks: (parsed.blocks || []).map(b=>b.type==='shop_grid'?{...b,type:'content',shop_grid:{products:b.products||[],currency:b.currency||'usd',layout:b.layout||'columns',product_cta_label:b.product_cta_label??'Shop now'}}:b), introBg: parsed.introBg || '#ffffff' }
   } catch {
     return { intro: html, blocks: [], introBg: '#ffffff' }
   }
