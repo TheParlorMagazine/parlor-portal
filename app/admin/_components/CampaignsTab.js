@@ -1,4 +1,5 @@
 'use client'
+import CampaignShopGridEditor from './CampaignShopGridEditor'
 
 import { Fragment, useEffect, useState, useCallback, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
@@ -554,6 +555,9 @@ function BlockCard({ block, index, total, onChange, onDelete, onMove, supabase, 
         </div>
       </div>
 
+      <label style={lbl}>Section type<select aria-label="Section type" value={block.type||'content'} onChange={e=>f('type',e.target.value)} style={inp}><option value="content">Image and text</option><option value="shop_grid">Shop grid</option><option value="button">Button</option></select></label>
+      {block.type==='shop_grid'&&<CampaignShopGridEditor block={block} onChange={onChange}/>}
+      {(!block.type||block.type==='content')&&<>
       {/* image */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -603,6 +607,7 @@ function BlockCard({ block, index, total, onChange, onDelete, onMove, supabase, 
         )}
       </div>
 
+      </>}
       {/* eyebrow + title */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
         <div>
@@ -654,7 +659,7 @@ function BlockCard({ block, index, total, onChange, onDelete, onMove, supabase, 
 }
 
 function BlockEditor({ blocks, onChange, supabase, onUpload }) {
-  const add = () => onChange([...blocks, EMPTY_BLOCK()])
+  const add = (type='content') => onChange([...blocks, {...EMPTY_BLOCK(),type,...(type==='shop_grid'?{products:[],currency:'usd',title:'From The Parlor Shop',product_cta_label:'Shop now'}:{}),...(type==='button'?{cta_label:'Shop now',cta_href:'/shop'}:{})}])
   const del = i => onChange(blocks.filter((_, idx) => idx !== i))
   const upd = (i, b) => onChange(blocks.map((x, idx) => idx === i ? b : x))
   const move = (i, dir) => {
@@ -672,12 +677,13 @@ function BlockEditor({ blocks, onChange, supabase, onUpload }) {
           onChange={nb => upd(i, nb)} onDelete={() => del(i)} onMove={move}
           supabase={supabase} onUpload={onUpload} />
       ))}
-      <button type="button" onClick={add}
+      <button type="button" onClick={()=>add()}
         style={{ padding: '10px', border: '1.5px dashed #e0e0e0', borderRadius: '8px', background: 'none', cursor: 'pointer', fontSize: '12px', color: '#aaa', fontFamily: ff, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'border-color .15s, color .15s' }}
         onMouseEnter={e => { e.currentTarget.style.borderColor = PINK; e.currentTarget.style.color = DP }}
         onMouseLeave={e => { e.currentTarget.style.borderColor = '#e0e0e0'; e.currentTarget.style.color = '#aaa' }}>
         + Add Section
       </button>
+      <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>{[['shop_grid','+ Add shop grid'],['button','+ Add button']].map(([type,label])=><button key={type} type="button" onClick={()=>add(type)} style={{padding:'10px 16px',border:'1px solid #0a0a0a',borderRadius:6,background:'#0a0a0a',color:'#fff',fontFamily:ff,cursor:'pointer'}}>{label}</button>)}</div>
     </div>
   )
 }
@@ -964,7 +970,7 @@ async function handleSendTest() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
               <span style={label}>Content Sections</span>
-              <span style={{ fontSize: '11px', color: '#ccc', fontFamily: ff }}>Each section renders as an image + headline + CTA strip in the email</span>
+              <span style={{ fontSize: '11px', color: '#ccc', fontFamily: ff }}>Add image and text sections, selected shop products, or buttons</span>
             </div>
             <BlockEditor blocks={blocks} onChange={setBlocks} supabase={supabase} onUpload={onUpload} />
           </div>
