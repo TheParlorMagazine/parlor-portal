@@ -1,18 +1,18 @@
 'use client'
 import CampaignShopGridEditor from './CampaignShopGridEditor'
+import CampaignButtonTool, {CampaignLink} from './CampaignButtonTool'
 
 import { Fragment, useEffect, useState, useCallback, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
-import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import TextAlign from '@tiptap/extension-text-align'
 import { confirmDialog, alertDialog } from '../../../lib/confirmDialog'
 import ImageEditor from './ImageEditor'
 import { campaignLinkUrl } from '../../../lib/campaignEmailStyles'
 import { campaignEmailHtml } from '../../../lib/campaignTemplate'
-import { blocksToEmailHtml } from '../../../lib/campaignRenderer'
+import { blocksToEmailHtml,blockToEmailHtml } from '../../../lib/campaignRenderer'
 import { footer } from '../../../lib/sendCampaign'
 import SubscriberActivity from './SubscriberActivity'
 import useCampaignTracking from './useCampaignTracking'
@@ -58,7 +58,7 @@ function decodeBodyHtml(html) {
   if (s === -1 || e === -1) return { intro: html, blocks: [], introBg: '#ffffff' }
   try {
     const parsed = JSON.parse(html.slice(s + MARKER_START.length, e))
-    return { intro: parsed.intro || '', blocks: parsed.blocks || [], introBg: parsed.introBg || '#ffffff' }
+    return { intro: parsed.intro || '', blocks: (parsed.blocks || []).map(b=>b.type==='shop_grid'?{...b,type:'content',shop_grid:{products:b.products||[],currency:b.currency||'usd',product_cta_label:b.product_cta_label??'Shop now'}}:b), introBg: parsed.introBg || '#ffffff' }
   } catch {
     return { intro: html, blocks: [], introBg: '#ffffff' }
   }
@@ -315,7 +315,7 @@ function IntroEditor({ content, onChange, supabase, onUpload, bg, onBgChange }) 
     extensions: [
       StarterKit.configure({ heading: { levels: [1,2,3] } }),
       Underline,
-      Link.configure({ openOnClick: false }),
+      CampaignLink.configure({ openOnClick: false }),
       AlignableImage,
     ],
     content: content || '',
@@ -385,6 +385,7 @@ function IntroEditor({ content, onChange, supabase, onUpload, bg, onBgChange }) 
         {btn('Link', editor.isActive('link'), () => editCampaignLink(editor),
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>)}
         {sep}
+        <CampaignButtonTool editor={editor}/>
         {/* Image insert */}
         {btn('Insert image', false, insertImage,
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -468,7 +469,7 @@ function BlockBodyEditor({ content, onChange }) {
     extensions: [
       StarterKit.configure({ heading: { levels: [2, 3] }, blockquote: false, codeBlock: false, horizontalRule: false }),
       Underline,
-      Link.configure({ openOnClick: false }),
+      CampaignLink.configure({ openOnClick: false }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
     ],
     content: content || '',
@@ -518,6 +519,7 @@ function BlockBodyEditor({ content, onChange }) {
         {btn('Align left',    editor.isActive({ textAlign: 'left' }),    () => editor.chain().focus().setTextAlign('left').run(),    <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="0" y="3" width="9"  height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="0" y="9" width="7"  height="1.5" rx="1"/></svg>)}
         {btn('Align center',  editor.isActive({ textAlign: 'center' }),  () => editor.chain().focus().setTextAlign('center').run(),  <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="2" y="3" width="9"  height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="3" y="9" width="7"  height="1.5" rx="1"/></svg>)}
         {btn('Align right',   editor.isActive({ textAlign: 'right' }),   () => editor.chain().focus().setTextAlign('right').run(),   <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="4" y="3" width="9"  height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="6" y="9" width="7"  height="1.5" rx="1"/></svg>)}
+        <CampaignButtonTool editor={editor}/>
         {btn('Justify',       editor.isActive({ textAlign: 'justify' }), () => editor.chain().focus().setTextAlign('justify').run(), <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="1.5" rx="1"/><rect x="0" y="3" width="13" height="1.5" rx="1"/><rect x="0" y="6" width="13" height="1.5" rx="1"/><rect x="0" y="9" width="13" height="1.5" rx="1"/></svg>)}
       </div>
       <div className="bbe" style={{ padding: '8px 10px', minHeight: '72px', color: '#0a0a0a' }}>
@@ -555,8 +557,6 @@ function BlockCard({ block, index, total, onChange, onDelete, onMove, supabase, 
         </div>
       </div>
 
-      <label style={lbl}>Section type<select aria-label="Section type" value={block.type||'content'} onChange={e=>f('type',e.target.value)} style={inp}><option value="content">Image and text</option><option value="shop_grid">Shop grid</option><option value="button">Button</option></select></label>
-      {block.type==='shop_grid'&&<CampaignShopGridEditor block={block} onChange={onChange}/>}
       {(!block.type||block.type==='content')&&<>
       {/* image */}
       <div>
@@ -626,6 +626,10 @@ function BlockCard({ block, index, total, onChange, onDelete, onMove, supabase, 
         <BlockBodyEditor content={block.body} onChange={v => f('body', v)} />
       </div>
 
+      <div style={{borderTop:'1px solid #f0e5e8',paddingTop:12}}>
+        {block.shop_grid ? <><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}><strong style={{fontFamily:ffH,color:'#923c5a'}}>Shop grid</strong><button type="button" onClick={()=>f('shop_grid',null)} style={{padding:'6px 10px',background:'#fff',border:'1px solid #ddd',borderRadius:5,fontFamily:ff,cursor:'pointer'}}>Remove shop grid</button></div><CampaignShopGridEditor block={block.shop_grid} onChange={grid=>f('shop_grid',grid)}/></> : <button type="button" onClick={()=>f('shop_grid',{products:[],currency:'usd',product_cta_label:'Shop now'})} style={{padding:'8px 12px',background:'#0a0a0a',color:'#fff',border:0,borderRadius:5,fontFamily:ff,cursor:'pointer'}}>Add shop grid</button>}
+      </div>
+
       {/* CTA */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px', padding: '12px', background: 'rgba(242,184,198,0.08)', borderRadius: '7px', border: '1px solid rgba(242,184,198,0.25)' }}>
         <div>
@@ -638,28 +642,14 @@ function BlockCard({ block, index, total, onChange, onDelete, onMove, supabase, 
         </div>
       </div>
 
-      {/* live preview strip */}
-      {(block.eyebrow || block.title || block.cta_label) && (() => {
-        const dark = ['#0a0a0a','#1a1a2e','#c4364a'].includes(block.bg_color)
-        const bg = block.bg_color || '#fafafa'
-        const tc = dark ? '#fff' : '#0a0a0a'
-        const bc = dark ? 'rgba(255,255,255,0.7)' : '#555'
-        const ec = dark ? '#f2b8c6' : '#7A263A'
-        return (
-          <div style={{ padding: '14px 16px', background: bg, borderRadius: '6px', borderTop: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
-            {block.eyebrow && <p style={{ fontFamily: ff, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.12em', color: ec, margin: '0 0 5px', fontWeight: '700' }}>{block.eyebrow}</p>}
-            {block.title   && <p style={{ fontFamily: ffH, fontSize: '18px', fontWeight: '700', color: tc, margin: '0 0 6px', lineHeight: '1.2' }}>{block.title}</p>}
-            {block.body    && <div dangerouslySetInnerHTML={{ __html: block.body }} style={{ fontFamily: 'Georgia,serif', fontSize: '13px', lineHeight: '1.6', color: bc, margin: '0 0 10px' }} />}
-            {block.cta_label && <span style={{ display: 'inline-block', padding: '7px 18px', background: PINK, color: '#0a0a0a', fontFamily: ff, fontSize: '11px', fontWeight: '700', letterSpacing: '.08em', textTransform: 'uppercase' }}>{block.cta_label}</span>}
-          </div>
-        )
-      })()}
+      {/* Same renderer as the final email, including the nested grid. */}
+      {(block.eyebrow || block.title || block.body || block.cta_label || block.shop_grid) && <div aria-label="Section preview" onClick={event=>{if(event.target.closest('a'))event.preventDefault()}} dangerouslySetInnerHTML={{__html:blockToEmailHtml({...block,image:''})}}/>}
     </div>
   )
 }
 
 function BlockEditor({ blocks, onChange, supabase, onUpload }) {
-  const add = (type='content') => onChange([...blocks, {...EMPTY_BLOCK(),type,...(type==='shop_grid'?{products:[],currency:'usd',title:'From The Parlor Shop',product_cta_label:'Shop now'}:{}),...(type==='button'?{cta_label:'Shop now',cta_href:'/shop'}:{})}])
+  const add = () => onChange([...blocks,EMPTY_BLOCK()])
   const del = i => onChange(blocks.filter((_, idx) => idx !== i))
   const upd = (i, b) => onChange(blocks.map((x, idx) => idx === i ? b : x))
   const move = (i, dir) => {
@@ -683,7 +673,7 @@ function BlockEditor({ blocks, onChange, supabase, onUpload }) {
         onMouseLeave={e => { e.currentTarget.style.borderColor = '#e0e0e0'; e.currentTarget.style.color = '#aaa' }}>
         + Add Section
       </button>
-      <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>{[['shop_grid','+ Add shop grid'],['button','+ Add button']].map(([type,label])=><button key={type} type="button" onClick={()=>add(type)} style={{padding:'10px 16px',border:'1px solid #0a0a0a',borderRadius:6,background:'#0a0a0a',color:'#fff',fontFamily:ff,cursor:'pointer'}}>{label}</button>)}</div>
+
     </div>
   )
 }
@@ -970,7 +960,7 @@ async function handleSendTest() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
               <span style={label}>Content Sections</span>
-              <span style={{ fontSize: '11px', color: '#ccc', fontFamily: ff }}>Add image and text sections, selected shop products, or buttons</span>
+              <span style={{ fontSize: '11px', color: '#ccc', fontFamily: ff }}>Add text, images, buttons and a shop grid inside each section</span>
             </div>
             <BlockEditor blocks={blocks} onChange={setBlocks} supabase={supabase} onUpload={onUpload} />
           </div>
