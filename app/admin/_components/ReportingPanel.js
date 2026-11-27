@@ -1,12 +1,13 @@
 'use client'
 import { useEffect, useState } from 'react'
-const names = { search: 'Search & SEO', ga4: 'GA4 acquisition', merchant: 'Product visibility', googleAds: 'Google Ads', instagram: 'Instagram / Meta', reddit: 'Reddit Ads', pinterest: 'Pinterest Ads' }
+import { TRAFFIC_COLUMNS, trafficSourceLabel } from '../../../lib/trafficSourceLabels'
+const names = { search: 'Search & SEO', ga4: 'Where visitors come from', merchant: 'Product visibility', googleAds: 'Google Ads', instagram: 'Instagram / Meta', reddit: 'Reddit Ads', pinterest: 'Pinterest Ads' }
 const font = "'Source Serif 4', Georgia, serif"
 const headingFont = "'Playfair Display', Georgia, serif"
 const providers = { search: 'Google Search Console', ga4: 'Google Analytics 4', merchant: 'Google Merchant Center', googleAds: 'Google Ads', instagram: 'Instagram / Meta', reddit: 'Reddit Ads', pinterest: 'Pinterest Ads' }
 const descriptions = {
   search: 'Search visibility, clicks and page performance from Google.',
-  ga4: 'Traffic sources, engagement and tracked key events.',
+  ga4: 'How people reach The Parlor and what they do during their visits. Data from Google Analytics.',
   merchant: 'Clicks, impressions and click-through rate for individual products on Google, plus store-level traffic.',
   paid: 'Campaign performance from your connected advertising accounts.',
 }
@@ -106,7 +107,13 @@ export default function ReportingPanel({ supabase, view, reports, onReport, paid
       {report && <div style={{ marginTop: 20, minWidth: 0 }}>
         <p style={{ ...paragraph, fontSize: 12 }}>{report.name} · {report.start} – {report.end} · retrieved {new Date(report.fetchedAt).toLocaleString()}</p>
         <p style={{ ...paragraph, fontSize: 12, margin: '6px 0 14px' }}>{report.note}</p>
-        {report.rows.length ? <div style={{ overflowX: 'auto', border: '1px solid #eee', borderRadius: 7 }}><table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: font, fontSize: 13, lineHeight: 1.6 }}><thead><tr>{report.columns.map(c => <th key={c} style={{ textAlign: 'left', padding: '10px 12px', background: '#fafafa', borderBottom: '1px solid #eee', fontFamily: font, fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.08em', color: '#999', whiteSpace: 'nowrap' }}>{c}</th>)}</tr></thead><tbody>{report.rows.map((row, i) => <tr key={i}>{row.map((value, j) => <td key={j} style={{ padding: '10px 12px', borderBottom: i < report.rows.length - 1 ? '1px solid #f2f2f2' : 'none', color: '#555', overflowWrap: 'anywhere' }}>{report.columns[j] === 'CTR' && value != null && Number.isFinite(Number(value)) ? `${(Number(value) * 100).toFixed(2)}%` : value ?? '—'}</td>)}</tr>)}</tbody></table></div> : <p style={{ ...paragraph, padding: 16, background: '#fafafa', borderRadius: 7 }}>{report.partial ? 'No rows from the available sources. Some report data could not be retrieved; retry later.' : 'No rows returned for this period.'}</p>}
+        {source === 'ga4' && <div style={{padding:'12px 14px',marginBottom:16,background:'#faf7f8',border:'1px solid #f0e5e8',borderRadius:7}}><strong style={{color:'#923c5a'}}>How to read this report</strong><dl style={{margin:'8px 0 0',display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:14}}>{[
+          ['Visits','Browsing sessions. One person can visit several times.'],
+          ['Active visitors','People Google counts as active for each source. The same person may appear under more than one source.'],
+          ['Engaged visits','Visits lasting beyond the engagement threshold (10 seconds by default), with a key action, or with at least two page or screen views.'],
+          ['Key actions','Events marked as important in Google Analytics, such as a purchase if configured. Zero does not establish that there were no sales.'],
+        ].map(([term,description])=><div key={term}><dt style={{fontWeight:600,color:'#333'}}>{term}</dt><dd style={{margin:'4px 0 0',fontSize:12,color:'#777'}}>{description}</dd></div>)}</dl></div>}
+        {report.rows.length ? <div style={{ overflowX: 'auto', border: '1px solid #eee', borderRadius: 7 }}><table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: font, fontSize: 13, lineHeight: 1.6 }}><thead><tr>{report.columns.map(c => <th key={c} style={{ textAlign: 'left', padding: '10px 12px', background: '#fafafa', borderBottom: '1px solid #eee', fontFamily: font, fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.08em', color: '#999', whiteSpace: 'nowrap' }}>{source === 'ga4' ? TRAFFIC_COLUMNS[c] || c : c}</th>)}</tr></thead><tbody>{report.rows.map((row, i) => <tr key={i}>{row.map((value, j) => <td key={j} style={{ padding: '10px 12px', borderBottom: i < report.rows.length - 1 ? '1px solid #f2f2f2' : 'none', color: '#555', overflowWrap: 'anywhere' }}>{source === 'ga4' && j === 0 ? <div><strong style={{color:'#333',fontWeight:500}}>{trafficSourceLabel(value).title}</strong>{trafficSourceLabel(value).detail && <div style={{fontSize:12,color:'#777',marginTop:3}}>{trafficSourceLabel(value).detail}</div>}<div style={{fontSize:11,color:'#999',marginTop:3}}>Google source: {value || 'Unavailable'}</div></div> : report.columns[j] === 'CTR' && value != null && Number.isFinite(Number(value)) ? `${(Number(value) * 100).toFixed(2)}%` : value ?? '—'}</td>)}</tr>)}</tbody></table></div> : <p style={{ ...paragraph, padding: 16, background: '#fafafa', borderRadius: 7 }}>{report.partial ? 'No rows from the available sources. Some report data could not be retrieved; retry later.' : 'No rows returned for this period.'}</p>}
       </div>}
       {view === 'paid' && <p style={{ ...paragraph, fontSize: 12, marginTop: 18, paddingTop: 12, borderTop: '1px solid #f0f0f0' }}>Platforms use different attribution windows. Their conversions may overlap; spend and conversions are not combined across platforms or currencies.</p>}
     </div>
