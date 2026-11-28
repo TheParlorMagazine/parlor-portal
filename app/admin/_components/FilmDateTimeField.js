@@ -55,6 +55,9 @@ export default function FilmDateTimeField({label,value,onChange,name,required=fa
   else handled=false
   if(handled){e.preventDefault();focusDay.current=true;setFocused(dayKey(next));setMonth(new Date(next.getFullYear(),next.getMonth(),1))}
  }
+ function setTime(part,n){const d=new Date(base);if(part==='hour')d.setHours(n);else d.setMinutes(n);update(d)}
+ function timeKey(event,part,n,count){let next;if(event.key==='ArrowDown')next=(n+1)%count;else if(event.key==='ArrowUp')next=(n+count-1)%count;else if(event.key==='Home')next=0;else if(event.key==='End')next=count-1;else return;event.preventDefault();setTime(part,next);event.currentTarget.parentElement.querySelector(`[data-time="${next}"]`)?.focus({preventScroll:true})}
+ useEffect(()=>{if(open)for(const list of panel.current?.querySelectorAll('[data-time-list]')||[]){const active=list.querySelector('[aria-pressed=true]');if(active)list.scrollTop=active.offsetTop-(list.clientHeight-active.offsetHeight)/2}},[open,actual])
  const heading=month.toLocaleDateString('en-GB',{month:'long',year:'numeric'})
  return <div className={styles.dateField}>
   <label htmlFor={id}>{label}</label>
@@ -64,12 +67,13 @@ export default function FilmDateTimeField({label,value,onChange,name,required=fa
   </div>
   {name&&<input type="hidden" name={name} value={actual || ''}/>}
   {open&&<div ref={panel} id={`${id}-calendar`} popover="auto" role="dialog" aria-label={`Choose ${label.toLowerCase()}`} className={styles.datePanel} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close()}}}>
+   <div className={styles.calendarBody}><div>
    <div className={styles.calendarHeading}><strong id={`${id}-month`} aria-live="polite">{heading}</strong><button type="button" aria-label="Previous month" onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()-1,1))}>‹</button><button type="button" aria-label="Next month" onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()+1,1))}>›</button></div>
    <div role="grid" aria-labelledby={`${id}-month`}>
     <div role="row" className={styles.calendarRow}>{['Mo','Tu','We','Th','Fr','Sa','Su'].map(day=><span role="columnheader" key={day}>{day}</span>)}</div>
     {Array.from({length:6},(_,week)=><div role="row" key={week} className={styles.calendarRow}>{days.slice(week*7,week*7+7).map(d=><button key={dayKey(d)} type="button" role="gridcell" data-day={dayKey(d)} data-outside={d.getMonth()!==month.getMonth()} tabIndex={dayKey(d)===active?0:-1} aria-selected={!!selected&&dayKey(d)===dayKey(selected)} aria-current={dayKey(d)===dayKey(new Date())?'date':undefined} aria-label={d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} onClick={()=>pick(d)} onKeyDown={e=>keyboard(e,d)}>{d.getDate()}</button>)}</div>)}
    </div>
-   <div className={styles.calendarTime}><label>Hour<input aria-label={`${label} hour`} type="number" min="0" max="23" value={pad(base.getHours())} onChange={e=>{if(e.target.value!==''&&e.target.validity.valid){const d=new Date(base);d.setHours(Number(e.target.value));update(d)}}}/></label><span>:</span><label>Minute<input aria-label={`${label} minute`} type="number" min="0" max="59" value={pad(base.getMinutes())} onChange={e=>{if(e.target.value!==''&&e.target.validity.valid){const d=new Date(base);d.setMinutes(Number(e.target.value));update(d)}}}/></label></div>
+   </div><div className={styles.calendarTime}>{[['hour','Hour',24,base.getHours()],['minute','Minute',60,base.getMinutes()]].map(([part,title,count,current])=><div key={part} className={styles.timeColumn}><span>{title}</span><div role="group" aria-label={`${label} ${part}`} data-time-list className={styles.timeList}>{Array.from({length:count},(_,n)=><button type="button" key={n} data-time={n} aria-label={`${label} ${part} ${pad(n)}`} aria-pressed={current===n} tabIndex={current===n?0:-1} onClick={()=>setTime(part,n)} onKeyDown={event=>timeKey(event,part,n,count)}>{pad(n)}</button>)}</div></div>)}</div></div>
    <div className={styles.calendarActions}><button type="button" onClick={()=>update(null)}>Clear</button><button type="button" onClick={()=>pick(new Date())}>Today</button><button type="button" onClick={close}>Done</button></div>
   </div>}
  </div>

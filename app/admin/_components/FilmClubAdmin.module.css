@@ -155,25 +155,29 @@
 .form .dateInput button { position: absolute; right: 4px; top: 4px; bottom: 4px; padding: 8px; border: 0; background: transparent; color: #813d52; }
 .dateInput svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; }
 .dateField input:focus-visible { outline: 2px solid #b65b79; outline-offset: 2px; }
-.datePanel { position: fixed; inset: auto; margin: 0; width: 320px; max-width: calc(100vw - 32px); max-height: calc(100dvh - 24px); overflow: auto; box-sizing: border-box; border: 1px solid #e8c5d0; border-radius: 12px; padding: 16px; background: #fff; color: #241c20; font: inherit; box-shadow: 0 10px 36px #32102030; }
-.datePanel button { font: inherit; cursor: pointer; border: 0; border-radius: 6px; background: transparent; color: #813d52; padding: 7px; }
+.datePanel { position: fixed; inset: auto; margin: 0; width: 360px; max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow: auto; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background: #fff; color: #241c20; font: 13px/1.3 system-ui,-apple-system,'Segoe UI',sans-serif; box-shadow: 0 4px 16px #0003; }
+.datePanel button { font: inherit; cursor: pointer; border: 0; border-radius: 3px; background: transparent; color: #813d52; padding: 5px; }
 .datePanel button:hover { background: #fce8ef; }
-.datePanel button:focus-visible { outline: 2px solid #b65b79; outline-offset: 1px; }
-.calendarHeading { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
-.calendarHeading strong { flex: 1; }
-.calendarHeading button { font-size: 24px; line-height: 1; width: 32px; }
-.calendarRow { display: grid; grid-template-columns: repeat(7,1fr); text-align: center; gap: 2px; }
-.calendarRow span { color: #76666d; font-size: 12px; padding: 6px 0; }
-.calendarRow button { color: #241c20; aspect-ratio: 1; padding: 0; }
+.datePanel button:focus-visible { outline: 2px solid #b65b79; outline-offset: -2px; }
+.calendarBody { display: grid; grid-template-columns: minmax(0,1fr) 90px; gap: 10px; }
+.calendarHeading { display: flex; align-items: center; gap: 2px; height: 30px; margin-bottom: 6px; }
+.calendarHeading strong { flex: 1; font-size: 12px; }
+.calendarHeading button { font-size: 22px; line-height: 1; width: 25px; padding: 3px; }
+.calendarRow { display: grid; grid-template-columns: repeat(7,1fr); text-align: center; gap: 1px; }
+.calendarRow span { color: #76666d; font-size: 11px; padding: 5px 0; }
+.calendarRow button { color: #241c20; height: 27px; padding: 0; font-size: 12px; }
 .calendarRow button[data-outside='true'] { color: #9a8c92; }
 .calendarRow button[aria-current='date'] { box-shadow: inset 0 0 0 1px #b65b79; }
 .calendarRow button[aria-selected='true'] { background: #f2b7c8; color: #401c29; font-weight: 700; }
-.calendarTime { display: flex; justify-content: center; align-items: flex-end; gap: 8px; margin-top: 14px; }
-.calendarTime label { display: grid; width: 78px; gap: 4px; font-size: 12px; }
-.calendarTime input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #e8c5d0; border-radius: 6px; font: inherit; font-size: 16px; accent-color: #b65b79; }
-.calendarTime > span { padding-bottom: 9px; }
-.calendarActions { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
-.calendarActions button:last-child { margin-left: auto; background: #813d52; color: white; }
+.calendarTime { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; min-width: 0; }
+.timeColumn { min-width: 0; text-align: center; }
+.timeColumn > span { display: block; font-size: 10px; color: #76666d; height: 20px; }
+.timeList { position: relative; height: 204px; overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain; }
+.timeList::-webkit-scrollbar { display: none; }
+.datePanel .timeList button { display: block; width: 100%; height: 30px; color: #241c20; }
+.datePanel .timeList button[aria-pressed='true'] { background: #f2b7c8; color: #401c29; font-weight: 700; }
+.calendarActions { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; }
+.calendarActions button:last-child { margin-left: auto; background: #f2b7c8; color: #401c29; }
 .dateInput button:focus-visible { outline: 2px solid #b65b79; outline-offset: 1px; }
 .dateField input::selection { background: #f2b7c8; color: #401c29; }
 
