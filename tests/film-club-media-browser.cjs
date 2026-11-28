@@ -14,7 +14,7 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
   async function mount(view){
    await p.evaluate(view=>{
     window.view=view;window.uploads=[];window.calls=[];window.rejectCreateOnce=true
-    window.records=[{event_id:'11111111-1111-4111-8111-111111111111',forum_id:'forum-existing',discussion_active:true,commenting_open:true,trailer_url:null,event:{id:'11111111-1111-4111-8111-111111111111',title:'Existing screening',status:'published',starts_at:'2099-12-12T19:00:00Z',cover_image_url:null}}]
+    window.records=[{event_id:'11111111-1111-4111-8111-111111111111',forum_id:'forum-existing',discussion_active:true,commenting_open:true,trailer_url:null,currency:'usd',ticket_price_cents:999,member_discount_percent:20,member_price_override_cents:null,host_share_percent:0,host_share_eligibility:'no',ticket_settings:{format:'live',fulfillment_method:'individual'},event:{id:'11111111-1111-4111-8111-111111111111',title:'Existing screening',status:'published',starts_at:'2099-12-12T19:00:00Z',cover_image_url:null}}]
     window.filmRequest=async(url,method='GET',body)=>{
      if(url.includes('/subscribers')){window.contacts ||= [{id:'paid-contact',full_name:'Existing Buyer',email:'buyer@example.invalid',plan:'Reader Circle',source:'Parlor ticket',newsletter_subscribed:true}];if(method==='POST'){window.calls.push({method,body});if(body.createNew&&window.contacts.some(c=>c.email.toLowerCase()===body.email.trim().toLowerCase()))throw new Error('Subscriber already exists. Select them from the subscriber search above.');if(!window.contacts.some(c=>c.email===body.email))window.contacts.push({id:'new-contact',email:body.email,full_name:body.full_name||'Existing Subscriber',plan:'free',newsletter_subscribed:true,source:'External ticket'});return{ok:true}}if(url.includes('&q='))return{members:[{id:'existing-contact',full_name:'Existing Subscriber',email:'existing@example.invalid',plan:'free'}]};return{subscribers:structuredClone(window.contacts)}}
      if(method==='GET'&&url.includes('overview=true'))return {dashboard:{byCurrency:[],rates:[],rows:[],tickets:0,screenings:0,pendingScreenings:0,unreportedTicketCounts:0}}
@@ -31,6 +31,7 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
       if(body.action==='trailer')record.trailer_url=body.trailer_url
       return {ok:true}
      }
+     if(url.includes('/commerce')){if(window.rejectSettingsOnce){window.rejectSettingsOnce=false;throw new Error('Save failed. Your draft is retained.')}const record=window.records.find(r=>r.event_id===body.eventId);Object.assign(record,{...body.settings,event:{...record.event,...body.settings.event},sales_enabled:body.action==='publish'});return{ok:true,message:'All screening details saved.'}}
      if(window.rejectCreateOnce){window.rejectCreateOnce=false;throw new Error('Could not save screening. Please try again.')}
      window.records.push({event_id:body.id,trailer_url:body.trailer_url,event:{id:body.id,title:body.title,status:'draft',starts_at:body.starts_at,cover_image_url:body.cover_image_url}})
      return {eventId:body.id}
@@ -87,11 +88,15 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
   await videoDrop.dispatchEvent('drop',{dataTransfer:oversized});await p.getByRole('alert').getByText('Choose a file up to 4 MB. For larger trailers, use a YouTube or Vimeo link.',{exact:true}).waitFor();assert.equal(await p.evaluate(()=>window.uploads.length),count+2)
   // A valid browser selection still works after a rejected drop.
   await p.getByLabel('Upload video snippet',{exact:true}).setInputFiles({name:'trailer.mp4',mimeType:'video/mp4',buffer:Buffer.from('fixture')})
-  await p.getByRole('button',{name:'Save cover image',exact:true}).click()
-  await p.getByText('Screening media saved.',{exact:true}).waitFor()
-  assert.equal(await p.getByLabel('Trailer URL',{exact:true}).inputValue(),'https://media.fixture/clip.mp4')
-  await p.getByRole('button',{name:'Save trailer',exact:true}).click()
-  await p.getByRole('button',{name:'Done',exact:true}).click()
+  assert.equal(await p.getByRole('button',{name:'Save cover image',exact:true}).count(),0);assert.equal(await p.getByRole('button',{name:'Save trailer',exact:true}).count(),0);assert.equal(await p.getByRole('button',{name:'Save changes',exact:true}).count(),1);assert.equal(await p.getByRole('button',{name:'Done',exact:true}).count(),0)
+  await p.getByLabel('Title',{exact:true}).fill('Recovered screening');await p.getByLabel('Publish and open ticket sales when saving').check()
+  assert.equal((await p.evaluate(()=>window.calls.filter(c=>c.body?.action==='publish').length)),0,'Auto-saving never publishes')
+  await p.keyboard.press('Escape');await p.getByRole('button',{name:'Edit',exact:true}).click()
+  assert.equal(await p.getByLabel('Title',{exact:true}).inputValue(),'Recovered screening');assert.equal(await p.getByLabel('Cover image URL',{exact:true}).inputValue(),'https://media.fixture/cover.webp');assert.equal(await p.getByLabel('Trailer URL',{exact:true}).inputValue(),'https://media.fixture/clip.mp4');assert.equal(await p.getByLabel('Publish and open ticket sales when saving').isChecked(),true);await p.getByLabel('Publish and open ticket sales when saving').uncheck()
+  const mediaBounds=await p.getByLabel('Trailer URL',{exact:true}).boundingBox(),publishBounds=await p.getByLabel('Publish and open ticket sales when saving').boundingBox(),saveBounds=await p.getByRole('button',{name:'Save changes',exact:true}).boundingBox();assert.ok(publishBounds.y>mediaBounds.y&&saveBounds.y>publishBounds.y,'Publish and Save are at the end, after media')
+  await p.evaluate(()=>window.rejectSettingsOnce=true);await p.getByRole('button',{name:'Save changes',exact:true}).click();await p.getByRole('alert').filter({hasText:'Save failed. Your draft is retained.'}).waitFor();await p.keyboard.press('Escape');await p.getByRole('button',{name:'Edit',exact:true}).click();assert.equal(await p.getByLabel('Title',{exact:true}).inputValue(),'Recovered screening')
+  await p.getByRole('button',{name:'Save changes',exact:true}).click();await p.getByText('All screening details saved.',{exact:true}).waitFor();const saved=(await p.evaluate(()=>window.calls.at(-1))).body;assert.equal(saved.action,'settings');assert.equal(saved.settings.event.cover_image_url,'https://media.fixture/cover.webp');assert.equal(saved.settings.trailer_url,'https://media.fixture/clip.mp4');assert.equal(await p.evaluate(()=>localStorage.getItem('parlor-film-editor-v1:11111111-1111-4111-8111-111111111111')),null)
+  await p.getByRole('button',{name:'Close screening editor',exact:true}).click()
   await p.getByRole('button',{name:'+ Add screening event',exact:true}).click()
   const form=p.getByRole('dialog',{name:'Add screening event',exact:true}).locator('form')
   await form.getByLabel('Title',{exact:true}).fill('New screening')
@@ -100,10 +105,11 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
   await form.getByLabel('Trailer URL',{exact:true}).fill('https://youtu.be/fixture123')
   await form.getByRole('button',{name:'Preview trailer',exact:true}).click()
   assert.equal(await form.locator('iframe').getAttribute('src'),'https://www.youtube.com/embed/fixture123')
-  await form.getByRole('button',{name:'Add screening event',exact:true}).click()
+  const creation=await p.evaluate(()=>JSON.parse(localStorage.getItem('parlor-film-editor-v1:new')).values.creation_id);await p.keyboard.press('Escape');await p.getByRole('button',{name:'+ Add screening event',exact:true}).click();assert.equal(await form.getByLabel('Title',{exact:true}).inputValue(),'New screening');assert.equal(await p.evaluate(()=>JSON.parse(localStorage.getItem('parlor-film-editor-v1:new')).values.creation_id),creation)
+  await form.getByRole('button',{name:'Save screening',exact:true}).click()
   await p.getByRole('dialog').getByRole('alert').getByText('Could not save screening. Please try again.').waitFor()
   assert.equal(await form.getByLabel('Title',{exact:true}).inputValue(),'New screening')
-  await form.getByRole('button',{name:'Add screening event',exact:true}).click()
+  await form.getByRole('button',{name:'Save screening',exact:true}).click()
   await p.getByText('Screening saved as a draft in Events.',{exact:true}).waitFor()
   const calls=await p.evaluate(()=>window.calls)
   const submissions=calls.filter(c=>c.method==='POST'&&c.body.title);assert.equal(submissions.length,2);assert.equal(submissions[0].body.id,submissions[1].body.id)
@@ -117,5 +123,5 @@ const {build}=require('/tmp/parlor-tour-validation/node_modules/esbuild'),{chrom
   await p.locator('video').waitFor();assert.equal(await p.locator('video').getAttribute('poster'),'https://media.fixture/cover.webp')
   assert.equal(await p.locator('img[src="https://media.fixture/cover.webp"]').count(),1)
   assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(errors,[]);await p.close()
- }console.log('PASS Film Club media UI: cover/video uploads, previews, independent saves, new-screening fields and published portal at mobile/desktop.')}finally{await browser.close();fs.rmSync(dir,{recursive:true,force:true})}
+ }console.log('PASS Film Club media UI: cover/video uploads, previews, unified save and automatic draft recovery, new-screening fields and published portal at mobile/desktop.')}finally{await browser.close();fs.rmSync(dir,{recursive:true,force:true})}
 })().catch(e=>{console.error(e);process.exitCode=1})

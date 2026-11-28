@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import { currencyExponent } from '../../../lib/filmTicketPricing'
 import { FilmTicketSettings, FilmTicketManagement, FilmTicketArchive } from './FilmTicketAdmin'
 import FilmClubMediaFields from './FilmClubMediaFields'
+import {filmEditorDraftKey,readFilmEditorDraft,writeFilmEditorDraft,mergeFilmEditorDraft} from '../../../lib/filmEditorDraft'
 import FilmClubModeration from '../../_components/FilmClubModeration'
 import { filmClubRequest } from '../../../lib/filmClubRequest'
 import styles from './FilmClubAdmin.module.css'
@@ -49,7 +50,7 @@ function Overview({ screening, onSave, busy }) {
   )
 }
 
-function ScreeningModal({ title, busy, onClose, children }) {
+function ScreeningModal({ title, busy, onClose, children, footer=true }) {
   const dialog = useRef(null)
   useEffect(() => {
     const previous = document.body.style.overflow
@@ -66,53 +67,32 @@ function ScreeningModal({ title, busy, onClose, children }) {
     onClick={event => { if (event.target === event.currentTarget && !busy) { const r=event.currentTarget.getBoundingClientRect(); if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)onClose() } }}>
     <header className={styles.modalHeader}><h2 id="screening-modal-title">{title}</h2><button type="button" aria-label="Close screening editor" disabled={busy} onClick={onClose}>×</button></header>
     <div className={styles.modalBody}>{children}</div>
-    <footer className={styles.modalFooter}><button className={styles.primary} type="button" disabled={busy} onClick={onClose}>Done</button></footer>
+    {footer&&<footer className={styles.modalFooter}><button className={styles.primary} type="button" disabled={busy} onClick={onClose}>Done</button></footer>}
   </dialog>
 }
 
 function ScreeningForm({ onAdd, busy, onBusyChange }) {
-  const submissionId = useRef(null)
-  const [trailerUrl, setTrailerUrl] = useState('')
-  const [cover, setCover] = useState('')
-  const [uploading, setUploading] = useState(false)
-
+  const [values,setValues]=useState(()=>{let draft;try{draft=readFilmEditorDraft('new',window.localStorage)}catch{}return mergeFilmEditorDraft({creation_id:crypto.randomUUID(),ticket_url:'',trailer_url:'',event:{title:'',description:'',starts_at:'',cover_image_url:''}},draft)})
+  const latest=useRef(values),[uploading,setUploading]=useState(false),[draftNote,setDraftNote]=useState('Draft edits are saved automatically on this browser.')
+  latest.current=values
+  function change(patch){const next={...latest.current,...patch};latest.current=next;setValues(next);try{writeFilmEditorDraft('new',next,false,window.localStorage);setDraftNote('Draft auto-saved on this browser.')}catch{setDraftNote('Automatic draft saving is unavailable. Save before closing.')}}
+  const eventField=(key,value)=>change({event:{...latest.current.event,[key]:value}})
   useEffect(() => { onBusyChange?.(uploading) }, [uploading, onBusyChange])
-
   async function submit(event) {
     event.preventDefault()
     if (busy || uploading) return
-    const form = event.currentTarget
-    const fields = Object.fromEntries(new FormData(form))
-    submissionId.current ||= crypto.randomUUID()
-    await onAdd({ ...fields, id: submissionId.current, starts_at: new Date(fields.starts_at).toISOString() })
+    const saved=await onAdd({id:values.creation_id,title:values.event.title,description:values.event.description,starts_at:new Date(values.event.starts_at).toISOString(),cover_image_url:values.event.cover_image_url,ticket_url:values.ticket_url,trailer_url:values.trailer_url})
+    if(saved)try{window.localStorage.removeItem(filmEditorDraftKey('new'))}catch{}
   }
-
-  return (
-    <form className={`${styles.card} ${styles.form}`} onSubmit={submit}>
-      <label>Title<input name="title" required maxLength={200} /></label>
-      <FilmDateTimeField label="Screening date and time (your local time)" name="starts_at" required />
-      <label>Description<textarea name="description" rows={3} maxLength={5000} /></label>
-      <label>External tickets URL<input name="ticket_url" type="url" placeholder="https://" /></label>
-      <FilmClubMediaFields cover={cover} trailer={trailerUrl} onCover={setCover} onTrailer={setTrailerUrl} disabled={busy} onUploading={setUploading} />
-      <p>The screening appears as a draft in Community → Events.</p>
-      <button disabled={busy || uploading}>Add screening event</button>
+  return <form className={`${styles.card} ${styles.form}`} onSubmit={submit}>
+      <label>Title<input name="title" required maxLength={200} value={values.event.title} onChange={e=>eventField('title',e.target.value)}/></label>
+      <FilmDateTimeField label="Screening date and time (your local time)" name="starts_at" required value={values.event.starts_at} onChange={value=>eventField('starts_at',value)}/>
+      <label>Description<textarea name="description" rows={3} maxLength={5000} value={values.event.description} onChange={e=>eventField('description',e.target.value)}/></label>
+      <label>External tickets URL<input name="ticket_url" type="url" placeholder="https://" value={values.ticket_url} onChange={e=>change({ticket_url:e.target.value})}/></label>
+      <FilmClubMediaFields cover={values.event.cover_image_url} trailer={values.trailer_url} onCover={value=>eventField('cover_image_url',value)} onTrailer={value=>change({trailer_url:value})} disabled={busy} onUploading={setUploading}/>
+      <p>The screening appears as a draft in Community → Events.</p><p role="status">{draftNote}</p>
+      <button disabled={busy || uploading}>Save screening</button>
     </form>
-  )
-}
-
-function ScreeningMediaEditor({ screening, busy, onSave, onBusyChange }) {
-  const [cover, setCover] = useState(screening.event.cover_image_url || '')
-  const [trailer, setTrailer] = useState(screening.trailer_url || '')
-  const [uploading, setUploading] = useState(false)
-  useEffect(() => { onBusyChange?.(uploading) }, [uploading, onBusyChange])
-  return <div className={styles.form}>
-    <FilmClubMediaFields cover={cover} trailer={trailer} onCover={setCover} onTrailer={setTrailer} disabled={busy} onUploading={setUploading} />
-    <div className={styles.mediaActions}>
-      <button disabled={busy || uploading} onClick={() => onSave({ action: 'cover', cover_image_url: cover.trim() })}>Save cover image</button>
-      <button disabled={busy || uploading} onClick={() => onSave({ action: 'trailer', trailer_url: trailer.trim() })}>Save trailer</button>
-    </div>
-    <p>Save each change after uploading. Clear its URL and save to remove it.</p>
-  </div>
 }
 
 export default function FilmClubAdmin() {
@@ -159,8 +139,10 @@ export default function FilmClubAdmin() {
         setScreenings((await filmClubRequest(api)).screenings)
         setRevision(value=>value+1)
       }
+      return result
     } catch (err) {
       setError(err.message)
+      return null
     } finally {
       setBusy(false)
     }
@@ -210,7 +192,7 @@ export default function FilmClubAdmin() {
       {!loading && tab === 'Tickets' && screening && <FilmTicketManagement key={`tickets:${screening.event_id}`} screening={screening} />}
       {tab === 'Screenings' && (
         <>
-          {adding && <ScreeningModal title="Add screening event" busy={modalBusy} onClose={() => setAdding(false)}>
+          {adding && <ScreeningModal title="Add screening event" footer={false} busy={modalBusy} onClose={() => setAdding(false)}>
             {error && <p role="alert" className={styles.error}>{error}</p>}
             <ScreeningForm busy={busy} onBusyChange={setEditorBusy} onAdd={body => save('POST', body, result => {
               setAdding(false)
@@ -224,13 +206,12 @@ export default function FilmClubAdmin() {
               <div className={styles.screeningActions}><span className={styles.badge}>{item.event.status}</span><button type="button" className={styles.primary} onClick={() => { setError(''); setNotice(''); setEditingId(item.event_id) }}>Edit</button></div>
             </section>
           ))}
-          {editing && <ScreeningModal title="Edit screening" busy={modalBusy} onClose={() => setEditingId(null)}>
+          {editing && <ScreeningModal title="Edit screening" footer={false} busy={modalBusy} onClose={() => setEditingId(null)}>
             {error && <p role="alert" className={styles.error}>{error}</p>}
             {notice && <p role="status">{notice}</p>}
             <fieldset className={styles.modalFields} disabled={modalBusy}>
-              <FilmTicketSettings screening={editing} onBusyChange={setEditorBusy} onChanged={async () => setScreenings((await filmClubRequest(api)).screenings)} />
-              <ScreeningMediaEditor key={editing.event_id} screening={editing} busy={busy} onBusyChange={setMediaBusy}
-                onSave={body => save('PATCH', { ...body, eventId: editing.event_id }, () => 'Screening media saved.')} />
+              <FilmTicketSettings key={editing.event_id} screening={editing} onBusyChange={setEditorBusy} onChanged={async () => setScreenings((await filmClubRequest(api)).screenings)} />
+
             </fieldset>
           </ScreeningModal>}
           {!screenings.length && !loading && !adding && <p>No screenings yet.</p>}

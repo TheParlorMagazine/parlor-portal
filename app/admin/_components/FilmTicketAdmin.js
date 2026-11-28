@@ -4,29 +4,38 @@ import { filmClubRequest } from '../../../lib/filmClubRequest'
 import { ticketPricing, filmMoney, FILM_CURRENCIES, currencyExponent } from '../../../lib/filmTicketPricing'
 import styles from './FilmClubAdmin.module.css'
 import FilmDateTimeField from './FilmDateTimeField'
+import FilmClubMediaFields from './FilmClubMediaFields'
+import {filmEditorDraftKey,filmEditorValues,readFilmEditorDraft,writeFilmEditorDraft,mergeFilmEditorDraft} from '../../../lib/filmEditorDraft'
 import { filmHasEnded } from '../../../lib/filmTicketLifecycle'
 const api='/api/admin/film-club'
 const filmLanguages=['English','Arabic','Bengali','Chinese','Dutch','French','German','Greek','Hebrew','Hindi','Indonesian','Italian','Japanese','Korean','Persian','Polish','Portuguese','Russian','Spanish','Swahili','Swedish','Tamil','Turkish','Ukrainian','Urdu','Vietnamese','Multiple languages','No dialogue']
 const editorScreening=screening=>({...screening,member_price_override_cents:null,ticket_settings:{...screening.ticket_settings}})
 export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
- const [s,setS]=useState(()=>editorScreening(screening)),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[failed,setFailed]=useState(false),[pending,setPending]=useState(''),[publishOnSave,setPublishOnSave]=useState(false)
- useEffect(()=>{setPublishOnSave(false)},[screening.event_id])
+ const recovered=useRef(undefined)
+ if(recovered.current===undefined){try{recovered.current=readFilmEditorDraft(screening.event_id,window.localStorage)}catch{recovered.current=null}}
+ const [s,setS]=useState(()=>mergeFilmEditorDraft(editorScreening(screening),recovered.current)),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[failed,setFailed]=useState(false),[pending,setPending]=useState(''),[publishOnSave,setPublishOnSave]=useState(!!recovered.current?.publish),[uploading,setUploading]=useState(false),[draftNote,setDraftNote]=useState(recovered.current?'Recovered your auto-saved draft from this browser.':'')
+ const latest=useRef(s),publishRef=useRef(publishOnSave),hasDraft=useRef(!!recovered.current),previous=useRef(screening)
+ latest.current=s;publishRef.current=publishOnSave
+ function persist(next,publish=publishRef.current){hasDraft.current=true;try{writeFilmEditorDraft(screening.event_id,next,publish,window.localStorage);setDraftNote('Draft auto-saved on this browser.')}catch{setDraftNote('Automatic draft saving is unavailable. Use Save changes before closing.')}}
+ function change(next){latest.current=next;setS(next);persist(next)}
  const editor=useRef(null)
  const pausedEdits=useRef(null)
- useEffect(()=>{setS(pausedEdits.current?{...pausedEdits.current,sales_enabled:screening.sales_enabled}:editorScreening(screening));pausedEdits.current=null},[screening])
- useEffect(()=>{onBusyChange?.(busy)},[busy,onBusyChange])
- const config=s.ticket_settings || {},dirty=JSON.stringify(s)!==JSON.stringify(screening)
- const set=(key,value)=>setS(old=>({...old,[key]:value}))
- const detail=(key,value)=>set('ticket_settings',{...config,[key]:value})
+ useEffect(()=>{if(previous.current===screening)return;previous.current=screening;const next=pausedEdits.current?{...pausedEdits.current,sales_enabled:screening.sales_enabled}:hasDraft.current?{...latest.current,sales_enabled:screening.sales_enabled}:editorScreening(screening);latest.current=next;setS(next);pausedEdits.current=null},[screening])
+ useEffect(()=>{onBusyChange?.(busy||uploading)},[busy,uploading,onBusyChange])
+ const config=s.ticket_settings || {},dirty=JSON.stringify(filmEditorValues(s))!==JSON.stringify(filmEditorValues(screening))
+ const set=(key,value)=>change({...latest.current,[key]:value})
+ const detail=(key,value)=>set('ticket_settings',{...latest.current.ticket_settings,[key]:value})
  let quote;try{quote=ticketPricing(s)}catch{}
  const settings=()=>({...s,member_price_override_cents:null,host_share_eligibility:s.host_share_eligibility==='yes'?'yes':'no',host_share_percent:s.host_share_eligibility==='yes'?s.host_share_percent:0,currency:s.currency || 'usd',ticket_settings:{...config,language:config.language || 'English',format:config.format || 'live',fulfillment_method:config.fulfillment_method || 'individual'}})
  async function action(action){
   if(['settings','publish'].includes(action)){const invalid=editor.current?.querySelector(':invalid');if(invalid){const disclosure=invalid.closest('details');if(disclosure)disclosure.open=true;invalid.reportValidity();invalid.focus();return}}
+  if(uploading||busy)return
   setBusy(true);setPending(action);setMessage('');setFailed(false)
   try{
    const result=await filmClubRequest(`${api}/commerce`,'POST',{eventId:s.event_id,action,...(['settings','publish'].includes(action)?{settings:settings()}:{})})
    if(action==='pause'&&dirty)pausedEdits.current={...s,sales_enabled:false}
-   await onChanged();setPublishOnSave(false);setMessage(result.message || 'Saved.')
+   if(['settings','publish'].includes(action)){hasDraft.current=false;try{window.localStorage.removeItem(filmEditorDraftKey(screening.event_id))}catch{}setDraftNote('All changes saved.');setPublishOnSave(false)}
+   await onChanged();setMessage(result.message || 'Saved.')
   }catch(e){if(e.saved){try{await onChanged()}catch{}}setFailed(true);setMessage(e.message)}finally{setBusy(false);setPending('')}
  }
  const moneyField=(key,label)=>{const scale=key.endsWith('_cents')?10**currencyExponent(s.currency || 'usd'):1;return <label key={key}>{label}<input type="number" min={key==='member_ticket_limit'?1:key==='ticket_price_cents'?1/scale:0} max={key.includes('percent')?100:undefined} step={scale>1||key.includes('percent')?'0.01':'1'} value={s[key]==null?'':s[key]/scale} onChange={e=>set(key,e.target.value===''?null:key.endsWith('_cents')?Math.round(Number(e.target.value)*scale):Number(e.target.value))}/></label>}
@@ -60,13 +69,17 @@ export function FilmTicketSettings({screening,onChanged,onBusyChange}) {
    <label>Other expenses<input type="number" min="0" step={currencyExponent(s.currency || 'usd')>0?'0.01':'1'} value={config.other_cost_cents==null?'':config.other_cost_cents/10**currencyExponent(s.currency || 'usd')} onChange={e=>detail('other_cost_cents',e.target.value?Math.round(Number(e.target.value)*10**currencyExponent(s.currency || 'usd')):null)}/></label>
    <p>Processing fees are pulled from Stripe after payment.</p>
   </section></details>
-  {(!screening.sales_enabled||dirty)&&<label className={styles.publishOption}><input type="checkbox" checked={publishOnSave} disabled={busy} onChange={e=>setPublishOnSave(e.target.checked)}/><span>Publish and open ticket sales when saving</span></label>}
-  <div className={styles.mediaActions}>
-   <button disabled={busy||!quote} onClick={()=>action(publishOnSave&&(!screening.sales_enabled||dirty)?'publish':'settings')}>{pending==='publish'?'Publishing…':pending==='settings'?'Saving…':'Save changes'}</button>
-   {screening.sales_enabled&&<button disabled={busy} onClick={()=>action('pause')}>{pending==='pause'?'Pausing…':'Pause sales'}</button>}
-  </div>
+  <FilmClubMediaFields cover={s.event?.cover_image_url||''} trailer={s.trailer_url||''} onCover={value=>set('event',{...latest.current.event,cover_image_url:value})} onTrailer={value=>set('trailer_url',value)} disabled={busy||uploading} onUploading={setUploading}/>
   <p>Ticket sales: {screening.sales_enabled?'Open':screening.stripe_archived?'Archived':screening.event?.status==='draft'?'Draft — not open':'Paused'}.</p>
   {message&&<p role={failed?'alert':'status'}>{message}</p>}
+  <div className={styles.editorSave}>
+   <p role="status">{draftNote||'Edits are automatically saved as a draft on this browser. Save changes to update the screening.'}</p>
+   {(!screening.sales_enabled||dirty)&&<label className={styles.publishOption}><input type="checkbox" checked={publishOnSave} disabled={busy||uploading} onChange={e=>{setPublishOnSave(e.target.checked);publishRef.current=e.target.checked;persist(latest.current,e.target.checked)}}/><span>Publish and open ticket sales when saving</span></label>}
+   <div className={styles.mediaActions}>
+    <button disabled={busy||uploading||!quote} onClick={()=>action(publishOnSave&&(!screening.sales_enabled||dirty)?'publish':'settings')}>{pending==='publish'?'Publishing…':pending==='settings'?'Saving…':'Save changes'}</button>
+    {screening.sales_enabled&&<button disabled={busy||uploading} onClick={()=>action('pause')}>{pending==='pause'?'Pausing…':'Pause sales'}</button>}
+   </div>
+  </div>
  </section>
 }
 export function FilmTicketArchive({screening,onChanged}) {

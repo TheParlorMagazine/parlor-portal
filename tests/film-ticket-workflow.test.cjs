@@ -1,8 +1,8 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm')
 const initial={event_id:'event',currency:'usd',ticket_price_cents:1000,member_discount_percent:20,host_share_percent:0,host_share_eligibility:'no',pricing_version:1,stripe_synced_version:null,sales_enabled:false,ticket_settings:{format:'live',fulfillment_method:'individual'},event:{title:'Film',status:'draft',is_public:true,starts_at:'2099-01-01',ends_at:'2099-01-02'}}
-async function fixture({screening=initial,env={STRIPE_SECRET_KEY:'sk_test_fake',FILM_CLUB_TICKET_SALES_ENABLED:'true'},syncFailure=false,publishFailure=false,role='admin',user={id:'admin'}}={}){
+async function fixture({screening=initial,env={STRIPE_SECRET_KEY:'sk_test_fake',FILM_CLUB_TICKET_SALES_ENABLED:'true'},syncFailure=false,publishFailure=false,mediaFailure='',role='admin',user={id:'admin'}}={}){
  let state=structuredClone(screening);const calls=[]
- const db={from(){return{select(){return this},eq(){return this},update(patch){state={...state,...patch};return this},then(resolve){resolve({})},single:async()=>({data:structuredClone(state)})}},rpc:async(name,args)=>{
+ const db={from(table){return{select(){return this},eq(){return this},update(patch){if(Object.hasOwn(patch,'cover_image_url')||Object.hasOwn(patch,'trailer_url'))calls.push('media:'+table);if(mediaFailure!==table){if(table==='events')state.event={...state.event,...patch};else state={...state,...patch}}return this},maybeSingle:async()=>mediaFailure===table?{error:Error('unavailable')}:{data:table==='events'?{id:state.event_id}:{event_id:state.event_id}},then(resolve){resolve({})},single:async()=>({data:structuredClone(state)})}},rpc:async(name,args)=>{
   calls.push(name)
   if(name==='save_film_ticket_settings'){
    const p=args.p_patch,changed=p.ticket_price_cents!==state.ticket_price_cents
@@ -17,7 +17,7 @@ async function fixture({screening=initial,env={STRIPE_SECRET_KEY:'sk_test_fake',
   return{}
  }}
  class Stripe{constructor(){calls.push('stripe');this.products={retrieve:async()=>({metadata:{screening_id:'event'}}),update:async()=>calls.push('archive_product')};this.prices={list:()=>({async *[Symbol.asyncIterator](){yield{id:'price'}}}),update:async()=>calls.push('archive_price')}}}
- const ctx=vm.createContext({Response,console,Date,process:{env}}),cache=new Map()
+ const ctx=vm.createContext({Response,URL,console,Date,process:{env}}),cache=new Map()
  const mocks={'stripe':{default:Stripe},'../../../../../lib/apiAuth':{requireUser:async()=>user,memberOf:async()=>({role}),serviceClient:()=>db},'./filmTicketCommerce':{synchronizeFilmProduct:async()=>{calls.push('sync');if(syncFailure)throw Error('provider unavailable');state.stripe_product_id='prod_same';state.stripe_price_id='price_same';state.stripe_synced_version=state.pricing_version}},'../../../../../lib/filmTicketCommerce':{synchronizeFilmProduct(){throw Error('Legacy sync path')}}}
  async function module(file){if(cache.has(file))return cache.get(file);const m=new vm.SourceTextModule(fs.readFileSync(file,'utf8'),{context:ctx});cache.set(file,m);await m.link(async spec=>{
   if(mocks[spec])return new vm.SyntheticModule(Object.keys(mocks[spec]),function(){for(const[k,v]of Object.entries(mocks[spec]))this.setExport(k,v)},{context:ctx})
@@ -67,4 +67,12 @@ test('archive is rejected before the event ends and only finished Stripe product
  const ended={...initial,stripe_product_id:'prod',event:{...initial.event,starts_at:'2000-01-01',ends_at:'2000-01-02'}}
  const f=await fixture({screening:ended});assert.equal((await f.post('archive')).status,200);assert.equal(f.state.stripe_archived,true);assert.ok(f.calls.indexOf('archive_price')<f.calls.indexOf('archive_product'));assert.ok(f.calls.includes('mark_finished_film_archived'))
  const done=await fixture({screening:{...ended,stripe_archived:true}});assert.equal((await done.post('archive')).status,200);assert.deepEqual(done.calls,[])
+})
+
+test('one save validates and persists cover/trailer before Stripe or publication, including removal',async()=>{
+ const f=await fixture();const media={event:{...initial.event,cover_image_url:'https://media.example/cover.png'},trailer_url:'https://youtu.be/abc123'}
+ const result=await f.post('publish',media);assert.equal(result.status,200);assert.equal(f.state.event.cover_image_url,media.event.cover_image_url);assert.equal(f.state.trailer_url,media.trailer_url);assert.deepEqual(f.calls,['save_film_ticket_settings','media:events','media:film_club_screenings','stripe','sync','publish_film_ticket_sales'])
+ assert.equal((await f.post('settings',{event:{...f.state.event,cover_image_url:''},trailer_url:''})).status,200);assert.equal(f.state.event.cover_image_url,null);assert.equal(f.state.trailer_url,null)
+ for(const patch of [{event:{...initial.event,cover_image_url:'javascript:alert(1)'}},{trailer_url:'https://unknown.example/not-a-trailer'},{trailer_url:42}]){const invalid=await fixture();assert.equal((await invalid.post('settings',patch)).status,409);assert.deepEqual(invalid.calls,[])}
+ const failed=await fixture({mediaFailure:'film_club_screenings'});const partial=await failed.post('publish',media);assert.equal(partial.status,409);assert.equal(partial.saved,true);assert.match(partial.error,/media could not be fully saved/);assert.ok(!failed.calls.includes('publish_film_ticket_sales'));assert.ok(!failed.calls.includes('sync'))
 })
